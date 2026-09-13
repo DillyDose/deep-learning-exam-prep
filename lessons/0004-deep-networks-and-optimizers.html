@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Lesson 4: Deep Networks &amp; Optimizers</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0003-cost-function-and-backpropagation.html">← Lesson 3: Backpropagation</a></span>
+  <span>Lesson 4 / 5 · Deep Networks &amp; Optimizers</span>
+  <span><a href="0005-vanishing-gradients-and-initialization.html">Lesson 5: Vanishing Gradients &amp; Init →</a></span>
+</nav>
+
+<p class="kicker">Lecture4.pdf · 2603520 Deep Learning</p>
+<h1>Deep Neural Network: จาก 2 Layer สู่ L Layer, และ Optimizer ที่เร็วกว่า Gradient Descent</h1>
+
+<p>บทนี้ทำ 2 อย่าง: (1) ยืนยันว่าสูตร backprop จาก Lesson 3 ใช้ได้กับเครือข่ายกี่ layer ก็ได้ แค่โซ่ chain rule ยาวขึ้น (2) แนะนำ optimizer ที่เร็วกว่า plain gradient descent — Momentum, RMSProp, Adam — ทุกตัวมีสูตรที่ต้องคำนวณตามได้.</p>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" rel="noopener">An overview of gradient descent optimization algorithms</a> — สไลด์อ้างอิงตรงนี้เอง ครอบคลุม Momentum, RMSProp, Adam ทุกสูตรที่เรียนในบทนี้.
+</div>
+
+<h2>1. Deep Neural Network: สูตรเดิม แค่ L Layer</h2>
+<figure>
+<img src="../assets/slides/dl4-p03-deep-nn-forward-general.png" alt="Fully connected deep neural network diagram with layers 1 through L, showing the general forward computation formula for layer 1 (z1[1]=theta10[1]+theta11[1]x1+theta12[1]x2, a1[1]=g(z1[1])) and the analogous formula for the final layer L (z1[L]=theta10[L]+theta11[L]a1[L-1]+theta12[L]a2[L-1], h(x)=a1[L]=g(z1[L]))">
+<figcaption>Slide: How Deep Neural Network Works — สูตร forward ทั่วไปสำหรับ layer ใดๆ (Lecture4.pdf, p.3)</figcaption>
+</figure>
+<p>สูตรเดียวกับ Lesson 2-3 เป๊ะ แค่เปลี่ยนจาก "layer 1, layer 2" เป็น "layer l ใดๆ": <code>zⱼ⁽ˡ⁾ = θⱼ₀⁽ˡ⁾ + Σᵢθⱼᵢ⁽ˡ⁾aᵢ⁽ˡ⁻¹⁾</code> แล้ว <code>aⱼ⁽ˡ⁾=g(zⱼ⁽ˡ⁾)</code>.</p>
+<p>layer แรกใช้ x ดิบๆแทน a⁽⁰⁾ (นิยาม a⁽⁰⁾:=x) ส่วน layer สุดท้าย L คือ h(x)=a⁽ᴸ⁾.</p>
+
+<figure>
+<img src="../assets/slides/dl4-p04-deep-nn-backward-interpretation.png" alt="Deep network with many layers showing the general backpropagation formula: dJ/dtheta_1,1^(L-1) = delta^(L) times theta_1,1^(L) times g'(z1^[L-1]) times a1^(L-2), generalizing the chain rule to reach further back through layer L-1, with an interpretation box explaining that a large delta_destination causes a larger gradient update">
+<figcaption>Slide: How Deep Neural Network Works (2) — สูตร backward ทั่วไป (Lecture4.pdf, p.4)</figcaption>
+</figure>
+<p>นี่คือการขยายสูตร Lesson 3 หัวข้อ 2 ตรงๆ: <code>∂J/∂θ₁,₁⁽ᴸ⁻¹⁾ = δ⁽ᴸ⁾ · θ₁,₁⁽ᴸ⁾ · g'(z₁⁽ᴸ⁻¹⁾) · a₁⁽ᴸ⁻²⁾</code>.</p>
+<p>เทียบกับสูตร 2 layer เดิม (4 เทอมคูณกัน) สูตรนี้ก็ยังมี 4 เทอมเท่ากัน (δ, θ, g', a) เพียงแต่ตอนนี้ δ, θ, g', a ทุกตัวมี superscript [L] หรือ [L-1] ไม่ใช่ [1]/[2] ตายตัว.</p>
+<p><strong>คำอธิบายที่สไลด์ให้ (Interpretation):</strong> ถ้า weight เส้นหนึ่งเชื่อมไปยัง node ที่มี δ<sub>destination</sub> ใหญ่ (node นั้นมีส่วนทำให้ error สุดท้ายสูง) gradient ของเส้นนั้นก็จะใหญ่ตาม ทำให้ gradient descent ปรับ weight เส้นนั้นแรงกว่าเส้นอื่น — ตรรกะ "ปรับมากตรงที่ผิดมาก" เดียวกับทุก layer ไม่ว่าจะมีกี่ layer.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Deep NN Backprop</span></div>
+  <div class="qtext">สูตร ∂J/∂θ₁,₁⁽ᴸ⁻¹⁾ = δ⁽ᴸ⁾·θ₁,₁⁽ᴸ⁾·g'(z₁⁽ᴸ⁻¹⁾)·a₁⁽ᴸ⁻²⁾ เทียบกับสูตร 2 layer เดิมจาก Lesson 3 ต่างกันอย่างไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">ต่างกันโดยพื้นฐาน เพราะเครือข่ายลึกต้องใช้ cost function คนละแบบกับเครือข่าย 2 layer</button>
+    <button class="opt" data-correct="false">ต่างกันเพราะเครือข่ายลึกไม่ใช้ g' (อนุพันธ์ของ activation) ในการคำนวณ δ อีกต่อไปแล้ว</button>
+    <button class="opt" data-correct="true">ไม่ต่างกันในเชิงโครงสร้าง เป็นสูตร chain rule เดิมทุกเทอม (δ,θ,g',a) แค่เปลี่ยน superscript เป็น L, L−1, L−2</button>
+    <button class="opt" data-correct="false">ต่างกันเพราะเครือข่ายลึกต้องบวกเทอม regularization เข้าไปในทุกขั้นของ backprop เสมอ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>2. ทำไม Deep Network เทรนยาก: 4 ปัญหาหลัก</h2>
+<p>สไลด์สรุป 4 ปัญหาหลักของการเทรนเครือข่ายลึก:</p>
+<ol>
+<li>เทรนช้า/ลู่เข้าช้า เมื่อข้อมูลมาก</li>
+<li>เสี่ยง overfitting สูง เพราะพารามิเตอร์มาก</li>
+<li>ปัญหา vanishing/exploding gradient (ขยายผลจาก Lesson 3 หัวข้อ 2 ที่เห็นแล้วว่ายิ่งโซ่ยาวยิ่งมีตัวคูณเยอะ — Lesson 5 จะลงรายละเอียดเต็ม)</li>
+<li>มี hyperparameter ให้ปรับมากเกินไป</li>
+</ol>
+<p>บทนี้ตอบปัญหาที่ 1 ด้วย optimizer ที่เร็วกว่า และปัญหาที่ 2 ด้วยเทคนิค overfitting handling.</p>
+
+<h2>3. Batch, Stochastic, Mini-Batch Gradient Descent</h2>
+<figure>
+<img src="../assets/slides/dl4-p07-batch-gradient-descent.png" alt="Batch gradient descent diagram: the gradient path taken across the entire cost surface using all training examples at once per update step, showing a smooth, low-noise trajectory toward the minimum">
+<figcaption>Slide: Batch Gradient Descent — ใช้ทุกตัวอย่างต่อ 1 update (Lecture4.pdf, p.7)</figcaption>
+</figure>
+<p><strong>Batch GD</strong> (ที่ใช้มาตลอด Lesson 1-3): อัปเดต θ หลังจากคำนวณ gradient จาก training example <em>ทุกตัว</em> ครบ 1 รอบ (1 iteration = 1 epoch).</p>
+<p>ข้อดี: ทิศทางแม่นยำ ไม่มี noise ข้อเสีย: ถ้ามี 100 ล้าน records ต้องรวมทั้ง 100 ล้านตัวก่อนอัปเดตได้แค่ 1 ครั้ง ช้ามาก.</p>
+
+<figure>
+<img src="../assets/slides/dl4-p09-stochastic-gradient-descent.png" alt="Stochastic gradient descent diagram: the gradient path zigzagging noisily and erratically toward the minimum, using just one training example per update step">
+<figcaption>Slide: Stochastic Gradient Descent — ใช้ 1 ตัวอย่างต่อ 1 update (Lecture4.pdf, p.9)</figcaption>
+</figure>
+<p><strong>SGD:</strong> อัปเดต θ หลังจากดูตัวอย่างเดียวแค่ตัวเดียว — เร็วกว่ามาก และ noise ที่เกิดขึ้นช่วยให้ "กระโดด" ออกจาก local minima/saddle point ได้ดีกว่า Batch GD.</p>
+<p>แต่ก็มี noise มากจนบางครั้งเดินสวนทาง ไม่ลู่เข้าเสถียร และเสียความเร็วจากการไม่ได้ใช้ matrix multiplication เต็มรูปแบบ.</p>
+
+<figure>
+<img src="../assets/slides/dl4-p11-mini-batch-gradient-descent.png" alt="Mini-batch gradient descent diagram: 10,000 training examples shuffled and divided into 10 mini-batches of 1,000 examples each, updating weights once per mini-batch instead of once per epoch or once per example">
+<figcaption>Slide: Mini-Batch Gradient Descent — ประนีประนอมระหว่างสองแบบ (Lecture4.pdf, p.11)</figcaption>
+</figure>
+<p><strong>Mini-Batch GD:</strong> จุดกึ่งกลาง — สไลด์ยกตัวอย่าง: มี 10,000 training examples แบ่งเป็น 10 mini-batch (batch size = 1,000 ตัวอย่างต่อ batch) อัปเดต θ ทุกครั้งที่ผ่าน 1 mini-batch (คำนวณ: <code>10,000 ÷ 1,000 = 10 mini-batches</code> ต่อ 1 epoch).</p>
+<p>ได้ทั้งความเร็วจาก matrix multiplication (คำนวณทีละ 1,000 ตัวอย่างพร้อมกัน) และความเสถียรที่ดีกว่า SGD ตัวเดียว — batch size ที่นิยม (32-256, เป็นเลขยกกำลัง 2) เพราะ GPU ทำงานได้มีประสิทธิภาพกับขนาดเหล่านี้.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>Mini-batch GD</span></div>
+  <div class="qtext">มี training set 10,000 ตัวอย่าง แบ่งเป็น mini-batch ขนาด 1,000 ตัวอย่างต่อ batch จำนวน mini-batch ต่อ 1 epoch เท่ากับเท่าไหร่?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">1,000 mini-batch เพราะเท่ากับขนาดของ mini-batch ที่กำหนดไว้โดยตรง</button>
+    <button class="opt" data-correct="true">10 mini-batch เพราะ 10,000 หารด้วยขนาด batch 1,000 เท่ากับ 10 พอดี</button>
+    <button class="opt" data-correct="false">100 mini-batch เพราะต้องคูณขนาด batch ด้วย 10 เสมอตามธรรมเนียมทั่วไป</button>
+    <button class="opt" data-correct="false">1 mini-batch เพราะ mini-batch GD ยังคงใช้ข้อมูลทั้งหมดในการอัปเดตครั้งเดียวเหมือน Batch GD</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>4. Momentum: ใช้ประวัติของ Gradient ช่วยเร่งความเร็ว</h2>
+<figure>
+<img src="../assets/slides/dl4-p14-momentum-ball-analogy.png" alt="Top-down view of a 3D loss surface comparing gradient descent's zigzagging path versus momentum optimization's smoother, faster path that curves more directly toward the minimum, like a ball rolling downhill and building speed">
+<figcaption>Slide: Gradient Descent with Momentum — เปรียบเหมือนลูกบอลกลิ้งลงเขา (Lecture4.pdf, p.14)</figcaption>
+</figure>
+<p>แทนที่จะใช้ gradient ณ จุดปัจจุบันตรงๆ (ซึ่งอาจ noisy และ zigzag) Momentum สร้าง "ค่าเฉลี่ยถ่วงน้ำหนักแบบเอ็กซ์โพเนนเชียล" (Exponential Weighted Moving Average) ของ gradient ที่ผ่านมาทั้งหมด แล้วใช้ค่าเฉลี่ยนี้อัปเดต θ แทน.</p>
+<p>ทำให้ทิศทางที่ "ผ่านมาต่อเนื่องกัน" ถูกขยายแรงขึ้นเรื่อยๆ (เหมือนลูกบอลที่กลิ้งไปทางเดิมนานๆจะเร่งความเร็ว) ในขณะที่ทิศทางที่ "แฉลบไปมา" จะถูกหักลบกันเองจนอ่อนแรงลง.</p>
+
+<figure>
+<img src="../assets/slides/dl4-p15-ewa-expansion-derivation.png" alt="Exponential weighted moving average formula v_t = beta*v_(t-1) + (1-beta)*value_t, expanded recursively across 3 consecutive timesteps to reveal that v_t is a weighted sum of all past values, with weights decaying exponentially the further back in time they occurred">
+<figcaption>Slide: Exponential Weighted Moving Averages — ขยายสูตรแบบ recursive (Lecture4.pdf, p.15)</figcaption>
+</figure>
+<p>สูตรตั้งต้น: <code>vₜ = β·vₜ₋₁ + (1−β)·valueₜ</code> — สไลด์ให้ขยายสูตรนี้ย้อนไป 3 ขั้นเพื่อดูว่า v ณ ปัจจุบันจริงๆแล้วประกอบด้วยอะไร: แทน <code>vₜ₋₁ = β·vₜ₋₂+(1−β)·valueₜ₋₁</code> เข้าไปใน <code>vₜ</code> แล้วแทนต่อไปอีกชั้น <code>vₜ₋₂ = β·vₜ₋₃+(1−β)·valueₜ₋₂</code> ไล่แทนจนหมด ได้:</p>
+<p><code>vₜ = β²(1−β)valueₜ₋₂ + β(1−β)valueₜ₋₁ + (1−β)valueₜ + …</code></p>
+<p>สังเกตแพทเทิร์นของสัมประสิทธิ์:</p>
+<ul>
+<li><code>valueₜ</code> (ล่าสุด) มีน้ำหนัก <code>(1−β)</code></li>
+<li><code>valueₜ₋₁</code> มีน้ำหนัก <code>β(1−β)</code> (เล็กกว่า เพราะคูณด้วย β&lt;1 เพิ่มอีกชั้น)</li>
+<li><code>valueₜ₋₂</code> มีน้ำหนัก <code>β²(1−β)</code> (เล็กกว่าอีก)</li>
+</ul>
+<p>ยิ่ง value เก่าเท่าไหร่ ยิ่งถูกคูณด้วย β ซ้ำหลายรอบ น้ำหนักจึงเล็กลง<strong>แบบเอ็กซ์โพเนนเชียล</strong> ตามชื่อของมัน — ถ้า β=0.9 ตัวอย่างเช่น value ปัจจุบันมีน้ำหนัก 0.1 ค่าก่อนหน้ามีน้ำหนัก 0.09 ก่อนนั้นอีก 0.081 ไล่ลดลงเรื่อยๆ.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>EWA Expansion</span></div>
+  <div class="qtext">จากสูตร vₜ=β·vₜ₋₁+(1−β)·valueₜ เมื่อขยายแบบ recursive ย้อนไป 2 ขั้น สัมประสิทธิ์ของ valueₜ₋₂ (ค่าเก่าสุดในสามค่า) เท่ากับอะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">(1−β) เท่ากันกับสัมประสิทธิ์ของ valueₜ เพราะทุกค่ามีน้ำหนักเท่ากันเสมอในสูตรนี้</button>
+    <button class="opt" data-correct="true">β²(1−β) เพราะต้องคูณด้วย β ซ้ำสองรอบตามจำนวนขั้นที่ย้อนกลับไปจาก valueₜ</button>
+    <button class="opt" data-correct="false">β(1−β) เท่ากับสัมประสิทธิ์ของ valueₜ₋₁ เพราะทั้งสองอยู่ในสมการเดียวกัน</button>
+    <button class="opt" data-correct="false">1−β² เพราะเป็นผลต่างระหว่างค่าคงที่ 1 กับ β ที่ยกกำลังสองแล้วโดยตรง</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>5. RMSProp และ Adam: ปรับ Learning Rate อัตโนมัติต่อพารามิเตอร์</h2>
+<figure>
+<img src="../assets/slides/dl4-p21-rmsprop-formula.png" alt="RMSProp formula: s_i := rho*s_i + (1-rho)*(dJ/dtheta_i)^2, maintaining an exponential weighted average of squared gradients, then scaling down the gradient update by dividing by the square root of s_i plus a small epsilon">
+<figcaption>Slide: RMSprop — normalize gradient ด้วยค่าเฉลี่ยกำลังสอง (Lecture4.pdf, p.21)</figcaption>
+</figure>
+<p>RMSProp เก็บค่าเฉลี่ยถ่วงน้ำหนักของ <em>กำลังสอง</em> ของ gradient: <code>sᵢ := ρ·sᵢ + (1−ρ)·(∂J/∂θᵢ)²</code> แล้วหาร gradient ด้วย <code>√(sᵢ+ε)</code> ก่อนอัปเดต θ.</p>
+<ul>
+<li>พารามิเตอร์ที่มี gradient <em>ใหญ่ต่อเนื่อง</em> (sᵢ สูง) จะถูกหารด้วยเลขที่ใหญ่ ทำให้ step เล็กลง (ป้องกันแฉลบ)</li>
+<li>พารามิเตอร์ที่มี gradient <em>เล็กต่อเนื่อง</em> (sᵢ ต่ำ) จะถูกหารด้วยเลขเล็ก ทำให้ step ใหญ่ขึ้นสัมพัทธ์ (ไม่ปล่อยให้มัน "นิ่ง" เกินไป)</li>
+</ul>
+<p>นี่คือความหมายของ "adaptive learning rate ต่อพารามิเตอร์": แต่ละ θᵢ มี effective learning rate ของตัวเอง ไม่ใช้ α ตัวเดียวกันทุกพารามิเตอร์แบบ plain gradient descent.</p>
+
+<figure>
+<img src="../assets/slides/dl4-p22-adam-formula.png" alt="Adam formula combining momentum and RMSProp: v_i := beta1*v_i + (1-beta1)*dJ/dtheta_i (first moment, momentum-style) and s_i := beta2*s_i + (1-beta2)*(dJ/dtheta_i)^2 (second moment, RMSProp-style), with typical hyperparameter values beta1=0.9, beta2=0.999, epsilon=1e-7">
+<figcaption>Slide: Adam — รวม Momentum กับ RMSProp เข้าด้วยกัน (Lecture4.pdf, p.22)</figcaption>
+</figure>
+<p>Adam คือ Momentum + RMSProp ในตัวเดียว: เก็บทั้ง <code>vᵢ</code> (ค่าเฉลี่ยของ gradient แบบ Momentum, β₁ ปรกติ 0.9) และ <code>sᵢ</code> (ค่าเฉลี่ยของ gradient² แบบ RMSProp, β₂ ปรกติ 0.999) แล้วอัปเดตด้วยทั้งสองค่าร่วมกัน.</p>
+<p>ได้ทั้งความเร็วจาก momentum และการปรับ scale อัตโนมัติจาก RMSProp พร้อมกัน จึงเป็น optimizer เริ่มต้นที่นิยมที่สุดในปัจจุบัน.</p>
+
+<figure>
+<img src="../assets/slides/dl4-p23-bias-correction.png" alt="Bias correction formulas for Adam: v_i_corrected = v_i divided by (1 - beta1^t), and s_i_corrected = s_i divided by (1 - beta2^t), where t is the timestep, correcting the fact that v and s start at zero and are initially biased toward zero in early iterations">
+<figcaption>Slide: Bias Correction — แก้ปัญหา v, s เริ่มจาก 0 (Lecture4.pdf, p.23)</figcaption>
+</figure>
+<p>เพราะ <code>v₀=0, s₀=0</code> ตอนเริ่มต้น ในไม่กี่ iteration แรก vᵢ,sᵢ จะยัง "เอียงเข้าใกล้ 0" มากเกินจริง (biased) สไลด์แก้ด้วยการหารด้วย <code>(1−β^t)</code>: <code>vᵢ_corrected = vᵢ/(1−β₁ᵗ)</code>.</p>
+<p>ที่ t เล็ก (t=1,2,..) ตัวหาร <code>(1−β₁ᵗ)</code> จะเล็กมาก (เพราะ β₁ᵗ ยังใกล้ 1 อยู่) ทำให้ค่าที่แก้แล้วถูก "ขยาย" ขึ้นมาชดเชยพอดี.</p>
+<p>พอ t มากขึ้น <code>β₁ᵗ→0</code> ตัวหารเข้าใกล้ 1 การแก้ไขจึงแทบไม่มีผลอีกต่อไป (ค่า v ที่สะสมมามากพอแล้วไม่ bias เข้า 0 อีก).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>Adam / Bias Correction</span></div>
+  <div class="qtext">เหตุผลที่ Adam ต้องมี Bias Correction (หาร vᵢ ด้วย 1−β₁ᵗ) ในช่วง iteration แรกๆคืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">เพราะ v₀,s₀ เริ่มต้นที่ 0 ทำให้ค่าเฉลี่ยในช่วงแรก "เอียงเข้าใกล้ 0" มากเกินจริง ต้องขยายชดเชย</button>
+    <button class="opt" data-correct="false">เพราะ learning rate α ของ Adam มีค่าติดลบในบาง iteration แรกถ้าไม่แก้ไขก่อน</button>
+    <button class="opt" data-correct="false">เพราะไม่ทำเช่นนี้แล้ว Adam จะกลายเป็นอัลกอริทึมเดียวกับ Batch Gradient Descent ทันที</button>
+    <button class="opt" data-correct="false">เพราะต้องป้องกันไม่ให้ค่า θ ของทุกพารามิเตอร์เท่ากันหมดตั้งแต่รอบแรก</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>6. Overfitting Countermeasures: Regularization, Dropout, Early Stopping</h2>
+<p>L1/L2 regularization ใช้สูตรเดียวกับ Lesson 1 หัวข้อ 11 และ Lesson 3 หัวข้อ 7 ทุกตัวอักษร เพิ่มเติมคือ <strong>Max-Norm Regularization</strong>: บีบขนาดของ weight vector แต่ละ node ให้ <code>‖w‖₂ ≤ r</code> — ถ้า norm เกิน r ให้ rescale ทันที <code>w := w·(r/‖w‖₂)</code> (สัดส่วน r/‖w‖₂ จะ ≤1 เสมอเมื่อ norm เกิน จึงบีบให้เล็กลงพอดี).</p>
+<p>ต่างจาก L1/L2 ที่เพิ่ม penalty term ในcost function, max-norm ปรับ w ตรงๆหลังทุก training step โดยไม่ต้องแก้ cost function เลย.</p>
+
+<figure>
+<img src="../assets/slides/dl4-p28-dropout-example.png" alt="Two shallow neural network diagrams side by side illustrating dropout: the left shows the full network with all nodes active, the right shows the same network with some nodes in layers 1 and 2 randomly deactivated (set to zero) for one training iteration">
+<figcaption>Slide: Dropout — สุ่มปิด node บางตัวระหว่างเทรน (Lecture4.pdf, p.28)</figcaption>
+</figure>
+<p>Dropout สุ่มปิด node บางส่วนในแต่ละ layer ระหว่างเทรน (ตั้งค่า activation เป็น 0 ชั่วคราว) ตัวอย่างสไลด์: dropout rate = 0.33 สำหรับ layer 1,2 และ 0.5 สำหรับ layer 3 (สุ่มใหม่ทุก iteration).</p>
+<p>เป้าหมายคือบีบไม่ให้เครือข่าย "พึ่งพา" node กลุ่มเดิมซ้ำๆจนจำ training data ได้แบบตายตัว (แต่ละรอบเครือข่ายต้องเรียนรู้จาก node สุ่มที่เหลืออยู่ ทำให้แต่ละ node ต้องเป็นประโยชน์ได้ด้วยตัวเองมากขึ้น ไม่ต้องพึ่ง node ข้างเคียงตลอดเวลา).</p>
+
+<p><strong>ทำไมต้อง scale activation ตอน training (Inverted Dropout)?</strong> สมมติ dropout rate=0.1 (10% ของ node ถูกปิด) นั่นคือ keep_prob=1−0.1=0.9 — สไลด์บอกให้<strong>หารค่า activation ที่เหลือด้วย keep_prob</strong> คือหารด้วย 0.9 (เท่ากับเพิ่มค่าที่เหลือขึ้น ~11%).</p>
+<p>เหตุผล: ถ้าไม่ scale ผลรวม input ที่ node ถัดไปได้รับจะ "น้อยกว่าปรกติ" เพราะมี node หายไป 10% พอถึงเวลา test (ไม่ dropout แล้ว ทุก node กลับมาทำงานครบ) ผลรวมจะกลายเป็น "มากกว่า" ที่โมเดลเคยเห็นตอนเทรน ถ้าไม่ชดเชยไว้ตั้งแต่ตอนเทรน การกระจายของค่า activation ตอน train กับ test จะไม่ตรงกัน.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>Dropout Scaling</span></div>
+  <div class="qtext">เมื่อ dropout rate = 0.1 (keep_prob = 0.9) เพราะเหตุใดต้องหารค่า activation ที่เหลือด้วย 0.9 ระหว่างการเทรน (Inverted Dropout)?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะต้องทำให้ค่า activation ทุกตัวมีค่าน้อยลงเสมอ ไม่ว่า dropout rate จะเป็นเท่าใดก็ตาม</button>
+    <button class="opt" data-correct="false">เพราะ keep_prob ต้องถูกใช้เป็น learning rate ใหม่ในการอัปเดตพารามิเตอร์ของ layer นั้น</button>
+    <button class="opt" data-correct="false">เพราะกฎของ dropout กำหนดให้ค่า activation ทั้งหมดของ layer นั้นต้องรวมกันเท่ากับ 1 เสมอ</button>
+    <button class="opt" data-correct="true">เพื่อชดเชยผลรวม input ที่ลดลงจาก node ที่ถูกปิด ให้สถิติของ activation ตรงกับตอน test ที่ไม่มี dropout</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl4-p32-early-stopping-graph.png" alt="Early stopping graph plotting training loss (steadily decreasing) and validation loss (decreasing then starting to increase again) against number of epochs, with a marked stopping point where validation loss reaches its minimum before starting to rise, indicating the onset of overfitting">
+<figcaption>Slide: Early Stopping — หยุดเทรนตรงจุดที่ validation error ต่ำสุด (Lecture4.pdf, p.32)</figcaption>
+</figure>
+<p>Early Stopping ติดตาม validation error ทุก epoch แล้วหยุดเทรนตรงจุดที่ validation error เริ่ม<strong>เพิ่มขึ้น</strong> (แม้ training error จะยังลดลงต่อเนื่องก็ตาม) — จุดตัดระหว่างสองเส้นในกราฟคือสัญญาณว่าโมเดลเริ่ม overfit (จำ training data มากเกินไปจนเสีย generalization).</p>
+<p>ข้อดีคือไม่ต้องเดา hyperparameter "จำนวน epoch ที่เหมาะสม" ล่วงหน้าเลย ตั้งจำนวน epoch ไว้สูงๆแล้วให้ early stopping หยุดเองตรงจุดที่ดีที่สุด.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>Early Stopping</span></div>
+  <div class="qtext">Early Stopping ใช้สัญญาณอะไรในการตัดสินใจว่าควรหยุดเทรนโมเดล?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">จุดที่ validation error เริ่มเพิ่มขึ้น แม้ training error จะยังลดลงต่อเนื่องอยู่ก็ตาม</button>
+    <button class="opt" data-correct="false">จำนวน epoch ที่กำหนดไว้ล่วงหน้าอย่างตายตัวก่อนเริ่มการเทรนโมเดลทุกครั้ง</button>
+    <button class="opt" data-correct="false">จุดที่ training error ลดลงถึงศูนย์พอดี ไม่ว่า validation error จะเป็นอย่างไร</button>
+    <button class="opt" data-correct="false">ค่า learning rate α ที่ลดลงจนต่ำกว่าเกณฑ์ที่ตั้งไว้ล่วงหน้าในการเทรน</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>7. Data Augmentation: เพิ่มข้อมูลโดยไม่ต้องเก็บใหม่</h2>
+<p>ถ้ามี training example น้อยเกินไป (สาเหตุของ overfitting โดยตรง) แต่เก็บข้อมูลใหม่ไม่ได้ ให้สร้างข้อมูลใหม่จากข้อมูลเดิมด้วยการแปลงแบบสุ่ม (เช่น หมุนภาพ, พลิกภาพ, ครอปภาพ).</p>
+<p>โมเดลจะเห็นความหลากหลายมากขึ้นในแต่ละ epoch ทำให้ทนทานต่อการเปลี่ยนตำแหน่ง/ทิศทาง/ขนาดของวัตถุในภาพมากขึ้น โดยไม่ต้องเก็บข้อมูลจริงเพิ่มเลย.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>Batch GD vs SGD</span></div>
+  <div class="qtext">ข้อได้เปรียบหลักของ Stochastic Gradient Descent (SGD) เมื่อเทียบกับ Batch Gradient Descent คืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">SGD ให้ทิศทางการอัปเดตที่แม่นยำกว่า Batch GD เสมอในทุก training example ที่ใช้</button>
+    <button class="opt" data-correct="false">SGD ไม่จำเป็นต้องมี learning rate α เลย เพราะคำนวณจากตัวอย่างเดียวโดยตรง</button>
+    <button class="opt" data-correct="true">SGD อัปเดตเร็วกว่ามาก (ใช้แค่ 1 ตัวอย่าง/ครั้ง) และ noise ช่วยให้หนี local minima ได้ดีกว่า</button>
+    <button class="opt" data-correct="false">SGD ใช้ได้กับ dataset ขนาดใหญ่มากเท่านั้น ไม่สามารถใช้กับ dataset ขนาดเล็กได้</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>RMSProp</span></div>
+  <div class="qtext">ใน RMSProp พารามิเตอร์ที่มี gradient ขนาดใหญ่ต่อเนื่องหลาย iteration จะได้รับผลอย่างไรต่อ effective learning rate ของมัน?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">Effective learning rate จะเพิ่มขึ้นเรื่อยๆ เพื่อเร่งให้พารามิเตอร์นั้นเปลี่ยนแปลงเร็วขึ้นอีก</button>
+    <button class="opt" data-correct="false">Effective learning rate จะไม่เปลี่ยนแปลงเลย เพราะ RMSProp ใช้ α คงที่เท่ากันทุกพารามิเตอร์</button>
+    <button class="opt" data-correct="false">พารามิเตอร์นั้นจะหยุดอัปเดตทันทีเพื่อป้องกันไม่ให้ gradient ใหญ่เกินไปจนระบบไม่เสถียร</button>
+    <button class="opt" data-correct="true">Effective learning rate จะลดลง เพราะ sᵢ (ค่าเฉลี่ยกำลังสองของ gradient) สูง ทำให้ตัวหารในสูตรมีค่ามากขึ้น</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>Max-Norm Regularization</span></div>
+  <div class="qtext">Max-Norm Regularization ต่างจาก L1/L2 Regularization อย่างไรในเชิงวิธีการ?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">Max-Norm ใช้ค่า λ เดียวกับ L2 ทุกประการ เพียงแต่เปลี่ยนชื่อเรียกให้ต่างออกไปเท่านั้น</button>
+    <button class="opt" data-correct="false">Max-Norm ใช้ได้เฉพาะกับ output layer เท่านั้น ในขณะที่ L1/L2 ใช้ได้กับทุก layer</button>
+    <button class="opt" data-correct="true">Max-Norm rescale w หลังทุก training step ตรงๆ ไม่ได้เพิ่ม penalty term ในcost function แบบ L1/L2</button>
+    <button class="opt" data-correct="false">Max-Norm ไม่สามารถใช้ร่วมกับ gradient descent ได้เลยในทุกสถานการณ์การเทรน</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Adam</span></div>
+  <div class="qtext">Adam Optimizer รวมแนวคิดของ optimizer สองตัวใดเข้าด้วยกัน?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">Momentum (ค่าเฉลี่ยของ gradient, vᵢ) และ RMSProp (ค่าเฉลี่ยของ gradient กำลังสอง, sᵢ)</button>
+    <button class="opt" data-correct="false">Batch Gradient Descent และ Stochastic Gradient Descent ในสัดส่วนที่เท่ากันเสมอ</button>
+    <button class="opt" data-correct="false">L1 Regularization และ L2 Regularization ผสมกันเป็นสูตรเดียวในการอัปเดตพารามิเตอร์</button>
+    <button class="opt" data-correct="false">Dropout และ Early Stopping ที่ทำงานร่วมกันในทุกขั้นตอนของการอัปเดต θ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควรอธิบายได้ว่าสูตร backprop ขยายจาก 2 layer เป็น L layer อย่างไร (แค่เปลี่ยน superscript ไม่เปลี่ยนโครงสร้าง), แยกความแตกต่าง Batch/Stochastic/Mini-batch GD ได้, ขยายสูตร EWA แบบ recursive ได้มือ, อธิบาย Momentum/RMSProp/Adam ได้ว่าแต่ละตัวแก้ปัญหาอะไร, และอธิบาย Dropout/Early Stopping/Max-Norm ในการแก้ overfitting ได้ — Lesson 5 จะใช้พื้นฐานนี้ต่อยอดไปที่ปัญหา vanishing/exploding gradient เต็มรูปแบบ.
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน Lecture4.pdf (35 หน้า) — เช็คว่าอ่านครบ</h2>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>ปก Part 2-Deep Neural Network</td><td>etc — บริบทวิชา</td></tr>
+<tr><td>2</td><td>Deep Neural Network — นิยาม</td><td>etc — เกริ่นก่อนหัวข้อ 1</td></tr>
+<tr><td>3</td><td>How Deep Neural Network Works — สูตร forward ทั่วไป</td><td>✓ หัวข้อ 1 (มีรูป)</td></tr>
+<tr><td>4</td><td>How Deep Neural Network Works (2) — สูตร backward ทั่วไป</td><td>✓ หัวข้อ 1 (มีรูป)</td></tr>
+<tr><td>5</td><td>Challenging in Training Deep Neural Networks — 4 ปัญหาหลัก</td><td>✓ หัวข้อ 2</td></tr>
+<tr><td>6</td><td>Faster Optimizers — เกริ่นภาพรวม</td><td>etc — เกริ่นก่อนหัวข้อ 3</td></tr>
+<tr><td>7</td><td>Batch Gradient Descent</td><td>✓ หัวข้อ 3 (มีรูป)</td></tr>
+<tr><td>8</td><td>Batch Gradient Descent (2) — Local Minima Problem</td><td>etc — ข้อจำกัดเสริมของ Batch GD</td></tr>
+<tr><td>9</td><td>Stochastic Gradient Descent</td><td>✓ หัวข้อ 3 (มีรูป)</td></tr>
+<tr><td>10</td><td>Stochastic Gradient Descent (2) — ข้อเสีย</td><td>✓ หัวข้อ 3 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>11</td><td>Mini-Batch Gradient Descent</td><td>✓ หัวข้อ 3 (มีรูป, คำนวณ 10,000÷1,000)</td></tr>
+<tr><td>12</td><td>Choosing an Appropriate Batch Size</td><td>✓ หัวข้อ 3 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>13</td><td>Cost in Training Mini-Batch Gradient Descent — กราฟเปรียบเทียบ</td><td>etc — ภาพเสริมเปรียบเทียบความนิ่งของ cost</td></tr>
+<tr><td>14</td><td>Gradient Descent with Momentum</td><td>✓ หัวข้อ 4 (มีรูป)</td></tr>
+<tr><td>15</td><td>Exponential Weighted Moving Averages — ขยายสูตร recursive</td><td>✓ หัวข้อ 4 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>16</td><td>Implementation — pseudocode ของ Momentum</td><td>etc — โค้ด/สูตร implementation (ตรงกับหัวข้อ 4)</td></tr>
+<tr><td>17–19</td><td>More on Momentum (1)-(3) — แก้ local minima, learning rate decay</td><td>etc — รายละเอียดเสริมของ Momentum</td></tr>
+<tr><td>20</td><td>Adaptive Learning Rate — เกริ่นก่อน RMSProp/Adam</td><td>etc — เกริ่นก่อนหัวข้อ 5</td></tr>
+<tr><td>21</td><td>RMSprop</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>22</td><td>Adam</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>23</td><td>Bias Correction</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>24</td><td>Experiments — เปรียบเทียบ Mini-Batch/Momentum/Adam</td><td>etc — ผลการทดลองเปรียบเทียบ (เชิงคุณภาพ)</td></tr>
+<tr><td>25</td><td>AdamW — decoupled weight decay</td><td>etc — ส่วนขยายของ Adam นอกขอบเขต quiz หลัก</td></tr>
+<tr><td>26</td><td>Overfitting Handling Strategies — เกริ่นภาพรวม</td><td>etc — เกริ่นก่อนหัวข้อ 6</td></tr>
+<tr><td>27</td><td>Regularization — L1/L2/Max-Norm</td><td>✓ หัวข้อ 6 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>28</td><td>Dropout</td><td>✓ หัวข้อ 6 (มีรูป)</td></tr>
+<tr><td>29</td><td>Dropout (2) — Inverted Dropout scaling</td><td>✓ หัวข้อ 6 (คำนวณในเนื้อหา)</td></tr>
+<tr><td>30</td><td>Dropout (3) — debugging ด้วยการปิด dropout ชั่วคราว</td><td>etc — เทคนิค debugging เสริม</td></tr>
+<tr><td>31</td><td>Dropout Implementation — forward/backward pseudocode</td><td>etc — รายละเอียด implementation</td></tr>
+<tr><td>32</td><td>Early Stopping</td><td>✓ หัวข้อ 6 (มีรูป)</td></tr>
+<tr><td>33</td><td>Early Stopping (2) — ข้อจำกัด</td><td>etc — ข้อจำกัดเสริมของ Early Stopping</td></tr>
+<tr><td>34</td><td>Data Augmentation</td><td>✓ หัวข้อ 7</td></tr>
+<tr><td>35</td><td>Homework 2</td><td>etc — การบ้าน ไม่ใช่เนื้อหาสอบ</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0003-cost-function-and-backpropagation.html">← Lesson 3: Backpropagation</a></span>
+  <span><a href="0005-vanishing-gradients-and-initialization.html">Lesson 5: Vanishing Gradients &amp; Init →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

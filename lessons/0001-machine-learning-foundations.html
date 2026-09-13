@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Lesson 1: Machine Learning Foundations</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span>Lesson 1 / 5 · ML Foundations</span>
+  <span><a href="0002-neural-network-basics.html">Lesson 2: Neural Network Basics →</a></span>
+</nav>
+
+<p class="kicker">Lecture1.pdf · 2603520 Deep Learning</p>
+<h1>Machine Learning Foundations: การคำนวณที่ Deep Learning ทุกบทใช้ต่อ</h1>
+
+<p>Lecture นี้เป็นการปูพื้น ML ก่อนเข้า Deep Learning จริง — แนวคิด <strong>cost function, gradient descent, sigmoid, softmax, regularization</strong> ที่เรียนในบทนี้จะถูกใช้ซ้ำ "เหมือนเดิมทุกตัวอักษร" ในทุก Lecture ถัดไป (แค่เปลี่ยนจาก 1 node เป็นหลาย node/หลาย layer) เพราะฉะนั้นถ้าคำนวณมือได้ในบทนี้ Lecture 2-5 คือแค่ต่อยอดสัญกรณ์ ไม่ใช่ต่อยอดหลักการ.</p>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+เนื้อหาบทนี้อิง <a href="https://www.coursera.org/learn/machine-learning" target="_blank" rel="noopener">Andrew Ng, Machine Learning (Coursera)</a> เกือบทั้งหมด (สัญกรณ์ θ, gradient descent, ฯลฯ) — ถ้าเคยเรียนคอร์สนี้มาก่อนจะคุ้นสัญกรณ์ทันที.
+</div>
+
+<h2>1. ทำไม Deep Learning ถึง "ทรงพลัง"? สองเหตุผลจากสไลด์</h2>
+<p>ก่อนเข้าเนื้อหาคำนวณ สไลด์เกริ่นด้วยเหตุผล 2 อย่างว่าทำไม Deep Learning เอาชนะ Machine Learning แบบดั้งเดิมได้:</p>
+<ul>
+<li><strong>Scale for complex tasks</strong> — งานที่ต้องการ decision boundary แบบไม่เป็นเส้นตรง หรือมี input features จำนวนมาก (เช่นภาพ 28×28 พิกเซล = 784 features ต่อภาพ)</li>
+<li><strong>Automate feature engineering</strong> — เรียนรู้ features จากข้อมูลเองโดยไม่ต้องมีมนุษย์มานั่งออกแบบ feature ทีละตัว</li>
+</ul>
+
+<figure>
+<img src="../assets/slides/dl1-p11-ai-ml-dl-timeline.png" alt="Timeline of AI, ML, and DL milestones from 1943 McCulloch-Pitts neuron model, through 1989 LeCun's handwritten digit CNN, 2010 deep learning takeoff, 2014 GANs, to 2017 Transformer and the explosion of LLM/multimodal model parameter counts">
+<figcaption>Slide: AI + ML + DL Timeline (Lecture1.pdf, p.11)</figcaption>
+</figure>
+<p>เส้นเวลานี้สำคัญเพราะบอกว่า "backpropagation" (ที่จะเรียนละเอียดใน Lesson 3) ไม่ใช่ของใหม่ — Yann LeCun ใช้มันจับคู่กับ CNN สำเร็จตั้งแต่ปี 1989 เพื่ออ่านลายมือให้ธนาคาร.</p>
+<p>แต่ Deep Learning ระเบิดความนิยมจริงในปี 2010 เป็นต้นมา เพราะสองเงื่อนไขที่ขาดไปก่อนหน้านั้นมาครบพร้อมกัน: ปริมาณข้อมูล (data) และพลังประมวลผล (GPU).</p>
+<p>สังเกตกราฟด้านขวาที่จำนวนพารามิเตอร์ของโมเดล LLM/multimodal (แถบสีส้ม/ชมพู) พุ่งขึ้นแบบ exponential หลังปี 2017 (Transformer) เพราะทั้งสองเงื่อนไขนี้เติบโตต่อเนื่อง.</p>
+
+<figure>
+<img src="../assets/slides/dl1-p18-tensorflow-playground.png" alt="Screenshot of TensorFlow Playground, an interactive browser tool for visualizing how a neural network's decision boundary changes as you adjust layers, neurons, and activation functions on toy datasets">
+<figcaption>Slide: TensorFlow Playground (Lecture1.pdf, p.18) — playground.tensorflow.org</figcaption>
+</figure>
+<p>เครื่องมือนี้ควรลองเล่นจริงคู่กับ Lesson 2-3: มันให้ปรับจำนวน hidden layer/node แล้วเห็น decision boundary เปลี่ยนสดๆ — เป็นภาพเดียวกับที่จะพิสูจน์ด้วยมือทีหลังว่าทำไม node ยิ่งมาก decision boundary ยิ่งซับซ้อนขึ้นได้.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Why DL</span></div>
+  <div class="qtext">เหตุผลหลักข้อหนึ่งที่สไลด์ให้ไว้ว่าทำไม Deep Learning จัดการงานที่มี input features จำนวนมาก (เช่น ภาพ) ได้ดีกว่าวิธีดั้งเดิม คืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ Deep Learning ใช้ฟังก์ชัน cost function ที่แตกต่างจาก Machine Learning โดยพื้นฐาน</button>
+    <button class="opt" data-correct="false">เพราะ Deep Learning ไม่จำเป็นต้องมี training data เลยก่อนเริ่มเรียนรู้อะไรทั้งสิ้น</button>
+    <button class="opt" data-correct="true">เพราะ Deep Learning เรียนรู้ features จากข้อมูลเองอัตโนมัติ ไม่ต้องให้มนุษย์ออกแบบ feature เอง</button>
+    <button class="opt" data-correct="false">เพราะ Deep Learning รับประกันว่าจะเจอ global minimum ของ cost function เสมอทุกครั้ง</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>2. Linear Regression: จากจุดสองจุดสู่สมการเส้นตรง</h2>
+<p>สไลด์เริ่มด้วยตัวอย่างที่ทำมือได้จริง: มีจุดข้อมูล (0,0) และ (3,3) แล้วถามว่า hypothesis function <code>h_θ(x) = θ₀ + θ₁x</code> ของเส้นนี้คืออะไร.</p>
+
+<figure>
+<img src="../assets/slides/dl1-p28-model-representation-slope-calc.png" alt="Linear regression model representation slide: a line through points (0,0) and (3,3) with slope calculated as (3-0)/(3-0)=1 giving h(x)=0+1x=x, plus a housing price table with size, bedroom count, and price columns extending the hypothesis to multiple variables">
+<figcaption>Slide: Model Representation — slope จากจุดจริง (Lecture1.pdf, p.28)</figcaption>
+</figure>
+<p>คำนวณตรงไปตรงมา: <code>θ₁ (slope) = Δy/Δx = (3−0)/(3−0) = 1</code> และเพราะเส้นผ่าน (0,0) จึง <code>θ₀ (y-intercept) = 0</code> ดังนั้น <code>h_θ(x) = 0 + 1·x = x</code>.</p>
+<p>สมการนี้ทำนายว่า y เท่ากับ x เป๊ะทุกจุด (สังเกตจาก scatter plot ตรงกลางสไลด์ที่จุดข้อมูลกระจายรอบเส้น <code>y=x</code>).</p>
+<p>พอขยายจาก 1 ตัวแปรไปหลายตัวแปร (เช่น size x₁ และจำนวนห้องนอน x₂) สมการก็แค่บวก term เพิ่มเป็น <code>h_θ(x) = θ₀+θ₁x₁+θ₂x₂+…+θₙxₙ</code> — โครงสร้างเดียวกันทุกประการ แค่จำนวนตัวแปรมากขึ้น.</p>
+
+<h2>3. Cost Function &amp; Gradient Descent: ทำไมสูตร θ := θ − α·∂J/∂θ ถึง "ลู่เข้า" หาค่าต่ำสุด</h2>
+<p>Cost function สำหรับ linear regression คือ Mean Squared Error: วัดว่าเส้นที่ทำนายห่างจากจุดข้อมูลจริงแค่ไหน (ยกกำลังสองเพื่อไม่ให้ค่าบวก/ลบหักลบกันเอง) เป้าหมายคือหา θ₀,θ₁ ที่ทำให้ J(θ₀,θ₁) น้อยที่สุด.</p>
+
+<figure>
+<img src="../assets/slides/dl1-p29-cost-function-bowl.png" alt="3D bowl-shaped surface plot of cost function J(theta0, theta1) for linear regression, showing a single global minimum at the bottom of the bowl">
+<figcaption>Slide: Cost Function J(θ₀,θ₁) เป็นรูปชามคว่ำ (Lecture1.pdf, p.29)</figcaption>
+</figure>
+<p>รูปชามนี้สำคัญ: linear regression's cost function เป็น <em>convex</em> (นูนแบบชามเดียว ไม่มีหลุมหลอก) เพราะฉะนั้นไม่ว่าจะเริ่ม θ ที่ไหน gradient descent ก็ไต่ลงไปเจอจุดต่ำสุดจุดเดียวได้เสมอ.</p>
+<p>นี่คือสิ่งที่ <em>ต่างจาก</em> neural network ในบทถัดไปที่ cost function ไม่นูน (มีหลุมหลอกหลายจุด อย่างที่ Lesson 3 จะพูดถึง).</p>
+
+<figure>
+<img src="../assets/slides/dl1-p31-behind-gradient-descent-iterations.png" alt="Two 1D slices of J(theta1): left panel shows a point on the left/steep side of the parabola where the tangent slope is negative, so subtracting alpha times a negative derivative moves theta1 rightward toward the minimum over two iterations; right panel shows a point on the right side where the tangent slope is positive, so theta1 moves leftward toward the minimum">
+<figcaption>Slide: Behind Gradient Descent — ทำไมสูตรลบเสมอถึง "เดินเข้า" หาจุดต่ำสุดได้ทั้งสองทาง (Lecture1.pdf, p.31)</figcaption>
+</figure>
+<p>นี่คือกลไกที่คำนวณตามได้ทีละก้าว:</p>
+<ul>
+<li><strong>เริ่มที่ฝั่งซ้ายของชาม</strong> (<code>θ₁'</code>, กราฟซ้าย) — เส้นสัมผัส (สีแดง) มีความชัน <strong>เป็นลบ</strong> เพราะกราฟกำลังลาดลง ดังนั้น <code>∂J/∂θ &lt; 0</code> สูตรอัปเดต <code>θ₁ := θ₁ − α·(ค่าลบ)</code> จะเท่ากับ <code>θ₁ + (ค่าบวก)</code> คือ θ₁ <em>เพิ่มขึ้น</em> เคลื่อนไปทางขวาเข้าใกล้จุดต่ำสุด (<code>θ₁''</code>)</li>
+<li><strong>เริ่มที่ฝั่งขวาของชาม</strong> (กราฟขวา) — ความชันเส้นสัมผัสเป็น <strong>บวก</strong> สูตรจะกลายเป็น <code>θ₁ − (ค่าบวก)</code> คือ θ₁ <em>ลดลง</em> เคลื่อนไปทางซ้ายเข้าใกล้จุดต่ำสุดเหมือนกัน</li>
+</ul>
+<p>เครื่องหมายลบหน้า α ทำหน้าที่ "กลับทิศให้เข้าหาจุดต่ำสุดเสมอ" ไม่ว่าจะเริ่มจากทางไหน นี่คือเหตุผลเชิงคณิตศาสตร์ที่สูตร gradient descent ใช้เครื่องหมายลบ ไม่ใช่บวก.</p>
+
+<figure>
+<img src="../assets/slides/dl1-p32-learning-rate-too-small-too-large.png" alt="Two plots of gradient descent trajectories on a bowl-shaped cost surface: with a small learning rate alpha, steps are tiny and convergence is very slow; with a large learning rate alpha, steps overshoot and can bounce back and forth or even diverge away from the minimum">
+<figcaption>Slide: Learning Rate α เล็กเกินไป vs ใหญ่เกินไป (Lecture1.pdf, p.32)</figcaption>
+</figure>
+<p>ขนาดของ α ควบคุมว่า "ก้าวแต่ละครั้งยาวแค่ไหน":</p>
+<ul>
+<li><strong>α เล็กเกินไป</strong> — ต้อง iterate เยอะมากกว่าจะถึงจุดต่ำสุด (ช้าแต่ปลอดภัย)</li>
+<li><strong>α ใหญ่เกินไป</strong> — อาจก้าวข้ามจุดต่ำสุดไปเลย แล้วแฉลบไปมา (oscillate) หรือแย่กว่านั้นคือ diverge (ค่า J สูงขึ้นเรื่อยๆ ไม่ลู่เข้า)</li>
+</ul>
+<p>วิธีตรวจสอบจริงคือดูกราฟ <code>J(θ)</code> เทียบกับจำนวน iteration: ถ้า J ลดลงเรื่อยๆ แปลว่า α เหมาะสม ถ้า J แฉลบขึ้นๆลงๆหรือพุ่งขึ้น (Cost Overshoot) แปลว่า α ใหญ่เกินไป ต้องลดค่า α ลง.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>Gradient Descent</span></div>
+  <div class="qtext">ที่จุดหนึ่งบนกราฟ J(θ₁) เส้นสัมผัส (slope ของ ∂J/∂θ₁) มีค่าเป็นบวก สูตร θ₁ := θ₁ − α·∂J/∂θ₁ จะทำให้ θ₁ เปลี่ยนแปลงอย่างไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">θ₁ จะเพิ่มขึ้น เพราะ α คูณกับค่าบวกทำให้ผลลบมีค่ามากขึ้นกว่าเดิมเสมอ</button>
+    <button class="opt" data-correct="false">θ₁ จะไม่เปลี่ยนแปลง เพราะ slope บวกหมายถึงอยู่ที่จุดต่ำสุดแล้วพอดี</button>
+    <button class="opt" data-correct="true">θ₁ จะลดลง เพราะลบค่าบวกออกจาก θ₁ เดิม ทำให้เคลื่อนเข้าใกล้จุดต่ำสุดทางซ้าย</button>
+    <button class="opt" data-correct="false">θ₁ จะแปรผันตรงกับค่า J(θ₁) ณ จุดนั้นโดยตรง ไม่เกี่ยวกับเครื่องหมาย slope</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>4. Feature Scaling: ทำไมต้อง Normalize ก่อนเทรน</h2>
+<p>ปัญหาคือถ้า feature หนึ่งมีสเกลใหญ่มาก (เช่นขนาดบ้านเป็น ft² อยู่ในช่วง 1,000-5,000) แต่อีก feature เล็กมาก (จำนวนห้องนอนอยู่ในช่วง 1-5) contour ของ cost function จะยืดเป็นวงรีแคบยาว ทำให้ gradient descent ต้อง zig-zag เดินอ้อมนานกว่าจะถึงจุดต่ำสุด.</p>
+<p>การ normalize ให้ทุก feature อยู่สเกลใกล้เคียงกันช่วยให้ contour กลมขึ้นและ gradient descent เดินตรงเข้าจุดต่ำสุดได้เร็วขึ้น.</p>
+
+<figure>
+<img src="../assets/slides/dl1-p35-min-max-normalization-calc.png" alt="Min-max normalization formula X_new = (X - min(X)) / (max(X) - min(X)) applied to a housing table: size feature x1 in range [1000,5000] with value 3000 normalizes to (3000-1000)/(5000-1000)=0.5, and bedroom count feature x2 in range [1,5] with value 3 also normalizes to (3-1)/(5-1)=0.5">
+<figcaption>Slide: Min-Max Normalization — สองค่าที่สเกลต่างกันมาก normalize แล้วได้ 0.5 เท่ากัน (Lecture1.pdf, p.35)</figcaption>
+</figure>
+<p>ตัวอย่างนี้แสดงประเด็นสำคัญ:</p>
+<ul>
+<li><code>size = 3000</code> อยู่ในช่วง [1000,5000] ให้ <code>X_new = (3000−1000)/(5000−1000) = 2000/4000 = 0.5</code></li>
+<li><code>#bedroom = 3</code> อยู่ในช่วง [1,5] ให้ <code>X_new = (3−1)/(5−1) = 2/4 = 0.5</code></li>
+</ul>
+<p>สังเกตว่าค่าตั้งต้นต่างกันมหาศาล (3000 vs 3) แต่ normalize แล้วได้ 0.5 เท่ากันทั้งคู่ เพราะทั้งสองค่าอยู่ "ตำแหน่งกึ่งกลางของช่วงตัวเองพอดี" (3000 อยู่กึ่งกลาง [1000,5000] และ 3 อยู่กึ่งกลาง [1,5]).</p>
+<p>นี่คือสิ่งที่ min-max normalization ทำ: ไม่สนใจสเกลเดิม สนใจแค่ "ตำแหน่งสัมพัทธ์ภายในช่วงของตัวเอง" ทำให้ทุก feature อยู่ในช่วง [0,1] เท่ากันหมดก่อนเข้า gradient descent.</p>
+
+<h2>5. Logistic Regression &amp; Decision Boundary: จาก θ ตัวเลขจริง สู่เส้นแบ่งที่มองเห็น</h2>
+<p>Logistic Regression ใช้ sigmoid function <code>g(z) = 1/(1+e^(−z))</code> บีบผลลัพธ์ให้อยู่ในช่วง [0,1] แล้วตีความเป็นความน่าจะเป็น จุดตัดสินคือ predict <code>y=1</code> เมื่อ <code>θ₀+θ₁x₁+θ₂x₂ &gt; 0</code> (เพราะ sigmoid(0)=0.5 พอดี คือจุดแบ่งครึ่ง) สไลด์ให้ค่า θ จริงมาคำนวณสองตัวอย่าง:</p>
+
+<figure>
+<img src="../assets/slides/dl1-p43-decision-boundary-linear-nonlinear-numeric.png" alt="Two decision boundary plots with actual theta values: left plot uses theta0=0, theta1=-1, theta2=1 giving decision boundary x2=x1 (a diagonal line) separating Sold (blue) and Available (red) points; right plot uses theta0=-4, theta1=1, theta2=1 on squared features giving a circular decision boundary of radius 2 (x1^2+x2^2=4) with Available points inside the circle and Sold points outside">
+<figcaption>Slide: Decision Boundary จากค่า θ จริง — เส้นตรงและวงกลม (Lecture1.pdf, p.43)</figcaption>
+</figure>
+<p><strong>ตัวอย่างซ้าย (linear):</strong> θ₀=0, θ₁=−1, θ₂=1 ทดสอบจุด x₁=100 (size), x₂=90 (width): แทนค่า <code>θ₀+θ₁x₁+θ₂x₂ = 0 + (−1)(100) + (1)(90) = −100+90 = −10</code>.</p>
+<p>เพราะ −10 ไม่มากกว่า 0 โมเดลจึงทำนาย <code>y=0</code> คือ "Available" (ไม่ใช่ "Sold") — สังเกตว่าเส้นแบ่ง <code>x₂ = x₁</code> พอดี (จาก −x₁+x₂=0) ตรงกับเส้นทึบในกราฟที่แบ่งจุดสีน้ำเงิน (Sold ซึ่งอยู่เหนือเส้น x₂&gt;x₁) จากจุดสีแดง (Available ซึ่งอยู่ใต้เส้น x₂&lt;x₁) พอดี.</p>
+<p><strong>ตัวอย่างขวา (non-linear):</strong> θ₀=−4, θ₁=1, θ₂=1 บน feature ที่ยกกำลังสอง (x₁², x₂²) ทดสอบจุด x₁=0, x₂=0: แทนค่า <code>θ₀+θ₁x₁²+θ₂x₂² = −4+0+0 = −4</code> ไม่ ≥ 0 จึงทำนาย <code>y=0</code> คือ "Available".</p>
+<p>เส้นแบ่งคือ <code>x₁²+x₂² = 4</code> ซึ่งคือวงกลมรัศมี 2 (เพราะ 4 = 2²) จุดใดๆที่อยู่ <em>ใน</em> วงกลมนี้ (รวมจุด (0,0) ที่ทดสอบ) จะได้ y=0 ("Available", จุดสีแดงในกราฟ) จุดที่อยู่ <em>นอก</em> วงกลมจะได้ y=1 ("Sold", จุดสีน้ำเงิน) — นี่คือตัวอย่างที่เห็นภาพชัดว่าแค่เปลี่ยน feature จาก x เป็น x² ก็ทำให้ decision boundary ที่เป็นเส้นตรงกลายเป็นวงกลมได้ โดยที่สมการยังเป็น "linear ใน θ" เหมือนเดิม.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>Decision Boundary</span></div>
+  <div class="qtext">ให้ θ₀=0, θ₁=−1, θ₂=1 และทำนาย y=1 ("Sold") เมื่อ θ₀+θ₁x₁+θ₂x₂ &gt; 0 ที่จุด x₁=100, x₂=90 โมเดลทำนายว่าอะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">y=0 ("Available") เพราะ 0+(−1)(100)+(1)(90) = −10 ซึ่งไม่มากกว่า 0</button>
+    <button class="opt" data-correct="false">y=1 ("Sold") เพราะ x₁ มีค่ามากกว่า x₂ ทำให้ผลรวมเป็นบวก</button>
+    <button class="opt" data-correct="false">y=1 ("Sold") เพราะ θ₂ เป็นค่าบวกจึงมีน้ำหนักเหนือกว่า θ₁ เสมอ</button>
+    <button class="opt" data-correct="false">ทำนายไม่ได้ เพราะต้องมีค่า θ₀ ที่ไม่เป็นศูนย์ก่อนจึงจะคำนวณได้</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>Decision Boundary</span></div>
+  <div class="qtext">Non-linear decision boundary จาก θ₀=−4, θ₁=1, θ₂=1 บน x₁²,x₂² (ทำนาย y=1 เมื่อ θ₀+θ₁x₁²+θ₂x₂² ≥ 0) มีรูปทรงและขนาดอย่างไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">วงกลมรัศมี 2 รอบจุดกำเนิด เพราะเส้นแบ่งคือ x₁²+x₂²=4</button>
+    <button class="opt" data-correct="false">เส้นตรงที่ผ่านจุดกำเนิด (0,0) ทำมุม 45 องศากับแกน x₁</button>
+    <button class="opt" data-correct="false">วงรีที่มีแกนยาวตามแกน x₁ เพราะสัมประสิทธิ์ θ₁ ต่างจาก θ₂</button>
+    <button class="opt" data-correct="false">พาราโบลาเปิดขึ้นที่มีจุดยอดอยู่ที่ (0,−4) ไม่ใช่รูปวงกลมปิด</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>6. Cost Function ของ Classification: ทำไมใช้ Log Loss แทน MSE</h2>
+<p>ถ้าใช้ MSE (จาก linear regression) ตรงกับ sigmoid function จะได้ cost function ที่ไม่นูน (non-convex, มีหลุมหลอกหลายจุด) ทำให้ gradient descent ติดหลุมได้ สไลด์เลยใช้ <strong>Cross-Entropy Loss</strong> แทน: <code>Cost = −y·log(h(x)) − (1−y)·log(1−h(x))</code>.</p>
+<p>ฟังก์ชันนี้มีสมบัติ "ลงโทษหนักเมื่อทำนายผิดมั่นใจ":</p>
+<ul>
+<li>ถ้า y=1 จริง แต่โมเดลทำนาย h(x)→0 (มั่นใจว่าไม่ใช่) → cost พุ่งไปที่ ∞</li>
+<li>ถ้า y=1 และ h(x)→1 (ทำนายถูกและมั่นใจ) → cost เข้าใกล้ 0 พอดี</li>
+</ul>
+<p>ฟังก์ชันนี้แหละที่ทำให้ cost function ของ logistic regression กลับมานูนเหมือน linear regression และ gradient descent ใช้สูตรอัปเดตหน้าตาเดียวกันได้ (<code>θⱼ := θⱼ − α·(1/m)Σ(h(x⁽ⁱ⁾)−y⁽ⁱ⁾)x⁽ⁱ⁾</code>) ทั้งที่ cost function ต้นทางหน้าตาต่างกันมาก — เป็นเพราะอนุพันธ์ของ cross-entropy กับ sigmoid ลดรูปมาเจอกันที่สูตรเดียวกันเป๊ะ.</p>
+
+<h2>7. Metrics: Confusion Matrix, ROC/AUC</h2>
+<figure>
+<img src="../assets/slides/dl1-p46-confusion-matrix-metrics.png" alt="Confusion matrix diagram showing True Positive, False Positive, True Negative, False Negative quadrants, with formulas for accuracy = (TP+TN)/(FP+FN+TP+TN), precision, recall, and F1 score, plus a note on the precision-recall trade-off">
+<figcaption>Slide: Confusion Matrix และ Metrics (Lecture1.pdf, p.46)</figcaption>
+</figure>
+<p>ลองแทนตัวเลขสมมติให้จำสูตรได้แม่น: ถ้าทำนาย 100 กรณีได้ TP=40, TN=45, FP=5, FN=10:</p>
+<ul>
+<li><code>accuracy = (40+45)/(40+45+5+10) = 85/100 = 0.85</code></li>
+<li><code>precision = TP/(TP+FP) = 40/45 ≈ 0.89</code> (จากที่ทำนายว่าเป็นบวก 45 ครั้ง ถูกจริง 40)</li>
+<li><code>recall = TP/(TP+FN) = 40/50 = 0.80</code> (จากของจริงที่เป็นบวก 50 ครั้ง จับได้ 40)</li>
+</ul>
+<p>สังเกต trade-off: ถ้าอยากได้ recall สูงขึ้น (จับ positive ให้ครบ) มักต้องยอมให้ precision ต่ำลง (ทำนายมั่วเป็นบวกมากขึ้น) และในทางกลับกัน.</p>
+
+<figure>
+<img src="../assets/slides/dl1-p47-roc-curve.png" alt="ROC curve plot with True Positive Rate on the y-axis and False Positive Rate on the x-axis, showing a curve above the diagonal reference line, with the area under the curve (AUC) as a single metric summarizing classifier performance across all thresholds">
+<figcaption>Slide: ROC Curve — TPR vs FPR ที่ threshold ต่างๆ (Lecture1.pdf, p.47)</figcaption>
+</figure>
+<p>จุดสำคัญคือ ROC ไม่ใช่ metric ค่าเดียวแบบ accuracy — มันคือกราฟที่ไล่ threshold การตัดสินใจ (ปกติ 0.5) ไปเรื่อยๆแล้ววาด <code>TPR = TP/(TP+FN)</code> กับ <code>FPR = FP/(FP+TN)</code> ที่ทุก threshold.</p>
+<p>เส้นทะแยง 45° คือ "โมเดลสุ่มเดา" ยิ่งเส้นโค้งของโมเดลโก่งขึ้นไปทางมุมซ้ายบนมากเท่าไหร่ (พื้นที่ใต้กราฟ หรือ AUC เข้าใกล้ 1) โมเดลยิ่งแยกสอง class ได้ดี.</p>
+
+<h2>8. Multiclass: One-vs-Rest และ Softmax</h2>
+<figure>
+<img src="../assets/slides/dl1-p49-one-vs-rest-scatter.png" alt="Three scatter plots side by side, each showing the same three-class dataset but with one class highlighted against the other two combined into a single rest class, illustrating how one-vs-rest trains one binary classifier per class">
+<figcaption>Slide: One versus Rest — เทรน binary classifier แยกทีละ class (Lecture1.pdf, p.49)</figcaption>
+</figure>
+<p>One-vs-Rest เทรน logistic regression k ตัว (k = จำนวน class) แต่ละตัวตอบคำถาม "เป็น class นี้ หรือไม่เป็น" แล้วเทียบ h⁽¹⁾(x), h⁽²⁾(x), h⁽³⁾(x) เลือก class ที่ค่าความน่าจะเป็นสูงสุด ข้อเสียคือต้องเทรนโมเดลแยกกัน k ตัว.</p>
+<p><strong>Softmax</strong> แก้ปัญหานี้ด้วยโมเดลเดียว: <code>aᵢ = e^(zᵢ) / Σₙ e^(zₙ)</code> ลองคำนวณตัวอย่างเล็กๆ: ถ้า 3 class มี logit ก่อน softmax เป็น z=[2, 1, 0]:</p>
+<ul>
+<li><code>e²≈7.39, e¹≈2.72, e⁰=1</code> รวมกัน ≈ 11.11</li>
+<li><code>probability = [7.39/11.11, 2.72/11.11, 1/11.11] ≈ [0.665, 0.245, 0.090]</code> รวมกันได้ 1.0 พอดี</li>
+</ul>
+<p>นี่คือเหตุผลที่ใช้ exponential แทนสัดส่วนตรงๆ: มันขยายค่าที่มากที่สุดให้เด่นชัดขึ้น (0.665 vs สัดส่วนดิบ 2/3≈0.5 ถ้าใช้สัดส่วนตรงๆ) และรับ logit ลบได้ด้วย (ต่าง sigmoid ตรงๆที่ map แค่ [0,1] ไม่รองรับผลรวม).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>Softmax</span></div>
+  <div class="qtext">เหตุผลหลักที่ softmax ใช้ e^z (exponential) แทนการเอาค่า z มาหารด้วยผลรวมตรงๆ (เช่น zᵢ/Σzₙ) คืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ e^z คำนวณได้เร็วกว่าการหารธรรมดาบนหน่วยประมวลผล GPU ทุกกรณีเสมอ</button>
+    <button class="opt" data-correct="true">เพราะ z อาจติดลบ (หารตรงๆใช้ไม่ได้) และ eᶻ ยังขยายค่าที่มากที่สุดให้เด่นชัดขึ้นด้วย</button>
+    <button class="opt" data-correct="false">เพราะ z อาจมีค่าเกิน 1 การหารตรงๆจะทำให้ผลรวมมากกว่า 100% เท่านั้นเสมอไป</button>
+    <button class="opt" data-correct="false">เพราะ e^z ทำให้ผลลัพธ์ทุก class มีค่าเท่ากันเสมอ ไม่ว่า z เดิมจะต่างกันแค่ไหนก็ตาม</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>9. Model Evaluation: Train/Validation/Test และ k-fold Cross Validation</h2>
+<figure>
+<img src="../assets/slides/dl1-p53-3fold-cross-validation-steps.png" alt="Step-by-step diagram of 3-fold cross validation: an 80-20 train-test split, then the 80% training portion split into 3 folds, with each fold held out once as validation while the model trains on the other two folds, and performance averaged across the three runs">
+<figcaption>Slide: ตัวอย่าง 3-fold Cross Validation ทีละขั้น (Lecture1.pdf, p.53)</figcaption>
+</figure>
+<p>ไล่ตามขั้นตอนจริงในสไลด์:</p>
+<ol>
+<li>แบ่งข้อมูลทั้งหมด 80-20 เป็น train/test ก่อน</li>
+<li>เอา 80% train มาแบ่งเป็น 3 fold เท่าๆกัน</li>
+<li>รอบที่ 1: เก็บ Fold 1 ไว้ทดสอบ เทรนด้วย Fold 2+3 วัดผลบน Fold 1</li>
+<li>รอบที่ 2: เก็บ Fold 2 ไว้ทดสอบ เทรนด้วย Fold 1+3</li>
+<li>รอบที่ 3: เก็บ Fold 3 ไว้ทดสอบ เทรนด้วย Fold 1+2</li>
+<li>เฉลี่ยผลทั้ง 3 รอบเป็นคะแนนสุดท้ายของ hyperparameter ชุดนั้น แล้วเลือกชุด hyperparameter ที่ให้คะแนนเฉลี่ยดีที่สุด</li>
+</ol>
+<p>จุดสำคัญคือ<strong>ข้อมูล test 20% ที่กันไว้ตอนแรกจะไม่ถูกแตะจนกว่าจะเลือก hyperparameter ได้แล้ว</strong> ป้องกันไม่ให้ตัวเลข test ถูก "มองเห็น" ระหว่างเลือกโมเดล.</p>
+
+<h2>10. Bias vs Variance: วินิจฉัยจากกราฟ Jtrain กับ Jcv</h2>
+<figure>
+<img src="../assets/slides/dl1-p55-bias-variance-vs-polynomial-degree.png" alt="Plot of Jtrain (red, decreasing) and Jcv (green, U-shaped) against polynomial degree d, with a box highlighting the high-bias region at low d where both curves are high, and another box highlighting the high-variance region at high d where Jtrain is low but Jcv is high; below, three fitted curves show underfitting (degree 1), a good fit (degree 2), and overfitting (degree 4, a wiggly curve through every point)">
+<figcaption>Slide: วินิจฉัย High Bias vs High Variance จาก Jtrain, Jcv (Lecture1.pdf, p.55)</figcaption>
+</figure>
+<p>อ่านกราฟนี้เป็นกฎการวินิจฉัย 2 ข้อ:</p>
+<ul>
+<li><strong>High Bias (underfitting)</strong> เกิดที่ d น้อย (โมเดลง่ายเกินไป เช่น <code>h(x)=θ₀+θ₁x</code> เส้นตรงเส้นเดียว) — ทั้ง <code>Jtrain</code> (สีแดง) และ <code>Jcv</code> (สีเขียว) สูงทั้งคู่ เพราะโมเดลง่ายเกินกว่าจะ fit ได้ดีทั้งข้อมูล train และ validation</li>
+<li><strong>High Variance (overfitting)</strong> เกิดที่ d มาก (เช่น <code>h(x)=θ₀+θ₁x+θ₂x²+θ₃x³+θ₄x⁴</code> เส้นหยักไปตามทุกจุด) — <code>Jtrain</code> ต่ำมาก (ท่องจำ training data ได้แม่นยำ) แต่ <code>Jcv</code> สูง (ทำนายข้อมูลใหม่แย่ เพราะไปท่องจำ noise ของ train มาด้วย)</li>
+</ul>
+<p>จุดที่ดีที่สุดคือ d ตรงกลางกราฟที่ทั้งสองเส้นต่ำพร้อมกัน (ในภาพคือ d=2, เส้นพาราโบลาที่ fit จุดข้อมูลได้พอดีโดยไม่หยักตามทุกจุด).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>Bias vs Variance</span></div>
+  <div class="qtext">ถ้าพบว่า Jtrain(θ) ต่ำมาก แต่ Jcv(θ) สูงมาก ควรวินิจฉัยปัญหาของโมเดลว่าอะไร และวิธีแก้ที่เหมาะสมที่สุดคือข้อใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">High Variance (overfitting) — ควรลด degree polynomial, ลด feature, หรือเพิ่ม regularization</button>
+    <button class="opt" data-correct="false">High Bias (underfitting) — ควรเพิ่ม degree ของ polynomial ให้ซับซ้อนขึ้นอีกมาก</button>
+    <button class="opt" data-correct="false">โมเดล fit ได้สมบูรณ์แบบแล้วในทุกกรณี ไม่ต้องแก้ไขอะไรเพิ่มเติมอีกเลย</button>
+    <button class="opt" data-correct="false">เป็นปัญหาที่ training set กับ validation set มาจาก distribution คนละชุดกันเท่านั้น</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>11. Regularization: บีบ θ ให้เล็กโดยไม่ทิ้ง feature</h2>
+<figure>
+<img src="../assets/slides/dl1-p57-overcome-overfitting-l2.png" alt="Diagram comparing high bias underfitting, high variance overfitting, and the right-fit model achieved through L2 regularization, which adds a penalty term proportional to the sum of squared parameters to the cost function">
+<figcaption>Slide: แก้ Overfitting ด้วย L2 Regularization (Lecture1.pdf, p.57)</figcaption>
+</figure>
+<p>แทนที่จะตัด feature ทิ้ง (ซึ่งเสียข้อมูลไปเลย) L2 regularization เพิ่ม penalty term <code>λ·Σθⱼ²</code> เข้าไปใน cost function บีบให้ทุก θ มีค่าน้อยลง (เข้าใกล้ 0 แต่ไม่ถึง 0 พอดี).</p>
+<p>ยิ่ง λ มากเท่าไหร่ยิ่งบีบ θ ให้เล็กเท่านั้น ถ้า λ ใหญ่เกินไปจนทุก θ ≈ 0 โมเดลจะกลายเป็นเส้นแบนราบ (High Bias กลับมาแทน) นี่คือเหตุผลที่ λ เป็น hyperparameter ที่ต้องหาค่าที่สมดุลด้วย cross-validation เหมือนกับ degree of polynomial.</p>
+
+<h2>12. Unsupervised Learning: K-means Clustering</h2>
+<figure>
+<img src="../assets/slides/dl1-p60-kmeans-diagram.png" alt="K-means clustering algorithm pseudocode: randomly initialize K cluster centroids, then repeat two steps until convergence — assign each point to the index of its closest centroid, then update each centroid to the average of the points assigned to it — illustrated with a scatter plot of clustered points">
+<figcaption>Slide: K-means Clustering — Given ไม่มี y label ให้เรียนรู้ (Lecture1.pdf, p.60)</figcaption>
+</figure>
+<p>K-means ต่างจากทุกหัวข้อก่อนหน้าตรงที่ <strong>ไม่มี y label</strong> ให้เรียนรู้เลย — อัลกอริทึมวนสองขั้นตอนสลับกัน:</p>
+<ul>
+<li><strong>Assign step:</strong> สำหรับจุดข้อมูลทุกจุด <code>x⁽ⁱ⁾</code> หา centroid <code>μₖ</code> ที่อยู่ใกล้ที่สุด แล้ว label จุดนั้นด้วย index ของ centroid นั้น</li>
+<li><strong>Update step:</strong> สำหรับ centroid ทุกตัว <code>μₖ</code> ย้ายตำแหน่งไปที่ค่าเฉลี่ยของจุดข้อมูลทั้งหมดที่ถูก assign เข้ามาในรอบนี้</li>
+</ul>
+<p>ทำสองขั้นตอนนี้สลับกันไปเรื่อยๆจนกว่า assignment จะไม่เปลี่ยนแปลงอีก (converge) — สังเกตว่าไม่มีขั้นตอนไหนที่ใช้ gradient descent หรือ cost function แบบมี label เลย มันคือการจัดกลุ่มจากโครงสร้างของข้อมูลเองล้วนๆ.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>K-means</span></div>
+  <div class="qtext">ในขั้นตอน "Update" ของ K-means algorithm หลังจาก assign จุดข้อมูลเข้ากลุ่มแล้ว ตำแหน่งใหม่ของ centroid μₖ แต่ละตัวคำนวณจากอะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">ตำแหน่งเดิมของ μₖ บวกกับ learning rate α คูณ gradient ของ cost function ตรงนั้น</button>
+    <button class="opt" data-correct="true">ค่าเฉลี่ยของจุดข้อมูลทั้งหมดที่ถูก assign เข้ากลุ่ม k นั้นในรอบล่าสุด</button>
+    <button class="opt" data-correct="false">ค่ามัธยฐาน (median) ของจุดข้อมูลทั้งหมดในทุกกลุ่มรวมกัน ไม่แยกตามกลุ่มเลย</button>
+    <button class="opt" data-correct="false">จุดข้อมูลที่อยู่ใกล้ศูนย์กลางของทั้ง dataset มากที่สุดเพียงจุดเดียวเท่านั้น</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>13. เชื่อมกับ Lesson ถัดไป</h2>
+<p>ทุกสูตรในบทนี้ — cost function, gradient descent update rule, sigmoid, softmax, regularization, bias/variance — จะกลับมาอีกใน Lesson 2-5 แค่เปลี่ยนจาก "1 node" เป็น "หลาย node เรียงเป็น layer" เท่านั้น ถ้าสูตร <code>θⱼ := θⱼ − α·∂J/∂θⱼ</code> และตัวอย่าง decision boundary ในบทนี้แม่นแล้ว Lesson 2-3 คือแค่การใส่ subscript/superscript เพิ่มเข้าไปในสูตรเดิม.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>Feature Scaling</span></div>
+  <div class="qtext">size = 3000 อยู่ในช่วง [1000,5000] และ #bedroom = 3 อยู่ในช่วง [1,5] เมื่อทำ min-max normalization แล้วทั้งสองค่าได้ 0.5 เท่ากัน เหตุผลที่ถูกต้องที่สุดคือ?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ min-max normalization ปัดเศษทุกค่าให้เป็น 0.5 เมื่อ range ของ feature มีขนาดต่างกันมาก</button>
+    <button class="opt" data-correct="true">เพราะทั้งสองค่าอยู่ตรงตำแหน่งกึ่งกลางของช่วง (range) ของตัวเองพอดี ไม่เกี่ยวกับสเกลตั้งต้นที่ต่างกัน</button>
+    <button class="opt" data-correct="false">เพราะ size และ #bedroom ถูกออกแบบให้มีความสัมพันธ์เชิงเส้นตรงกันเสมอในทุก dataset</button>
+    <button class="opt" data-correct="false">เพราะสูตร min-max normalization หารด้วยจำนวน feature ทั้งหมดเสมอ ในที่นี้คือ 2</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>Cost Function Convexity</span></div>
+  <div class="qtext">เหตุผลที่ logistic regression ใช้ Cross-Entropy Loss แทน Mean Squared Error (MSE) ทั้งที่ทั้งคู่วัด "ความผิดพลาดของการทำนาย" ได้เหมือนกันคืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ MSE คำนวณด้วยมือไม่ได้เลย ต้องใช้ซอฟต์แวร์เฉพาะทางมาช่วยเท่านั้น</button>
+    <button class="opt" data-correct="false">เพราะ Cross-Entropy ให้ค่า cost ที่เป็นค่าลบได้ ซึ่งช่วยให้ gradient descent ลู่เข้าเร็วกว่า</button>
+    <button class="opt" data-correct="false">เพราะ MSE ใช้ได้แค่กับ y ที่เป็นค่าต่อเนื่อง ไม่สามารถนิยามได้เลยเมื่อ y เป็น 0 หรือ 1</button>
+    <button class="opt" data-correct="true">เพราะ MSE ผสมกับ sigmoid ได้ cost function ที่ไม่นูน (มีหลุมหลอกหลายจุด) ต่างจาก Cross-Entropy ที่นูน</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Cross Validation</span></div>
+  <div class="qtext">ในขั้นตอน 3-fold cross validation ที่ถูกต้อง ข้อมูล test set 20% ที่กันไว้ตอนแรกควรถูกนำมาใช้เมื่อไหร่?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">ใช้ตรวจสอบผลในทุกๆรอบของ 3-fold ควบคู่ไปกับ validation fold เพื่อความแม่นยำ</button>
+    <button class="opt" data-correct="false">ใช้แทนที่ fold ใดๆก็ได้เมื่อ fold นั้นมีข้อมูลไม่เพียงพอในการเทรน</button>
+    <button class="opt" data-correct="false">ใช้ฝึกโมเดลเพิ่มเติมร่วมกับ training fold ทั้งสามในรอบสุดท้ายเพื่อเพิ่มข้อมูล</button>
+    <button class="opt" data-correct="true">ใช้ประเมิน generalization error ครั้งเดียว หลังเลือก hyperparameter ที่ดีที่สุดแล้วเท่านั้น</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควรคำนวณมือได้ครบ: slope ของ linear regression จากจุดจริง, ทิศทางการอัปเดต θ จาก gradient descent ตามเครื่องหมายของอนุพันธ์, min-max normalization, decision boundary จากค่า θ ที่กำหนด (ทั้งเส้นตรงและวงกลม), softmax แบบคำนวณตัวเลขจริง, และวินิจฉัย high bias/high variance จากกราฟ Jtrain/Jcv — ทั้งหมดนี้คือฐานที่ Lesson 2-5 จะสร้างต่อโดยไม่มีสูตรใหม่ มีแต่สัญกรณ์ใหม่.
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน Deck (60 หน้า) — เช็คว่าอ่านครบ</h2>
+<p>ไล่ทุกหน้าของ <code>Lecture1.pdf</code> — หน้าที่มี ✓ ถูกอธิบายและ/หรือใส่รูปในเนื้อหาข้างบนแล้ว ที่เหลือเป็นเนื้อหาปูพื้น/อ้างอิงที่ไม่ได้ทำ quiz แยก (etc).</p>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1–5</td><td>ปก, ผู้สอน, Course Overview, Grading Policy, Recommended Resources</td><td>etc — บริบทวิชา</td></tr>
+<tr><td>6–8</td><td>Artificial Intelligence, Machine Learning, Deep Learning (นิยาม)</td><td>etc — นิยามเกริ่นนำ</td></tr>
+<tr><td>9</td><td>Deep Learning Model — biological/artificial neuron</td><td>etc — ภาพเกริ่นนำ (อธิบายในหัวข้อ 1 แล้วโดยไม่แยกรูป)</td></tr>
+<tr><td>10</td><td>Deep Neural Network — fully connected layers diagram</td><td>etc — เกริ่นโครงสร้าง (รายละเอียดเต็มอยู่ Lesson 2)</td></tr>
+<tr><td>11</td><td>AI + ML + DL Timeline</td><td>✓ หัวข้อ 1 (มีรูป)</td></tr>
+<tr><td>12–17</td><td>Why DL is Powerful, Why DL is Popular, Successful Applications, ตัวอย่างงานวิจัยผู้สอน (CV, NLP)</td><td>etc — ตัวอย่างประกอบ/ผลงานตีพิมพ์ ไม่ใช่ทฤษฎีคำนวณ</td></tr>
+<tr><td>18</td><td>TensorFlow Playground</td><td>✓ หัวข้อ 1 (มีรูป)</td></tr>
+<tr><td>19</td><td>Deep Learning Challenges (data hungry, black box, no common sense)</td><td>etc — ข้อจำกัดเชิงแนวคิด</td></tr>
+<tr><td>20–21</td><td>Machine Learning นิยามซ้ำ, How Machines Learn</td><td>etc — ทวนนิยาม</td></tr>
+<tr><td>22</td><td>How the Model Fits Data — y=wx+b</td><td>etc — เกริ่นก่อนหัวข้อ 2 (สูตรเดียวกับหัวข้อ 2)</td></tr>
+<tr><td>23</td><td>Common Modelling Process (Representation → Cost → Learning)</td><td>etc — กรอบคิด 3 ขั้นตอนที่หัวข้อ 2-3 ใช้ตาม</td></tr>
+<tr><td>24–26</td><td>Types of ML, ML Algorithms, Dataset notation (x,y,m)</td><td>etc — นิยามสัญกรณ์พื้นฐาน</td></tr>
+<tr><td>27</td><td>Linear Regression นิยาม</td><td>✓ หัวข้อ 2</td></tr>
+<tr><td>28</td><td>Model Representation — slope จากจุด (0,0),(3,3)</td><td>✓ หัวข้อ 2 (มีรูป)</td></tr>
+<tr><td>29</td><td>Cost Function J(θ₀,θ₁) รูปชาม</td><td>✓ หัวข้อ 3 (มีรูป)</td></tr>
+<tr><td>30</td><td>Parameter Learning — Gradient Descent Algorithm นิยาม</td><td>✓ หัวข้อ 3 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>31</td><td>Behind Gradient Descent — ทิศทางการอัปเดตสองฝั่ง</td><td>✓ หัวข้อ 3 (มีรูป)</td></tr>
+<tr><td>32</td><td>Learning Rate เล็ก/ใหญ่เกินไป</td><td>✓ หัวข้อ 3 (มีรูป)</td></tr>
+<tr><td>33</td><td>Calibrating Learning Rate — Convergence vs Overshoot</td><td>✓ หัวข้อ 3 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>34</td><td>Speed up Gradient Descent — ตัวอย่างตารางขนาดบ้าน</td><td>✓ หัวข้อ 4 (เกริ่นก่อนตัวอย่าง normalization)</td></tr>
+<tr><td>35</td><td>Min-Max Normalization ตัวอย่างคำนวณ</td><td>✓ หัวข้อ 4 (มีรูป)</td></tr>
+<tr><td>36</td><td>Mean Normalization (z-score)</td><td>etc — วิธี normalize อีกแบบ นอกขอบเขต quiz หลัก</td></tr>
+<tr><td>37</td><td>Why Parameter Learning — normal equation vs gradient descent</td><td>etc — เหตุผลเชิงทฤษฎี</td></tr>
+<tr><td>38–39</td><td>Classification นิยาม, Binary Classification Problem</td><td>✓ หัวข้อ 5 (เกริ่นก่อนตัวอย่าง)</td></tr>
+<tr><td>40–42</td><td>Logistic Regression, Model Representation (1)-(2)</td><td>✓ หัวข้อ 5 (อธิบายสูตร sigmoid ในเนื้อหา)</td></tr>
+<tr><td>43</td><td>Understand Decision Boundary — ตัวอย่างคำนวณเชิงตัวเลข</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>44</td><td>Cost Function (Classification) — log loss curves</td><td>✓ หัวข้อ 6</td></tr>
+<tr><td>45</td><td>Parameter Learning (Classification) — gradient descent สูตรเดียวกับ regression</td><td>✓ หัวข้อ 6 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>46</td><td>Metrics from Confusion Matrix</td><td>✓ หัวข้อ 7 (มีรูป)</td></tr>
+<tr><td>47</td><td>ROC Curve</td><td>✓ หัวข้อ 7 (มีรูป)</td></tr>
+<tr><td>48</td><td>Multiclass Classification นิยาม</td><td>✓ หัวข้อ 8 (เกริ่นก่อนตัวอย่าง)</td></tr>
+<tr><td>49</td><td>One versus Rest (or All) Algorithm</td><td>✓ หัวข้อ 8 (มีรูป)</td></tr>
+<tr><td>50</td><td>Multiclass Logistic Regression (Softmax)</td><td>✓ หัวข้อ 8 (คำนวณตัวอย่างในเนื้อหา)</td></tr>
+<tr><td>51</td><td>Model Evaluation — Train/Validation/Test split</td><td>✓ หัวข้อ 9 (เกริ่นก่อนตัวอย่าง)</td></tr>
+<tr><td>52</td><td>Cross Validation นิยาม, k-fold diagram</td><td>✓ หัวข้อ 9</td></tr>
+<tr><td>53</td><td>Example of 3-fold Cross Validation</td><td>✓ หัวข้อ 9 (มีรูป)</td></tr>
+<tr><td>54</td><td>Model Improvement — High Bias/High Variance diagram (train vs validation set)</td><td>✓ หัวข้อ 10 (แนวคิดเดียวกับรูปหัวข้อ 10 หน้า 55)</td></tr>
+<tr><td>55</td><td>How to debug bias or variance? — Jtrain/Jcv vs degree of polynomial</td><td>✓ หัวข้อ 10 (มีรูป)</td></tr>
+<tr><td>56</td><td>Overcome Underfitting — เพิ่ม feature/degree</td><td>✓ หัวข้อ 10 (อธิบายแนวคิดตรงข้ามกับหัวข้อ 11)</td></tr>
+<tr><td>57</td><td>Overcome Overfitting — L1/L2 Regularization</td><td>✓ หัวข้อ 11 (มีรูป)</td></tr>
+<tr><td>58</td><td>Overcome Overfitting (2) — เพิ่มข้อมูลช่วย High Variance</td><td>etc — ข้อสรุปเสริมของหัวข้อ 11</td></tr>
+<tr><td>59</td><td>Tuning Hyperparameters — parameter vs hyperparameter</td><td>etc — นิยามคำศัพท์ ใช้ต่อใน Lesson 4</td></tr>
+<tr><td>60</td><td>Unsupervised Learning — K-means algorithm</td><td>✓ หัวข้อ 12 (มีรูป)</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span></span>
+  <span><a href="0002-neural-network-basics.html">Lesson 2: Neural Network Basics →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

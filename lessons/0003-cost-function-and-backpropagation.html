@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Lesson 3: Backpropagation</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0002-neural-network-basics.html">← Lesson 2: Neural Network Basics</a></span>
+  <span>Lesson 3 / 5 · Backpropagation</span>
+  <span><a href="0004-deep-networks-and-optimizers.html">Lesson 4: Deep Networks &amp; Optimizers →</a></span>
+</nav>
+
+<p class="kicker">Lecture3.pdf (49 หน้า — เนื้อหาเดียวกับ Lecture2.pdf หน้า 50-98) · 2603520 Deep Learning</p>
+<h1>Backpropagation: คำนวณ Gradient ย้อนกลับด้วย Chain Rule</h1>
+
+<p>นี่คือหัวใจของข้อสอบวิชานี้ สไลด์ของบทนี้ตั้งใจเว้น "คำตอบตัวเลข" ของตัวอย่างคำนวณไว้ให้กรอกในคาบ (มีแค่ diagram กับสูตรทั่วไป) — บทเรียนนี้จะคำนวณให้ครบทุกตัวเลขที่สไลด์เว้นไว้ พร้อมพิสูจน์ที่มาของสูตร δ ทุกขั้น.</p>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+<a href="https://www.3blue1brown.com/lessons/backpropagation-calculus" target="_blank" rel="noopener">3Blue1Brown — "Backpropagation calculus"</a> (Essence of Neural Networks ep.4) — อธิบาย chain rule expansion แบบเดียวกับสไลด์นี้ทุกขั้นตอนด้วยภาพเคลื่อนไหว 10 นาที.
+</div>
+
+<h2>1. Chain Rule: เครื่องมือเดียวที่ใช้พิสูจน์ backprop ทั้งหมด</h2>
+<p>Chain Rule คือการหาอนุพันธ์ของ "ฟังก์ชันซ้อนฟังก์ชัน" — ถ้า <code>y=f(u)</code> และ <code>u=g(x)</code> แล้ว <code>dy/dx = (dy/du)·(du/dx)</code> สไลด์ทิ้งคำถามไว้ 2 ข้อให้ฝึกมือก่อนเข้า backprop จริง:</p>
+
+<figure>
+<img src="../assets/slides/dl3-p04-chain-rule-example1.png" alt="Chain rule practice question: find dy/dx when y equals e raised to the power of x cubed, left as a blank exercise with no worked solution shown">
+<figcaption>Slide: Chain Rule's Example (1) — โจทย์เว้นคำตอบ (Lecture3.pdf, p.4)</figcaption>
+</figure>
+<p><strong>แก้เอง:</strong> <code>y = e^(x³)</code> ให้ <code>u = x³</code> ดังนั้น <code>y = e^u</code> — <code>dy/du = e^u = e^(x³)</code> และ <code>du/dx = 3x²</code> รวมด้วย chain rule: <code>dy/dx = e^(x³) · 3x²</code>.</p>
+<p>สังเกตแพทเทิร์น: "คงฟังก์ชันชั้นนอกไว้ทั้งดุ้น (e^(x³)) แล้วคูณด้วยอนุพันธ์ของชั้นใน (3x²)" — นี่คือกลไกเดียวกันที่จะใช้แยก ∂J/∂θ ทีละชั้นในเครือข่าย.</p>
+
+<figure>
+<img src="../assets/slides/dl3-p05-chain-rule-computation-graph.png" alt="Second chain rule exercise: find dy/dx when y equals (2x-5) to the power of 10, with a hint to let u=2x-5 so that y=u^10, illustrated as a computation graph">
+<figcaption>Slide: From Chain Rule to Backpropagation — โจทย์ที่ 2 พร้อม hint u=2x−5 (Lecture3.pdf, p.5)</figcaption>
+</figure>
+<p><strong>แก้เอง:</strong> ตาม hint ให้ <code>u=2x−5</code> ดังนั้น <code>y=u¹⁰</code> — <code>dy/du = 10u⁹</code> และ <code>du/dx = 2</code> รวมกัน: <code>dy/dx = 10u⁹ · 2 = 20(2x−5)⁹</code>.</p>
+<p>สไลด์เรียกภาพนี้ว่า "Computation Graph": มองเป็นสองขั้นเรียงต่อกัน (x → u → y) แต่ละขั้นมีอนุพันธ์ของตัวเอง แล้ว "คูณไล่ตามลูกโซ่" กลับมาที่ x.</p>
+<p>โครงข่ายประสาทเทียมก็คือ computation graph ที่มีขั้นมากกว่านี้ (z[1]→a[1]→z[2]→a[2]→…) แค่นั้นเอง.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Chain Rule</span></div>
+  <div class="qtext">จาก y=(2x−5)¹⁰ โดยให้ u=2x−5 (y=u¹⁰) ค่า dy/dx ตาม chain rule เท่ากับอะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">10(2x−5)⁹ เพราะ du/dx ไม่มีผลต่อผลลัพธ์สุดท้ายของอนุพันธ์นี้เลย</button>
+    <button class="opt" data-correct="false">(2x−5)⁹ เพราะลดกำลังลงหนึ่งขั้นโดยไม่ต้องคูณด้วยค่าคงที่ใดๆเพิ่ม</button>
+    <button class="opt" data-correct="true">20(2x−5)⁹ เพราะ dy/du=10u⁹ คูณกับ du/dx=2 ได้ 10u⁹×2=20u⁹</button>
+    <button class="opt" data-correct="false">10(2x−5)¹⁰ เพราะเลขชี้กำลังไม่เปลี่ยนแปลงเมื่อหาอนุพันธ์ของฟังก์ชันซ้อน</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>2. จาก Chain Rule สู่ ∂J/∂θ: สูตรทั่วไปของ Backprop</h2>
+<p>โครงข่าย 2 layer คือฟังก์ชันซ้อนฟังก์ชัน: <code>h(x) = g(θ[2]·g(θ[1]·x))</code>.</p>
+<ul>
+<li>การหา <code>∂J/∂θ[2]</code> (layer สุดท้าย) ใช้ chain rule 1 ขั้น: <code>∂J/∂θ[2] = (∂J/∂z[2])·(∂z[2]/∂θ[2])</code></li>
+<li>การหา <code>∂J/∂θ[1]</code> (layer แรก) ต้องไล่ผ่าน 2 ขั้น เพราะ θ[1] ส่งผลถึง J โดยทางผ่าน z[1]→a[1]→z[2]→a[2]→J: <code>∂J/∂θ[1] = (∂J/∂z[2])·(∂z[2]/∂a[1])·(∂a[1]/∂z[1])·(∂z[1]/∂θ[1])</code></li>
+</ul>
+<p>นี่คือเหตุผลที่ยิ่ง layer อยู่ลึกเท่าไหร่ (ใกล้ input) โซ่การคูณยิ่งยาวขึ้นเท่านั้น.</p>
+
+<figure>
+<img src="../assets/slides/dl3-p07-forward-computation-1example.png" alt="Forward computation formula for a 1-example shallow neural network: hypothesis h(x)=a1[2]=g(z1[2]) where z1[2]=theta10[2]+theta11[2]a1[1]+theta12[2]a2[1]+theta13[2]a3[1], with the underlying formula z=sum of theta times x and a=g(z)">
+<figcaption>Slide: Forward Computation สำหรับ 1 example (Lecture3.pdf, p.7)</figcaption>
+</figure>
+<p>ก่อนไปข้างหลัง (backward) ต้องไปข้างหน้า (forward) ให้ครบก่อนเสมอ: <code>h_θ(x) = a₁⁽²⁾ = g(z₁⁽²⁾)</code> โดย <code>z₁⁽²⁾ = θ₁₀⁽²⁾+θ₁₁⁽²⁾a₁⁽¹⁾+θ₁₂⁽²⁾a₂⁽¹⁾+θ₁₃⁽²⁾a₃⁽¹⁾</code>.</p>
+<p>สูตรนี้เหมือนที่เรียนใน Lesson 2 หัวข้อ 8 ทุกตัวอักษร เพียงแต่ตอนนี้จะใช้ค่าที่คำนวณได้นี้ไปหา error ย้อนกลับ.</p>
+
+<figure>
+<img src="../assets/slides/dl3-p08-backward-computation-delta.png" alt="Backward computation definitions: delta_j^[l] defined as the error of cost with respect to a_j^[l], with the layer 2 delta computed as delta1[2] = h(x) - y, and layer 1 deltas computed as delta_j[1] = (theta_j1[2])^T times delta1[2] times g'(z_j[1]) for each of the three hidden nodes">
+<figcaption>Slide: Backward Computation — นิยาม δ และสูตร δ⁽¹⁾ จาก δ⁽²⁾ (Lecture3.pdf, p.8)</figcaption>
+</figure>
+<p>สไลด์นิยาม <code>δⱼ⁽ˡ⁾ = ∂J/∂zⱼ⁽ˡ⁾</code> ("error" ที่ node j ในเลเยอร์ l มีต่อ cost) แล้วให้สูตรสำเร็จ 2 บรรทัดที่ต้องพิสูจน์ที่มา (หัวข้อ 3):</p>
+<ul>
+<li><strong>สำหรับ output layer:</strong> <code>δ₁⁽²⁾ = h(x) − y</code> (ง่ายที่สุด เพราะเป็น layer สุดท้ายที่เทียบกับ y ตรงๆ)</li>
+<li><strong>สำหรับ hidden layer:</strong> <code>δⱼ⁽¹⁾ = (θⱼ₁⁽²⁾)ᵗ · δ₁⁽²⁾ · g'(zⱼ⁽¹⁾)</code> — δ ของ layer ก่อน "ยืม" ค่า δ ของ layer ถัดไปมาคูณกับ weight ที่เชื่อมสองเลเยอร์ (θ) และคูณด้วยอนุพันธ์ของ activation function ที่ node นั้น (g')</li>
+</ul>
+<p>นี่คือที่มาของคำว่า "back-propagate": error ไหลจากขวา (output) ไปซ้าย (input) สวนทางกับ forward pass เป๊ะ.</p>
+
+<figure>
+<img src="../assets/slides/dl3-p10-mathematical-proof.png" alt="Mathematical proof deriving the two backpropagation formulas from the chain rule: dJ/dtheta[2] = dJ/dz[2] times dz[2]/dtheta[2], which equals (h(x)-y) times a[1]; and dJ/dtheta[1] expanded through the longer chain dJ/dz[2] times dz[2]/da[1] times da[1]/dz[1] times dz[1]/dtheta[1], which equals (h(x)-y) times theta[2] times a[1] times (1-a[1]) times x">
+<figcaption>Slide: Mathematical Proof — พิสูจน์สูตร δ ด้วย Chain Rule เต็มขั้น (Lecture3.pdf, p.10)</figcaption>
+</figure>
+<p>นี่คือการพิสูจน์ที่ต้องตามให้ทันทุกขั้น.</p>
+<p><strong>ขั้นที่ 1 (θ[2]):</strong> <code>∂J/∂θ[2] = (∂J/∂z[2])·(∂z[2]/∂θ[2])</code></p>
+<ul>
+<li>เทอมแรก <code>∂J/∂z[2] = h(x)−y</code> (มาจาก cross-entropy loss ผสม sigmoid ที่ลดรูปสวยแบบที่เห็นใน Lesson 1 หัวข้อ 6)</li>
+<li>เทอมสอง <code>∂z[2]/∂θ[2] = a[1]</code> (เพราะ z[2]=θ[2]·a[1] อนุพันธ์เทียบ θ[2] เหลือ a[1])</li>
+</ul>
+<p>รวมกันได้ <code>∂J/∂θ[2] = (h(x)−y)·a[1]</code>.</p>
+<p><strong>ขั้นที่ 2 (θ[1], โซ่ยาวกว่า):</strong> <code>∂J/∂θ[1] = (∂J/∂z[2])·(∂z[2]/∂a[1])·(∂a[1]/∂z[1])·(∂z[1]/∂θ[1])</code> แทนแต่ละเทอม:</p>
+<ul>
+<li><code>∂J/∂z[2]=h(x)−y</code></li>
+<li><code>∂z[2]/∂a[1]=θ[2]</code> (เพราะ z[2]=θ[2]·a[1])</li>
+<li><code>∂a[1]/∂z[1]=g'(z[1])=a[1](1−a[1])</code> (อนุพันธ์ sigmoid ที่พิสูจน์ในหัวข้อ 5)</li>
+<li><code>∂z[1]/∂θ[1]=x</code></li>
+</ul>
+<p>รวมกันทั้ง 4 เทอม: <code>∂J/∂θ[1] = (h(x)−y)·θ[2]·a[1](1−a[1])·x</code>.</p>
+<p>สังเกตว่าสูตรนี้มี "4 ตัวคูณ" พอดีตามจำนวนขั้นในโซ่ ยิ่งเครือข่ายลึกเท่าไหร่ จำนวนตัวคูณยิ่งเยอะตาม (นี่คือรากของปัญหา vanishing/exploding gradient ที่ Lesson 5 จะพูดถึง).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>Backprop Derivation</span></div>
+  <div class="qtext">ในการพิสูจน์ ∂J/∂θ[1] ด้วย chain rule (เครือข่าย 2 layer) เทอม ∂a[1]/∂z[1] มีค่าเท่ากับอะไร (เมื่อ activation function คือ sigmoid)?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">h(x)−y เพราะเป็นเทอมเดียวกับที่ใช้ในการคำนวณ δ ของ output layer เสมอ</button>
+    <button class="opt" data-correct="true">a[1](1−a[1]) เพราะเป็นอนุพันธ์ของ sigmoid function เทียบกับ z[1] โดยตรง</button>
+    <button class="opt" data-correct="false">θ[2] เพราะเป็นเทอมที่เชื่อมระหว่าง z[2] กับ a[1] ในสมการ z[2]=θ[2]·a[1]</button>
+    <button class="opt" data-correct="false">x เพราะเป็นอนุพันธ์ของ z[1] เทียบกับ θ[1] ในสมการ z[1]=θ[1]·x</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>3. ตัวอย่างคำนวณเต็มรูปแบบ: 2 Layer, 2 Training Examples</h2>
+<p>นี่คือตัวอย่างที่สไลด์เว้นตัวเลขไว้ทั้งหมด (6 หน้าต่อเนื่อง) — โครงข่ายมี input x₁,x₂ (บวก bias x₀=1) → hidden layer 2 node (a₁⁽¹⁾,a₂⁽¹⁾) → output 1 node สมมติ sigmoid ทุก node, <code>y=1</code> ทั้งสอง training example.</p>
+
+<figure>
+<img src="../assets/slides/dl3-p11-worked-example-forward-1.png" alt="Small neural network diagram for the worked example: x0=1, x1=1, x2=1 feeding into hidden nodes a1[1] and a2[1] with visible edge weights (1,1,0 to a1[1] and 1,0,1 to a2[1]), and both hidden nodes feeding into output a1[2] with weights (0,1,0), all under sigmoid activation, y=1">
+<figcaption>Slide: Example — Forward Computation ตัวอย่างที่ 1 (x₁=1, x₂=1) (Lecture3.pdf, p.11)</figcaption>
+</figure>
+<p>อ่าน weight จาก diagram ตรงๆ: <code>θ⁽¹⁾ = [[1,1,0],[1,0,1]]</code> (แถวคือ node a₁⁽¹⁾: bias=1,x₁=1,x₂=0 และ a₂⁽¹⁾: bias=1,x₁=0,x₂=1) และ <code>θ⁽²⁾ = [0,1,0]</code> (output: bias=0, จาก a₁⁽¹⁾=1, จาก a₂⁽¹⁾=0).</p>
+<p><strong>Forward สำหรับตัวอย่างที่ 1 (x₁=1,x₂=1):</strong></p>
+<ul>
+<li><code>z₁⁽¹⁾ = 1(1)+1(1)+0(1) = 2</code> → <code>a₁⁽¹⁾ = σ(2) ≈ 0.881</code></li>
+<li><code>z₂⁽¹⁾ = 1(1)+0(1)+1(1) = 2</code> → <code>a₂⁽¹⁾ = σ(2) ≈ 0.881</code></li>
+<li><code>z₁⁽²⁾ = 0(1)+1(0.881)+0(0.881) = 0.881</code> → <code>h(x) = σ(0.881) ≈ 0.707</code></li>
+</ul>
+
+<figure>
+<img src="../assets/slides/dl3-p14-worked-example-forward-2.png" alt="Same small neural network with the second training example: x1=1, x2=2, same weights as before, forward computation to be recomputed with the new x2 value">
+<figcaption>Slide: Example — Forward Computation ตัวอย่างที่ 2 (x₁=1, x₂=2) (Lecture3.pdf, p.14)</figcaption>
+</figure>
+<p><strong>Forward สำหรับตัวอย่างที่ 2 (x₁=1,x₂=2, weight เดิมทุกตัว):</strong></p>
+<ul>
+<li><code>z₁⁽¹⁾ = 1(1)+1(1)+0(2) = 2</code> → <code>a₁⁽¹⁾ = σ(2) ≈ 0.881</code> (เหมือนตัวอย่างที่ 1 เป๊ะ เพราะ θ ของ x₂→a₁⁽¹⁾ เท่ากับ 0 อยู่แล้ว ไม่ว่า x₂ จะเป็น 1 หรือ 2 ก็ไม่มีผลกับ a₁⁽¹⁾)</li>
+<li><code>z₂⁽¹⁾ = 1(1)+0(1)+1(2) = 3</code> → <code>a₂⁽¹⁾ = σ(3) ≈ 0.953</code> (ต่างจากตัวอย่างที่ 1 เพราะ x₂ คูณกับ weight 1 ที่นี่)</li>
+<li><code>z₁⁽²⁾ = 0(1)+1(0.881)+0(0.953) = 0.881</code> → <code>h(x) = σ(0.881) ≈ 0.707</code></li>
+</ul>
+<p><strong>ข้อสังเกตสำคัญ:</strong> h(x) ออกมาเท่ากันทุกตัวอักษรทั้งสองตัวอย่าง (0.707) ทั้งที่ x₂ เปลี่ยนจาก 1 เป็น 2! เพราะ output ใช้ weight จาก a₂⁽¹⁾ เท่ากับ 0 (ไม่ได้ใช้ a₂⁽¹⁾ เลยในการคำนวณ h(x)) — นี่คือตัวอย่างที่จับต้องได้ว่า "weight เท่ากับ 0" หมายถึง connection นั้นไม่ส่งข้อมูลต่อไปข้างหน้าเลย.</p>
+
+<figure>
+<img src="../assets/slides/dl3-p12-worked-example-backward-1.png" alt="Backward computation diagram with arrows reversed, pointing from output back through hidden layer to inputs, for computing delta values via backpropagation">
+<figcaption>Slide: Example — Backward Computation ทิศทางย้อนกลับ (Lecture3.pdf, p.12)</figcaption>
+</figure>
+<p><strong>Backward สำหรับตัวอย่างที่ 1:</strong> <code>δ₁⁽²⁾ = h(x)−y = 0.707−1 = −0.293</code> ไล่ย้อนไปที่ hidden layer ด้วยสูตร <code>δⱼ⁽¹⁾ = θⱼ₁⁽²⁾·δ₁⁽²⁾·g'(zⱼ⁽¹⁾)</code>:</p>
+<ul>
+<li><code>δ₁⁽¹⁾ = θ₁₁⁽²⁾·δ₁⁽²⁾·a₁⁽¹⁾(1−a₁⁽¹⁾) = 1×(−0.293)×0.881×(1−0.881) = 1×(−0.293)×0.105 ≈ −0.0308</code></li>
+<li><code>δ₂⁽¹⁾ = θ₂₁⁽²⁾·δ₁⁽²⁾·a₂⁽¹⁾(1−a₂⁽¹⁾) = 0×(−0.293)×(…) = 0</code></li>
+</ul>
+<p>δ₂⁽¹⁾ เป็น 0 เป๊ะเพราะ weight θ₂₁⁽²⁾ (จาก a₂⁽¹⁾ ไปยัง output) เท่ากับ 0 พอดี ตอกย้ำหลักการเดียวกับ forward: ถ้า weight ไปข้างหน้าเป็น 0 gradient ที่ไหลย้อนกลับผ่านเส้นนั้นก็เป็น 0 ด้วย (node นี้ "ไม่ได้เรียนรู้อะไร" จาก output ในรอบนี้).</p>
+
+<p><strong>Backward สำหรับตัวอย่างที่ 2:</strong> คำนวณเหมือนกันทุกขั้นเพราะ h(x) และ y เท่ากันทั้งคู่ (h(x)=0.707,y=1): <code>δ₁⁽²⁾ = 0.707−1 = −0.293</code>, <code>δ₁⁽¹⁾ = 1×(−0.293)×0.881×0.119 ≈ −0.0308</code>, <code>δ₂⁽¹⁾ = 0</code> เหมือนเดิม.</p>
+
+<figure>
+<img src="../assets/slides/dl3-p16-worked-example-final-update.png" alt="Final step of the worked example: accumulate gradients Delta_ij[l] across both training examples, average them via D_ij[l] = (1/m) Delta_ij[l], then perform one gradient descent update step theta_ij[l] := theta_ij[l] - alpha * dJ/dtheta_ij[l] with alpha=0.1">
+<figcaption>Slide: Example — Accumulate Gradients และ Gradient Descent Update (Lecture3.pdf, p.16)</figcaption>
+</figure>
+<p><strong>รวม gradient จาก 2 ตัวอย่าง (Δᵢⱼ⁽ˡ⁾ = Σ aⱼ⁽ˡ⁻¹⁾·δᵢ⁽ˡ⁾):</strong> เพราะทั้งสองตัวอย่างให้ δ เท่ากันเป๊ะ (δ₁⁽¹⁾≈−0.0308 ทั้งคู่, δ₁⁽²⁾=−0.293 ทั้งคู่) ผลรวม Δ จึงเท่ากับ 2 เท่าของตัวอย่างเดียว แล้วหารด้วย m=2 กลับมาเท่าค่าเดิม:</p>
+<ul>
+<li><code>D₁₁⁽¹⁾ = (1/2)(a₁⁽⁰⁾δ₁⁽¹⁾ + a₁⁽⁰⁾δ₁⁽¹⁾) = x₁·δ₁⁽¹⁾ = 1×(−0.0308) = −0.0308</code> (เทียบกับ x₁=1 ในทั้งสองตัวอย่าง)</li>
+<li><code>D₁₀⁽²⁾ = a₁⁽¹⁾·δ₁⁽²⁾ ≈ 0.881×(−0.293) ≈ −0.258</code></li>
+</ul>
+<p><strong>อัปเดตค่า θ₁₁⁽²⁾ ด้วย α=0.1:</strong> <code>θ₁₁⁽²⁾ := 1 − 0.1×(−0.258) = 1 + 0.0258 = 1.0258</code>.</p>
+<p>สังเกตว่า θ เพิ่มขึ้นเล็กน้อย (ไม่ใช่ลดลง) เพราะ gradient เป็นค่าลบ (h(x)&lt;y ทำนายต่ำกว่าจริง โมเดลจึงต้อง "เพิ่ม" weight ที่ส่งผลบวกต่อ output เพื่อให้ h(x) ขยับเข้าใกล้ y=1 มากขึ้นในรอบถัดไป) ส่วน <code>θ₂₁⁽²⁾</code> (weight ที่เป็น 0) จะไม่เปลี่ยนแปลงเลยในรอบนี้ เพราะ gradient ของมันเป็น 0 พอดี.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>Worked Example</span></div>
+  <div class="qtext">ในตัวอย่างคำนวณเต็มรูปแบบ (θ⁽²⁾=[0,1,0]) ทำไม δ₂⁽¹⁾ (error ของ node a₂⁽¹⁾) จึงมีค่าเท่ากับ 0 เป๊ะในทั้งสองตัวอย่าง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ a₂⁽¹⁾ มีค่า activation ต่ำกว่า a₁⁽¹⁾ อยู่แล้วในการคำนวณ forward ทั้งสองครั้ง</button>
+    <button class="opt" data-correct="false">เพราะ x₂ ในทั้งสองตัวอย่างมีค่าต่างกัน (1 และ 2) ทำให้ผล δ หักลบกันจนเหลือ 0 พอดี</button>
+    <button class="opt" data-correct="false">เพราะ y=1 เท่ากันทั้งสองตัวอย่าง ทำให้ error ที่ต้องกระจายไปยัง node นี้เป็นศูนย์เสมอ</button>
+    <button class="opt" data-correct="true">เพราะ weight θ₂₁⁽²⁾ ที่เชื่อม a₂⁽¹⁾ ไปยัง output เท่ากับ 0 พอดี ทำให้ไม่มี gradient ไหลย้อนผ่านเส้นนี้เลย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>Worked Example</span></div>
+  <div class="qtext">ในตัวอย่างเดียวกัน ทำไม h(x) จากตัวอย่างที่ 1 (x₁=1,x₂=1) และตัวอย่างที่ 2 (x₁=1,x₂=2) จึงได้ผลลัพธ์เท่ากันเป๊ะที่ 0.707?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">เพราะ output ไม่ใช้ a₂⁽¹⁾ (weight=0) และ a₁⁽¹⁾ ก็ไม่ขึ้นกับ x₂ เลยเช่นกัน</button>
+    <button class="opt" data-correct="false">เพราะ sigmoid function ให้ผลลัพธ์เท่ากันเสมอไม่ว่า input จะต่างกันแค่ไหนก็ตาม</button>
+    <button class="opt" data-correct="false">เพราะ y=1 เท่ากันทั้งสองตัวอย่าง จึงบังคับให้ h(x) ต้องเท่ากันไปด้วยเสมอ</button>
+    <button class="opt" data-correct="false">เพราะค่า bias x₀=1 มีอิทธิพลเหนือกว่า x₁ และ x₂ ในทุกกรณีของโครงข่ายนี้</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>4. Backpropagation Algorithm: สรุปเป็น Pseudocode ที่ใช้ได้ทุกโครงข่าย</h2>
+<figure>
+<img src="../assets/slides/dl3-p17-backprop-algorithm-1.png" alt="Backpropagation algorithm pseudocode part 1: given a training set with m examples, initialize accumulated gradient Delta_ij[l] to 0, then for each training example set a[0]=x and perform forward computation through all layers: z[1]=theta[1]a[0], a[1]=g(z[1]), and so on up to h(x)=a[L]=g(z[L])">
+<figcaption>Slide: Backpropagation Algorithm — ส่วน Forward (Lecture3.pdf, p.17)</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl3-p18-backprop-algorithm-2.png" alt="Backpropagation algorithm pseudocode part 2: compute output error delta[L]=a[L]-y, then compute delta[L-1] through delta[1] via delta[l-1]=(theta[l])^T delta[l] times g'(z[l-1]), accumulate Delta_ij[l] += a_j[l-1] delta_i[l], then average as D_ij[l]=(1/m)Delta_ij[l] and use in gradient descent">
+<figcaption>Slide: Backpropagation Algorithm — ส่วน Backward และ Update (Lecture3.pdf, p.18)</figcaption>
+</figure>
+<p>สรุปเป็นขั้นตอนที่ใช้ได้กับโครงข่ายกี่ layer ก็ได้ (ไม่จำกัดที่ 2 layer แบบตัวอย่างข้างบน):</p>
+<ol>
+<li>ตั้ง <code>Δᵢⱼ⁽ˡ⁾:=0</code> ทุกเส้นก่อนเริ่ม</li>
+<li>วนทุก training example: forward คำนวณ a⁽⁰⁾ ถึง a⁽ᴸ⁾ ให้ครบ</li>
+<li>คำนวณ error ที่ output <code>δ⁽ᴸ⁾ = a⁽ᴸ⁾−y</code></li>
+<li>ไล่ย้อนจาก <code>δ⁽ᴸ⁾</code> ไปหา <code>δ⁽ᴸ⁻¹⁾,…,δ⁽¹⁾</code> ด้วย <code>δ⁽ˡ⁻¹⁾ = (θ⁽ˡ⁾)ᵗδ⁽ˡ⁾ * g'(z⁽ˡ⁻¹⁾)</code></li>
+<li>สะสม <code>Δᵢⱼ⁽ˡ⁾ += aⱼ⁽ˡ⁻¹⁾δᵢ⁽ˡ⁾</code> ทุกตัวอย่าง</li>
+<li>หลังวนครบทุกตัวอย่าง หาค่าเฉลี่ย <code>Dᵢⱼ⁽ˡ⁾ = (1/m)Δᵢⱼ⁽ˡ⁾</code> แล้วใช้ D นี้แทน <code>∂J/∂θᵢⱼ⁽ˡ⁾</code> ใน gradient descent</li>
+</ol>
+<p>สังเกตว่าตัวอย่างคำนวณมือในหัวข้อ 3 คือการรัน algorithm นี้ตรงๆแค่ 1 รอบด้วย m=2.</p>
+
+<h2>5. Activation Function และอนุพันธ์: ตัวเลือกที่ส่งผลต่อ Gradient</h2>
+<figure>
+<img src="../assets/slides/dl3-p25-sigmoid-derivative-proof.png" alt="Sigmoid function sigma(z)=1/(1+e^-z) with full derivative proof shown step by step, concluding sigma'(z)=sigma(z)(1-sigma(z)), alongside plots of the sigmoid curve (S-shaped, 0 to 1) and its derivative curve (bell-shaped, peaking at 0.25 when z=0)">
+<figcaption>Slide: Sigmoid และอนุพันธ์ — พิสูจน์เต็ม (Lecture3.pdf, p.25)</figcaption>
+</figure>
+<p>สไลด์พิสูจน์เต็มด้วย quotient rule: <code>σ'(z) = [(1+e⁻ᶻ)·0 − 1·(−e⁻ᶻ)] / (1+e⁻ᶻ)²  = e⁻ᶻ/(1+e⁻ᶻ)²</code> แล้วแยก <code>e⁻ᶻ/(1+e⁻ᶻ)² = σ(z)·[e⁻ᶻ/(1+e⁻ᶻ)] = σ(z)·[(1+e⁻ᶻ)/(1+e⁻ᶻ) − 1/(1+e⁻ᶻ)] = σ(z)·(1−σ(z))</code>.</p>
+<p>ผลลัพธ์สุดท้ายที่ต้องจำ: <code>σ'(z) = σ(z)(1−σ(z))</code> ดูกราฟด้านขวา: อนุพันธ์ (เส้นสีแดง) มีค่าสูงสุดแค่ <strong>0.25</strong> ที่ z=0 และ<strong>เข้าใกล้ 0 อย่างรวดเร็ว</strong>เมื่อ z ห่างจาก 0 ไปทางบวกหรือลบมาก.</p>
+<p>นี่คือรากของปัญหา vanishing gradient ที่ Lesson 5 จะขยายผล: ยิ่ง sigmoid หลาย layer ต่อกัน ยิ่งคูณเลขที่ ≤0.25 ซ้ำหลายรอบ ค่า gradient จึงเล็กลงเรื่อยๆแบบทวีคูณ.</p>
+
+<figure>
+<img src="../assets/slides/dl3-p30-relu-derivative.png" alt="ReLU function f(x)=0 for x<0 and f(x)=x for x>=0, piecewise linear, with derivative f'(x)=0 for x<0 and f'(x)=1 for x>=0, a simple step-like derivative">
+<figcaption>Slide: ReLU และอนุพันธ์ (Lecture3.pdf, p.30)</figcaption>
+</figure>
+<p>ReLU เรียบง่ายกว่ามาก: <code>f(x)=max(0,x)</code> อนุพันธ์เป็น <strong>0 หรือ 1 เท่านั้น</strong> (ไม่มีค่าระหว่างกลางที่ลดขนาดลงเรื่อยๆแบบ sigmoid) เมื่อ x≥0 อนุพันธ์คงที่ที่ 1 พอดี ไม่ทำให้ gradient หดตัวเลยไม่ว่าจะผ่านกี่ layer — นี่คือเหตุผลหลักที่ ReLU เป็นตัวเลือกอันดับหนึ่งของ hidden layer ในเครือข่ายลึก.</p>
+<p>แต่ก็มีข้อเสีย: เมื่อ x&lt;0 อนุพันธ์เป็น 0 เป๊ะ (node "ตาย" ไม่เรียนรู้อะไรต่ออีกถ้าเข้าโซนนี้ถาวร) เป็นที่มาของ Leaky ReLU ที่ให้ความชันเล็กน้อย (0.01) แทน 0 ไปเลยในโซน x&lt;0.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>Activation Derivative</span></div>
+  <div class="qtext">อนุพันธ์ของ sigmoid function σ'(z)=σ(z)(1−σ(z)) มีค่าสูงสุดเท่ากับเท่าไหร่ และเกิดขึ้นที่ z เท่าไหร่?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">สูงสุด 1.0 ที่ z=0 เพราะ σ(z) เองมีค่าสูงสุดเท่ากับ 1 พอดีที่จุดนั้น</button>
+    <button class="opt" data-correct="false">สูงสุด 0.5 ที่ z เข้าใกล้อนันต์ เพราะ σ(z) ค่อยๆเข้าใกล้ 1 ตลอดเวลา</button>
+    <button class="opt" data-correct="false">ไม่มีค่าสูงสุด เพราะ σ'(z) เพิ่มขึ้นตลอดเมื่อ z มีค่ามากขึ้นเรื่อยๆไม่หยุด</button>
+    <button class="opt" data-correct="true">สูงสุด 0.25 ที่ z=0 เพราะ σ(0)=0.5 ทำให้ σ(0)(1−σ(0))=0.5×0.5=0.25</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<p>ทำไม activation function ต้อง non-linear? สไลด์พิสูจน์ด้วยการลองแทน f(x)=x (linear) ทุก node:</p>
+<figure>
+<img src="../assets/slides/dl3-p35-why-not-linear-activation.png" alt="Diagram showing that if every activation function in a 2-layer network is linear (f(x)=x), the output h(x) collapses back into a single linear function of the inputs (a+bx1+cx2), no matter how many layers are stacked, defeating the purpose of having multiple layers">
+<figcaption>Slide: Why not Linear Activation Function? (Lecture3.pdf, p.35)</figcaption>
+</figure>
+<p>ถ้า <code>f(x)=x</code> ทุก node: <code>z₁⁽¹⁾ = θ₁₀⁽¹⁾+θ₁₁⁽¹⁾x₁+θ₁₂⁽¹⁾x₂</code> แล้ว <code>a₁⁽¹⁾ = f(z₁⁽¹⁾) = z₁⁽¹⁾</code> (ไม่เปลี่ยนอะไรเลย).</p>
+<p>พอไป layer 2: <code>z₁⁽²⁾ = θ₁₀⁽²⁾+θ₁₁⁽²⁾a₁⁽¹⁾+…</code> แทนค่า a⁽¹⁾ ที่เป็น linear combination ของ x เข้าไป จะลดรูปกลับมาเป็น <code>z₁⁽²⁾ = a+bx₁+cx₂</code> (linear function ของ x₁,x₂ ตัวเดียว ไม่ว่าจะมีกี่ layer ก็ตาม).</p>
+<p>นี่คือเหตุผลที่ต้องมี non-linear activation: ถ้าไม่มี การต่อหลาย layer จะไม่ต่างอะไรกับ layer เดียว (linear regression ธรรมดา) เพราะ "linear ซ้อน linear ยังคงเป็น linear เสมอ".</p>
+
+<h2>6. Output Layer และ Softmax: ต่อจาก Lesson 1</h2>
+<figure>
+<img src="../assets/slides/dl3-p38-softmax-output-node.png" alt="Softmax activation function for multi-class classification: t_i = e^(z_i^[L]), a_i^[L] = t_i divided by the sum of all t values, normalizing outputs to a probability distribution that sums to 1 across all output classes">
+<figcaption>Slide: Multi-class Classification (Softmax at Output Node) (Lecture3.pdf, p.38)</figcaption>
+</figure>
+<p>สูตร Softmax เหมือนที่คำนวณตัวอย่างจริงไปแล้วใน Lesson 1 หัวข้อ 8: <code>aᵢ⁽ᴸ⁾ = eᶻⁱ⁽ᴸ⁾ / Σₙ eᶻⁿ⁽ᴸ⁾</code>.</p>
+<p>สิ่งใหม่ที่นี่คือ Softmax ถูกมองเป็น "activation function ของทั้ง output layer พร้อมกัน" ไม่ใช่ทีละ node เหมือน sigmoid/ReLU (Softmax ต้องรู้ค่า z ของทุก output node พร้อมกันก่อนจะ normalize ได้ ในขณะที่ sigmoid คำนวณแยกแต่ละ node ได้อิสระ).</p>
+<p>เมื่อใช้ Softmax ที่ output ร่วมกับ Cross-Entropy Loss การพิสูจน์ δ⁽ᴸ⁾ = a⁽ᴸ⁾−y ในหัวข้อ 2-3 ยังใช้ได้เหมือนเดิมทุกตัวอักษร (เป็นคุณสมบัติพิเศษที่ Softmax+Cross-Entropy ลดรูปสวยเหมือน Sigmoid+Cross-Entropy).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>Softmax vs Sigmoid</span></div>
+  <div class="qtext">ข้อแตกต่างสำคัญระหว่าง Softmax กับ Sigmoid เมื่อใช้เป็น activation function ที่ output layer คืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">Softmax ใช้ได้กับ binary classification เท่านั้น ในขณะที่ Sigmoid ใช้กับ multi-class ได้</button>
+    <button class="opt" data-correct="false">Sigmoid ให้ผลรวมของทุก output node เท่ากับ 1 เสมอ เหมือนกับ Softmax ทุกประการ</button>
+    <button class="opt" data-correct="true">Softmax ต้องรู้ z ของทุก output node พร้อมกันก่อน normalize ต่างจาก Sigmoid ที่คำนวณแยกได้</button>
+    <button class="opt" data-correct="false">Softmax ไม่สามารถใช้ร่วมกับ Cross-Entropy Loss ได้เลยไม่ว่ากรณีใดก็ตาม</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>7. Regularization และ Hyperparameter Tuning</h2>
+<p>L2 regularization เพิ่ม penalty term <code>(λ/m)ΣΣΣ(θᵢⱼ⁽ˡ⁾)²</code> เข้าไปใน cost function — สูตรเหมือน Lesson 1 หัวข้อ 11 ทุกตัวอักษร เพียงแต่ตอนนี้ผลรวมต้องไล่ทั้ง 3 ระดับ (l=layer, i=node ปลายทาง, j=node ต้นทาง) แทนแค่ผลรวมเดียวของ logistic regression.</p>
+<p>ตัวอย่างสไลด์ถาม: เครือข่าย 3 layer (input=2, hidden=10, output=1) มีกี่พารามิเตอร์ในเทอม regularization? นับจาก θ⁽¹⁾ (10×3 = 30 ตัว รวม bias) และ θ⁽²⁾ (1×11 = 11 ตัว รวม bias) รวมทั้งหมด 41 พารามิเตอร์ที่ต้องถูกบีบด้วย λ (ไม่รวม bias term เองซึ่งปกติไม่ regularize แต่ปัดตกรายละเอียดนี้ไปตามที่สไลด์นับรวม).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>Regularization</span></div>
+  <div class="qtext">L2 Regularization term (λ/m)ΣΣΣ(θᵢⱼ⁽ˡ⁾)² ต้องไล่ผลรวมกี่ระดับ (index) และคืออะไรบ้าง?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">3 ระดับ คือ l (layer), i (node ปลายทางในเลเยอร์ l), และ j (node ต้นทางในเลเยอร์ l−1)</button>
+    <button class="opt" data-correct="false">2 ระดับ คือ i (node ปลายทาง) และ j (node ต้นทาง) เท่านั้น ไม่รวม layer</button>
+    <button class="opt" data-correct="false">1 ระดับเดียว คือ l (layer) เพราะ regularization คิดรวมทั้ง layer เป็นค่าเดียว</button>
+    <button class="opt" data-correct="false">4 ระดับ โดยเพิ่ม training example index (i) เข้าไปด้วยจากผลรวม m ตัวอย่าง</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>8. Binary Classification Exercise: ฝึกเขียนสูตรทั่วไปซ้ำ</h2>
+<p>สไลด์ทิ้งแบบฝึกหัดไว้ 2 หน้า (forward + backward) โดยใช้ shallow neural network เดิม (input 2 node, hidden 10 node, output 1 node) แต่ไม่ให้ค่า θ จริง — เป้าหมายคือฝึกเขียนสูตรทั่วไปซ้ำด้วยตัวเอง:</p>
+<ul>
+<li><strong>Forward:</strong> <code>zⱼ⁽¹⁾ = θⱼ₀⁽¹⁾+θⱼ₁⁽¹⁾x₁+θⱼ₂⁽¹⁾x₂</code> สำหรับ j=1..10, <code>aⱼ⁽¹⁾=g(zⱼ⁽¹⁾)</code>, แล้ว <code>z₁⁽²⁾ = θ₁₀⁽²⁾+Σⱼθ₁ⱼ⁽²⁾aⱼ⁽¹⁾</code> (ผลรวมนี้ยาวกว่าตัวอย่างก่อนหน้าเพราะมี hidden node 10 ตัวไม่ใช่ 2-3 ตัว)</li>
+<li><strong>Backward:</strong> <code>δ₁⁽²⁾=h(x)−y</code> แล้ว <code>δⱼ⁽¹⁾ = θ₁ⱼ⁽²⁾·δ₁⁽²⁾·g'(zⱼ⁽¹⁾)</code> สำหรับ j=1..10</li>
+</ul>
+<p>โครงสร้างสูตรเหมือนตัวอย่างหัวข้อ 3 ทุกตัวอักษร ต่างกันแค่ "จำนวน node" ที่มากขึ้น พิสูจน์ว่าสูตร backprop สเกลไปกับขนาดเครือข่ายได้โดยไม่ต้องเปลี่ยนกลไกอะไรเลย.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>Backprop Algorithm</span></div>
+  <div class="qtext">ในขั้นตอน Backpropagation Algorithm สูตร δ⁽ˡ⁻¹⁾ = (θ⁽ˡ⁾)ᵗδ⁽ˡ⁾ * g'(z⁽ˡ⁻¹⁾) ใช้คำนวณอะไร และทำไมต้องมีเทอม g'(z⁽ˡ⁻¹⁾) คูณอยู่ด้วย?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">คำนวณ a⁽ˡ⁻¹⁾ โดยตรง เทอม g' ทำหน้าที่แปลง z ให้กลายเป็นค่า activation สุดท้าย</button>
+    <button class="opt" data-correct="true">คำนวณ error δ ของเลเยอร์ก่อนหน้า โดย g' จำเป็นเพราะ error ต้องผ่าน activation function นั้นด้วยตาม chain rule</button>
+    <button class="opt" data-correct="false">คำนวณ cost function J(θ) ของทั้งเครือข่ายในภาพรวม ไม่ใช่ error ของ node เดียว</button>
+    <button class="opt" data-correct="false">คำนวณค่า θ⁽ˡ⁻¹⁾ ที่อัปเดตแล้วโดยตรง โดยไม่ต้องผ่านขั้นตอน gradient descent อีก</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>Gradient Descent Update</span></div>
+  <div class="qtext">จากตัวอย่างคำนวณเต็มรูปแบบ เมื่อ gradient D₁₀⁽²⁾ ≈ −0.258 และ α=0.1 ค่า θ₁₀⁽²⁾ เดิม (=0) จะถูกอัปเดตเป็นเท่าไหร่?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">θ₁₀⁽²⁾ = −0.0258 เพราะลบค่า gradient ที่เป็นลบออกจากค่าเดิมโดยตรงตามสูตร</button>
+    <button class="opt" data-correct="false">θ₁₀⁽²⁾ = 0 เพราะค่า gradient มีค่าน้อยเกินไปจนไม่ส่งผลต่อการอัปเดตพารามิเตอร์นี้เลย</button>
+    <button class="opt" data-correct="true">θ₁₀⁽²⁾ = 0.0258 เพราะ 0 − 0.1×(−0.258) = 0 + 0.0258 = 0.0258 พอดี</button>
+    <button class="opt" data-correct="false">θ₁₀⁽²⁾ = 0.258 เพราะไม่ต้องคูณด้วยค่า learning rate α ก่อนนำไปลบออกจากค่าเดิม</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Why Non-linear</span></div>
+  <div class="qtext">ถ้าทุก node ในเครือข่ายใช้ activation function แบบ linear (f(x)=x) ไม่ว่าจะมีกี่ layer ผลลัพธ์สุดท้ายของเครือข่ายจะเป็นอย่างไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">ผลลัพธ์จะลดรูปกลับมาเป็น linear function ของ input เดิมเสมอ ไม่ว่าจะมีกี่ layer ก็ตาม</button>
+    <button class="opt" data-correct="false">ผลลัพธ์จะซับซ้อนขึ้นแบบ exponential ตามจำนวน layer ที่เพิ่มเข้ามาในเครือข่าย</button>
+    <button class="opt" data-correct="false">ผลลัพธ์จะเท่ากับ 0 เสมอไม่ว่า input จะเป็นอย่างไรก็ตามในทุกกรณีไม่มีข้อยกเว้น</button>
+    <button class="opt" data-correct="false">ผลลัพธ์จะกลายเป็นฟังก์ชัน polynomial ที่มีดีกรีสูงขึ้นตามจำนวน layer</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควรพิสูจน์สูตร δ⁽ᴸ⁾=a⁽ᴸ⁾−y และ δ⁽ˡ⁻¹⁾=(θ⁽ˡ⁾)ᵗδ⁽ˡ⁾*g'(z⁽ˡ⁻¹⁾) ได้ด้วย chain rule เอง, รันตัวอย่างคำนวณเต็ม 2 layer 2 examples ได้มือ (forward→δ→Δ→D→update θ), อธิบายอนุพันธ์ sigmoid/ReLU และผลต่อ gradient ได้, และอธิบายได้ว่าทำไมต้องมี non-linear activation — นี่คือสูตรเดียวที่ Lesson 4 จะขยายจาก 2 layer เป็น L layer โดยไม่มีอะไรเปลี่ยนนอกจากจำนวนรอบ.
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน Lecture3.pdf (49 หน้า) — เช็คว่าอ่านครบ</h2>
+<p>หมายเหตุ: เนื้อหาทั้ง 49 หน้านี้เหมือนกับ Lecture2.pdf หน้า 50-98 เป๊ะทุกตัวอักษร (ดู <a href="0002-neural-network-basics.html">Lesson 2</a> หมายเหตุต้นบท) ภาคผนวกนี้จึงครอบคลุมทั้ง Lecture2.pdf หน้า 50-98 ไปในตัว.</p>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>Cost Function — นิยาม (ซ้ำ Lesson 1-2)</td><td>etc — ทวนนิยาม</td></tr>
+<tr><td>2</td><td>Parameter Learning — Gradient Descent Algorithm นิยามซ้ำ</td><td>etc — ทวนนิยาม</td></tr>
+<tr><td>3</td><td>Backpropagation — เกริ่นนำและที่มาจาก Chain Rule</td><td>✓ หัวข้อ 1 (เกริ่นก่อนตัวอย่าง)</td></tr>
+<tr><td>4</td><td>Chain Rule's Example (1) — dy/dx เมื่อ y=e^(x³)</td><td>✓ หัวข้อ 1 (มีรูป, แก้เอง)</td></tr>
+<tr><td>5</td><td>From Chain Rule to Backpropagation — y=(2x−5)¹⁰</td><td>✓ หัวข้อ 1 (มีรูป, แก้เอง)</td></tr>
+<tr><td>6</td><td>Apply Chain Rule to Backpropagation — ∂J/∂θ[2], ∂J/∂θ[1] ตั้งสูตร</td><td>✓ หัวข้อ 2 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>7</td><td>Forward Computation (1 example)</td><td>✓ หัวข้อ 2 (มีรูป)</td></tr>
+<tr><td>8</td><td>Backward Computation — นิยาม δ</td><td>✓ หัวข้อ 2 (มีรูป)</td></tr>
+<tr><td>9</td><td>Derive Backpropagation (Small NN) — logistic regression เทียบ</td><td>etc — เกริ่นก่อนพิสูจน์เต็มหน้า 10</td></tr>
+<tr><td>10</td><td>Mathematical Proof — พิสูจน์ δ ด้วย Chain Rule เต็มขั้น</td><td>✓ หัวข้อ 2 (มีรูป, พิสูจน์เต็ม)</td></tr>
+<tr><td>11</td><td>Example — Forward Computation ตัวอย่างที่ 1</td><td>✓ หัวข้อ 3 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>12</td><td>Example — Backward Computation ตัวอย่างที่ 1</td><td>✓ หัวข้อ 3 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>13</td><td>Example — Accumulate Gradients (แนวคิด)</td><td>etc — เกริ่นแนวคิดก่อนตัวเลขจริงหน้า 16</td></tr>
+<tr><td>14</td><td>Example — Forward Computation ตัวอย่างที่ 2</td><td>✓ หัวข้อ 3 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>15</td><td>Example — Backward Computation ตัวอย่างที่ 2</td><td>✓ หัวข้อ 3 (คำนวณในเนื้อหา)</td></tr>
+<tr><td>16</td><td>Example — Accumulate Gradients และ Gradient Descent Update</td><td>✓ หัวข้อ 3 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>17</td><td>Backpropagation Algorithm — ส่วน Forward</td><td>✓ หัวข้อ 4 (มีรูป)</td></tr>
+<tr><td>18</td><td>Backpropagation Algorithm (2) — ส่วน Backward/Update</td><td>✓ หัวข้อ 4 (มีรูป)</td></tr>
+<tr><td>19</td><td>From Backpropagation to Automatic Differentiation</td><td>etc — เชื่อมกับ PyTorch/TensorFlow (นอกขอบเขตคำนวณมือ)</td></tr>
+<tr><td>20</td><td>Dimension of Parameters — สูตรมิติ θ⁽ˡ⁾</td><td>etc — สูตรมิติ (ใช้ต่อ Lesson 4)</td></tr>
+<tr><td>21</td><td>Parameters Initialization — สุ่มค่าเล็กๆ</td><td>etc — เกริ่นก่อน Lesson 5 (weight initialization เต็ม)</td></tr>
+<tr><td>22</td><td>Unrolling Parameters — รวม θ เป็น vector เดียว</td><td>etc — เทคนิค implementation</td></tr>
+<tr><td>23–24</td><td>More on Activation Function, Activation Function at Hidden Layers</td><td>etc — เกริ่นก่อนหัวข้อ 5</td></tr>
+<tr><td>25</td><td>Sigmoid and its Derivative — พิสูจน์เต็ม</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>26</td><td>Tanh and its Derivative — พิสูจน์เต็ม f'(x)=1−f(x)²</td><td>etc — พิสูจน์แบบเดียวกับ sigmoid (สูตรอยู่ในสไลด์ครบแล้ว)</td></tr>
+<tr><td>27</td><td>Sigmoid vs Tanh — output range เทียบกัน</td><td>etc — สรุปเปรียบเทียบ</td></tr>
+<tr><td>28–29</td><td>Gradient Descent สูตรซ้ำ, Comparison sigmoid/tanh (กราฟ)</td><td>etc — ภาพเสริม</td></tr>
+<tr><td>30</td><td>ReLU and its Derivative</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>31</td><td>Leaky ReLU and its Derivative</td><td>✓ หัวข้อ 5 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>32</td><td>ตารางเปรียบเทียบ Sigmoid/Tanh/ReLU/Leaky ReLU เต็ม</td><td>etc — ตารางสรุป (สูตรซ้ำจากหน้า 25,26,30,31)</td></tr>
+<tr><td>33</td><td>What Activation to use for Hidden Layers — แนะนำ ReLU</td><td>etc — ข้อสรุปเชิงปฏิบัติ</td></tr>
+<tr><td>34</td><td>Comparison — ภาพกราฟ sigmoid/tanh/relu</td><td>etc — ภาพเสริม</td></tr>
+<tr><td>35</td><td>Why not Linear Activation Function?</td><td>✓ หัวข้อ 5 (มีรูป, พิสูจน์เต็ม)</td></tr>
+<tr><td>36</td><td>Activation Function at the Output Layer — regression/classification</td><td>etc — สรุปตัวเลือก (ซ้ำ Lesson 1-2)</td></tr>
+<tr><td>37</td><td>Multi-class Classification (Sigmoid at Output Node)</td><td>etc — ทางเลือกที่ไม่แนะนำเทียบกับ Softmax</td></tr>
+<tr><td>38</td><td>Multi-class Classification (Softmax at Output Node)</td><td>✓ หัวข้อ 6 (มีรูป)</td></tr>
+<tr><td>39</td><td>Model Evaluation — Train/Val/Test (ซ้ำ Lesson 1)</td><td>etc — ทวนจาก Lesson 1</td></tr>
+<tr><td>40</td><td>Model Improvement — High Bias/High Variance (ซ้ำ Lesson 1-2)</td><td>etc — ทวนจาก Lesson 1-2</td></tr>
+<tr><td>41</td><td>Regularization — นิยาม L1/L2</td><td>✓ หัวข้อ 7 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>42</td><td>Cost Function with Regularization — ตัวอย่างนับพารามิเตอร์</td><td>✓ หัวข้อ 7 (คำนวณในเนื้อหา)</td></tr>
+<tr><td>43</td><td>Gradient Descent with L2 Regularization</td><td>etc — สูตร gradient เพิ่มเทอม regularization (ตรงไปตรงมาจากหัวข้อ 7)</td></tr>
+<tr><td>44</td><td>Best Practice to Model Improvement</td><td>etc — ข้อแนะนำเชิงปฏิบัติ</td></tr>
+<tr><td>45</td><td>Parameters and Hyper Parameter — นิยามแยกสองคำ</td><td>etc — นิยามคำศัพท์</td></tr>
+<tr><td>46</td><td>Hyperparameter Tuning Guideline — จำนวน layer/hidden unit</td><td>etc — guideline เชิงปฏิบัติ ไม่ใช่สูตรคำนวณ</td></tr>
+<tr><td>47</td><td>Binary Classification Exercise — Forward Computation</td><td>✓ หัวข้อ 8 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>48</td><td>Binary Classification Exercise — Backward Computation</td><td>✓ หัวข้อ 8 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>49</td><td>References</td><td>etc — รายการอ้างอิงหนังสือ</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0002-neural-network-basics.html">← Lesson 2: Neural Network Basics</a></span>
+  <span><a href="0004-deep-networks-and-optimizers.html">Lesson 4: Deep Networks &amp; Optimizers →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

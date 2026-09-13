@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Lesson 5: Vanishing Gradients &amp; Initialization</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0004-deep-networks-and-optimizers.html">← Lesson 4: Deep Networks &amp; Optimizers</a></span>
+  <span>Lesson 5 / 5 · Vanishing Gradients &amp; Init</span>
+</nav>
+
+<p class="kicker">Lecture5.pdf · 2603520 Deep Learning</p>
+<h1>Vanishing/Exploding Gradients, Weight Initialization และ Keras ในภาคปฏิบัติ</h1>
+
+<p>บทสุดท้ายตอบคำถามที่ Lesson 3-4 ทิ้งไว้: ทำไม backprop สูตรที่คูณกันหลายเทอมถึง "พัง" เมื่อเครือข่ายลึกมากๆ แล้วจะแก้ด้วยอะไรได้บ้าง (weight initialization, batch normalization) ปิดท้ายด้วยการเอาทุกอย่างไปใช้จริงใน Keras.</p>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf" target="_blank" rel="noopener">Understanding the difficulty of training deep feedforward neural networks</a> — ต้นตำรับของ Xavier Initialization ที่สไลด์อ้างอิงตรงนี้.
+</div>
+
+<h2>1. Vanishing/Exploding Gradients: ผลสืบเนื่องจาก Chain Rule ที่ยาวเกินไป</h2>
+<figure>
+<img src="../assets/slides/dl5-p01-vanishing-exploding-gradients-formula.png" alt="The backpropagation chain rule formula for a deep network, showing that computing the gradient at an early layer requires multiplying through many terms (theta, g-prime, a) across all the layers in between, which is the mechanical source of the vanishing and exploding gradient problems">
+<figcaption>Slide: Vanishing and Exploding Gradients — ที่มาจากโซ่ chain rule ที่ยาว (Lecture5.pdf, p.1)</figcaption>
+</figure>
+<p>ย้อนสูตรจาก Lesson 4 หัวข้อ 1: <code>∂J/∂θ₁,₁⁽ᴸ⁻¹⁾ = δ⁽ᴸ⁾·θ₁,₁⁽ᴸ⁾·g'(z₁⁽ᴸ⁻¹⁾)·a₁⁽ᴸ⁻²⁾</code> — ถ้าเครือข่ายมี 10 layer การหา gradient ของ layer แรกสุดต้องคูณเทอม g'(z) ต่อกัน<strong>เกือบ 10 ตัว</strong> (1 ตัวต่อ layer ที่ผ่าน).</p>
+<ul>
+<li><strong>Exploding:</strong> ถ้าแต่ละเทอมมีค่า &gt;1 (เช่น weight เริ่มต้นใหญ่) การคูณ 10 ตัวที่ &gt;1 ซ้ำกันจะทำให้ gradient ใหญ่ขึ้นแบบทวีคูณ (exponential) จนอัปเดต weight กระโดดสุ่มไม่ลู่เข้า</li>
+<li><strong>Vanishing:</strong> ถ้าแต่ละเทอมมีค่า &lt;1 (เช่น g'(z) ของ sigmoid สูงสุดแค่ 0.25 ตามที่พิสูจน์ใน Lesson 3 หัวข้อ 5) การคูณ 10 ตัวที่ &lt;1 ซ้ำกันจะทำให้ gradient เล็กลงแบบทวีคูณจนเข้าใกล้ 0 — <code>0.25¹⁰ ≈ 0.00000095</code> (เล็กมากจนแทบไม่มีการอัปเดต weight ของ layer แรกๆเลย)</li>
+</ul>
+<p>นี่คือเหตุผลที่ layer ที่อยู่ใกล้ input มักเรียนรู้ช้ากว่า layer ใกล้ output มากในเครือข่ายลึกที่ใช้ sigmoid.</p>
+
+<figure>
+<img src="../assets/slides/dl5-p02-activation-sigmoid-saturation.png" alt="Sigmoid function curve showing flat, saturated regions at both extremes (very negative or very positive z), where the derivative is nearly zero, illustrating why saturated sigmoid neurons stop learning during backpropagation">
+<figcaption>Slide: Activation Function — ปัญหา Saturation ของ sigmoid (Lecture5.pdf, p.2)</figcaption>
+</figure>
+<p>ปัญหาไม่ได้อยู่แค่ "ค่าเฉลี่ยของ g'(z) น้อยกว่า 1" แต่ยังมีปัญหา <em>saturation</em>: ถ้า z มีค่ามากหรือน้อยเกินไป (ไม่ใกล้ 0) sigmoid จะแบนราบสนิท (g'(z)≈0 เป๊ะ ไม่ใช่แค่เล็ก).</p>
+<p>ตรงนี้คือเหตุผลที่ ReLU (จาก Lesson 3 หัวข้อ 5) ถูกเลือกเป็นค่าเริ่มต้นสำหรับ hidden layer: อนุพันธ์ของมันเป็น 1 คงที่เมื่อ z≥0 (ไม่มี saturation ในโซนบวก) ทำให้ไม่ลดขนาด gradient ไม่ว่าจะผ่านกี่ layer.</p>
+<p>แต่ ReLU ก็แลกมาด้วยปัญหาใหม่ (ตายที่ z&lt;0 และเสี่ยง exploding เมื่อ activation บวกไม่มีขอบเขตบน) จึงต้องมี gradient clipping (ตัดค่า gradient ไม่ให้เกิน threshold ก่อน update) ช่วยแก้ฝั่ง exploding.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Vanishing Gradient</span></div>
+  <div class="qtext">ทำไมเครือข่ายที่ใช้ sigmoid ทุก layer ถึงเสี่ยงเกิด Vanishing Gradient มากกว่าเครือข่ายที่ใช้ ReLU?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">เพราะอนุพันธ์ sigmoid สูงสุดแค่ 0.25 และเข้าใกล้ 0 เมื่อ saturate ต่างจาก ReLU ที่คงที่ 1</button>
+    <button class="opt" data-correct="false">เพราะ sigmoid ใช้ได้กับ output layer เท่านั้น ไม่สามารถใช้กับ hidden layer ได้เลย</button>
+    <button class="opt" data-correct="false">เพราะ sigmoid ต้องการค่า learning rate ที่สูงกว่า ReLU มากในทุกกรณีของการเทรน</button>
+    <button class="opt" data-correct="false">เพราะ sigmoid ไม่สามารถหาอนุพันธ์ได้เลยในทางคณิตศาสตร์เมื่อเครือข่ายมีหลาย layer</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>2. Weight Initialization: ทำไม "สุ่มเฉยๆ" ไม่พอ</h2>
+<figure>
+<img src="../assets/slides/dl5-p05-problem-of-random-init.png" alt="Diagram with 100 input features x1 through x100, all set to 1, feeding into a hidden layer where weights are drawn from a standard normal distribution (mean=0, variance=1); the exercise asks to compute the mean and variance of z1[1] = sum of theta_i times x_i across all 100 inputs, illustrating that variance grows with the number of inputs">
+<figcaption>Slide: The Problem of Random Initialization — ตัวอย่างคำนวณ mean, variance ของ z (Lecture5.pdf, p.5)</figcaption>
+</figure>
+<p>สไลด์เว้นคำตอบไว้ให้คำนวณ: มี 100 input <code>x₁,…,x₁₀₀=1</code> ทุกตัว weight <code>θ ~ N(0,1)</code> (สุ่มจาก normal distribution ค่าเฉลี่ย 0 variance 1) <code>z₁⁽¹⁾ = θ₁₀⁽¹⁾+θ₁₁⁽¹⁾x₁+…+θ₁,₁₀₀⁽¹⁾x₁₀₀</code>:</p>
+<ul>
+<li><strong>mean:</strong> ผลรวมของตัวแปรสุ่มที่มี mean=0 ทุกตัว บวกกันยังได้ mean=0 (ค่าคาดหวังของผลรวม = ผลรวมของค่าคาดหวัง)</li>
+<li><strong>variance:</strong> เพราะแต่ละเทอม <code>θᵢxᵢ</code> เป็นอิสระกัน variance ของผลรวม = ผลรวมของ variance แต่ละเทอม = <code>Var(θᵢ)·xᵢ² = 1×1² = 1</code> ต่อเทอม รวม 100 เทอมได้ <code>variance = 100</code></li>
+</ul>
+<p>ตรงกับที่สไลด์เตือนไว้ "Variance ของ input โตขึ้นตามจำนวน input" พอ variance ของ z ใหญ่ขนาดนี้ (100 เทียบกับ 1 ตอนตั้งต้น) z มีโอกาสสูงที่จะหลุดไปอยู่ในโซน saturation ของ sigmoid (z ห่างจาก 0 มากๆ) ตั้งแต่ layer แรกเลย.</p>
+<p>นี่คือเหตุผลที่ "สุ่ม weight เฉยๆ" ไม่พอ ต้องคุม variance ให้เหมาะกับจำนวน input ด้วย.</p>
+
+<figure>
+<img src="../assets/slides/dl5-p06-weight-init-techniques-table.png" alt="Table of three weight initialization techniques with their variance formulas: LeCun Initialization uses variance=1/fan_in (recommended for SELU), Glorot/Xavier Initialization uses variance=2/(fan_in+fan_out) (recommended for sigmoid/tanh/softmax), and He/Kaiming Initialization uses variance=2/fan_in (recommended for ReLU and its variants)">
+<figcaption>Slide: Weight Initialization Techniques — สูตร variance ของแต่ละวิธี (Lecture5.pdf, p.6)</figcaption>
+</figure>
+<p>ทั้ง 3 วิธีแก้ปัญหาเดียวกัน (variance ของ z ไม่ควรโตหรือหดตามจำนวน input/output) ด้วยสูตรต่างกันเล็กน้อย:</p>
+<ul>
+<li><strong>LeCun (1998):</strong> <code>var = 1/fan_in</code> (fan_in = จำนวน node ที่ส่ง input เข้ามา) — เหมาะกับ SELU</li>
+<li><strong>Xavier/Glorot (2010):</strong> <code>var = 2/(fan_in+fan_out)</code> (คำนึงถึงทั้ง forward และ backward pass พร้อมกัน) — เหมาะกับ sigmoid/tanh/softmax</li>
+<li><strong>He/Kaiming (2015):</strong> <code>var = 2/fan_in</code> — เหมาะกับ ReLU และตัวแปรของมัน (ตัวเลข 2 ในตัวเศษชดเชยที่ ReLU "ตัดครึ่งค่าลบทิ้ง" ทำให้ variance ที่ออกมาจาก ReLU ลดลงครึ่งหนึ่งโดยธรรมชาติ ต้องเพิ่มตัวคูณ 2 มาชดเชย)</li>
+</ul>
+<p>กฎจำง่ายจากสไลด์หัวข้อถัดไป: <strong>ReLU/Leaky ReLU ใช้ He, tanh/Sigmoid ใช้ Xavier</strong>.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>Weight Init Variance</span></div>
+  <div class="qtext">มี 100 input ทุกตัวเท่ากับ 1 และ weight สุ่มจาก N(0,1) อิสระกัน variance ของ z₁⁽¹⁾ = Σθᵢxᵢ (รวม 100 เทอม) เท่ากับเท่าไหร่?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">1 เพราะ variance ของ weight แต่ละตัวเท่ากับ 1 อยู่แล้วไม่เปลี่ยนแปลงตามจำนวนเทอม</button>
+    <button class="opt" data-correct="true">100 เพราะ variance ของผลรวมตัวแปรสุ่มอิสระเท่ากับผลรวม variance ของแต่ละเทอม (1×100)</button>
+    <button class="opt" data-correct="false">10 เพราะต้องหารด้วยรากที่สองของจำนวน input ก่อนนำมาบวกกันตามสูตรมาตรฐาน</button>
+    <button class="opt" data-correct="false">0 เพราะ mean ของแต่ละ weight เท่ากับ 0 ทำให้ variance ของผลรวมเป็น 0 ไปด้วย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>He vs Xavier Init</span></div>
+  <div class="qtext">ตามหลักการที่สไลด์แนะนำ ควรใช้ Weight Initialization แบบใดกับ hidden layer ที่ใช้ ReLU เป็น activation function?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">He (Kaiming) Initialization เพราะออกแบบมาสำหรับ ReLU และตัวแปรของมันโดยเฉพาะ (var=2/fan_in)</button>
+    <button class="opt" data-correct="false">Xavier (Glorot) Initialization เพราะใช้ได้กับทุก activation function เท่าเทียมกันเสมอ</button>
+    <button class="opt" data-correct="false">LeCun Initialization เพราะเป็นวิธีที่เก่าที่สุดจึงเหมาะกับ activation function ทุกแบบ</button>
+    <button class="opt" data-correct="false">ไม่ต้องเลือกวิธีใดเป็นพิเศษ เพราะ ReLU ไม่ได้รับผลกระทบจากการเลือก initialization เลย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>3. Batch Normalization: Normalize z ก่อนเข้า Activation ทุก Layer</h2>
+<figure>
+<img src="../assets/slides/dl5-p12-batch-norm-formula.png" alt="Batch normalization formulas: z_norm^(i) = (z^(i) - mu_B) / sqrt(sigma_B^2 + epsilon), zero-centering and normalizing z using the mini-batch mean and variance, followed by a learnable scale and shift: z_tilde^(i) = gamma * z_norm^(i) + beta">
+<figcaption>Slide: Batch Normalization (BN) — สูตร normalize แล้ว scale/shift (Lecture5.pdf, p.12)</figcaption>
+</figure>
+<p>BN ทำ 2 ขั้นในทุก hidden layer ก่อน (หรือหลัง) activation function:</p>
+<ul>
+<li><strong>ขั้น 1 (normalize):</strong> <code>z_norm⁽ⁱ⁾ = (z⁽ⁱ⁾−μ_B)/√(σ_B²+ε)</code> — ลบด้วยค่าเฉลี่ยของ mini-batch (μ_B) แล้วหารด้วยส่วนเบี่ยงเบนมาตรฐานของ mini-batch (√(σ_B²+ε), ε ป้องกันหารด้วย 0) ผลคือ z_norm มี mean≈0, variance≈1 เสมอไม่ว่า layer ไหน</li>
+<li><strong>ขั้น 2 (scale/shift):</strong> <code>z̃⁽ⁱ⁾ = γ·z_norm⁽ⁱ⁾+β</code> — คูณด้วย γ และบวก β ที่เป็นพารามิเตอร์ที่<strong>เรียนรู้ได้เอง</strong> (ไม่ใช่ค่าคงที่) เพื่อให้เครือข่ายเลือกได้เองว่าจะ "คง" การ normalize ไว้เท่าไหร่ (ถ้า γ,β เรียนกลับมาเป็นค่าเดิมของ z ก็แปลว่า BN ไม่ช่วยตรงนี้ ปล่อยให้เป็นแบบเดิม)</li>
+</ul>
+<p>เหตุผลที่ต้องมีขั้นที่ 2: ถ้า normalize แล้วหยุดเลย ทุก layer จะถูกบีบให้มี distribution เดียวกันตายตัว ซึ่งอาจไม่เหมาะกับทุกงาน จึงต้องให้เครือข่ายเรียนรู้ระดับการ "คลาย" เอง.</p>
+
+<p><strong>ตอน Training vs ตอน Test:</strong> ตอน train, μ_B และ σ_B² คำนวณจาก mini-batch ปัจจุบัน (เปลี่ยนไปทุก batch) แต่ตอน test ไม่มี "mini-batch" ให้คำนวณ (อาจมีแค่ 1 ตัวอย่าง) — ทางแก้คือเก็บ <em>moving average</em> ของ μ_B, σ_B² ที่สะสมมาตลอดการเทรน แล้วใช้ค่าเฉลี่ยสะสมนี้แทนตอน test (คงที่ ไม่เปลี่ยนตามข้อมูล test แต่ละตัว).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>Batch Normalization</span></div>
+  <div class="qtext">เพราะเหตุใด Batch Normalization ยังต้องมีขั้น "scale and shift" (γz_norm+β) ต่อจากขั้น normalize แทนที่จะหยุดแค่ normalize ให้ mean=0, variance=1?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">เพื่อให้เครือข่ายเรียนรู้เองว่าจะคงการ normalize ไว้แค่ไหน ไม่ถูกบีบให้เหมือนกันทุก layer</button>
+    <button class="opt" data-correct="false">เพราะขั้น normalize เพียงอย่างเดียวทำให้ค่า z กลายเป็นค่าลบทั้งหมดในทุกกรณีของการเทรน</button>
+    <button class="opt" data-correct="false">เพราะกฎของ Keras กำหนดให้ทุก layer ต้องมีพารามิเตอร์ที่เรียนรู้ได้อย่างน้อยสองตัวเสมอ</button>
+    <button class="opt" data-correct="false">เพราะขั้น normalize เพียงอย่างเดียวทำให้ gradient ไม่สามารถไหลย้อนกลับผ่าน layer นั้นได้อีก</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>4. Layer Normalization: เมื่อไม่อยากพึ่ง Mini-batch</h2>
+<figure>
+<img src="../assets/slides/dl5-p18-batchnorm-to-layernorm.png" alt="Diagram contrasting Batch Normalization, which computes mean and variance down each column across all examples in a mini-batch for a given neuron, with Layer Normalization, which instead computes mean and variance across all neurons within a single example, independent of batch size">
+<figcaption>Slide: From Batch Normalization to Layer Normalization (Lecture5.pdf, p.18)</figcaption>
+</figure>
+<p>BN คำนวณ mean/variance "ไล่ตามคอลัมน์" คือรวบรวมค่าของ 1 neuron จากทุกตัวอย่างใน mini-batch (พึ่งพา batch size — ถ้า batch เล็กเกินไป สถิติที่คำนวณได้จะไม่น่าเชื่อถือ).</p>
+<p>LayerNorm แก้ปัญหานี้ด้วยการคำนวณ mean/variance "ไล่ตามแถว" คือรวบรวมค่าของ neuron <em>ทุกตัวภายใน 1 ตัวอย่างเดียว</em> — ไม่ต้องพึ่งตัวอย่างอื่นใน batch เลย ทำให้:</p>
+<ul>
+<li>ใช้ได้แม้ batch size=1</li>
+<li>พฤติกรรมเหมือนกันทั้งตอน train และ test (ไม่ต้องเก็บ moving average แบบ BN)</li>
+<li>เหมาะกับ Transformer ที่ batch statistics ผันแปรสูง</li>
+</ul>
+<p>นี่คือเหตุผลที่ LayerNorm เป็นตัวเลือกมาตรฐานใน Transformer/LLM ในขณะที่ BN ยังนิยมใน CNN.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>Layer vs Batch Norm</span></div>
+  <div class="qtext">ข้อได้เปรียบหลักของ Layer Normalization เทียบกับ Batch Normalization คืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">LayerNorm ใช้ได้กับ CNN เท่านั้น ในขณะที่ BatchNorm ใช้ได้กับทุกสถาปัตยกรรม</button>
+    <button class="opt" data-correct="false">LayerNorm ไม่มีพารามิเตอร์ γ, β ที่เรียนรู้ได้เลย ต่างจาก BatchNorm ที่มีทั้งสองตัว</button>
+    <button class="opt" data-correct="false">LayerNorm ต้องใช้ batch size ที่ใหญ่กว่า BatchNorm มากเพื่อให้สถิติแม่นยำเพียงพอ</button>
+    <button class="opt" data-correct="true">LayerNorm คำนวณสถิติจากภายใน 1 ตัวอย่างเดียว ไม่ต้องพึ่งตัวอย่างอื่นใน mini-batch เหมือน BatchNorm</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>5. Keras ในภาคปฏิบัติ: MNIST ตัวอย่างเต็มรูปแบบ</h2>
+<p>ขั้นตอนมาตรฐาน 5 ขั้นของ Keras:</p>
+<ol>
+<li>โหลด/เตรียมข้อมูล</li>
+<li>สร้างโมเดล</li>
+<li>compile (เลือก loss, optimizer, metric)</li>
+<li>เทรนด้วย <code>.fit()</code></li>
+<li>ประเมินผล</li>
+</ol>
+<p>MNIST (เลขเขียนมือ 28×28 พิกเซล, 10 class) คือตัวอย่างที่สไลด์ใช้สาธิตทุกขั้น.</p>
+
+<figure>
+<img src="../assets/slides/dl5-p29-mnist-parameter-count-table.png" alt="Keras model.summary() output for a 3-layer dense network (784 inputs, 16, 16, 10 outputs) showing parameter counts per layer: 12,560 for the first dense layer (16 times 784+1), 272 for the second (16 times 16+1), 170 for the third (10 times 16+1), summing to a total of 13,002 trainable parameters">
+<figcaption>Slide: Concise Summary of the Network Topology — นับพารามิเตอร์จริงจาก model.summary() (Lecture5.pdf, p.29)</figcaption>
+</figure>
+<p>โมเดล 784→16→16→10 (MNIST แบบ flatten เป็นเวกเตอร์ 784 ก่อนเข้า Dense) นับพารามิเตอร์ทีละ layer ด้วยกฎเดียวจาก Lesson 2 หัวข้อ 5 (dimension ของ θ⁽ˡ⁾ = จำนวน node ปัจจุบัน × (จำนวน node ก่อนหน้า+1 สำหรับ bias)):</p>
+<ul>
+<li><strong>Layer 1:</strong> <code>16×(784+1) = 16×785 = 12,560</code></li>
+<li><strong>Layer 2:</strong> <code>16×(16+1) = 16×17 = 272</code></li>
+<li><strong>Layer 3 (output):</strong> <code>10×(16+1) = 10×17 = 170</code></li>
+</ul>
+<p><strong>รวม:</strong> <code>12,560+272+170 = 13,002</code> พารามิเตอร์ที่ต้องเรียนรู้ทั้งหมด — ตรงกับตัวเลขที่ Keras พิมพ์ออกมาจริงเป๊ะทุกหลัก.</p>
+
+<figure>
+<img src="../assets/slides/dl5-p31-launch-training-minibatch-count.png" alt="Keras training call model.fit(X, y, epochs=40, validation_split=0.2, batch_size=64), with a calculation showing that with 48,000 training examples after the 20% validation split, the number of mini-batches per epoch equals 48,000 divided by 64, which equals 750 batches">
+<figcaption>Slide: Launch the training — คำนวณจำนวน mini-batch ต่อ epoch (Lecture5.pdf, p.31)</figcaption>
+</figure>
+<p>เรียก <code>model.fit(X, y, epochs=40, validation_split=0.2, batch_size=64)</code> — เพราะ <code>validation_split=0.2</code> ดึงข้อมูล 20% ไปเป็น validation ก่อน เหลือ training จริง 48,000 ตัวอย่าง (จาก 60,000 ตัวอย่างเต็มของ MNIST training set).</p>
+<p>จำนวน mini-batch ต่อ epoch คำนวณตรงไปตรงมาตามสูตร Lesson 4 หัวข้อ 3: <code>#mini-batches = #training examples ÷ batch size = 48,000 ÷ 64 = 750 batches</code>.</p>
+<p>เครือข่ายจะอัปเดต θ ทั้งหมด 750 ครั้งต่อ 1 epoch และเทรนซ้ำ 40 epoch (รวม 30,000 ครั้งของการอัปเดต θ ทั้งหมด).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>Keras Parameter Count</span></div>
+  <div class="qtext">โมเดล Keras มีโครงสร้าง 784→16→16→10 (Dense ทุก layer) จำนวนพารามิเตอร์ของ layer แรก (784→16) เท่ากับเท่าไหร่ ตามกฎ #node ปัจจุบัน × (#node ก่อนหน้า+1)?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">784 เพราะเท่ากับจำนวน input feature ทั้งหมดของภาพ MNIST หนึ่งภาพพอดี</button>
+    <button class="opt" data-correct="false">12,544 เพราะคำนวณจาก 16×784 โดยตรง ไม่ต้องบวกเทอม bias เข้าไปด้วย</button>
+    <button class="opt" data-correct="true">12,560 เพราะคำนวณจาก 16×(784+1) = 16×785 ซึ่งรวมเทอม bias ของแต่ละ node ด้วย</button>
+    <button class="opt" data-correct="false">16 เพราะเท่ากับจำนวน node ของ layer นั้นเพียงอย่างเดียวโดยไม่คูณกับสิ่งใด</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>Mini-batch Count</span></div>
+  <div class="qtext">เรียก model.fit(X,y,validation_split=0.2,batch_size=64) บนข้อมูล MNIST 60,000 ตัวอย่าง จำนวน mini-batch ต่อ epoch เท่ากับเท่าไหร่?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">938 batch เพราะคำนวณจาก 60,000 หารด้วย 64 โดยตรง ไม่ต้องหักส่วน validation ออกก่อน</button>
+    <button class="opt" data-correct="false">64 batch เพราะเท่ากับค่า batch_size ที่กำหนดไว้ตรงๆในโค้ดโดยไม่ต้องคำนวณเพิ่ม</button>
+    <button class="opt" data-correct="true">750 batch เพราะเหลือ training จริง 48,000 ตัวอย่าง (หัก validation 20% แล้ว) หารด้วย 64 เท่ากับ 750</button>
+    <button class="opt" data-correct="false">48,000 batch เพราะเท่ากับจำนวน training example ที่เหลือหลังหัก validation ออกไปแล้ว</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>6. Compile Options และ Softmax Layer</h2>
+<p>เมื่อ label เป็น integer เดี่ยว (เช่น MNIST แต่ละภาพมี label เป็นเลข 0-9 ตัวเดียว ไม่ใช่ one-hot vector) ใช้ <code>loss="sparse_categorical_crossentropy"</code> แทน <code>categorical_crossentropy</code> (ซึ่งต้องการ one-hot) — ประหยัดทั้งโค้ดแปลงข้อมูลและหน่วยความจำ.</p>
+<p>ส่วน <code>Softmax</code> layer (ที่เรียนสูตรใน Lesson 3 หัวข้อ 6) ในบางกรณีเขียนแยกเป็น layer ต่างหากต่อจาก Dense layer สุดท้าย แทนที่จะฝัง activation='softmax' ไว้ใน Dense เลย — โครงสร้าง <code>Input → Flatten → Dense → Softmax</code> เป็นอีกวิธีเขียนโมเดลแบบ explicit ที่ให้ผลเหมือนกัน.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>Sparse Categorical Crossentropy</span></div>
+  <div class="qtext">เพราะเหตุใดจึงใช้ loss="sparse_categorical_crossentropy" กับ label ของ MNIST แทน "categorical_crossentropy"?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ sparse_categorical_crossentropy ให้ค่า accuracy ที่สูงกว่าเสมอไม่ว่า dataset จะเป็นแบบใด</button>
+    <button class="opt" data-correct="true">เพราะ label ของ MNIST เป็น integer เดี่ยว (0-9) ไม่ใช่ one-hot vector จึงไม่ต้องแปลงข้อมูลก่อนใช้งาน</button>
+    <button class="opt" data-correct="false">เพราะ categorical_crossentropy ใช้ไม่ได้เลยกับโมเดลที่มี Softmax layer อยู่ท้ายสุด</button>
+    <button class="opt" data-correct="false">เพราะ sparse_categorical_crossentropy ไม่ต้องใช้ Softmax activation ที่ output layer เลย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>7. Overcome Overfitting ในโค้ดจริง</h2>
+<p>สไลด์ปิดท้ายด้วยการเขียน L2 regularization และ dropout ผ่าน Keras API จริง (เชื่อมกับ Lesson 4 หัวข้อ 6):</p>
+<ul>
+<li>เพิ่ม <code>kernel_regularizer=regularizers.l2(λ)</code> เป็น argument ของ layer ที่ต้องการ regularize</li>
+<li>เพิ่ม <code>layers.Dropout(rate)</code> เป็น layer แยกต่อท้าย layer ที่ต้องการทำ dropout</li>
+</ul>
+<p>ทั้งสองคือการ "แปลสูตรทฤษฎีที่เรียนมาทั้งวิชา" เป็นโค้ด 1 บรรทัดเท่านั้น ไม่มีคณิตศาสตร์ใหม่.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>Gradient Clipping</span></div>
+  <div class="qtext">Gradient Clipping (การตัดค่า gradient ไม่ให้เกิน threshold ก่อน update) เป็นวิธีแก้ปัญหาใดเป็นหลัก?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">แก้ปัญหา Overfitting โดยลดความซับซ้อนของโมเดลลงโดยตรงในทุก layer</button>
+    <button class="opt" data-correct="true">แก้ปัญหา Exploding Gradient โดยจำกัดขนาด gradient ไม่ให้ใหญ่จนอัปเดตพารามิเตอร์แกว่งรุนแรง</button>
+    <button class="opt" data-correct="false">แก้ปัญหา Vanishing Gradient โดยขยายขนาดของ gradient ที่เล็กเกินไปให้ใหญ่ขึ้น</button>
+    <button class="opt" data-correct="false">แก้ปัญหาการเลือก Batch Size ที่ไม่เหมาะสมกับจำนวนข้อมูลที่มีอยู่ในการเทรน</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Batch Norm Train vs Test</span></div>
+  <div class="qtext">ทำไม Batch Normalization ต้องใช้ moving average ของ μ_B, σ_B² (ที่สะสมมาตอนเทรน) แทนการคำนวณจาก batch จริงตอน test?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะกฎของ Keras บังคับให้ทุกโมเดลต้องใช้ moving average เสมอไม่ว่ากรณีใด</button>
+    <button class="opt" data-correct="false">เพราะ γ และ β ไม่สามารถถูกเรียกใช้ได้อีกหลังจากขั้นตอนการเทรนเสร็จสิ้นแล้ว</button>
+    <button class="opt" data-correct="false">เพราะการคำนวณจาก batch จริงตอน test ใช้เวลานานกว่าการเทรนทั้งโมเดลใหม่อีกครั้ง</button>
+    <button class="opt" data-correct="true">เพราะตอน test อาจมีแค่ 1 ตัวอย่าง ไม่มี mini-batch ให้คำนวณค่าเฉลี่ย/variance ที่น่าเชื่อถือ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้ (และของทั้งวิชา)</div>
+คุณควรอธิบายได้ว่าทำไม chain rule ที่ยาวทำให้เกิด vanishing/exploding gradient, คำนวณ variance ของ z จากจำนวน input ได้ (และรู้ว่า He ใช้กับ ReLU, Xavier ใช้กับ sigmoid/tanh), อธิบายสูตร Batch/Layer Normalization ได้ทั้ง train และ test time, และอ่าน/คำนวณพารามิเตอร์จาก Keras model.summary() ได้มือ — ครบทั้ง 5 บทแล้ว ตั้งแต่ ML พื้นฐานจนถึงการเทรน deep network จริงใน Keras.
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน Lecture5.pdf (38 หน้า) — เช็คว่าอ่านครบ</h2>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>Vanishing and Exploding Gradients — ที่มาจาก chain rule</td><td>✓ หัวข้อ 1 (มีรูป)</td></tr>
+<tr><td>2</td><td>Activation Function — Sigmoid saturation</td><td>✓ หัวข้อ 1 (มีรูป)</td></tr>
+<tr><td>3</td><td>Activation Function (2) — ReLU กับ Gradient Clipping</td><td>✓ หัวข้อ 1 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>4</td><td>Weight Initialization — เกริ่นภาพรวม</td><td>etc — เกริ่นก่อนหัวข้อ 2</td></tr>
+<tr><td>5</td><td>The Problem of Random Initialization — คำนวณ mean, variance</td><td>✓ หัวข้อ 2 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>6</td><td>Weight initialization Techniques — LeCun/Xavier/He</td><td>✓ หัวข้อ 2 (มีรูป)</td></tr>
+<tr><td>7</td><td>Experiments — เปรียบเทียบ Zero/Random/He Init</td><td>etc — ผลทดลองเชิงคุณภาพ</td></tr>
+<tr><td>8</td><td>Issues about Weight Initialization — ข้อจำกัด</td><td>etc — ข้อจำกัดเสริม (init ช่วยได้แค่รอบแรก)</td></tr>
+<tr><td>9</td><td>Why Normalization helps Optimization — เกริ่นก่อน BN</td><td>etc — เกริ่นก่อนหัวข้อ 3</td></tr>
+<tr><td>10–11</td><td>Batch Normalization — ภาพรวมโครงสร้าง</td><td>etc — เกริ่นก่อนสูตรเต็มหน้า 12</td></tr>
+<tr><td>12</td><td>Batch Normalization (BN) — สูตรเต็ม</td><td>✓ หัวข้อ 3 (มีรูป)</td></tr>
+<tr><td>13–14</td><td>Normalize z (pre-activation), Normalize a (post-activation)</td><td>etc — ตัวเลือกตำแหน่งวาง BN สองแบบ</td></tr>
+<tr><td>15</td><td>Issues about Batch Normalization — train/test</td><td>✓ หัวข้อ 3 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>16–17</td><td>Issues about Batch Normalization (2)-(3) — ข้อดีเสริม, dropout ร่วมกับ BN</td><td>etc — ข้อดีเสริมของ BN</td></tr>
+<tr><td>18</td><td>From Batch Normalization to Layer Normalization</td><td>✓ หัวข้อ 4 (มีรูป)</td></tr>
+<tr><td>19</td><td>Why Layer Normalization? — เหตุผลเลือกใช้</td><td>✓ หัวข้อ 4 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>20–21</td><td>Keras API, Typical Keras Workflow</td><td>✓ หัวข้อ 5 (เกริ่น 5 ขั้นตอน)</td></tr>
+<tr><td>22</td><td>Begin with Circle Dataset — ตัวอย่างโค้ดสั้น</td><td>etc — ตัวอย่างประกอบก่อน MNIST</td></tr>
+<tr><td>23</td><td>Understand Core Keras APIs via Examples — เกริ่น MNIST</td><td>etc — เกริ่นก่อนตัวอย่างเต็ม</td></tr>
+<tr><td>24–27</td><td>Loading MNIST, Data Exploration, Data Preparation, Preparing Labels</td><td>etc — ขั้นเตรียมข้อมูล (ไม่มีคำนวณใหม่)</td></tr>
+<tr><td>28</td><td>Build the Model with Sequential API</td><td>etc — วิธีสร้างโมเดล (โครงสร้างเดียวกับหัวข้อ 5)</td></tr>
+<tr><td>29</td><td>Concise Summary of the Network Topology — นับพารามิเตอร์</td><td>✓ หัวข้อ 5 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>30</td><td>Compile the model</td><td>etc — ขั้น compile (อธิบายในหัวข้อ 6)</td></tr>
+<tr><td>31</td><td>Launch the training — คำนวณจำนวน mini-batch</td><td>✓ หัวข้อ 5 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>32–33</td><td>Plot the Performance, Check the Model on the Test Set</td><td>etc — ขั้นประเมินผล (ไม่มีคำนวณใหม่)</td></tr>
+<tr><td>34</td><td>More Compile Options — sparse_categorical_crossentropy</td><td>✓ หัวข้อ 6</td></tr>
+<tr><td>35</td><td>Using Input(), Flatten() and Softmax()</td><td>✓ หัวข้อ 6 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>36</td><td>Other Ways of Splitting the Data — train_test_split</td><td>etc — ทางเลือกแบ่งข้อมูลเสริม</td></tr>
+<tr><td>37</td><td>Homework: Classify Movies Reviews (IMDB dataset)</td><td>etc — การบ้าน ไม่ใช่เนื้อหาสอบ</td></tr>
+<tr><td>38</td><td>Overcome Overfitting — L2/Dropout ในโค้ด Keras จริง</td><td>✓ หัวข้อ 7</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0004-deep-networks-and-optimizers.html">← Lesson 4: Deep Networks &amp; Optimizers</a></span>
+  <span><a href="0001-machine-learning-foundations.html">กลับไป Lesson 1 →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

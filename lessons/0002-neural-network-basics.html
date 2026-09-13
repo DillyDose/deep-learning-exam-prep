@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Lesson 2: Neural Network Basics</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0001-machine-learning-foundations.html">← Lesson 1: ML Foundations</a></span>
+  <span>Lesson 2 / 5 · Neural Network Basics</span>
+  <span><a href="0003-cost-function-and-backpropagation.html">Lesson 3: Backpropagation →</a></span>
+</nav>
+
+<p class="kicker">Lecture2.pdf (หน้า 1-49) · 2603520 Deep Learning</p>
+<h1>Neural Network Basics: จาก Node เดียวสู่โครงข่าย</h1>
+
+<p>บทนี้ตอบคำถามว่า "ทำไมต้องมี Neural Network ทั้งที่มี Logistic Regression แล้ว" แล้วสอนสัญกรณ์ (θ, layer, node) ที่จะใช้ไปตลอดวิชา ก่อนจบด้วยการคำนวณ Forward Computation มือจริงครั้งแรก — <strong>หมายเหตุสำคัญ:</strong> Lecture2.pdf หน้า 50-98 คือสไลด์เดียวกับ Lecture3.pdf ทั้ง 49 หน้าเป๊ะ (อาจารย์เอา deck เดิมมาเปิดซ้ำเป็นการทวนก่อนต่อเนื้อหาใหม่) ดังนั้นบทเรียนนี้ครอบคลุมแค่หน้า 1-49 ของ Lecture2.pdf ส่วนเนื้อหา Cost Function/Backpropagation/Activation Function ทั้งหมดไปอยู่ที่ <a href="0003-cost-function-and-backpropagation.html">Lesson 3</a> แทน (ไม่ซ้ำเนื้อหาสองที่).</p>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+<a href="https://www.3blue1brown.com/lessons/neural-networks" target="_blank" rel="noopener">3Blue1Brown — "But what is a neural network?"</a> วิดีโอ 19 นาทีที่อธิบาย node/layer/weight ด้วยภาพเคลื่อนไหว ตรงกับหัวข้อ 1-3 ของบทนี้เป๊ะ.
+</div>
+
+<h2>1. ทำไมต้อง Neural Network: ปัญหาของ Polynomial Feature</h2>
+<p>วิธีเดิมในการทำ decision boundary ไม่เป็นเส้นตรง (จาก Lesson 1) คือเพิ่ม polynomial feature เช่น x₁², x₁x₂ เข้าไปใน logistic regression.</p>
+<p>ปัญหาคือพอ feature ตั้งต้นมีจำนวนมาก จำนวน polynomial term ที่ต้องสร้างจะระเบิดเร็วมาก.</p>
+
+<figure>
+<img src="../assets/slides/dl2-p02-polynomial-feature-blowup.png" alt="Spiral dataset with two interleaved classes requiring a non-linear decision boundary, with the polynomial degree-2 expansion formula shown, and a calculation showing that with 100 input features, all degree-2 polynomial terms explode to 5,150 features">
+<figcaption>Slide: Complex Non-linear Tasks — polynomial expansion ระเบิดเป็น 5,150 features (Lecture2.pdf, p.2)</figcaption>
+</figure>
+<p>ไล่ตัวเลขตามสไลด์: ถ้ามี input แค่ x₁,x₂ การเพิ่ม polynomial degree 2 ให้ครบ (x₁²,x₂²,x₁x₂) ยังจัดการได้ไม่ยาก แต่พอมี <code>x₁,x₂,…,x₁₀₀</code> (100 features) แค่ทำ polynomial degree 2 ให้ครบทุกคู่ (x₁xⱼ สำหรับทุก i,j) จำนวน term รวมพุ่งไปถึง <strong>5,150 features</strong> — และนี่คือ degree 2 เท่านั้น.</p>
+<p>ถ้าเป็นภาพสี RGB ขนาด 28×28 พิกเซล (จะคำนวณด้านล่าง) จำนวน input feature ตั้งต้นก็ปาไป 2,352 แล้ว การทำ polynomial expansion บนขนาดนี้จึงไม่มีทางทำได้จริงในทางปฏิบัติ — นี่คือ "ปัญหา" ที่ทำให้ต้องมีวิธีใหม่ในการสร้าง non-linear decision boundary โดยไม่ต้องเพิ่ม feature มือเอง.</p>
+
+<p>สไลด์หน้าถัดมาให้คำนวณจำนวน feature ของภาพจริง:</p>
+<ul>
+<li>ภาพ grayscale ขนาด 28×28 พิกเซล มีจำนวน feature = <code>28×28 = 784</code> (แต่ละพิกเซลคือ 1 feature ค่า [0-255])</li>
+<li>ภาพสี RGB ที่มี 3 channel (แดง เขียว น้ำเงิน) ต่อพิกเซล จะได้ <code>784×3 = 2,352</code> features</li>
+</ul>
+<p>ยิ่งตอกย้ำว่าการเพิ่ม polynomial term มือด้วยจำนวน feature ระดับพันแบบนี้เป็นไปไม่ได้เลย.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Why ANN</span></div>
+  <div class="qtext">ทำไม Explicit Polynomial Feature Expansion ถึง "impractical" เมื่อจำนวน input feature มาก (เช่น 100 features)?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ sigmoid function ไม่สามารถรับ input มากกว่า 2 ตัวได้ในทางคณิตศาสตร์</button>
+    <button class="opt" data-correct="true">เพราะจำนวน polynomial term เพิ่มแบบทวีคูณ (100 features degree 2 = 5,150 features)</button>
+    <button class="opt" data-correct="false">เพราะ gradient descent ใช้ไม่ได้เลยกับ feature ที่มาจาก polynomial expansion</button>
+    <button class="opt" data-correct="false">เพราะข้อมูลภาพทุกชนิดต้องแปลงเป็นขาวดำก่อนเสมอ ไม่สามารถใช้ภาพสีได้เลย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>2. ประวัติย่อของ ANN: จาก McCulloch-Pitts สู่ปัญหา XOR</h2>
+<figure>
+<img src="../assets/slides/dl2-p08-mcculloch-pitts-neuron.png" alt="McCulloch and Pitts 1943 artificial neuron model diagrams showing simple logical computations like AND and OR gates built from binary threshold neurons">
+<figcaption>Slide: Logical Computation with Neurons (McCulloch &amp; Pitts, 1943) (Lecture2.pdf, p.8)</figcaption>
+</figure>
+<p>โมเดลนิวรอนแรกสุด (1943) รับ input แบบ binary (on/off) แล้ว activate output เมื่อจำนวน input ที่ active เกินเกณฑ์ที่กำหนด — เรียบง่ายแต่พิสูจน์แล้วว่าคำนวณ logic proposition (AND, OR, NOT) ได้ครบ.</p>
+
+<figure>
+<img src="../assets/slides/dl2-p09-perceptron-tlu.png" alt="Rosenblatt's 1957 Perceptron: a single Threshold Logic Unit (TLU) that takes numerical input features, applies weights, sums them, and outputs a binary result if the sum exceeds a threshold">
+<figcaption>Slide: Perceptron (Rosenblatt, 1957) — Threshold Logic Unit (TLU) เดี่ยว (Lecture2.pdf, p.9)</figcaption>
+</figure>
+<p>Perceptron (1957) พัฒนาต่อให้รับ input เป็นตัวเลขจริง (ไม่จำเป็นต้อง binary) คูณด้วย weight บวกกัน แล้วผ่าน step function.</p>
+<p>แต่ Minsky (1969) พิสูจน์ว่า TLU เดี่ยวตัวเดียว<strong>แก้ปัญหา XOR ไม่ได้</strong> เพราะ XOR ไม่ใช่ linearly separable (ไม่มีเส้นตรงเส้นเดียวที่แบ่ง (0,0)/(1,1)→0 ออกจาก (0,1)/(1,0)→1 ได้).</p>
+
+<figure>
+<img src="../assets/slides/dl2-p10-mlp-xor-problem.png" alt="Multilayer Perceptron solving XOR: two hidden threshold logic units and one output unit, with four labeled connection weights (-1.5 bias to AND-like hidden unit, -0.5 bias to OR-like hidden unit, -1 from AND-like hidden unit to output, -0.5 bias to output) while all other connections default to weight 1">
+<figcaption>Slide: Multilayer Perceptron (MLP, Rosenblatt 1969) แก้ปัญหา XOR ได้ (Lecture2.pdf, p.10)</figcaption>
+</figure>
+<p>นี่คือคำตอบที่ทำให้ต้องมี "หลาย layer": ใช้ TLU 2 ตัวใน hidden layer แทน 1 ตัว:</p>
+<ul>
+<li>ตัวแรกคำนวณ <code>step(x₁+x₂−1.5)</code> (ให้ 1 เฉพาะ x₁=x₂=1 พอดี คือทำหน้าที่เหมือน AND)</li>
+<li>ตัวที่สองคำนวณ <code>step(x₁+x₂−0.5)</code> (ให้ 1 เมื่อมีอย่างน้อยหนึ่งตัวเป็น 1 คือทำหน้าที่เหมือน OR)</li>
+</ul>
+<p>แล้ว output รวมสองค่านี้เป็น <code>step(OR − AND − 0.5)</code> ลองแทนค่าจริง:</p>
+<ul>
+<li>x₁=1,x₂=1 → AND=step(2−1.5)=1, OR=step(2−0.5)=1, output=step(1−1−0.5)=step(−0.5)=0 (ถูก เพราะ XOR(1,1)=0)</li>
+<li>x₁=1,x₂=0 → AND=step(1−1.5)=0, OR=step(1−0.5)=1, output=step(1−0−0.5)=step(0.5)=1 (ถูก เพราะ XOR(1,0)=1)</li>
+</ul>
+<p>นี่คือหลักฐานที่จับต้องได้ว่า "ต่อ TLU สองตัวเป็นสอง layer" แก้ปัญหาที่ TLU เดี่ยวแก้ไม่ได้.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>XOR Problem</span></div>
+  <div class="qtext">เหตุผลเชิงคณิตศาสตร์ที่ Perceptron (TLU เดี่ยวตัวเดียว) ไม่สามารถแก้ปัญหา XOR classification ได้คืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ XOR มี input แค่ 2 ตัว ในขณะที่ Perceptron ต้องการ input อย่างน้อย 3 ตัว</button>
+    <button class="opt" data-correct="false">เพราะ Perceptron ใช้ step function ซึ่งไม่สามารถ output ค่า 0 ได้เลยในทุกกรณี</button>
+    <button class="opt" data-correct="false">เพราะ XOR ต้องใช้ค่า input เป็นเลขทศนิยมเท่านั้น ไม่รับ input แบบ binary</button>
+    <button class="opt" data-correct="true">เพราะ XOR ไม่ใช่ linearly separable ไม่มีเส้นตรงเส้นเดียวที่แบ่งสอง class ได้ถูกต้องทั้งหมด</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>3. สัญกรณ์ของ Neural Network: θ, Layer, Node</h2>
+<figure>
+<img src="../assets/slides/dl2-p12-notation-layer-node.png" alt="A fully connected neural network diagram with one input layer, one hidden layer of 3 nodes labeled a1[1], a2[1], a3[1], and one output layer, illustrating the notation for layer number as a superscript bracket and node index as a subscript">
+<figcaption>Slide: Neural Network Notation — layer เป็น superscript [l], node เป็น subscript (Lecture2.pdf, p.12)</figcaption>
+</figure>
+<p>สัญกรณ์นี้ใช้ไปตลอดวิชา ต้องแม่น: <code>a_j^[l]</code> คือ activation ของ node ที่ j ใน layer ที่ l (ตัวเลขใน <code>[ ]</code> คือ layer ไม่ใช่ยกกำลัง) ส่วน <code>θ_ij^[l]</code> คือ weight ของเส้นเชื่อมที่วิ่ง<strong>เข้า</strong>ไปที่ node i ในเลเยอร์ l โดยมาจาก node j ในเลเยอร์ l−1.</p>
+<p>สังเกตว่าลำดับ subscript คือ "ปลายทาง,ต้นทาง" (i=ปลายทาง, j=ต้นทาง) ไม่ใช่ "ต้นทาง,ปลายทาง" ซึ่งเป็นจุดที่มักสับสน.</p>
+
+<figure>
+<img src="../assets/slides/dl2-p13-notation-bias-unit-weight.png" alt="Detailed notation diagram showing the bias unit x0 (typically fixed at +1) connected via weight theta_10^[1] into a hidden node, with z_j^[l] defined as the weighted sum of inputs before the activation function g is applied to produce a_j^[l]">
+<figcaption>Slide: Bias Unit x₀ และสูตร z, a (Lecture2.pdf, p.13)</figcaption>
+</figure>
+<p>สูตรหลักที่ใช้ตลอด: <code>z_j^[l] = Σᵢ θ_ji^[l] · xᵢ</code> (ผลรวมถ่วงน้ำหนักก่อนเข้า activation function) แล้ว <code>a_j^[l] = g(z_j^[l])</code> (ผลลัพธ์หลังผ่าน activation function g).</p>
+<p>bias unit <code>x₀</code> ถูกกำหนดค่าคงที่ <code>+1</code> เสมอ (ไม่ใช่ input จริงจากข้อมูล) ทำหน้าที่เดียวกับ θ₀ ใน logistic regression ของ Lesson 1 คือขยับเส้น/ระนาบให้ไม่ต้องผ่านจุดกำเนิดเสมอไป.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>Notation</span></div>
+  <div class="qtext">ในสัญกรณ์ θ_ij^[l] ตัวเลข i และ j แต่ละตัวหมายถึงอะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">i = index ของ node ปลายทางในเลเยอร์ l, j = index ของ node ต้นทางในเลเยอร์ l−1</button>
+    <button class="opt" data-correct="false">i = จำนวน layer ทั้งหมดในโครงข่าย, j = จำนวน node ในเลเยอร์ปัจจุบัน</button>
+    <button class="opt" data-correct="false">i = index ของ node ต้นทางในเลเยอร์ l−1, j = index ของ node ปลายทางในเลเยอร์ l</button>
+    <button class="opt" data-correct="false">i และ j ทั้งสองตัวหมายถึง index ของ training example ลำดับที่ i และ j</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>4. Logic Gates เป็น Neuron เดี่ยว: AND, OR, NOT</h2>
+<p>ตัวอย่างที่ทำให้เห็นภาพชัดว่า 1 node ทำอะไรได้: ใช้ node เดียว (sigmoid) แทน logic gate ได้ทั้ง AND, OR, NOT โดยเลือกค่า θ ให้เหมาะสม.</p>
+
+<figure>
+<img src="../assets/slides/dl2-p16-logic-and-gate-calc.png" alt="AND logic gate built from a single sigmoid neuron with weights theta0=-30, theta1=20, theta2=20, computing h(x)=g(-30+20x1+20x2) and testing all four binary input combinations to verify it reproduces the AND truth table">
+<figcaption>Slide: Logic Operator AND จาก neuron เดียว (Lecture2.pdf, p.16)</figcaption>
+</figure>
+<p>ตั้ง θ₀=−30, θ₁=20, θ₂=20 คำนวณครบ 4 กรณี:</p>
+<ul>
+<li><code>x₁=0,x₂=0 → g(−30)≈0</code></li>
+<li><code>x₁=0,x₂=1 → g(−30+20)=g(−10)≈0</code></li>
+<li><code>x₁=1,x₂=0 → g(−10)≈0</code></li>
+<li><code>x₁=1,x₂=1 → g(−30+20+20)=g(10)≈1</code></li>
+</ul>
+<p>เพราะ sigmoid(z) เข้าใกล้ 0 เมื่อ z เป็นลบมากๆ และเข้าใกล้ 1 เมื่อ z เป็นบวกมากๆ ผลลัพธ์ตรงกับ AND truth table ครบทั้ง 4 แถวพอดี (ให้ 1 เฉพาะกรณีที่ทั้งสอง input เป็น 1).</p>
+
+<figure>
+<img src="../assets/slides/dl2-p17-logic-or-gate-calc.png" alt="OR logic gate built from a single sigmoid neuron with weights theta0=-10, theta1=20, theta2=20, computing h(x)=g(-10+20x1+20x2), with blank spaces for the student to fill in the result of testing all four binary input combinations">
+<figcaption>Slide: Logic Operator OR — ช่องคำตอบเว้นให้กรอกเอง (Lecture2.pdf, p.17)</figcaption>
+</figure>
+<p>สไลด์นี้เว้นคำตอบไว้ให้กรอกในคาบเรียน — คำนวณให้ครบด้วย θ₀=−10, θ₁=20, θ₂=20:</p>
+<ul>
+<li><code>x₁=0,x₂=0 → g(−10)≈0</code></li>
+<li><code>x₁=0,x₂=1 → g(−10+20)=g(10)≈1</code></li>
+<li><code>x₁=1,x₂=0 → g(10)≈1</code></li>
+<li><code>x₁=1,x₂=1 → g(−10+20+20)=g(30)≈1</code></li>
+</ul>
+<p>ให้ 1 ทุกกรณีที่มีอย่างน้อยหนึ่ง input เป็น 1 ตรงกับ OR พอดี สังเกตว่าต่างจาก AND แค่ค่า θ₀ (bias) จาก −30 เป็น −10 — ยิ่ง bias น้อยลง (ใกล้ 0 มากขึ้น) threshold การ activate ก็ต่ำลง ทำให้ "ง่ายขึ้น" ที่จะ output 1.</p>
+
+<figure>
+<img src="../assets/slides/dl2-p18-logic-not-gate-calc.png" alt="NOT logic gate built from a single sigmoid neuron with weights theta0=10, theta1=-20, computing h(x)=g(10-20x1), with blank spaces for the student to fill in the result of testing both binary input values">
+<figcaption>Slide: Logic Operator NOT — ช่องคำตอบเว้นให้กรอกเอง (Lecture2.pdf, p.18)</figcaption>
+</figure>
+<p>NOT ใช้ input เดียว θ₀=10, θ₁=−20: <code>x₁=0 → g(10)≈1</code> และ <code>x₁=1 → g(10−20)=g(−10)≈0</code> — ตรงข้ามกับ input พอดี.</p>
+<p>สังเกตแพทเทิร์นที่ทั้งสามตัวอย่างใช้ร่วมกัน: <strong>ทุก logic gate คือ neuron เดียวที่เลือกค่า θ ให้ "จุดตัด" (threshold) ตรงกับเงื่อนไขของ gate นั้น</strong> — นี่คือฐานที่ Lesson 3 จะต่อยอดเป็นการ "เรียน" ค่า θ พวกนี้จากข้อมูลด้วย gradient descent แทนการตั้งมือ.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>Logic Gate Neuron</span></div>
+  <div class="qtext">AND gate จาก neuron เดียวใช้ θ₀=−30, θ₁=20, θ₂=20 คำนวณ h(x)=g(θ₀+θ₁x₁+θ₂x₂) ที่ x₁=1, x₂=0 ได้ผลลัพธ์เท่าไหร่ (ประมาณ)?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">g(10) ≈ 1 เพราะผลรวมภายในเป็นค่าบวกมากพอที่จะ activate</button>
+    <button class="opt" data-correct="false">g(30) ≈ 1 เพราะนำค่า θ₁ และ θ₂ มาบวกกันโดยไม่รวม θ₀</button>
+    <button class="opt" data-correct="true">g(−10) ≈ 0 เพราะ −30+20(1)+20(0) = −10 ซึ่งยังเป็นค่าลบอยู่มาก</button>
+    <button class="opt" data-correct="false">g(0) = 0.5 เพราะผลรวมภายในพอดีเท่ากับศูนย์ในกรณีนี้</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>5. Vectorization &amp; Linear Algebra: เครื่องมือที่ใช้เขียนสูตรให้กระชับ</h2>
+<p>ก่อนเข้าสูตร Forward Computation จริง สไลด์ทวน Linear Algebra พื้นฐานที่ต้องคำนวณมือได้ทันที เพราะทุกสูตรของ Neural Network เขียนในรูป vector/matrix ทั้งหมด.</p>
+
+<figure>
+<img src="../assets/slides/dl2-p24-vector-length-geometric.png" alt="Geometric interpretation of a vector: point u=(3,4) in the 2D plane, with its length calculated via Pythagoras as the square root of 3 squared plus 4 squared equals 5, and its unit direction vector w=(3/5,4/5); below, a question asks for the size of vector [1,2,3]">
+<figcaption>Slide: Geometric Interpretation of Vector — ||u|| ด้วย Pythagoras (Lecture2.pdf, p.24)</figcaption>
+</figure>
+<p>เวกเตอร์ u=(3,4) มีขนาด <code>||u|| = √(3²+4²) = √25 = 5</code> (ทฤษฎีพีทาโกรัส) และทิศทาง (unit vector) คือ <code>w = (3/5, 4/5)</code> (หารทุกสมาชิกด้วยขนาดของมันเอง เพื่อให้ขนาดใหม่เท่ากับ 1 พอดี).</p>
+<p>สไลด์ทิ้งคำถามไว้ให้ลองคำนวณเอง: เวกเตอร์ [1,2,3] มีขนาดเท่าไหร่? ใช้สูตรเดียวกันแต่ขยายเป็น 3 มิติ: <code>||[1,2,3]|| = √(1²+2²+3²) = √(1+4+9) = √14 ≈ 3.742</code>.</p>
+<p>สูตรนี้คือรากฐานของ <code>||u||² = u·u</code> (ขนาดยกกำลังสอง เท่ากับ dot product ของเวกเตอร์กับตัวเอง) ที่จะใช้อีกในการคำนวณ regularization term ของ Lesson 1 (Σθⱼ²) ซึ่งก็คือ ||θ||² นั่นเอง.</p>
+
+<figure>
+<img src="../assets/slides/dl2-p28-matrix-indexing-example.png" alt="Given a 2x3 matrix A with elements 3,4,38 in the first row and 8,46,54 in the second row, an exercise asks the student to identify m (number of rows), n (number of columns), the element a23, and the row/column indices i,j for the element with value 38">
+<figcaption>Slide: Matrix Indexing — หา m, n, a₂₃ จากตัวอย่างจริง (Lecture2.pdf, p.28)</figcaption>
+</figure>
+<p>เมทริกซ์ <code>A = [[3,4,38],[8,46,54]]</code> มี 2 แถว 3 คอลัมน์ ดังนั้น <code>m=2, n=3</code> (มิติ 2×3) องค์ประกอบ <code>a₂₃</code> อ่านว่า "แถว 2 คอลัมน์ 3" คือเลข <code>54</code> ส่วนเลข <code>38</code> อยู่ที่แถว 1 คอลัมน์ 3 จึงเขียนเป็น <code>a₁₃</code> (i=1, j=3).</p>
+<p>กฎการอ่าน subscript ของ matrix (แถวก่อน คอลัมน์หลัง) นี้ใช้สัญกรณ์เดียวกับ θ_ij^[l] ที่เพิ่งเรียนไปในหัวข้อ 3 พอดี (i=ปลายทาง/แถว, j=ต้นทาง/คอลัมน์).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>Vector Length</span></div>
+  <div class="qtext">เวกเตอร์ [1,2,3] มีขนาด (length/norm) เท่ากับเท่าไหร่ ตามสูตร Euclidean magnitude?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">6 เพราะเป็นผลรวมของสมาชิกทั้งสามตัวบวกกันตรงๆโดยไม่ผ่านการยกกำลัง</button>
+    <button class="opt" data-correct="true">√14 ≈ 3.742 เพราะ ||[1,2,3]|| = √(1²+2²+3²) = √14 ตามทฤษฎีพีทาโกรัส</button>
+    <button class="opt" data-correct="false">3 เพราะเท่ากับจำนวนสมาชิกทั้งหมดภายในเวกเตอร์นั้นเสมอ</button>
+    <button class="opt" data-correct="false">√6 เพราะเป็นรากที่สองของผลรวมสมาชิกทั้งสามตัวที่บวกกันตรงๆ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl2-p34-matrix-matrix-mult-example.png" alt="Exercise multiplying a 3x2 matrix [[1,2],[2,0],[4,4]] by the column vector [1,0], then by [0,1], then by the 2x2 identity matrix, illustrating that multiplying by the identity matrix returns the original matrix unchanged">
+<figcaption>Slide: Matrix Multiplication ด้วย Identity Matrix (Lecture2.pdf, p.34)</figcaption>
+</figure>
+<p>เมทริกซ์ <code>A = [[1,2],[2,0],[4,4]]</code> (3×2) คูณเวกเตอร์ <code>[1,0]ᵗ</code>: แต่ละแถวคูณแล้วบวกกัน:</p>
+<ul>
+<li>แถว 1: <code>1×1+2×0=1</code></li>
+<li>แถว 2: <code>2×1+0×0=2</code></li>
+<li>แถว 3: <code>4×1+4×0=4</code></li>
+</ul>
+<p>ได้ผลลัพธ์ <code>[1,2,4]ᵗ</code> (คือดึงคอลัมน์แรกของ A ออกมาตรงๆ) ลองคูณกับ <code>[0,1]ᵗ</code> แทน:</p>
+<ul>
+<li>แถว 1: <code>1×0+2×1=2</code></li>
+<li>แถว 2: <code>2×0+0×1=0</code></li>
+<li>แถว 3: <code>4×0+4×1=4</code></li>
+</ul>
+<p>ได้ <code>[2,0,4]ᵗ</code> (คือดึงคอลัมน์ที่สองของ A ออกมา) — พอเอาสองผลลัพธ์นี้มาเรียงเป็นคอลัมน์ของเมทริกซ์เดียวกัน (เทียบเท่าการคูณ A ด้วย Identity Matrix I₂ ทั้งก้อน) จะได้ A กลับมาเหมือนเดิมทุกตัว.</p>
+<p>นี่คือเหตุผลที่ <code>A×I = A</code> เสมอ: การคูณด้วย identity matrix คือการคูณด้วย "เวกเตอร์หน่วย" ของแต่ละแกนพร้อมกันทุกแกน จึงได้เมทริกซ์เดิมกลับมาไม่เปลี่ยนแปลง.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>Matrix Indexing</span></div>
+  <div class="qtext">จากเมทริกซ์ A = [[3,4,38],[8,46,54]] (2 แถว, 3 คอลัมน์) องค์ประกอบ a₂₃ มีค่าเท่ากับเท่าไหร่?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">54 เพราะ a₂₃ คือค่าที่อยู่แถวที่ 2 คอลัมน์ที่ 3 ของเมทริกซ์ A พอดี</button>
+    <button class="opt" data-correct="false">38 เพราะเป็นค่าที่มากที่สุดในแถวแรกของเมทริกซ์ A ทั้งหมด</button>
+    <button class="opt" data-correct="false">46 เพราะอยู่กึ่งกลางของแถวที่ 2 ตามลำดับตำแหน่งคอลัมน์</button>
+    <button class="opt" data-correct="false">8 เพราะเป็นสมาชิกตัวแรกของแถวที่ 2 ตามลำดับที่นับจากซ้าย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>Identity Matrix</span></div>
+  <div class="qtext">ทำไมการคูณเมทริกซ์ A ด้วย Identity Matrix I (A×I) จึงได้ผลลัพธ์เท่ากับ A ทุกครั้งไม่เปลี่ยนแปลง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ Identity Matrix มีค่าเป็นศูนย์ทั้งหมด จึงไม่ส่งผลต่อการคูณเลย</button>
+    <button class="opt" data-correct="false">เพราะกฎการคูณเมทริกซ์กำหนดให้ผลคูณกับเมทริกซ์ใดก็ได้ค่าเท่าตัวตั้งเสมอ</button>
+    <button class="opt" data-correct="false">เพราะ Identity Matrix สลับตำแหน่งแถวกับคอลัมน์ของ A กลับมาที่เดิมพอดี</button>
+    <button class="opt" data-correct="true">เพราะแต่ละคอลัมน์ของ I คือเวกเตอร์หน่วยที่ดึงคอลัมน์เดิมของ A ออกมาตรงๆทีละคอลัมน์</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>6. Vectorized Linear Regression: จาก For Loop สู่ Matrix</h2>
+<figure>
+<img src="../assets/slides/dl2-p41-vectorization-one-example.png" alt="Worked example: given hypothesis h(x)=1+2x1+3x2 and a table of three training examples with x2 values 1, 2, 3 (x1 always 0), the exercise asks to find the predicted hypothesis values in matrix form for all three examples at once">
+<figcaption>Slide: Vectorization ตัวอย่าง h(x)=1+2x₁+3x₂ กับ 3 training examples (Lecture2.pdf, p.41)</figcaption>
+</figure>
+<p>จาก <code>h(x)=1+2x₁+3x₂</code> (θ₀=1,θ₁=2,θ₂=3) กับ 3 examples ที่ x₁=0 ทุกแถว และ x₂=1,2,3: แทนค่าทีละแถว:</p>
+<ul>
+<li>แถว 1 (x₁=0,x₂=1): <code>h=1+2(0)+3(1)=1+0+3=4</code></li>
+<li>แถว 2 (x₁=0,x₂=2): <code>h=1+0+3(2)=1+6=7</code></li>
+<li>แถว 3 (x₁=0,x₂=3): <code>h=1+0+3(3)=1+9=10</code></li>
+</ul>
+<p>เขียนเป็น matrix form ได้ <code>h(X)=Xθ</code> โดย X คือ matrix 3×3 (รวมคอลัมน์ x₀=1) และ θ คือ column vector [1,2,3]ᵗ ผลคูณ matrix-vector นี้ให้ผลลัพธ์ [4,7,10]ᵗ ในการคำนวณครั้งเดียว แทนการวน for loop ทีละแถว 3 รอบ.</p>
+<p>นี่คือเหตุผลที่ NumPy เร็วกว่า Python list ธรรมดา (สไลด์หัวข้อ Vectorization หน้า 19 เปรียบเทียบเวลารันจริงระหว่าง <code>for loop</code> กับ <code>numpy array</code>).</p>
+
+<h2>7. Shallow Neural Network สร้าง XNOR จาก AND, OR, NOT</h2>
+<p>ตัวอย่างสุดท้ายก่อนเข้า Forward Computation เต็มรูปแบบ: รวม gate เดี่ยวๆจากหัวข้อ 4 (AND, OR, NOT) มาต่อกันเป็น 2 layer เพื่อสร้าง <strong>XNOR</strong> (ตรงข้ามกับ XOR — ให้ 1 เมื่อ input เหมือนกัน).</p>
+
+<figure>
+<img src="../assets/slides/dl2-p46-xnor-truth-table.png" alt="Truth table for building XNOR from AND, OR, NOT gates, listing x1, x2, x1 AND x2, NOT x1, NOT x2, (NOT x1) AND (NOT x2), and the final h(x) column showing 1,0,0,1 for inputs (0,0),(0,1),(1,0),(1,1) respectively">
+<figcaption>Slide: XNOR using AND, OR, NOT — truth table เต็ม (Lecture2.pdf, p.46)</figcaption>
+</figure>
+<p>ไล่ตาราง truth table ทีละแถว:</p>
+<ul>
+<li><code>(x₁,x₂)=(0,0)</code>: x₁∧x₂=0, ¬x₁=1, ¬x₂=1, (¬x₁)∧(¬x₂)=1 → h(x)=1 (เพราะ "x₁∧x₂" OR "(¬x₁)∧(¬x₂)" = 0 OR 1 = 1)</li>
+<li><code>(0,1)</code>: x₁∧x₂=0, ¬x₁=1,¬x₂=0, (¬x₁)∧(¬x₂)=0 → h(x)=0</li>
+<li><code>(1,0)</code>: เหมือนกัน h(x)=0</li>
+<li><code>(1,1)</code>: x₁∧x₂=1, (¬x₁)∧(¬x₂)=0 → h(x)=1</li>
+</ul>
+<p>ผลลัพธ์ h(x)=[1,0,0,1] คือ "ให้ 1 เมื่อ x₁ กับ x₂ เท่ากัน" ซึ่งคือนิยามของ XNOR พอดี.</p>
+
+<figure>
+<img src="../assets/slides/dl2-p47-xnor-network-weights.png" alt="Neural network diagram wiring three single-gate neurons together into a two-layer network: an AND gate and a (NOT x1) AND (NOT x2) gate as the two hidden layer nodes, feeding into an OR gate as the output node, computing XNOR">
+<figcaption>Slide: โครงข่ายที่ต่อ AND, NOT, OR เข้าด้วยกันเป็น XNOR (Lecture2.pdf, p.47)</figcaption>
+</figure>
+<p>โครงสร้างที่ต่อกัน: hidden layer มี 2 node — node แรกคือ AND gate (θ₀=−30,θ₁=20,θ₂=20 จากหัวข้อ 4) คำนวณ <code>x₁∧x₂</code> node ที่สองคือ "(¬x₁)∧(¬x₂)" (AND gate ที่รับ input เป็นผลลัพธ์จาก NOT gate ของ x₁,x₂ ก่อน) แล้ว output layer เป็น OR gate ที่รับผลจากทั้งสอง hidden node มารวมกัน.</p>
+<p>นี่คือภาพที่ตอบคำถามหัวข้อ 2 อย่างเป็นรูปธรรม: การต่อ node เดี่ยวๆ (ที่ทำ logic gate ง่ายๆได้) เข้าด้วยกันเป็นหลาย layer ทำให้คำนวณ function ที่ node เดียวทำไม่ได้ (XOR/XNOR) ได้สำเร็จ.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>XNOR Construction</span></div>
+  <div class="qtext">จาก truth table การสร้าง XNOR ด้วย AND/OR/NOT ที่ (x₁,x₂)=(0,1) ค่า h(x) สุดท้ายเท่ากับเท่าไหร่ และเพราะเหตุใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">h(x)=1 เพราะ x₁ กับ x₂ ต่างกัน ซึ่งตรงกับเงื่อนไขการ activate ของ XNOR โดยตรง</button>
+    <button class="opt" data-correct="false">h(x)=1 เพราะ NOT x₁ ให้ค่า 1 เพียงอย่างเดียวก็เพียงพอต่อการ activate output แล้ว</button>
+    <button class="opt" data-correct="true">h(x)=0 เพราะทั้ง x₁∧x₂=0 และ (¬x₁)∧(¬x₂)=0 ดังนั้น OR ของทั้งสองจึงเป็น 0</button>
+    <button class="opt" data-correct="false">h(x)=0 เพราะ XNOR ให้ output เป็น 0 เสมอเมื่อ x₂ มีค่าเท่ากับ 1</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2>8. Forward Computation: คำนวณมือครั้งแรกแบบเต็มโครงข่าย</h2>
+<figure>
+<img src="../assets/slides/dl2-p48-forward-computation-blank.png" alt="A shallow neural network with 2 input nodes, 3 hidden layer nodes, and 1 output node, with blank formula placeholders for computing z and a at each hidden node and the output, for the student to fill in during class">
+<figcaption>Slide: Forward Computation — สูตรเว้นให้กรอกเอง (Lecture2.pdf, p.48)</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl2-p49-forward-computation-solution.png" alt="The same shallow neural network with the complete forward computation formulas filled in: z1[1], z2[1], z3[1] as weighted sums of x1, x2 plus bias for each hidden node, a1[1] through a3[1] as g(z) for each, and z1[2], the final h(x)=a1[2]=g(z1[2]) at the output combining all three hidden activations">
+<figcaption>Slide: Forward Computation — เฉลยเต็ม (Lecture2.pdf, p.49)</figcaption>
+</figure>
+<p>นี่คือสูตรที่ต้องคำนวณได้ทันทีตลอดวิชา: โครงข่ายมี input x₁,x₂ → hidden layer 3 node (a₁⁽¹⁾,a₂⁽¹⁾,a₃⁽¹⁾) → output 1 node.</p>
+<p><strong>ขั้นที่ 1 (คำนวณ layer 1):</strong> แต่ละ hidden node คำนวณ weighted sum ก่อน แล้วผ่าน g:</p>
+<ul>
+<li><code>z₁⁽¹⁾ = θ₁₀⁽¹⁾ + θ₁₁⁽¹⁾x₁ + θ₁₂⁽¹⁾x₂</code>, ตามด้วย <code>a₁⁽¹⁾ = g(z₁⁽¹⁾)</code></li>
+<li><code>z₂⁽¹⁾ = θ₂₀⁽¹⁾+θ₂₁⁽¹⁾x₁+θ₂₂⁽¹⁾x₂</code>, <code>a₂⁽¹⁾=g(z₂⁽¹⁾)</code></li>
+<li><code>z₃⁽¹⁾=θ₃₀⁽¹⁾+θ₃₁⁽¹⁾x₁+θ₃₂⁽¹⁾x₂</code>, <code>a₃⁽¹⁾=g(z₃⁽¹⁾)</code></li>
+</ul>
+<p><strong>ขั้นที่ 2 (คำนวณ layer 2/output):</strong> รวม activation ทั้ง 3 ตัวจาก layer 1 (ไม่ใช่ x₁,x₂ ดิบๆอีกแล้ว): <code>z₁⁽²⁾ = θ₁₀⁽²⁾+θ₁₁⁽²⁾a₁⁽¹⁾+θ₁₂⁽²⁾a₂⁽¹⁾+θ₁₃⁽²⁾a₃⁽¹⁾</code> แล้ว <code>h_θ(x) = a₁⁽²⁾ = g(z₁⁽²⁾)</code>.</p>
+<p>สังเกตรูปแบบที่ซ้ำกันทุก layer: "คูณ weight บวกกัน (z) แล้วผ่าน g (a)" ต่างกันแค่ layer ที่ลึกกว่าใช้ a ของ layer ก่อนหน้าเป็น input แทน x ดิบๆ — รูปแบบนี้จะขยายเป็นสูตรทั่วไปของ deep network ใน Lesson 4.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>Forward Computation</span></div>
+  <div class="qtext">ในการคำนวณ z₁⁽²⁾ (ค่า z ของ output node ในโครงข่าย 2 layer ที่มี hidden layer 3 node) ตัวแปรที่ถูกนำมาคูณกับ θ นั้นคืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="true">a₁⁽¹⁾, a₂⁽¹⁾, a₃⁽¹⁾ คือ activation ที่ออกมาจาก hidden layer ไม่ใช่ x₁,x₂ ดิบๆ</button>
+    <button class="opt" data-correct="false">x₁ และ x₂ ดิบๆจาก input layer โดยตรง ไม่ผ่าน hidden layer เลย</button>
+    <button class="opt" data-correct="false">z₁⁽¹⁾, z₂⁽¹⁾, z₃⁽¹⁾ ก่อนที่จะผ่าน activation function g ของ hidden layer</button>
+    <button class="opt" data-correct="false">ค่า y จริงจาก training example ที่ใช้เทียบกับผลการทำนายของโครงข่าย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Vectorization</span></div>
+  <div class="qtext">เหตุผลหลักที่การคำนวณ cost function แบบ vectorized (h=np.dot(X,theta)) เร็วกว่าการวน for loop ทีละ training example คืออะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false">เพราะ vectorized form เปลี่ยนสูตรคณิตศาสตร์ให้ต่างจาก for loop โดยพื้นฐาน</button>
+    <button class="opt" data-correct="true">เพราะการคูณ matrix/vector เป็น array operation ที่ประมวลผลพร้อมกันได้ ไม่ต้องวนทีละตัว</button>
+    <button class="opt" data-correct="false">เพราะ vectorized form ใช้ค่า θ ที่ต่างไปจาก for loop เสมอในทุกกรณีที่ทดสอบ</button>
+    <button class="opt" data-correct="false">เพราะ for loop ให้ผลลัพธ์ค่า cost function ที่ไม่ถูกต้องเมื่อข้อมูลมีขนาดใหญ่</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควรอธิบายได้ว่าทำไมต้องมี Neural Network (ไม่ใช่แค่เพิ่ม polynomial feature), อ่านสัญกรณ์ θ_ij^[l], a_j^[l] ได้ถูกต้อง, คำนวณ logic gate จาก neuron เดียวได้ (AND/OR/NOT), อธิบายได้ว่าทำไม XOR ต้องใช้ 2 layer, และคำนวณ Forward Computation เต็มโครงข่ายมือได้ตั้งแต่ input จนถึง h_θ(x) — ทั้งหมดนี้คือสูตรเดียวกันที่ Lesson 3 จะสอน backpropagation ย้อนกลับ.
+</div>
+
+<h2>ภาคผนวก: Slide หน้า 1-49 ของ Lecture2.pdf — เช็คว่าอ่านครบ</h2>
+<p>ไล่ทุกหน้าที่เป็นเนื้อหาของ Lesson นี้ (หน้า 1-49) — หน้า 50-98 ของ Lecture2.pdf คือ Lecture3.pdf ทั้งหมด (สไลด์เดียวกันเป๊ะ) ไปดูภาคผนวกที่ <a href="0003-cost-function-and-backpropagation.html">Lesson 3</a> แทน.</p>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>ปก Part 1-Neural Network</td><td>etc — บริบทวิชา</td></tr>
+<tr><td>2</td><td>Complex Non-linear Tasks — polynomial blowup 5,150 features</td><td>✓ หัวข้อ 1 (มีรูป)</td></tr>
+<tr><td>3</td><td>Computer Vision Tasks — จำนวน feature ของภาพ 28×28</td><td>✓ หัวข้อ 1 (คำนวณในเนื้อหา)</td></tr>
+<tr><td>4–6</td><td>Artificial Neural Networks, From Biological to Artificial NN, Neural Network Intuition</td><td>etc — เกริ่นแนวคิดพื้นฐาน (ไม่มีคำนวณใหม่)</td></tr>
+<tr><td>7</td><td>Why Can Neural Networks Model Complex Patterns? — รวม boundary ง่ายเป็นซับซ้อน</td><td>etc — แนวคิดเกริ่นก่อนหัวข้อ 2</td></tr>
+<tr><td>8</td><td>Brief History of ANNs — McCulloch &amp; Pitts (1943)</td><td>✓ หัวข้อ 2 (มีรูป)</td></tr>
+<tr><td>9</td><td>Brief History of ANNs (2) — Perceptron/TLU (1957)</td><td>✓ หัวข้อ 2 (มีรูป)</td></tr>
+<tr><td>10</td><td>Brief History of ANNs (3) — MLP แก้ XOR (1969)</td><td>✓ หัวข้อ 2 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>11</td><td>Neural Network Structure — input/hidden/output layer นิยาม</td><td>etc — นิยามคำศัพท์ก่อนหัวข้อ 3</td></tr>
+<tr><td>12</td><td>Neural Network Notation — layer superscript, node subscript</td><td>✓ หัวข้อ 3 (มีรูป)</td></tr>
+<tr><td>13</td><td>Neural Network Notation (2) — bias unit, z, a, g</td><td>✓ หัวข้อ 3 (มีรูป)</td></tr>
+<tr><td>14</td><td>Small Neural Network — linear/logistic regression เป็น NN 1 node</td><td>etc — เชื่อมกับ Lesson 1 (ไม่มีคำนวณใหม่)</td></tr>
+<tr><td>15</td><td>Example on Computational Logic — เกริ่นตรรกศาสตร์</td><td>etc — เกริ่นก่อนหัวข้อ 4</td></tr>
+<tr><td>16</td><td>Logic Operator AND</td><td>✓ หัวข้อ 4 (มีรูป)</td></tr>
+<tr><td>17</td><td>Logic Operator OR</td><td>✓ หัวข้อ 4 (มีรูป)</td></tr>
+<tr><td>18</td><td>Logic Operator NOT</td><td>✓ หัวข้อ 4 (มีรูป)</td></tr>
+<tr><td>19</td><td>Vectorization — for loop vs numpy เวลารัน</td><td>etc — เกริ่นก่อนหัวข้อ 5</td></tr>
+<tr><td>20–23</td><td>Linear Algebra นิยาม, Vector, Vector Operations, Vector Operations Properties</td><td>etc — นิยาม/สมบัติพื้นฐานของเวกเตอร์</td></tr>
+<tr><td>24</td><td>Geometric Interpretation of Vector — ||u|| ด้วย Pythagoras</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>25</td><td>Exercise — Euclidean distance ระหว่างเวกเตอร์</td><td>etc — โจทย์ฝึกเสริม นอกขอบเขต quiz หลัก</td></tr>
+<tr><td>26</td><td>The Dot Product — นิยามและตัวอย่าง numpy</td><td>etc — นิยาม dot product (ใช้ต่อในหัวข้อ 5)</td></tr>
+<tr><td>27</td><td>Matrix — นิยามและมิติ</td><td>etc — นิยามก่อนตัวอย่างหน้า 28</td></tr>
+<tr><td>28</td><td>Example — matrix indexing m, n, a₂₃</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>29–30</td><td>Matrix Operations (Addition/Subtraction), Matrix Multiplication (Scalar)</td><td>etc — กฎการคำนวณพื้นฐาน</td></tr>
+<tr><td>31</td><td>Matrix Multiplication — matrix-vector นิยาม</td><td>etc — นิยามก่อนตัวอย่างหน้า 34</td></tr>
+<tr><td>32</td><td>Example — matrix-vector multiplication ตัวอย่างสั้น</td><td>etc — ตัวอย่างคล้ายหน้า 34 ที่อธิบายละเอียดแล้ว</td></tr>
+<tr><td>33</td><td>Matrix Multiplication — matrix-matrix นิยาม</td><td>etc — นิยามก่อนตัวอย่างหน้า 34</td></tr>
+<tr><td>34</td><td>Example — matrix × identity matrix</td><td>✓ หัวข้อ 5 (มีรูป)</td></tr>
+<tr><td>35</td><td>Multiplication Properties — commutative ไม่จริงสำหรับ matrix</td><td>etc — สมบัติเสริม</td></tr>
+<tr><td>36</td><td>Matrix Transpose — นิยามและตัวอย่าง numpy</td><td>etc — นิยาม (ไม่มีคำนวณใหม่ที่ต้องแยก quiz)</td></tr>
+<tr><td>37</td><td>Identity Matrix — นิยาม AI=IA=A</td><td>✓ หัวข้อ 5 (พิสูจน์ด้วยตัวอย่างหน้า 34)</td></tr>
+<tr><td>38–40</td><td>Vectorization for Linear Regression — hypothesis function เป็น matrix form</td><td>✓ หัวข้อ 6 (เกริ่นก่อนตัวอย่างหน้า 41)</td></tr>
+<tr><td>41</td><td>Example — vectorization h(x)=1+2x₁+3x₂ กับ 3 examples</td><td>✓ หัวข้อ 6 (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>42–43</td><td>From For Loop to Vectorization, Cost Function (For Loop vs Vectorization code)</td><td>✓ หัวข้อ 6 (อธิบายในเนื้อหา)</td></tr>
+<tr><td>44</td><td>Exercise — เขียน numpy L1/L2 loss เอง</td><td>etc — โจทย์ฝึกเขียนโค้ด นอกขอบเขต quiz ทฤษฎี</td></tr>
+<tr><td>45</td><td>Shallow Neural Network — diagram เต็มพร้อม θ ทุกเส้น</td><td>etc — เกริ่นก่อนหัวข้อ 7</td></tr>
+<tr><td>46</td><td>XNOR using AND, OR, NOT — truth table</td><td>✓ หัวข้อ 7 (มีรูป)</td></tr>
+<tr><td>47</td><td>XNOR using AND, OR, NOT (2) — โครงข่ายที่ต่อกัน</td><td>✓ หัวข้อ 7 (มีรูป)</td></tr>
+<tr><td>48</td><td>Forward Computation — สูตรเว้นให้กรอก</td><td>✓ หัวข้อ 8 (มีรูป)</td></tr>
+<tr><td>49</td><td>Forward Computation (Solution) — เฉลยเต็ม</td><td>✓ หัวข้อ 8 (มีรูป, คำนวณเต็ม)</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0001-machine-learning-foundations.html">← Lesson 1: ML Foundations</a></span>
+  <span><a href="0003-cost-function-and-backpropagation.html">Lesson 3: Backpropagation →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
