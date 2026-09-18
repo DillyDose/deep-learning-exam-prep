@@ -2,24 +2,38 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lesson 5: Vanishing Gradients &amp; Initialization</title>
 <link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
 </head>
 <body>
 
 <nav class="lesson-nav">
   <span><a href="0004-deep-networks-and-optimizers.html">← Lesson 4: Deep Networks &amp; Optimizers</a></span>
-  <span>Lesson 5 / 5 · Vanishing Gradients &amp; Init</span>
+  <span>Lesson 5 / 6 · Vanishing Gradients &amp; Init</span>
+  <span><a href="0006-callbacks-and-hyperparameter-tuning.html">Lesson 6: Callbacks &amp; Tuning →</a></span>
 </nav>
 
-<p class="kicker">Lecture5.pdf · 2603520 Deep Learning</p>
+<p class="kicker">Lecture5 (deep_learning_part2_2.pdf, 38 หน้า) · 2603520 Deep Learning</p>
 <h1>Vanishing/Exploding Gradients, Weight Initialization และ Keras ในภาคปฏิบัติ</h1>
 
-<p>บทสุดท้ายตอบคำถามที่ Lesson 3-4 ทิ้งไว้: ทำไม backprop สูตรที่คูณกันหลายเทอมถึง "พัง" เมื่อเครือข่ายลึกมากๆ แล้วจะแก้ด้วยอะไรได้บ้าง (weight initialization, batch normalization) ปิดท้ายด้วยการเอาทุกอย่างไปใช้จริงใน Keras.</p>
+<p>บทนี้ตอบคำถามที่ Lesson 3–4 ทิ้งไว้: ทำไม backprop ที่คูณหลายเทอมถึง "พัง" เมื่อเครือข่ายลึก และแก้ได้อย่างไร (weight initialization, batch/layer normalization) ก่อนจบด้วยการเขียนทุกอย่างเป็นโค้ด Keras จริง. ทุกสูตรมีตัวอย่างตัวเลขทีละขั้น.</p>
 
 <div class="box source">
 <div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
 Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf" target="_blank" rel="noopener">Understanding the difficulty of training deep feedforward neural networks</a> — ต้นตำรับของ Xavier Initialization ที่สไลด์อ้างอิงตรงนี้.
+</div>
+
+<div class="box beginner">
+<div class="label">ก่อนเริ่ม — 2 ศัพท์ทางสถิติที่ใช้ในบทนี้</div>
+<ul style="margin-bottom:0">
+<li><strong>Mean (ค่าเฉลี่ย) \(\mu\)</strong> และ <strong>Variance (ความแปรปรวน) \(\sigma^2\)</strong> = ค่าเฉลี่ยของ (ระยะห่างจากค่าเฉลี่ย)² — ยิ่งข้อมูลกระจายกว้าง variance ยิ่งสูง; ส่วนเบี่ยงเบนมาตรฐาน \(\sigma = \sqrt{\sigma^2}\)</li>
+<li><strong>\(N(0,1)\)</strong> = การแจกแจงแบบระฆัง mean 0 variance 1; <strong>fan_in / fan_out</strong> = จำนวน node ที่ส่งเข้า / ส่งออกของ layer นั้น (เช่น layer \(784\to16\): fan_in = 784, fan_out = 16)</li>
+</ul>
 </div>
 
 <h2>1. Vanishing/Exploding Gradients: ผลสืบเนื่องจาก Chain Rule ที่ยาวเกินไป</h2>
@@ -27,30 +41,60 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <img src="../assets/slides/dl5-p01-vanishing-exploding-gradients-formula.png" alt="The backpropagation chain rule formula for a deep network, showing that computing the gradient at an early layer requires multiplying through many terms (theta, g-prime, a) across all the layers in between, which is the mechanical source of the vanishing and exploding gradient problems">
 <figcaption>Slide: Vanishing and Exploding Gradients — ที่มาจากโซ่ chain rule ที่ยาว (Lecture5.pdf, p.1)</figcaption>
 </figure>
-<p>ย้อนสูตรจาก Lesson 4 หัวข้อ 1: <code>∂J/∂θ₁,₁⁽ᴸ⁻¹⁾ = δ⁽ᴸ⁾·θ₁,₁⁽ᴸ⁾·g'(z₁⁽ᴸ⁻¹⁾)·a₁⁽ᴸ⁻²⁾</code> — ถ้าเครือข่ายมี 10 layer การหา gradient ของ layer แรกสุดต้องคูณเทอม g'(z) ต่อกัน<strong>เกือบ 10 ตัว</strong> (1 ตัวต่อ layer ที่ผ่าน).</p>
+<p>ย้อนสูตรจาก Lesson 4 §1: $$\dfrac{\partial J}{\partial\theta_{1,1}^{[L-1]}} = \delta^{[L]}\,\theta_{1,1}^{[L]}\,g'(z_1^{[L-1]})\,a_1^{[L-2]}$$. ถ้าเครือข่ายมี 10 layer การหา gradient ของ layer แรกสุดต้อง<strong>คูณตัวคูณต่อกันประมาณ 10 ตัว</strong> (\(\theta\) กับ \(g'\) ของแต่ละ layer ที่ผ่าน).</p>
 <ul>
-<li><strong>Exploding:</strong> ถ้าแต่ละเทอมมีค่า &gt;1 (เช่น weight เริ่มต้นใหญ่) การคูณ 10 ตัวที่ &gt;1 ซ้ำกันจะทำให้ gradient ใหญ่ขึ้นแบบทวีคูณ (exponential) จนอัปเดต weight กระโดดสุ่มไม่ลู่เข้า</li>
-<li><strong>Vanishing:</strong> ถ้าแต่ละเทอมมีค่า &lt;1 (เช่น g'(z) ของ sigmoid สูงสุดแค่ 0.25 ตามที่พิสูจน์ใน Lesson 3 หัวข้อ 5) การคูณ 10 ตัวที่ &lt;1 ซ้ำกันจะทำให้ gradient เล็กลงแบบทวีคูณจนเข้าใกล้ 0 — <code>0.25¹⁰ ≈ 0.00000095</code> (เล็กมากจนแทบไม่มีการอัปเดต weight ของ layer แรกๆเลย)</li>
+<li><strong>Exploding:</strong> ถ้าตัวคูณ \(>1\) (เช่น weight เริ่มต้นใหญ่) ผลคูณโตแบบทวีคูณ ⇒ อัปเดต weight กระโดดจนไม่ลู่เข้า (สไลด์: many layers get insanely large weight updates and the algorithm diverges)</li>
+<li><strong>Vanishing:</strong> ถ้าตัวคูณ \(&lt;1\) (เช่น \(g'\) ของ sigmoid สูงสุด 0.25) ผลคูณหดเป็นศูนย์ ⇒ weight ของ layer ล่างแทบไม่ขยับ (สไลด์: training never converges to a good solution)</li>
 </ul>
-<p>นี่คือเหตุผลที่ layer ที่อยู่ใกล้ input มักเรียนรู้ช้ากว่า layer ใกล้ output มากในเครือข่ายลึกที่ใช้ sigmoid.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: ตัวคูณเล็กน้อยกว่า 1 หรือมากกว่า 1 นิดเดียว พอคูณซ้ำก็ต่างกันมหาศาล</div>
+<ol class="steps">
+<li><div class="st-title">sigmoid ต่อกัน 10 layer (ตัวคูณสูงสุดของ \(g'\) คือ 0.25)</div>
+$$0.25^{10} = 9.5\times10^{-7}$$
+<p>gradient ของ layer แรกเล็กลงเกือบล้านเท่า</p></li>
+<li><div class="st-title">ตัวคูณ 0.9 ต่อ layer (ดูไม่แย่)</div>
+$$0.9^{10} = 0.349\ (\text{ลดลง }65\%),\qquad 0.9^{50} = 0.00515\ (\text{ลดลง }99.5\%)$$</li>
+<li><div class="st-title">ตัวคูณ 1.1 ต่อ layer (ดูไม่มาก)</div>
+$$1.1^{10} = 2.59,\qquad 1.1^{50} = 117$$</li>
+</ol>
+<div class="answer"><p>ตัวคูณเบี่ยงจาก 1 แค่ 10% แต่ลึก 50 layer ก็ต่างกัน 2 ตำแหน่งทศนิยม — ความลึกทำให้ปัญหาโตแบบเลขชี้กำลัง (เหตุผลเดียวกับ EWA ใน Lesson 4 §4 ที่ \(\beta\) คูณตัวเองซ้ำ).</p></div>
+</div>
 
 <figure>
 <img src="../assets/slides/dl5-p02-activation-sigmoid-saturation.png" alt="Sigmoid function curve showing flat, saturated regions at both extremes (very negative or very positive z), where the derivative is nearly zero, illustrating why saturated sigmoid neurons stop learning during backpropagation">
 <figcaption>Slide: Activation Function — ปัญหา Saturation ของ sigmoid (Lecture5.pdf, p.2)</figcaption>
 </figure>
-<p>ปัญหาไม่ได้อยู่แค่ "ค่าเฉลี่ยของ g'(z) น้อยกว่า 1" แต่ยังมีปัญหา <em>saturation</em>: ถ้า z มีค่ามากหรือน้อยเกินไป (ไม่ใกล้ 0) sigmoid จะแบนราบสนิท (g'(z)≈0 เป๊ะ ไม่ใช่แค่เล็ก).</p>
-<p>ตรงนี้คือเหตุผลที่ ReLU (จาก Lesson 3 หัวข้อ 5) ถูกเลือกเป็นค่าเริ่มต้นสำหรับ hidden layer: อนุพันธ์ของมันเป็น 1 คงที่เมื่อ z≥0 (ไม่มี saturation ในโซนบวก) ทำให้ไม่ลดขนาด gradient ไม่ว่าจะผ่านกี่ layer.</p>
-<p>แต่ ReLU ก็แลกมาด้วยปัญหาใหม่ (ตายที่ z&lt;0 และเสี่ยง exploding เมื่อ activation บวกไม่มีขอบเขตบน) จึงต้องมี gradient clipping (ตัดค่า gradient ไม่ให้เกิน threshold ก่อน update) ช่วยแก้ฝั่ง exploding.</p>
+<p>อีกสาเหตุคือ <em>saturation</em>: ถ้า \(z\) ห่างจาก 0 มาก sigmoid แบนสนิท (\(g'(z)\approx0\) จริงๆ ไม่ใช่แค่น้อยกว่า 1). ค่าจาก Lesson 3 §5: \(g'(\pm4)=0.0177\), \(g'(\pm8)=0.000335\). ดังนั้น <strong>ทั้ง</strong> "ตัวคูณ \(\le0.25\)" และ "ความชันหายตอน saturate" ทำให้ sigmoid/tanh เสี่ยง vanishing.</p>
+
+<figure>
+<img src="../assets/slides/dl5-p03-relu-gradient-clipping.png" alt="Slide Activation Function (2): ReLU is preferred in hidden layers because its derivative is 1 when the weighted sum is positive; some nodes may die when negative so use Leaky ReLU; ReLU can make activations blow up and explode gradients, one solution being gradient clipping which thresholds the gradient values before a gradient descent step">
+<figcaption>Slide: Activation Function (2) — ReLU และ Gradient Clipping (Lecture5, p.3)</figcaption>
+</figure>
+<p><strong>ทางแก้ที่สไลด์หน้า 3 ให้:</strong> ใช้ <strong>ReLU</strong> เป็น hidden layer (อนุพันธ์ = 1 เมื่อผลรวมเป็นบวก จึงไม่ทำให้ gradient หดหรือขยาย). แต่ ReLU มีข้อเสีย: node อาจ "ตาย" เมื่อผลรวมเป็นลบ (ใช้ Leaky ReLU แทน) และ activation บวกไม่มีขอบเขตบนอาจ blow up ทำให้ gradient ระเบิด — ทางแก้หนึ่งคือ <strong>gradient clipping</strong>: ตัดค่า gradient ด้วย threshold ก่อนทำก้าว gradient descent.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: gradient clipping 2 แบบ กับ gradient \(g = [3,\ -7,\ 0.5]\)</div>
+<ol class="steps">
+<li><div class="st-title">Clip by value (threshold \(c=1\)): จำกัดแต่ละสมาชิกให้อยู่ใน \([-1,1]\)</div>
+$$g' = [\min(3,1),\ \max(-7,-1),\ 0.5] = [1,\ -1,\ 0.5]$$
+<p>ทิศทางเปลี่ยน (สัดส่วนระหว่างสมาชิกเพี้ยน)</p></li>
+<li><div class="st-title">Clip by norm (threshold \(c=5\)): หา \(\|g\|\) ก่อน</div>
+$$\|g\| = \sqrt{9+49+0.25} = 7.63 > 5\ \Rightarrow\ g' = g\cdot\frac{5}{7.63} = [1.97,\ -4.59,\ 0.33]$$
+<p>\(\|g'\|=5\) และ<strong>ทิศทางเดิม</strong> (แค่หดความยาว)</p></li>
+</ol>
+<div class="answer"><p>ทั้งสองแบบกันไม่ให้ก้าวใหญ่เกินจนระเบิด: by value ง่ายแต่เปลี่ยนทิศ, by norm รักษาทิศทาง. (Keras: <code>clipvalue</code> / <code>clipnorm</code> ใน optimizer)</p></div>
+</div>
 
 <div class="box mech">
 <div class="label">กลไกที่ต้องอธิบายได้</div>
 <dl>
 <dt>ทำไมต้องมี</dt>
-<dd>ปรากฏการณ์นี้เป็นผลคูณสะสม (product) ไม่ใช่ผลรวม (sum) — แม้แต่ละเทอมเบี่ยงจาก 1 แค่นิดเดียว พอคูณกันหลายสิบรอบผลลัพธ์ก็ต่างกันเป็นเลขชี้กำลัง ต่างจากผลรวมที่ไม่เบี่ยงเบนเร็วขนาดนี้</dd>
+<dd>ปรากฏการณ์นี้เป็นผลคูณสะสม (product) ไม่ใช่ผลรวม (sum) — ตัวคูณเบี่ยงจาก 1 นิดเดียว พอคูณหลายสิบรอบก็ต่างกันเป็นเลขชี้กำลัง ต่างจากผลรวมที่เบี่ยงเบนไม่เร็วขนาดนี้.</dd>
 <dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>ถ้าแต่ละเทอมเฉลี่ยที่ 0.9 (ไม่ใช่ 0.25 แบบ sigmoid saturate) 10 layer จะได้ <code>0.9¹⁰≈0.349</code> (ลดลงแค่ 65%) แต่ 50 layer จะได้ <code>0.9⁵⁰≈0.00515</code> (ลดลง 99.5%) — "จำนวน layer" ต่างหากที่ทำให้ปัญหารุนแรงแบบทวีคูณ แม้ค่าเฉลี่ยต่อเทอมดูไม่แย่มาก (0.9) ก็พังได้ถ้าเครือข่ายลึกพอ</dd>
+<dd>ตัวคูณเฉลี่ย 0.9 (แทน 0.25): 10 layer ⇒ 0.349, 50 layer ⇒ 0.00515 — "จำนวน layer" ทำให้ปัญหารุนแรงแบบทวีคูณ แม้ค่าต่อ layer ดูไม่แย่.</dd>
 <dt>เชื่อมกับ</dt>
-<dd>กลไกการคูณสะสมเดียวกับ Exponential Weighted Average ใน Lesson 4 หัวข้อ 4 (β คูณตัวเองซ้ำ) — ทั้งสองเรื่องคือผลลัพธ์ของ "คูณเลขที่ใกล้ 1 ซ้ำหลายรอบ" แค่บริบทต่างกัน</dd>
+<dd>การคูณสะสมเดียวกับ EWA ใน Lesson 4 §4 ("คูณเลขใกล้ 1 ซ้ำหลายรอบ") และตัวอย่างโซ่ 3 layer ใน Lesson 4 §1 (gradient layer แรกเล็กกว่า layer สุดท้าย 15.7 เท่า).</dd>
 </dl>
 </div>
 
@@ -68,38 +112,109 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 
 <h2>2. Weight Initialization: ทำไม "สุ่มเฉยๆ" ไม่พอ</h2>
 <figure>
+<img src="../assets/slides/dl5-p07-init-experiments-zero-random-he.png" alt="Experiments on the Circle Dataset comparing Zero Initialization (cost flat at about 0.6931 and no decision boundary learned), Random Initialization (cost stays near 0.69 for the first stretch then drops to about 0.3, training accuracy 84.14 percent) and He Initialization (cost drops quickly from about 1.0 to about 0.3)">
+<figcaption>Slide: Experiments — Zero vs Random vs He Initialization บน Circle Dataset (Lecture5, p.7)</figcaption>
+</figure>
+<p><strong>ดูผลลัพธ์ก่อน แล้วค่อยอธิบาย:</strong> ในสไลด์หน้า 7 การตั้ง weight <em>เป็น 0 ทั้งหมด</em> ทำให้ cost ค้างที่ประมาณ <strong>0.6931</strong> ตลอดการเทรนและไม่เกิด decision boundary; Random ธรรมดาใช้เวลานานกว่าจะเริ่มลด (cost อยู่แถว 0.69 ช่วงแรก) แล้วจบที่ train accuracy 84.14%; He ลดเร็วตั้งแต่ต้น. เลข 0.6931 คือ \(\ln 2\) (cost ของโมเดลที่ทำนาย 0.5 ทุกตัวอย่าง — Lesson 1 §6).</p>
+
+<h3>2.1 ทำไม weight เท่ากันหมด (เช่น 0) ถึงพัง — symmetry</h3>
+<p>สไลด์หน้า 4: weight ต้อง<strong>สุ่มและไม่เหมือนกัน</strong> เพื่อไม่ให้ node ซ้ำซ้อน. ดูด้วยตัวเลข:</p>
+<div class="calc">
+<div class="calc-title">คำนวณ: zero init ในเครือข่าย 2 → 2 → 1 (sigmoid, \(x=(1,2)\), \(y=1\), weight/bias ทุกตัว = 0)</div>
+<ol class="steps">
+<li><div class="st-title">Forward</div>
+$$z^{[1]}_1 = z^{[1]}_2 = 0\ \Rightarrow\ a^{[1]}_1 = a^{[1]}_2 = g(0) = 0.5,\qquad z^{[2]} = 0\ \Rightarrow\ h = 0.5$$
+<p>cost \(= -\ln 0.5 = 0.693\) ✓ (ตรงกับที่สไลด์ค้าง)</p></li>
+<li><div class="st-title">Backward: \(\delta\) ที่ output</div>
+$$\delta^{[2]} = 0.5 - 1 = -0.5$$</li>
+<li><div class="st-title">\(\delta\) ของ hidden = \(\theta^{[2]}_{1j}\,\delta^{[2]}\,g'\) โดย \(\theta^{[2]}=0\)</div>
+$$\delta^{[1]}_1 = 0\times(-0.5)\times0.25 = 0,\qquad \delta^{[1]}_2 = 0$$
+<p>gradient ของ \(\theta^{[1]}\) ทั้งหมด = 0 ⇒ ไม่ขยับ</p></li>
+<li><div class="st-title">gradient ของ \(\theta^{[2]} = \delta^{[2]}\cdot a^{[1]}\)</div>
+$$\partial J/\partial\theta^{[2]}_{11} = -0.5\times0.5 = -0.25,\qquad \partial J/\partial\theta^{[2]}_{12} = -0.25$$
+<p>เท่ากันทั้งสองตัว ⇒ หลังอัปเดต \(\theta^{[2]}_{11} = \theta^{[2]}_{12}\) ≠ 0 แต่<em>ยังเท่ากัน</em></p></li>
+<li><div class="st-title">รอบถัดไป: hidden ทั้งสองตัวได้ \(\delta\) เท่ากัน อัปเดตเท่ากัน ...</div></li>
+</ol>
+<div class="answer"><p>hidden 2 node ทำงานเหมือน<em>ตัวเดียวกัน</em>ตลอดกาล (ไม่มีวัน "แตกต่าง") — แม้มี hidden 100 node ก็เท่ากับมี 1 node. การสุ่ม \(\theta\) ให้ต่างกันเรียกว่า <strong>symmetry breaking</strong>.</p></div>
+</div>
+
+<h3>2.2 ทำไม "สุ่มแล้ว" ยังไม่พอ — ขนาด (variance) สำคัญ</h3>
+<p>สไลด์หน้า 4 เตือนว่าผลจากหลักฐาน: จะสุ่มจาก uniform หรือ Gaussian ไม่ค่อยต่าง แต่<strong>ขนาดของ weight เริ่มต้น</strong>ส่งผลต่อทั้งความคืบหน้าของการ optimize และการ generalize.</p>
+<figure>
 <img src="../assets/slides/dl5-p05-problem-of-random-init.png" alt="Diagram with 100 input features x1 through x100, all set to 1, feeding into a hidden layer where weights are drawn from a standard normal distribution (mean=0, variance=1); the exercise asks to compute the mean and variance of z1[1] = sum of theta_i times x_i across all 100 inputs, illustrating that variance grows with the number of inputs">
 <figcaption>Slide: The Problem of Random Initialization — ตัวอย่างคำนวณ mean, variance ของ z (Lecture5.pdf, p.5)</figcaption>
 </figure>
-<p>สไลด์เว้นคำตอบไว้ให้คำนวณ: มี 100 input <code>x₁,…,x₁₀₀=1</code> ทุกตัว weight <code>θ ~ N(0,1)</code> (สุ่มจาก normal distribution ค่าเฉลี่ย 0 variance 1) <code>z₁⁽¹⁾ = θ₁₀⁽¹⁾+θ₁₁⁽¹⁾x₁+…+θ₁,₁₀₀⁽¹⁾x₁₀₀</code>:</p>
-<ul>
-<li><strong>mean:</strong> ผลรวมของตัวแปรสุ่มที่มี mean=0 ทุกตัว บวกกันยังได้ mean=0 (ค่าคาดหวังของผลรวม = ผลรวมของค่าคาดหวัง)</li>
-<li><strong>variance:</strong> เพราะแต่ละเทอม <code>θᵢxᵢ</code> เป็นอิสระกัน variance ของผลรวม = ผลรวมของ variance แต่ละเทอม = <code>Var(θᵢ)·xᵢ² = 1×1² = 1</code> ต่อเทอม รวม 100 เทอมได้ <code>variance = 100</code></li>
-</ul>
-<p>ตรงกับที่สไลด์เตือนไว้ "Variance ของ input โตขึ้นตามจำนวน input" พอ variance ของ z ใหญ่ขนาดนี้ (100 เทียบกับ 1 ตอนตั้งต้น) z มีโอกาสสูงที่จะหลุดไปอยู่ในโซน saturation ของ sigmoid (z ห่างจาก 0 มากๆ) ตั้งแต่ layer แรกเลย.</p>
-<p>นี่คือเหตุผลที่ "สุ่ม weight เฉยๆ" ไม่พอ ต้องคุม variance ให้เหมาะกับจำนวน input ด้วย.</p>
+<div class="calc">
+<div class="calc-title">คำนวณ: โจทย์ที่สไลด์เว้นไว้ — mean และ variance ของ \(z_1^{[1]}\) เมื่อมี 100 input</div>
+<div class="given">\(x_1=\dots=x_{100}=1\), weight \(\theta_i \sim N(0,1)\) อิสระกัน; \(z = \theta_0 + \sum_{i=1}^{100}\theta_i x_i\) (ให้ bias \(\theta_0\) = 0 เพื่อความสั้น)</div>
+<ol class="steps">
+<li><div class="st-title">mean</div>
+$$E[z] = \sum_i E[\theta_i]\,x_i = 100\times0\times1 = 0$$</li>
+<li><div class="st-title">variance ของผลรวมตัวแปรอิสระ = ผลรวม variance</div>
+$$\operatorname{Var}(z) = \sum_{i=1}^{100}\operatorname{Var}(\theta_i)\,x_i^2 = 100\times1\times1^2 = 100$$</li>
+<li><div class="st-title">ส่วนเบี่ยงเบนมาตรฐาน</div>
+$$\sigma_z = \sqrt{100} = 10$$</li>
+</ol>
+<div class="answer"><p>z กระจายกว้าง ±10 (เทียบกับ input ที่เป็น 1) ⇒ ตกเขต saturation ของ sigmoid (\(g'(\pm10)\approx0.00005\)) ตั้งแต่ layer แรก. <strong>สไลด์: variance โตขึ้นตามจำนวน input.</strong></p></div>
+</div>
 
 <figure>
 <img src="../assets/slides/dl5-p06-weight-init-techniques-table.png" alt="Table of three weight initialization techniques with their variance formulas: LeCun Initialization uses variance=1/fan_in (recommended for SELU), Glorot/Xavier Initialization uses variance=2/(fan_in+fan_out) (recommended for sigmoid/tanh/softmax), and He/Kaiming Initialization uses variance=2/fan_in (recommended for ReLU and its variants)">
 <figcaption>Slide: Weight Initialization Techniques — สูตร variance ของแต่ละวิธี (Lecture5.pdf, p.6)</figcaption>
 </figure>
-<p>ทั้ง 3 วิธีแก้ปัญหาเดียวกัน (variance ของ z ไม่ควรโตหรือหดตามจำนวน input/output) ด้วยสูตรต่างกันเล็กน้อย:</p>
-<ul>
-<li><strong>LeCun (1998):</strong> <code>var = 1/fan_in</code> (fan_in = จำนวน node ที่ส่ง input เข้ามา) — เหมาะกับ SELU</li>
-<li><strong>Xavier/Glorot (2010):</strong> <code>var = 2/(fan_in+fan_out)</code> (คำนึงถึงทั้ง forward และ backward pass พร้อมกัน) — เหมาะกับ sigmoid/tanh/softmax</li>
-<li><strong>He/Kaiming (2015):</strong> <code>var = 2/fan_in</code> — เหมาะกับ ReLU และตัวแปรของมัน (ตัวเลข 2 ในตัวเศษชดเชยที่ ReLU "ตัดครึ่งค่าลบทิ้ง" ทำให้ variance ที่ออกมาจาก ReLU ลดลงครึ่งหนึ่งโดยธรรมชาติ ต้องเพิ่มตัวคูณ 2 มาชดเชย)</li>
-</ul>
-<p>กฎจำง่ายจากสไลด์หัวข้อถัดไป: <strong>ReLU/Leaky ReLU ใช้ He, tanh/Sigmoid ใช้ Xavier</strong>.</p>
+<p>ทั้ง 3 วิธีแก้ปัญหาเดียวกัน — คุม \(\operatorname{Var}(\theta)\) ให้ตามจำนวน input/output:</p>
+<table class="compact">
+<tr><th>วิธี</th><th>\(\operatorname{Var}(\theta)\)</th><th>เหมาะกับ</th></tr>
+<tr><td>LeCun (1998)</td><td>\(\dfrac{1}{\text{fan\_in}}\)</td><td>SELU</td></tr>
+<tr><td>Xavier / Glorot (2010)</td><td>\(\dfrac{2}{\text{fan\_in}+\text{fan\_out}}\)</td><td>sigmoid / tanh / softmax</td></tr>
+<tr><td>He / Kaiming (2015)</td><td>\(\dfrac{2}{\text{fan\_in}}\)</td><td>ReLU และตระกูล</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">พิสูจน์ที่มา: ทำไม \(\operatorname{Var}(\theta) = 2/\text{fan\_in}\) สำหรับ ReLU</div>
+<div class="given">ให้ layer มี \(n=\)fan_in ตัว, input \(a_i\) เป็นอิสระ, weight \(\theta_i\) มี mean 0 และ variance \(\sigma_\theta^2\)</div>
+<ol class="steps">
+<li><div class="st-title">variance ของ \(z\) ใน layer ถัดไป</div>
+$$\operatorname{Var}(z') = n\,\sigma_\theta^2\,E[a^2]$$</li>
+<li><div class="st-title">activation ที่ผ่าน ReLU: ครึ่งหนึ่งของ \(z\) เป็นลบถูกตัดเป็น 0 ⇒ \(E[a^2] = \tfrac12\operatorname{Var}(z)\)</div>
+$$\operatorname{Var}(z') = n\,\sigma_\theta^2\cdot\tfrac12\operatorname{Var}(z)$$</li>
+<li><div class="st-title">ต้องการให้ variance คงที่: \(\operatorname{Var}(z')=\operatorname{Var}(z)\)</div>
+$$n\,\sigma_\theta^2\cdot\tfrac12 = 1\ \Rightarrow\ \sigma_\theta^2 = \frac{2}{n} = \frac{2}{\text{fan\_in}}$$</li>
+</ol>
+<div class="answer"><p>เลข 2 ในตัวเศษ (He) ชดเชยที่ ReLU ตัดครึ่งลบทิ้ง. ถ้าใช้ LeCun \(1/n\) กับ ReLU ตัวคูณต่อ layer จะเป็น \(\tfrac12\) ⇒ variance หดครึ่งทุก layer. Xavier ใช้ค่าเฉลี่ยของเงื่อนไข forward (\(1/\text{fan\_in}\)) และ backward (\(1/\text{fan\_out}\)) จึงเป็น \(2/(\text{fan\_in}+\text{fan\_out})\).</p></div>
+</div>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: variance ของ \(z\) ผ่าน 10 layer ReLU กว้าง 100 (ผลจากการจำลองด้วยคอมพิวเตอร์)</div>
+<ol class="steps">
+<li><div class="st-title">weight \(N(0,1)\) ธรรมดา: ตัวคูณต่อ layer \(= n\sigma_\theta^2/2 = 100\times1/2 = 50\)</div>
+$$\operatorname{Var}(z):\ 99.5\ \to\ 5{,}054\ \to\ 237{,}844\ \to\ \dots\ \to\ 3.8\times10^{17}\ (\text{layer 10})$$
+<p>ระเบิดเป็นเลขชี้กำลัง (exploding)</p></li>
+<li><div class="st-title">He: \(\sigma_\theta^2 = 2/100 = 0.02\) (\(\sigma_\theta = 0.141\))</div>
+$$\operatorname{Var}(z):\ 2.0\ \to\ 1.98\ \to\ 2.06\ \to\ \dots\ \to\ 1.96\ (\text{layer 10})$$
+<p>คงที่ทุก layer</p></li>
+<li><div class="st-title">LeCun \(1/n\) กับ ReLU (ผิดคู่): ตัวคูณ \(\tfrac12\)</div>
+$$\operatorname{Var}(z):\ 1.0\ \to\ 0.49\ \to\ 0.29\ \to\ \dots\ \to\ 0.001\ (\text{layer 10})$$
+<p>หดหาย (vanishing)</p></li>
+</ol>
+<div class="answer"><p>กฎจำง่ายจากสไลด์หน้า 8: <strong>ReLU / Leaky ReLU ใช้ He, tanh / sigmoid ใช้ Xavier</strong> — ใน Keras: <code>kernel_initializer='he_normal'</code> / <code>'glorot_uniform'</code> (ค่า default ของ Dense).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl5-p08-issues-weight-init.png" alt="Slide Issues about Weight Initialization: initialization breaks symmetry and addresses vanishing and exploding gradients; use He for ReLU and Leaky ReLU and Xavier for tanh and sigmoid; but it cannot totally eliminate the problems because it only controls the variance of each layer's outputs during the first iteration and weights change afterward">
+<figcaption>Slide: Issues about Weight Initialization (Lecture5, p.8)</figcaption>
+</figure>
+<p><strong>ข้อจำกัด (สไลด์หน้า 8):</strong> initialization ช่วย break symmetry และคุม variance <em>ในรอบแรกของ gradient descent</em> เท่านั้น — เมื่อ weight เปลี่ยนในรอบถัดไปก็ยังกลับไปเล็กหรือใหญ่เกินได้อีก จึงไม่ได้กำจัดปัญหา vanishing/exploding ให้สิ้นซาก (จึงต้องมี Batch Normalization ใน §3).</p>
 
 <div class="box mech">
 <div class="label">กลไกที่ต้องอธิบายได้</div>
 <dl>
 <dt>ทำไมต้องมี</dt>
-<dd>ทำไม variance (ไม่ใช่ mean) คือตัวที่ต้องคุม? เพราะ mean=0 อยู่แล้วโดยอัตโนมัติจากการสุ่มสมมาตร (บวก/ลบเท่ากัน) แต่ variance สะสมทุกเทอมที่บวกกัน (เป็นค่าบวกเสมอ ไม่หักล้างกัน) จึงเป็นปริมาณเดียวที่ "โต" ตามจำนวน input จริงๆ ถ้าไม่คุม z จะกระจายกว้างขึ้นทุก layer ที่ลึกขึ้น</dd>
+<dd>ทำไมต้องคุม variance (ไม่ใช่ mean)? เพราะ mean = 0 อยู่แล้วจากการสุ่มสมมาตร แต่ variance สะสมทุกเทอมที่บวกกัน (เป็นบวกเสมอ ไม่หักล้าง) จึงโตตามจำนวน input จริง — ถ้าไม่คุม \(z\) กระจายกว้างขึ้นทุก layer ที่ลึกขึ้น.</dd>
 <dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>ถ้าใช้ He init (var=2/fan_in) กับ fan_in=100: var(θᵢ)=2/100=0.02 ต่อ weight, variance ของผลรวม 100 เทอม = 100×0.02×1²=2 (คงที่ที่ 2 ไม่ว่า fan_in จะเป็นเท่าไหร่ เพราะ 2/fan_in × fan_in = 2 เสมอ) — ต่างจาก N(0,1) ธรรมดาที่ variance โตเป็น 100 ตามจำนวน input โดยไม่มีขีดจำกัด</dd>
+<dd>He กับ fan_in = 100: \(\operatorname{Var}(\theta)=2/100=0.02\) ⇒ \(\operatorname{Var}(z)=100\times0.02\times1=2\) และคงที่ไม่ว่า fan_in เท่าไร (เพราะ \(\tfrac{2}{n}\times n = 2\) เสมอ) ต่างจาก \(N(0,1)\) ที่ variance โตเป็น 100 ตามจำนวน input.</dd>
 <dt>เชื่อมกับ</dt>
-<dd>นี่คือกลไกที่ตอบคำถามหัวข้อ 1 โดยตรง — การคุม variance ให้คงที่ทุก layer ป้องกันไม่ให้ z หลุดไปโซน saturation ตั้งแต่ layer แรก ซึ่งคือต้นตอของ vanishing gradient</dd>
+<dd>คำถามใน §1 โดยตรง: คุม variance ให้คงที่ทุก layer ⇒ z ไม่หลุดเข้า saturation ตั้งแต่ layer แรก ⇒ ตัวคูณ \(g'\) ไม่หด; และการทดลอง Lesson 6 §7 (RandomUniform(0,1) ทำให้ tanh อิ่มตัว).</dd>
 </dl>
 </div>
 
@@ -114,7 +229,6 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
   </div>
   <div class="feedback"></div>
 </div>
-
 <div class="quiz">
   <div class="qhead"><span>คำถาม 3</span><span>He vs Xavier Init</span></div>
   <div class="qtext">ตามหลักการที่สไลด์แนะนำ ควรใช้ Weight Initialization แบบใดกับ hidden layer ที่ใช้ ReLU เป็น activation function?</div>
@@ -129,29 +243,100 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 
 <h2>3. Batch Normalization: Normalize z ก่อนเข้า Activation ทุก Layer</h2>
 <figure>
+<img src="../assets/slides/dl5-p09-why-normalization-helps.png" alt="Slide Why Normalization helps Optimization: for logistic regression, unnormalized data spread along one axis is shifted toward zero mean then rescaled to a similar spread, turning elongated elliptical cost contours into circular ones; for a deep network with layers 1 to L one should normalize z (pre-activation) or a (post-activation); formulas for z-score, mean and standard deviation are shown">
+<figcaption>Slide: Why Normalization helps Optimization (Lecture5, p.9)</figcaption>
+</figure>
+<p><strong>ทำไม normalization ช่วย optimize (สไลด์หน้า 9):</strong> ใน logistic regression ข้อมูลที่ไม่ normalize (แกน y ถึง 100 แกน x แค่ ±15) ทำให้ contour ของ cost เป็นวงรีแคบยาว gradient descent zig-zag; หลัง "shift ให้ mean = 0" และ "rescale ให้กระจายใกล้กัน" contour กลม เดินตรงเข้าหาจุดต่ำสุด — เหมือน feature scaling ใน Lesson 1 §4 (สูตร z-score \(x_{\text{new}}=\frac{x-\mu}{\sigma}\)). ใน deep network แต่ละ layer ได้ input จาก layer ก่อนหน้า จึง<em>ควร normalize \(z\) (pre-activation) หรือ \(a\) (post-activation)</em> ของทุก layer เช่นกัน.</p>
+
+<figure>
 <img src="../assets/slides/dl5-p12-batch-norm-formula.png" alt="Batch normalization formulas: z_norm^(i) = (z^(i) - mu_B) / sqrt(sigma_B^2 + epsilon), zero-centering and normalizing z using the mini-batch mean and variance, followed by a learnable scale and shift: z_tilde^(i) = gamma * z_norm^(i) + beta">
 <figcaption>Slide: Batch Normalization (BN) — สูตร normalize แล้ว scale/shift (Lecture5.pdf, p.12)</figcaption>
 </figure>
-<p>BN ทำ 2 ขั้นในทุก hidden layer ก่อน (หรือหลัง) activation function:</p>
-<ul>
-<li><strong>ขั้น 1 (normalize):</strong> <code>z_norm⁽ⁱ⁾ = (z⁽ⁱ⁾−μ_B)/√(σ_B²+ε)</code> — ลบด้วยค่าเฉลี่ยของ mini-batch (μ_B) แล้วหารด้วยส่วนเบี่ยงเบนมาตรฐานของ mini-batch (√(σ_B²+ε), ε ป้องกันหารด้วย 0) ผลคือ z_norm มี mean≈0, variance≈1 เสมอไม่ว่า layer ไหน</li>
-<li><strong>ขั้น 2 (scale/shift):</strong> <code>z̃⁽ⁱ⁾ = γ·z_norm⁽ⁱ⁾+β</code> — คูณด้วย γ และบวก β ที่เป็นพารามิเตอร์ที่<strong>เรียนรู้ได้เอง</strong> (ไม่ใช่ค่าคงที่) เพื่อให้เครือข่ายเลือกได้เองว่าจะ "คง" การ normalize ไว้เท่าไหร่ (ถ้า γ,β เรียนกลับมาเป็นค่าเดิมของ z ก็แปลว่า BN ไม่ช่วยตรงนี้ ปล่อยให้เป็นแบบเดิม)</li>
-</ul>
-<p>เหตุผลที่ต้องมีขั้นที่ 2: ถ้า normalize แล้วหยุดเลย ทุก layer จะถูกบีบให้มี distribution เดียวกันตายตัว ซึ่งอาจไม่เหมาะกับทุกงาน จึงต้องให้เครือข่ายเรียนรู้ระดับการ "คลาย" เอง.</p>
+<p>BN (Ioffe &amp; Szegedy, 2015) ทำ 2 ขั้นในทุก hidden layer โดยใช้สถิติของ<em>mini-batch ปัจจุบัน</em> \(B\):</p>
+$$\mu_B = \frac{1}{m_B}\sum_i z^{(i)},\quad \sigma_B^2 = \frac{1}{m_B}\sum_i \left(z^{(i)}-\mu_B\right)^2,\quad z_{\text{norm}}^{(i)} = \frac{z^{(i)}-\mu_B}{\sqrt{\sigma_B^2+\epsilon}},\quad \tilde z^{(i)} = \gamma\,z_{\text{norm}}^{(i)} + \beta$$
+<p class="plain-thai">ขั้น 1: ทำให้ mean = 0, variance = 1 (ε ≈ 10⁻⁷ กันหารด้วย 0). ขั้น 2: คูณ \(\gamma\) บวก \(\beta\) — สองตัวนี้เป็น<strong>พารามิเตอร์ที่เรียนรู้ได้</strong> (ต่อ 1 node) เพื่อให้เครือข่ายเลือกได้ว่าจะคง normalization ไว้เท่าไร</p>
 
-<p><strong>ตอน Training vs ตอน Test:</strong> ตอน train, μ_B และ σ_B² คำนวณจาก mini-batch ปัจจุบัน (เปลี่ยนไปทุก batch) แต่ตอน test ไม่มี "mini-batch" ให้คำนวณ (อาจมีแค่ 1 ตัวอย่าง) — ทางแก้คือเก็บ <em>moving average</em> ของ μ_B, σ_B² ที่สะสมมาตลอดการเทรน แล้วใช้ค่าเฉลี่ยสะสมนี้แทนตอน test (คงที่ ไม่เปลี่ยนตามข้อมูล test แต่ละตัว).</p>
+<div class="calc">
+<div class="calc-title">คำนวณ: BN ของ 1 neuron ใน mini-batch 4 ตัวอย่าง (\(\gamma=1.5,\ \beta=0.5\), ละ \(\epsilon\))</div>
+<div class="given">\(z = [2,\ 4,\ 6,\ 8]\)</div>
+<ol class="steps">
+<li><div class="st-title">mean</div>
+$$\mu_B = \frac{2+4+6+8}{4} = 5$$</li>
+<li><div class="st-title">variance</div>
+$$\sigma_B^2 = \frac{(-3)^2+(-1)^2+1^2+3^2}{4} = 5,\qquad \sqrt{\sigma_B^2}=2.236$$</li>
+<li><div class="st-title">normalize</div>
+$$z_{\text{norm}} = \left[\tfrac{-3}{2.236},\ \tfrac{-1}{2.236},\ \tfrac{1}{2.236},\ \tfrac{3}{2.236}\right] = [-1.342,\ -0.447,\ 0.447,\ 1.342]$$
+<p>mean = 0, variance = 1 ✓</p></li>
+<li><div class="st-title">scale &amp; shift: \(\tilde z = 1.5\,z_{\text{norm}} + 0.5\)</div>
+$$\tilde z = [-1.512,\ -0.171,\ 1.171,\ 2.512]$$</li>
+</ol>
+<div class="answer"><p>ขั้น 2 ให้เครือข่ายเลือกได้: ถ้าเรียนได้ \(\gamma=\sqrt{\sigma_B^2}\) และ \(\beta=\mu_B\) จะได้ \(\tilde z = z\) กลับมาเหมือนเดิม (ปิด BN); ถ้าไม่มีขั้น 2 ทุก layer ถูกบีบให้มี distribution เดียวกันตายตัว ซึ่งไม่เหมาะกับทุกงาน (เช่น sigmoid ที่ต้องการ z ไม่ชิด 0 เกินไป).</p></div>
+</div>
+
+<h3>3.1 วาง BN ตรงไหน (สไลด์หน้า 13–14)</h3>
+<figure>
+<img src="../assets/slides/dl5-p13-bn-before-activation-summary.png" alt="Slide Normalize z (pre-activation), as in the paper: Keras Sequential model with Flatten, then Dense(16), BatchNormalization, Activation relu, Dense(16), BatchNormalization, Activation relu, Dense(10), BatchNormalization, Activation softmax; model.summary shows dense_4 12,560 parameters, batch_normalization layers with 64, 64 and 40 parameters, dense_5 272, dense_6 170, with Total params 13,170, Trainable params 13,086 and Non-trainable params 84">
+<figcaption>Slide: Normalize z (pre-activation) — BN ก่อน Activation พร้อม model.summary (Lecture5, p.13)</figcaption>
+</figure>
+<p>สองตำแหน่งที่ทำได้: <strong>normalize z</strong> (BN ก่อน activation — แบบในเปเปอร์: <code>Dense → BatchNormalization → Activation</code>) และ <strong>normalize a</strong> (BN หลัง activation: <code>Dense(activation='relu') → BatchNormalization</code>). สไลด์หน้า 14 ระบุด้วยว่าถ้าใส่ BN เป็น layer แรกสุด มักไม่ต้อง standardize ข้อมูลเทรนเอง.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: BN มีพารามิเตอร์กี่ตัว — อ่านจาก model.summary ในสไลด์หน้า 13</div>
+<div class="given">โมเดล 784 → 16 → 16 → 10, BN ก่อน activation ทุก layer (ไม่มี BN ที่ input)</div>
+<ol class="steps">
+<li><div class="st-title">BN 1 layer ที่มี \(n\) node เก็บ 4 ชุดต่อ node</div>
+<p>\(\gamma\) (scale), \(\beta\) (shift) — <strong>trainable</strong> ; และ moving mean, moving variance (สำหรับตอน test) — <strong>non-trainable</strong></p>
+$$\text{พารามิเตอร์ของ BN} = 4n$$</li>
+<li><div class="st-title">แต่ละ BN layer</div>
+$$n=16:\ 4\times16 = 64,\qquad n=16:\ 64,\qquad n=10:\ 4\times10 = 40$$
+<p>ตรงกับ 64, 64, 40 ในสไลด์</p></li>
+<li><div class="st-title">รวมทั้งโมเดล</div>
+$$\text{Total} = 13{,}002 + (64+64+40) = 13{,}170$$
+$$\text{Trainable} = 13{,}002 + 2(16+16+10) = 13{,}086,\qquad \text{Non-trainable} = 2(16+16+10) = 84$$</li>
+</ol>
+</div>
+
+<figure>
+<img src="../assets/slides/dl5-p14-bn-after-activation-summary.png" alt="Slide Normalize a (post-activation): Keras model with Flatten, an optional BatchNormalization on the 784 inputs, Dense(16, relu), BatchNormalization, Dense(16, relu), BatchNormalization, Dense(10, softmax); model.summary shows batch_normalization_9 with 3,136 parameters (784 times 4), 64 and 64, Total params 16,266, Trainable params 14,634, Non-trainable params 1,632; a note says adding a BN layer as the very first layer means you may not need to standardize the training set">
+<figcaption>Slide: Normalize a (post-activation) — BN หลัง Activation พร้อม model.summary (Lecture5, p.14)</figcaption>
+</figure>
+<p>เช็คด้วยกฎเดียวกันกับโมเดลหน้า 14 (มี BN ที่ input 784 ตัวด้วย): BN แรก \(4\times784 = 3{,}136\) ✓; total \(=13{,}002+3{,}136+64+64 = 16{,}266\) ✓; non-trainable \(=2(784+16+16) = 1{,}632\) ✓; trainable \(=16{,}266-1{,}632 = 14{,}634\) ✓.</p>
+
+<h3>3.2 ตอน Train เทียบตอน Test (สไลด์หน้า 15)</h3>
+<figure>
+<img src="../assets/slides/dl5-p15-batch-norm-train-test-issues.png" alt="Slide Issues about Batch Normalization: at training time mean and standard deviation are estimated over the current mini-batch; at test time the whole test instance is used and a moving average of the means and standard deviations of all mini-batches is used, controlled by a momentum hyperparameter">
+<figcaption>Slide: Issues about Batch Normalization — train vs test (Lecture5, p.15)</figcaption>
+</figure>
+<p>ตอน train \(\mu_B,\sigma_B^2\) คำนวณจาก mini-batch ปัจจุบัน แต่ตอน test ไม่มี mini-batch (อาจมีแค่ 1 ตัวอย่าง) — ทางแก้: เก็บ <em>moving average</em> ของ \(\mu_B,\sigma_B^2\) ระหว่างเทรนแล้วใช้ค่านั้นตอน test (คงที่ ไม่เปลี่ยนตามข้อมูล test แต่ละตัว) โดยใช้ <code>momentum</code> เป็นตัวควบคุมการอัปเดต:</p>
+$$\mu_{\text{moving}} := \text{momentum}\cdot\mu_{\text{moving}} + (1-\text{momentum})\cdot\mu_B$$
+<div class="calc">
+<div class="calc-title">คำนวณ: อัปเดต moving mean (momentum = 0.99 ค่า default ของ Keras)</div>
+<div class="given">moving mean เดิม \(=4.8\); batch นี้ \(\mu_B = 5\)</div>
+<ol class="steps">
+<li><div class="st-title">แทนค่า</div>
+$$\mu_{\text{moving}} = 0.99(4.8) + 0.01(5) = 4.752 + 0.05 = 4.802$$</li>
+</ol>
+<div class="answer"><p>ขยับช้ามาก (4.8 → 4.802) เพราะ momentum สูง — เป็น EWA เดียวกับ Lesson 4 §4 (สไลด์หน้า 22 ของ Lecture 6 แนะนำลอง momentum ของ BN ที่ 0.9/0.99/0.999).</p></div>
+</div>
 
 <div class="box mech">
 <div class="label">กลไกที่ต้องอธิบายได้</div>
 <dl>
 <dt>ทำไมต้องมี</dt>
-<dd>ทำไมต้อง normalize "ต่อ mini-batch" ไม่ใช่ normalize จากสถิติของทั้ง dataset ครั้งเดียวตอนเริ่มเทรน? เพราะ distribution ของ z ที่ hidden layer เปลี่ยนไปเรื่อยๆระหว่างเทรน (θ ของ layer ก่อนหน้าเปลี่ยนทุก step) — normalize ครั้งเดียวตอนต้นจะล้าสมัยทันที ต้องคำนวณใหม่ทุก mini-batch ถึงจะตามทัน</dd>
+<dd>ทำไม normalize "ต่อ mini-batch" ไม่ใช่จากสถิติทั้ง dataset ครั้งเดียวตอนต้น? เพราะ distribution ของ \(z\) ที่ hidden layer เปลี่ยนไปเรื่อยๆ ระหว่างเทรน (\(\theta\) ของ layer ก่อนหน้าเปลี่ยนทุก step) — normalize ครั้งเดียวจะล้าสมัยทันที ต้องคำนวณใหม่ทุก mini-batch.</dd>
 <dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>ถ้า mini-batch มีแค่ 2 ตัวอย่าง การประมาณ μ_B, σ_B² จาก 2 จุดน่าเชื่อถือแค่ไหน? ต่ำมาก — standard error ∝ 1/√n ทำให้แต่ละ mini-batch normalize ไปคนละทิศ เพิ่ม noise ให้การเทรนแทนที่จะลด นี่คือเหตุผลที่ batch size เล็กเกินไปทำให้ BN ทำงานแย่ลง</dd>
+<dd>ถ้า mini-batch มีแค่ 2 ตัวอย่าง (เช่น \(z=[1,2]\) ⇒ \(\mu_B=1.5\), \(\sigma_B^2=0.25\) ⇒ \(z_{\text{norm}}=[-1,+1]\) เสมอไม่ว่าค่าจริงเป็นเท่าไร) สถิติจาก 2 จุดแปรปรวนสูง (\(\propto1/\sqrt n\)) และถ้า batch มี 1 ตัวอย่าง \(z-\mu_B=0\) ⇒ ได้ 0 ทั้งหมด ข้อมูลหาย — batch เล็กเกินไปทำให้ BN แย่ลง. (สไลด์หน้า 17: BN ให้ผลคล้าย regularization เพราะ noise จาก batch เล็ก)</dd>
 <dt>เชื่อมกับ</dt>
-<dd>batch size ตัวเดียวกับที่ Lesson 4 หัวข้อ 3 ใช้ trade-off ความเร็ว/ความนิ่งของ gradient ตอนนี้ยังส่งผลต่อคุณภาพของ BN ด้วย — เลือก batch size ต้องคิดถึงทั้งสองเรื่องพร้อมกัน</dd>
+<dd>batch size ตัวเดียวกับ Lesson 4 §3 (trade-off ความเร็ว/ความนิ่งของ gradient) — ตอนนี้ส่งผลต่อคุณภาพของ BN ด้วย เลือก batch size ต้องคิดทั้งสองเรื่อง.</dd>
 </dl>
 </div>
+
+<p><strong>ข้อดีของ BN (สไลด์หน้า 16):</strong> ป้องกัน activation เล็กเกิน (vanishing) หรือใหญ่เกิน (exploding); ใช้ learning rate สูงขึ้นได้และไม่ต้องระวังเรื่อง initialization มาก; ลดการพึ่งพากันระหว่าง layer ต้นกับ layer ปลาย (แต่ละ layer เรียนอิสระขึ้น ทำให้ gradient นิ่งขึ้น); แม้แต่ละ epoch ช้าลง (คำนวณเพิ่ม) แต่ลู่เข้าใช้ epoch น้อยลง. <strong>BN + dropout (หน้า 17):</strong> ควรใส่ dropout <em>หลัง</em> BN — ถ้า dropout ก่อน BN แล้ว mean/variance ของ activation เปลี่ยน ผลดีของ BN จะหายไป.</p>
+<figure>
+<img src="../assets/slides/dl5-p17-bn-regularization-dropout.png" alt="Slide Issues about Batch Normalization (3): BN offers some regularization because statistics over a small batch are unreliable; BN can be added with dropout, preferably dropout after BN, because dropout before normalization changes the mean and variance of activations; code shows Dense(16), BatchNormalization, Activation relu, Dropout(0.2) twice then Dense(10), BatchNormalization, Activation softmax">
+<figcaption>Slide: Issues about Batch Normalization (3) — BN กับ Dropout (Lecture5, p.17)</figcaption>
+</figure>
+<p>รูปแบบโค้ดในสไลด์หน้า 17: <code>Dense(16) → BatchNormalization → Activation('relu') → Dropout(0.2)</code> ซ้ำ 2 ชั้น แล้ว <code>Dense(10) → BatchNormalization → Activation('softmax')</code> — ลำดับ BN แล้ว activation แล้ว dropout ตามคำแนะนำ.</p>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 4</span><span>Batch Normalization</span></div>
@@ -170,24 +355,34 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <img src="../assets/slides/dl5-p18-batchnorm-to-layernorm.png" alt="Diagram contrasting Batch Normalization, which computes mean and variance down each column across all examples in a mini-batch for a given neuron, with Layer Normalization, which instead computes mean and variance across all neurons within a single example, independent of batch size">
 <figcaption>Slide: From Batch Normalization to Layer Normalization (Lecture5.pdf, p.18)</figcaption>
 </figure>
-<p>BN คำนวณ mean/variance "ไล่ตามคอลัมน์" คือรวบรวมค่าของ 1 neuron จากทุกตัวอย่างใน mini-batch (พึ่งพา batch size — ถ้า batch เล็กเกินไป สถิติที่คำนวณได้จะไม่น่าเชื่อถือ).</p>
-<p>LayerNorm แก้ปัญหานี้ด้วยการคำนวณ mean/variance "ไล่ตามแถว" คือรวบรวมค่าของ neuron <em>ทุกตัวภายใน 1 ตัวอย่างเดียว</em> — ไม่ต้องพึ่งตัวอย่างอื่นใน batch เลย ทำให้:</p>
-<ul>
-<li>ใช้ได้แม้ batch size=1</li>
-<li>พฤติกรรมเหมือนกันทั้งตอน train และ test (ไม่ต้องเก็บ moving average แบบ BN)</li>
-<li>เหมาะกับ Transformer ที่ batch statistics ผันแปรสูง</li>
-</ul>
-<p>นี่คือเหตุผลที่ LayerNorm เป็นตัวเลือกมาตรฐานใน Transformer/LLM ในขณะที่ BN ยังนิยมใน CNN.</p>
+<p>BN คำนวณ mean/variance "ไล่ตามคอลัมน์" (1 neuron ข้ามทุกตัวอย่างใน batch) ส่วน <strong>LayerNorm</strong> คำนวณ "ไล่ตามแถว" (ทุก neuron ใน<em>ตัวอย่างเดียว</em>) — ไม่พึ่งตัวอย่างอื่นเลย. สูตรเดียวกับ BN เพียงแต่เปลี่ยนแกนที่เฉลี่ย.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: BN เทียบ LayerNorm บนข้อมูลเดียวกัน (batch 2 ตัวอย่าง × 4 neuron, ละ \(\epsilon,\gamma,\beta\))</div>
+<div class="given">\(Z = \begin{bmatrix}1&3&5&7\\2&2&6&6\end{bmatrix}\) (แถว = ตัวอย่าง, คอลัมน์ = neuron)</div>
+<ol class="steps">
+<li><div class="st-title">BN: เฉลี่ยตาม<strong>คอลัมน์</strong> (neuron 1 = [1, 2])</div>
+$$\mu = 1.5,\ \sigma^2 = 0.25\ \Rightarrow\ z_{\text{norm}} = \left[\tfrac{1-1.5}{0.5},\ \tfrac{2-1.5}{0.5}\right] = [-1,\ +1]$$</li>
+<li><div class="st-title">LayerNorm: เฉลี่ยตาม<strong>แถว</strong> (ตัวอย่างที่ 1 = [1,3,5,7])</div>
+$$\mu = 4,\ \sigma^2 = 5\ \Rightarrow\ z_{\text{norm}} = [-1.342,\ -0.447,\ 0.447,\ 1.342]$$</li>
+<li><div class="st-title">LayerNorm ตัวอย่างที่ 2 ([2,2,6,6])</div>
+$$\mu = 4,\ \sigma^2 = 4\ \Rightarrow\ z_{\text{norm}} = [-1,\ -1,\ +1,\ +1]$$</li>
+<li><div class="st-title">ถ้า batch มีตัวอย่างเดียว (batch size = 1)</div>
+<p>BN: แต่ละ neuron มีค่าเดียว \(\Rightarrow z-\mu=0\) ทั้งหมด (ข้อมูลหาย); LayerNorm: ยังคำนวณจาก 4 neuron ในตัวอย่างนั้นได้ตามปกติ</p></li>
+</ol>
+</div>
+
+<p>ข้อดี (สไลด์หน้า 19 <em>Why Layer Normalization?</em>): <strong>ไม่ขึ้นกับ batch size</strong> (ใช้ได้แม้ batch = 1); <strong>เสถียรสำหรับการเทรน Transformer ขนาดใหญ่</strong> (ไม่พึ่งสถิติ batch ที่แกว่งหรือเปลี่ยนตลอด); <strong>พฤติกรรมเหมือนกันตอน train และ inference</strong> (ไม่ต้องเก็บ moving average). จึงเป็นมาตรฐานใน Transformer/LLM ส่วน BN ยังนิยมใน CNN.</p>
 
 <div class="box mech">
 <div class="label">กลไกที่ต้องอธิบายได้</div>
 <dl>
 <dt>ทำไมต้องมี</dt>
-<dd>ทำไม LayerNorm ถึง "ไม่ต้องพึ่ง moving average" เหมือน BN? เพราะ BN ต้องพึ่ง moving average เนื่องจาก "หน่วยที่ normalize" (1 neuron ข้ามทุกตัวอย่าง) หายไปตอน test (เหลือตัวอย่างเดียว) แต่ LayerNorm normalize "ข้าม neuron ภายในตัวอย่างเดียวกัน" ซึ่งมีอยู่ครบทั้งตอน train และ test เสมอ</dd>
+<dd>BN ต้องพึ่ง moving average เพราะ "หน่วยที่ normalize" (1 neuron ข้ามทุกตัวอย่าง) หายไปตอน test (เหลือตัวอย่างเดียว) แต่ LayerNorm normalize "ข้าม neuron ภายในตัวอย่างเดียว" ซึ่งมีครบทั้งตอน train และ test.</dd>
 <dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>ถ้า layer มี neuron แค่ 2 ตัว การคำนวณ LayerNorm (mean/variance จาก 2 ค่า) น่าเชื่อถือไหมเทียบกับ layer ที่มี 512 neuron? ไม่น่าเชื่อถือเท่า — LayerNorm มีปัญหาตรงข้ามกับ BN: ยิ่ง layer มี neuron น้อย ยิ่งประมาณสถิติแย่ (เหมือนปัญหา batch size เล็กของ BN แต่ย้ายแกนมาเป็น "layer width เล็ก" แทน)</dd>
+<dd>layer ที่มี neuron แค่ 2 ตัว: mean/variance จาก 2 ค่า แม่นน้อยกว่า layer 512 neuron มาก — LayerNorm มีจุดอ่อนแบบเดียวกับ BN แต่ย้ายแกนมาเป็น "layer width เล็ก" แทน "batch size เล็ก".</dd>
 <dt>เชื่อมกับ</dt>
-<dd>ทั้ง BN และ LayerNorm มีจุดอ่อนเดียวกันทางสถิติ (ประมาณ mean/variance จากตัวอย่างน้อยไม่แม่น) แค่แกนที่ใช้นับต่างกัน (ข้ามตัวอย่าง vs ข้าม neuron) — batch ใหญ่เลือก BN, layer กว้างเลือก LayerNorm</dd>
+<dd>BN และ LayerNorm มีจุดอ่อนทางสถิติเดียวกัน (ประมาณ mean/variance จากตัวอย่างน้อย) แค่แกนนับต่างกัน — batch ใหญ่เลือก BN, layer กว้างเลือก LayerNorm.</dd>
 </dl>
 </div>
 
@@ -204,45 +399,80 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 </div>
 
 <h2>5. Keras ในภาคปฏิบัติ: MNIST ตัวอย่างเต็มรูปแบบ</h2>
-<p>ขั้นตอนมาตรฐาน 5 ขั้นของ Keras:</p>
-<ol>
-<li>โหลด/เตรียมข้อมูล</li>
-<li>สร้างโมเดล</li>
-<li>compile (เลือก loss, optimizer, metric)</li>
-<li>เทรนด้วย <code>.fit()</code></li>
-<li>ประเมินผล</li>
+<p>สไลด์หน้า 20–21: <strong>Keras</strong> คือ high-level API สำหรับสร้าง/เทรนโมเดล (พัฒนาโดย François Chollet รันบน TensorFlow, PyTorch หรือ JAX) และมีขั้นตอนมาตรฐาน 5 ขั้น:</p>
+<ol class="steps" style="margin-left:0">
+<li><div class="st-title">โหลด/เตรียมข้อมูล</div></li>
+<li><div class="st-title">สร้างโมเดล</div><p>จำนวน layer, จำนวน node, activation</p></li>
+<li><div class="st-title">compile</div><p>เลือก cost function, optimizer, metric</p></li>
+<li><div class="st-title">เทรนด้วย <code>fit()</code></div></li>
+<li><div class="st-title">ประเมินผลและทำนาย</div></li>
 </ol>
-<p>MNIST (เลขเขียนมือ 28×28 พิกเซล, 10 class) คือตัวอย่างที่สไลด์ใช้สาธิตทุกขั้น.</p>
+<p>สไลด์หน้า 22 เปิดด้วย Circle Dataset (โค้ดสั้น 4 layer: <code>Dense(10, relu, he_normal)</code> ×3 + <code>Dense(1, sigmoid)</code>, <code>Adam(learning_rate=0.03)</code>, <code>fit(..., epochs=50, batch_size=150)</code>) — โครงสร้างเดียวกับ Lesson 6 §6.</p>
 
+<h3>5.1 เตรียมข้อมูล MNIST (สไลด์หน้า 23–27)</h3>
+<p>MNIST = ภาพเลขเขียนมือ 60,000 ภาพสำหรับเทรน + 10,000 สำหรับ test ขนาด 28×28 พิกเซล, label 0–9.</p>
+<div class="calc">
+<div class="calc-title">คำนวณ: ขั้นเตรียมข้อมูล</div>
+<ol class="steps">
+<li><div class="st-title">flatten ภาพ 28×28 เป็นเวกเตอร์ (Dense รับเวกเตอร์เท่านั้น)</div>
+$$28\times28 = 784\ \text{features}\qquad(\text{shape }(60000,28,28)\to(60000,784))$$</li>
+<li><div class="st-title">ปรับค่าพิกเซล 0–255 เป็น 0–1 ด้วยการหาร 255 (min-max scaling จาก Lesson 1 §4 ที่ min = 0, max = 255)</div>
+$$\frac{255}{255} = 1,\quad \frac{128}{255} = 0.502,\quad \frac{64}{255} = 0.251,\quad \frac{0}{255} = 0$$</li>
+<li><div class="st-title">label เป็นเลขจำนวนเต็ม 0–9 (ไม่ใช่ one-hot)</div>
+<p>เช่น <code>y[:10] = [5 0 4 1 9 2 1 3 1 4]</code> ⇒ ต้องใช้ loss แบบ sparse (§6)</p></li>
+</ol>
+</div>
+
+<h3>5.2 นับพารามิเตอร์ของโมเดล (สไลด์หน้า 28–29)</h3>
 <figure>
 <img src="../assets/slides/dl5-p29-mnist-parameter-count-table.png" alt="Keras model.summary() output for a 3-layer dense network (784 inputs, 16, 16, 10 outputs) showing parameter counts per layer: 12,560 for the first dense layer (16 times 784+1), 272 for the second (16 times 16+1), 170 for the third (10 times 16+1), summing to a total of 13,002 trainable parameters">
 <figcaption>Slide: Concise Summary of the Network Topology — นับพารามิเตอร์จริงจาก model.summary() (Lecture5.pdf, p.29)</figcaption>
 </figure>
-<p>โมเดล 784→16→16→10 (MNIST แบบ flatten เป็นเวกเตอร์ 784 ก่อนเข้า Dense) นับพารามิเตอร์ทีละ layer ด้วยกฎเดียวจาก Lesson 2 หัวข้อ 5 (dimension ของ θ⁽ˡ⁾ = จำนวน node ปัจจุบัน × (จำนวน node ก่อนหน้า+1 สำหรับ bias)):</p>
-<ul>
-<li><strong>Layer 1:</strong> <code>16×(784+1) = 16×785 = 12,560</code></li>
-<li><strong>Layer 2:</strong> <code>16×(16+1) = 16×17 = 272</code></li>
-<li><strong>Layer 3 (output):</strong> <code>10×(16+1) = 10×17 = 170</code></li>
-</ul>
-<p><strong>รวม:</strong> <code>12,560+272+170 = 13,002</code> พารามิเตอร์ที่ต้องเรียนรู้ทั้งหมด — ตรงกับตัวเลขที่ Keras พิมพ์ออกมาจริงเป๊ะทุกหลัก.</p>
+<p>โมเดล 784→16→16→10 (สไลด์หน้า 28: <code>Sequential</code> + <code>Dense(16, relu)</code> ×2 + <code>Dense(10, softmax)</code>) นับด้วยกฎ \(s_l\times(s_{l-1}+1)\) จาก Lesson 3 §4:</p>
+<div class="calc">
+<div class="calc-title">คำนวณ: <code>model.summary()</code> ของ MNIST</div>
+<ol class="steps">
+<li><div class="st-title">Layer 1: 784 → 16</div>
+$$16\times(784+1) = 16\times785 = 12{,}560$$</li>
+<li><div class="st-title">Layer 2: 16 → 16</div>
+$$16\times(16+1) = 272$$</li>
+<li><div class="st-title">Layer 3 (output): 16 → 10</div>
+$$10\times(16+1) = 170$$</li>
+<li><div class="st-title">รวม</div>
+$$12{,}560 + 272 + 170 = 13{,}002$$</li>
+</ol>
+<div class="answer"><p>13,002 พารามิเตอร์ (ตรงกับที่ Keras พิมพ์ทุกหลัก). ผิดที่พบบ่อย: ลืมบวก 1 (bias) ได้ \(16\times784 = 12{,}544\).</p></div>
+</div>
 
+<h3>5.3 เทรนและนับ mini-batch (สไลด์หน้า 30–31)</h3>
 <figure>
 <img src="../assets/slides/dl5-p31-launch-training-minibatch-count.png" alt="Keras training call model.fit(X, y, epochs=40, validation_split=0.2, batch_size=64), with a calculation showing that with 48,000 training examples after the 20% validation split, the number of mini-batches per epoch equals 48,000 divided by 64, which equals 750 batches">
 <figcaption>Slide: Launch the training — คำนวณจำนวน mini-batch ต่อ epoch (Lecture5.pdf, p.31)</figcaption>
 </figure>
-<p>เรียก <code>model.fit(X, y, epochs=40, validation_split=0.2, batch_size=64)</code> — เพราะ <code>validation_split=0.2</code> ดึงข้อมูล 20% ไปเป็น validation ก่อน เหลือ training จริง 48,000 ตัวอย่าง (จาก 60,000 ตัวอย่างเต็มของ MNIST training set).</p>
-<p>จำนวน mini-batch ต่อ epoch คำนวณตรงไปตรงมาตามสูตร Lesson 4 หัวข้อ 3: <code>#mini-batches = #training examples ÷ batch size = 48,000 ÷ 64 = 750 batches</code>.</p>
-<p>เครือข่ายจะอัปเดต θ ทั้งหมด 750 ครั้งต่อ 1 epoch และเทรนซ้ำ 40 epoch (รวม 30,000 ครั้งของการอัปเดต θ ทั้งหมด).</p>
+<p>สไลด์หน้า 30: <code>compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])</code> แล้วหน้า 31: <code>model.fit(X, y, epochs=40, validation_split=0.2, batch_size=64)</code>.</p>
+<div class="calc">
+<div class="calc-title">คำนวณ: จำนวน mini-batch และจำนวนการอัปเดต \(\theta\)</div>
+<ol class="steps">
+<li><div class="st-title">แบ่ง validation ออกก่อน</div>
+$$60{,}000\times0.2 = 12{,}000\ (\text{validation}),\qquad 60{,}000-12{,}000 = 48{,}000\ (\text{train})$$</li>
+<li><div class="st-title">mini-batch ต่อ epoch (สูตร Lesson 4 §3: \(\lceil m/B\rceil\))</div>
+$$\frac{48{,}000}{64} = 750$$</li>
+<li><div class="st-title">อัปเดตทั้งหมด</div>
+$$750\times40\ \text{epoch} = 30{,}000\ \text{ครั้ง}$$</li>
+</ol>
+<div class="answer"><p>เมื่อ \(m\) หารด้วย \(B\) ไม่ลงตัวจะปัดขึ้น เช่น IMDB ในการบ้าน: \(25{,}000\times0.6 = 15{,}000\) แล้ว \(\lceil 15000/256\rceil = 59\) batch; ประเมินบน test 10,000 ตัวอย่างด้วย batch 32 ⇒ \(\lceil 10000/32\rceil = 313\) batch.</p></div>
+</div>
+<p>สไลด์หน้า 32–33: หลังเทรนพล็อต loss/accuracy ของ train และ validation เทียบ epoch (เห็น overfit เมื่อ val_loss เริ่มขึ้น) แล้ว <code>model.evaluate(Xtest, ytest)</code> และ <code>model.predict(Xtest[0:1])</code> ได้เวกเตอร์ความน่าจะเป็น 10 ตัว — <code>np.argmax</code> ให้คลาสที่ทำนาย.</p>
 
 <div class="box mech">
 <div class="label">กลไกที่ต้องอธิบายได้</div>
 <dl>
 <dt>ทำไมต้องมี</dt>
-<dd>ทำไมการนับพารามิเตอร์และ mini-batch ใน Keras ไม่ใช่ความรู้ใหม่ แต่คือสูตรเดิมจาก Lesson 2 (dimension ของ θ) และ Lesson 4 (batch size) ที่ใส่ตัวเลขจริง? เพราะ Keras แค่ implement สูตรคณิตศาสตร์ที่เรียนมาทั้งวิชา ไม่มีกลไกใหม่ — ต้องมั่นใจสูตรมือก่อน แล้วโค้ดจะตรงกับที่คำนวณได้</dd>
+<dd>การนับพารามิเตอร์/mini-batch ใน Keras ไม่ใช่ความรู้ใหม่ แต่คือสูตรเดิมจาก Lesson 3 (ขนาด \(\theta\)) และ Lesson 4 (batch size) ที่ใส่ตัวเลขจริง — Keras แค่ implement สูตรที่เรียนมาทั้งวิชา ต้องมั่นใจสูตรมือก่อนแล้วโค้ดจะตรง.</dd>
 <dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>ถ้าโมเดลเปลี่ยนเป็น 784→32→10 (ตัด hidden layer หนึ่งชั้นออก แต่ให้ชั้นที่เหลือกว้างขึ้น) พารามิเตอร์รวมเท่าไหร่? Layer1: 32×(784+1)=25,120, Layer2: 10×(32+1)=330, รวม 25,450 — มากกว่าโมเดลเดิม (13,002) เกือบ 2 เท่า ทั้งที่ตัด layer ออก เพราะ layer แรกที่คูณกับ 784 อยู่แล้วยิ่งกว้างยิ่งโตเร็ว</dd>
+<dd>โมเดล 784→32→10 (ตัด hidden หนึ่งชั้น แต่ให้ชั้นที่เหลือกว้างขึ้น): \(32\times785 = 25{,}120\) + \(10\times33 = 330\) = 25,450 — มากกว่า 13,002 เกือบ 2 เท่าทั้งที่ตัด layer ออก เพราะ layer แรกที่คูณกับ 784 อยู่แล้วยิ่งกว้างยิ่งโตเร็ว.</dd>
 <dt>เชื่อมกับ</dt>
-<dd>ตรงกับกลไกที่ Lesson 3 หัวข้อ 7 พิสูจน์ไว้ (ความกว้างกับความลึกส่งผลต่อจำนวนพารามิเตอร์คนละแบบ) — ลด layer แต่เพิ่มความกว้างไม่ได้แปลว่าพารามิเตอร์จะลดลงเสมอไป</dd>
+<dd>ความกว้างกับความลึกส่งผลต่อจำนวนพารามิเตอร์คนละแบบ (Lesson 3 §7, Lesson 4 §2) และตัวเลข "Optimizer params" ใน <code>summary</code> (Lesson 6 §3).</dd>
 </dl>
 </div>
 
@@ -257,7 +487,6 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
   </div>
   <div class="feedback"></div>
 </div>
-
 <div class="quiz">
   <div class="qhead"><span>คำถาม 7</span><span>Mini-batch Count</span></div>
   <div class="qtext">เรียก model.fit(X,y,validation_split=0.2,batch_size=64) บนข้อมูล MNIST 60,000 ตัวอย่าง จำนวน mini-batch ต่อ epoch เท่ากับเท่าไหร่?</div>
@@ -271,18 +500,46 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 </div>
 
 <h2>6. Compile Options และ Softmax Layer</h2>
-<p>เมื่อ label เป็น integer เดี่ยว (เช่น MNIST แต่ละภาพมี label เป็นเลข 0-9 ตัวเดียว ไม่ใช่ one-hot vector) ใช้ <code>loss="sparse_categorical_crossentropy"</code> แทน <code>categorical_crossentropy</code> (ซึ่งต้องการ one-hot) — ประหยัดทั้งโค้ดแปลงข้อมูลและหน่วยความจำ.</p>
-<p>ส่วน <code>Softmax</code> layer (ที่เรียนสูตรใน Lesson 3 หัวข้อ 6) ในบางกรณีเขียนแยกเป็น layer ต่างหากต่อจาก Dense layer สุดท้าย แทนที่จะฝัง activation='softmax' ไว้ใน Dense เลย — โครงสร้าง <code>Input → Flatten → Dense → Softmax</code> เป็นอีกวิธีเขียนโมเดลแบบ explicit ที่ให้ผลเหมือนกัน.</p>
+<figure>
+<img src="../assets/slides/dl5-p34-compile-options-loss-table.png" alt="Slide More Compile Options: an example Adam optimizer configured via a Python object, a table of common last-layer activation and loss function per problem type (binary classification: sigmoid with binary_crossentropy; multiclass single-label: softmax with categorical_crossentropy; multiclass multilabel: sigmoid with binary_crossentropy; regression to arbitrary values: none with mse; regression to values between 0 and 1: sigmoid with mse or binary_crossentropy) and a comparison of categorical versus sparse categorical crossentropy where the true label is a one-hot vector versus an integer index, the loss value is identical and sparse is more memory efficient">
+<figcaption>Slide: More Compile Options — ตาราง Last-layer activation กับ Loss (Lecture5, p.34)</figcaption>
+</figure>
+<p>กฎที่ต้องจับให้ถูก: activation ของ layer สุดท้ายต้อง<em>สอดคล้อง</em>กับ loss และชนิดของ label — ตารางในสไลด์สรุปเป็น:</p>
+<table class="compact">
+<tr><th>ชนิดปัญหา</th><th>activation ของ layer สุดท้าย</th><th>loss</th></tr>
+<tr><td>Binary classification</td><td>sigmoid</td><td>binary_crossentropy</td></tr>
+<tr><td>Multiclass, single-label</td><td>softmax</td><td>categorical_crossentropy</td></tr>
+<tr><td>Multiclass, multilabel</td><td>sigmoid</td><td>binary_crossentropy</td></tr>
+<tr><td>Regression ค่าอะไรก็ได้</td><td>ไม่ใช้ (linear)</td><td>mse</td></tr>
+<tr><td>Regression ค่า 0–1</td><td>sigmoid</td><td>mse หรือ binary_crossentropy</td></tr>
+</table>
+<p>เมื่อ label เป็นจำนวนเต็มเดี่ยว (MNIST: 0–9) และแต่ละภาพอยู่ในคลาสเดียว ใช้ <code>sparse_categorical_crossentropy</code> แทน <code>categorical_crossentropy</code> (ซึ่งต้องการ one-hot).</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: sparse กับ categorical ให้ loss เท่ากัน (label จริง \(y=3\) จาก 10 คลาส)</div>
+<div class="given">softmax ให้ความน่าจะเป็นของคลาส 3 เท่ากับ \(\hat y_3 = 0.7\)</div>
+<ol class="steps">
+<li><div class="st-title">categorical (one-hot \(y=[0,0,0,1,0,0,0,0,0,0]\))</div>
+$$-\sum_k y_k\ln\hat y_k = -(1\cdot\ln0.7) = 0.357$$</li>
+<li><div class="st-title">sparse (เก็บแค่ index 3)</div>
+$$-\ln\hat y_{3} = -\ln0.7 = 0.357$$</li>
+<li><div class="st-title">พื้นที่เก็บ label 60,000 ตัวอย่าง</div>
+$$\text{sparse}: 60{,}000\ \text{ตัวเลข},\qquad \text{one-hot}: 60{,}000\times10 = 600{,}000\ \text{ตัวเลข}$$</li>
+</ol>
+<div class="answer"><p>loss เท่ากัน (สไลด์: Final Loss Value = Identical) ต่างกันแค่วิธีเก็บ \(y\) — sparse ประหยัดหน่วยความจำ ยิ่งจำนวนคลาส \(K\) มาก ยิ่งต่างมาก (\(K\) เท่า).</p></div>
+</div>
+
+<p><strong>Input, Flatten, Softmax (สไลด์หน้า 35):</strong> อีกวิธีสร้างโมเดลแบบ explicit: <code>Input</code> = จุดเริ่มต้นบอก shape ของข้อมูล 1 ตัว; <code>Flatten</code> แปลงภาพ (28,28) เป็นเวกเตอร์ 784 (ถ้าใช้ Flatten ไม่ต้อง reshape ข้อมูลเอง); <code>Softmax</code> คืนคะแนนความน่าจะเป็น 10 ตัวที่รวมเป็น 1. สไลด์หน้า 36: แบ่งข้อมูลด้วย <code>train_test_split(X, y, test_size=0.2)</code> เมื่อชุดข้อมูลยังไม่ถูกแบ่ง หรือส่ง <code>validation_data=(Xval, yval)</code> เมื่อแบ่งไว้แล้ว.</p>
 
 <div class="box mech">
 <div class="label">กลไกที่ต้องอธิบายได้</div>
 <dl>
 <dt>ทำไมต้องมี</dt>
-<dd>ทำไม sparse_categorical_crossentropy กับ categorical_crossentropy ให้ค่า loss เท่ากันทุกตัวเลข? เพราะทั้งสองคำนวณสูตรเดียวกันทุกตัวอักษร (<code>−Σyₖlog(h(x)ₖ)</code> จาก Lesson 1) ต่างกันแค่วิธีเก็บ y: one-hot เก็บเป็น vector ส่วน sparse เก็บเป็น index เดียว แล้ว Keras แปลงเป็น one-hot ให้เองข้างในตอนคำนวณ</dd>
+<dd>sparse กับ categorical ให้ loss เท่ากันทุกตัวเลข เพราะคำนวณสูตรเดียวกัน (\(-\sum y_k\ln\hat y_k\)) ต่างกันแค่วิธีเก็บ \(y\): one-hot เก็บเป็นเวกเตอร์ sparse เก็บเป็น index เดียว Keras แปลงเป็น one-hot ข้างในให้เอง.</dd>
 <dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>ถ้า label จริงคือ y=3 (จาก 10 class) sparse เก็บเป็น "3" ตรงๆ ส่วน one-hot ต้องเก็บ [0,0,0,1,0,0,0,0,0,0] (10 ตัวเลข) — 60,000 ตัวอย่าง sparse ใช้พื้นที่ 60,000 ตัวเลข ส่วน one-hot ใช้ 600,000 (มากกว่า 10 เท่า เพราะ K=10) ยิ่ง K มาก ความต่างของพื้นที่เก็บยิ่งมาก</dd>
+<dd>label จริง \(y=3\): sparse เก็บ "3" ส่วน one-hot เก็บ 10 ตัวเลข — 60,000 ตัวอย่าง 60,000 เทียบ 600,000 (10 เท่า เพราะ \(K=10\)).</dd>
 <dt>เชื่อมกับ</dt>
-<dd>สูตร cross-entropy loss เดียวกับ Lesson 1 หัวข้อ multi-class — sparse/categorical คือแค่รูปแบบการเก็บ y คนละแบบ ไม่ใช่สูตร loss คนละตัว</dd>
+<dd>cross-entropy ตัวเดียวกับ Lesson 1 §8 และ Lesson 3 §6 (softmax + cross-entropy ⇒ \(\delta=a-y\)).</dd>
 </dl>
 </div>
 
@@ -299,22 +556,38 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 </div>
 
 <h2>7. Overcome Overfitting ในโค้ดจริง</h2>
-<p>สไลด์ปิดท้ายด้วยการเขียน L2 regularization และ dropout ผ่าน Keras API จริง (เชื่อมกับ Lesson 4 หัวข้อ 6):</p>
+<figure>
+<img src="../assets/slides/dl5-p38-overcome-overfitting-keras.png" alt="Slide Overcome Overfitting: L2 regularization added by passing a regularizer instance such as kernel_regularizer=keras.regularizers.l2(0.01) to a Dense layer, with a validation loss plot where the L2 model rises less than the original model; and Dropout via keras.layers.Dropout(rate=0.2) placed after Dense(300, elu, he_normal) and Dense(100, elu, he_normal) layers before a Dense(10, softmax), with a plot showing lower validation loss for the dropout model than the original">
+<figcaption>Slide: Overcome Overfitting — L2 และ Dropout ใน Keras (Lecture5, p.38)</figcaption>
+</figure>
+<p>สไลด์ปิดท้ายแปล L2 และ dropout (Lesson 4 §6) เป็นโค้ด:</p>
 <ul>
-<li>เพิ่ม <code>kernel_regularizer=regularizers.l2(λ)</code> เป็น argument ของ layer ที่ต้องการ regularize</li>
-<li>เพิ่ม <code>layers.Dropout(rate)</code> เป็น layer แยกต่อท้าย layer ที่ต้องการทำ dropout</li>
+<li><strong>L2:</strong> ส่ง regularizer เข้าอาร์กิวเมนต์ของ layer: <code>Dense(100, activation="elu", kernel_initializer="he_normal", kernel_regularizer=keras.regularizers.l2(0.01))</code> — เพิ่ม \(0.01\sum\theta^2\) เข้า cost ของ layer นั้น (Keras ไม่หารด้วย \(m\); ไม่รวม bias)</li>
+<li><strong>Dropout:</strong> เพิ่ม <code>keras.layers.Dropout(rate=0.2)</code> เป็น layer แยก ซึ่งใช้กับ output ของ layer ก่อนหน้ามัน</li>
 </ul>
-<p>ทั้งสองคือการ "แปลสูตรทฤษฎีที่เรียนมาทั้งวิชา" เป็นโค้ด 1 บรรทัดเท่านั้น ไม่มีคณิตศาสตร์ใหม่.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: "rate" ของ Keras ไม่ใช่ keep_prob</div>
+<ol class="steps">
+<li><div class="st-title"><code>Dropout(rate=0.2)</code></div>
+$$\text{ปิด }20\%\ \Rightarrow\ \text{keep\_prob} = 1-0.2 = 0.8,\quad \text{ตัวคูณชดเชย} = \frac{1}{0.8}=1.25$$</li>
+<li><div class="st-title"><code>Dropout(0.6)</code> (ที่ใช้ในการบ้าน IMDB)</div>
+$$\text{keep\_prob} = 0.4,\quad \text{ตัวคูณ} = \frac{1}{0.4} = 2.5$$</li>
+</ol>
+<div class="answer"><p>ระวังสับสนกับ <code>keep_prob</code> ในสไลด์ Lecture 4 (ความน่าจะเป็นที่<em>เก็บ</em> node) — Keras ใช้ <code>rate</code> = สัดส่วนที่<em>ปิด</em>. ตอน <code>predict</code>/<code>evaluate</code> Keras ปิด dropout ให้เอง.</p></div>
+</div>
+
+<p>สไลด์หน้า 37 (การบ้าน): จำแนก review หนัง IMDB 50,000 ตัวอย่าง (train 25,000 / test 25,000) เป็น positive/negative — โครงสร้างเดียวกับ MNIST แต่ output เป็น sigmoid 1 node + <code>binary_crossentropy</code>.</p>
 
 <div class="box mech">
 <div class="label">กลไกที่ต้องอธิบายได้</div>
 <dl>
 <dt>ทำไมต้องมี</dt>
-<dd>ทำไมโค้ด 1 บรรทัด (kernel_regularizer, Dropout) แทนสูตรคณิตศาสตร์ทั้งหมดได้? เพราะ Keras แยกสถาปัตยกรรม (layer ต่อกันยังไง) ออกจากพฤติกรรมตอนเทรน (บวก penalty term หรือสุ่มปิด node ยังไง) — ผู้ใช้แค่ประกาศเจตนา แล้ว autodiff (Lesson 3 หัวข้อ 4) จัดการอนุพันธ์ของ penalty term ให้เองหมด</dd>
+<dd>โค้ดบรรทัดเดียว (<code>kernel_regularizer</code>, <code>Dropout</code>) แทนสูตรทั้งหมดได้เพราะ Keras แยก "สถาปัตยกรรม" ออกจาก "พฤติกรรมตอนเทรน" — ผู้ใช้แค่ประกาศเจตนา แล้ว autodiff (Lesson 3 §4) หาอนุพันธ์ของเทอมปรับให้เอง.</dd>
 <dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>ถ้าใส่ทั้ง kernel_regularizer=l2(λ) และ Dropout(0.5) ใน layer เดียวกัน จะขัดแย้งกันไหม? ไม่ขัดแย้ง เพราะคนละกลไก (L2 บีบขนาด θ ตอน update ทุก step, Dropout สุ่มปิด node ตอน forward pass) ใช้ร่วมกันได้ปกติ เป็นเทคนิคที่นิยมทำคู่กันจริงเพื่อลด overfitting จากสองมุมพร้อมกัน</dd>
+<dd>ใส่ทั้ง \(\ell_2\) และ Dropout(0.5) ใน layer เดียวกันได้ ไม่ขัดแย้ง — คนละกลไก (L2 บีบขนาด \(\theta\) ทุก step, Dropout สุ่มปิด node ตอน forward) นิยมใช้คู่กันเพื่อลด overfit จากสองมุม.</dd>
 <dt>เชื่อมกับ</dt>
-<dd>ตรงกับกลไกที่ Lesson 4 หัวข้อ 6 อธิบายไว้ (Max-Norm/Dropout/L2 แก้ overfitting คนละมุม ไม่ทับซ้อนกัน) — โค้ดนี้คือการ implement หลักการเดียวกันนั้นจริงๆ</dd>
+<dd>Lesson 4 §6 (Max-Norm/Dropout/L2 แก้คนละมุม) — และ Lesson 6 ที่ให้ tuner หาค่า dropout/\(\lambda\) ที่เหมาะ.</dd>
 </dl>
 </div>
 
@@ -329,7 +602,6 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
   </div>
   <div class="feedback"></div>
 </div>
-
 <div class="quiz">
   <div class="qhead"><span>คำถาม 10</span><span>Batch Norm Train vs Test</span></div>
   <div class="qtext">ทำไม Batch Normalization ต้องใช้ moving average ของ μ_B, σ_B² (ที่สะสมมาตอนเทรน) แทนการคำนวณจาก batch จริงตอน test?</div>
@@ -347,8 +619,8 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <hr>
 
 <div class="box win">
-<div class="label">ชัยชนะของบทเรียนนี้ (และของทั้งวิชา)</div>
-คุณควรอธิบายได้ว่าทำไม chain rule ที่ยาวทำให้เกิด vanishing/exploding gradient, คำนวณ variance ของ z จากจำนวน input ได้ (และรู้ว่า He ใช้กับ ReLU, Xavier ใช้กับ sigmoid/tanh), อธิบายสูตร Batch/Layer Normalization ได้ทั้ง train และ test time, และอ่าน/คำนวณพารามิเตอร์จาก Keras model.summary() ได้มือ — ครบทั้ง 5 บทแล้ว ตั้งแต่ ML พื้นฐานจนถึงการเทรน deep network จริงใน Keras.
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควรอธิบายได้ว่าทำไม chain rule ที่ยาวทำให้เกิด vanishing/exploding gradient (พร้อมตัวเลข \(0.25^{10}\), \(0.9^{50}\)) และ clip gradient ได้, พิสูจน์ได้ว่า zero init ทำให้ node เหมือนกันตลอดกาล และคำนวณ \(\operatorname{Var}(z)=n\operatorname{Var}(\theta)\) พร้อมที่มาของ He/Xavier/LeCun, คำนวณ BatchNorm และ LayerNorm ด้วยตัวเลข (รวมนับพารามิเตอร์ \(4n\) ต่อ BN layer และ train vs test), และคำนวณพารามิเตอร์/mini-batch/loss ของโมเดล Keras (\(13{,}002\); \(750\); sparse vs categorical) — ครบเนื้อหา Lecture 1–5 แล้ว บทถัดไป (Lesson 6) ต่อด้วยเครื่องมือช่วยเทรนและการจูน hyperparameter.
 </div>
 
 <h2>ภาคผนวก: Slide ทั้งหมดใน Lecture5.pdf (38 หน้า) — เช็คว่าอ่านครบ</h2>
@@ -386,11 +658,12 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <tr><td>38</td><td>Overcome Overfitting — L2/Dropout ในโค้ด Keras จริง</td><td>✓ หัวข้อ 7</td></tr>
 </table>
 
+
 <p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
 
 <nav class="lesson-nav">
   <span><a href="0004-deep-networks-and-optimizers.html">← Lesson 4: Deep Networks &amp; Optimizers</a></span>
-  <span><a href="0001-machine-learning-foundations.html">กลับไป Lesson 1 →</a></span>
+  <span><a href="0006-callbacks-and-hyperparameter-tuning.html">Lesson 6: Callbacks &amp; Tuning →</a></span>
 </nav>
 
 <script src="../assets/quiz.js"></script>

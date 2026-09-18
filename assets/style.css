@@ -268,3 +268,85 @@ th { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; font-size:
   text-align: right;
   margin-top: -0.5em;
 }
+
+/* --- Math (KaTeX) --- */
+.katex { font-size: 1.05em; }
+.katex-display { margin: 0.9em 0; overflow-x: auto; overflow-y: hidden; padding: 0.2em 0; }
+
+/* --- Step-by-step worked calculation --- */
+.calc {
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 1em 1.3em 0.6em;
+  margin: 1.6em 0;
+  background: #fff;
+}
+.calc > .calc-title {
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.6em;
+}
+.calc .given {
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 0.5em 1em;
+  margin: 0.4em 0 0.8em;
+  font-size: 0.95em;
+}
+ol.steps { list-style: none; counter-reset: st; padding: 0; margin: 0.6em 0; }
+ol.steps > li {
+  counter-increment: st;
+  position: relative;
+  padding: 0.1em 0 0.9em 2.6em;
+  margin: 0;
+}
+ol.steps > li::before {
+  content: counter(st);
+  position: absolute;
+  left: 0; top: 0.15em;
+  width: 1.85em; height: 1.85em;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-align: center;
+  line-height: 1.85em;
+}
+ol.steps > li > .st-title { font-weight: 700; margin-bottom: 0.15em; }
+ol.steps > li p { margin: 0.3em 0; }
+.answer {
+  background: var(--good-bg);
+  border-left: 4px solid var(--good);
+  border-radius: 4px;
+  padding: 0.5em 1em;
+  margin: 0.6em 0 0.8em;
+}
+.answer .katex-display { margin: 0.4em 0; }
+.plain-thai {
+  font-size: 0.93em;
+  color: var(--ink-soft);
+  border-left: 3px solid var(--rule);
+  padding-left: 0.9em;
+  margin: 0.6em 0;
+}
+.plain-thai::before {
+  content: "อ่านเป็นภาษาคน: ";
+  font-weight: 700;
+  color: var(--ink);
+}
+.box.beginner {
+  border-left: 4px solid #2b5fa5;
+  background: #fff;
+}
+.box.beginner .label { color: #2b5fa5; }
+.eqtable td, .eqtable th { vertical-align: middle; }
+
+/* Compact tables (calculation tables inside .calc / worked examples) */
+table.compact { font-size: 0.85em; }
+table.compact th, table.compact td { padding: 0.3em 0.55em; }

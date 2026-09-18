@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 6: Callbacks &amp; Hyperparameter Tuning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0005-vanishing-gradients-and-initialization.html">← Lesson 5: Vanishing Gradients &amp; Init</a></span>
+  <span>Lesson 6 / 6 · Callbacks &amp; Tuning</span>
+  <span><a href="0001-machine-learning-foundations.html">กลับไป Lesson 1 →</a></span>
+</nav>
+
+<p class="kicker">Lecture6 (lecture 6.pdf, 33 หน้า) · 2603520 Deep Learning</p>
+<h1>Keras Callbacks, TensorBoard และ Hyperparameter Tuning</h1>
+
+<p>บทนี้คือ "เครื่องมือช่วยเทรน" — ตอนนี้คุณรู้แล้วว่า network ทำงานอย่างไร (Lesson 1–5) บทนี้สอนว่า<strong>ระหว่างเทรน</strong>จะสั่งให้ Keras ทำอะไรอัตโนมัติได้บ้าง (หยุดเมื่อไม่ดีขึ้น, เซฟโมเดล, ลด learning rate, ดูกราฟ) และ<strong>ก่อนเทรน</strong>จะเลือกค่า hyperparameter (จำนวน layer, learning rate, dropout …) อย่างมีระบบได้อย่างไร.</p>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+<a href="https://keras.io/api/callbacks/" target="_blank" rel="noopener">Keras — Callbacks API</a> และ <a href="https://keras.io/guides/keras_tuner/getting_started/" target="_blank" rel="noopener">KerasTuner — Getting started</a> (สองลิงก์ที่สไลด์อ้างอิงตรงๆ) · ส่วน Grid vs Random Search อ่านต้นฉบับ <a href="https://www.jmlr.org/papers/volume13/bergstra12a/bergstra12a.pdf" target="_blank" rel="noopener">Bergstra &amp; Bengio (2012)</a> ที่มาของรูปในสไลด์หน้า 25–26.
+</div>
+
+<div class="box beginner">
+<div class="label">ก่อนเริ่ม — 3 คำที่ต้องแยกให้ออก</div>
+<ul>
+<li><strong>Epoch</strong> = เทรนวนครบข้อมูลทั้งชุด 1 รอบ</li>
+<li><strong>Batch</strong> = ข้อมูลกลุ่มเล็กๆ ที่ใช้อัปเดต weight 1 ครั้ง. จำนวน batch ต่อ epoch = \(\lceil m / B \rceil\) เมื่อ \(m\) = จำนวนตัวอย่าง, \(B\) = batch size (เครื่องหมาย \(\lceil\ \rceil\) คือ "ปัดขึ้น")</li>
+<li><strong>Hyperparameter</strong> = ค่าที่<u>เราตั้งก่อนเทรน</u> (learning rate, จำนวน layer …) ต่างจาก <strong>parameter</strong> \(\theta\) ที่โมเดลเรียนรู้เอง</li>
+</ul>
+</div>
+
+<h2 id="s1">1. Callback คืออะไร: "ผู้ช่วยข้างสนาม" ที่ Keras เรียกให้เอง</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p01-keras-callbacks-intro.png" alt="Slide: Keras Callbacks. A callback is an object passed to model.fit(); the slide shows a custom callback class with on_train_begin, on_train_batch_end and on_epoch_end methods that print messages, and a model.fit call with callbacks=[my_callback()]">
+<figcaption>Slide: Keras Callbacks — เขียน callback เองด้วย base class (Lecture6, p.1)</figcaption>
+</figure>
+
+<p><strong>แนวคิด:</strong> การเทรนคือ loop ซ้อน loop — วนทุก epoch, ในแต่ละ epoch วนทุก batch. Callback คือ object ที่เราแนบให้ <code>model.fit()</code> แล้ว Keras จะ<em>เรียกฟังก์ชันของมันเองอัตโนมัติ</em> ทุกครั้งที่ถึงจุดที่กำหนด (เช่น "จบ epoch แล้ว") โดยเราไม่ต้องแก้ loop ของ Keras.</p>
+
+<p><strong>ตัวอย่างในสไลด์หน้า 1:</strong> สมมติ <code>X</code> มี 150 ตัวอย่าง (ข้อมูลที่ใช้สอนในคาบ), <code>batch_size=64</code> และเทรน 3 epoch:</p>
+<div class="calc">
+<div class="calc-title">คำนวณ: callback ถูกเรียกกี่ครั้ง และพิมพ์อะไร</div>
+<div class="given">กำหนด: \(m = 150\), \(B = 64\), epochs = 3</div>
+<ol class="steps">
+<li><div class="st-title">หาจำนวน batch ต่อ epoch</div>
+$$\text{batches} = \left\lceil \frac{150}{64} \right\rceil = \lceil 2.34 \rceil = 3$$</li>
+<li><div class="st-title">ไล่ลำดับการเรียก</div>
+<p><code>on_train_begin</code> ถูกเรียก <strong>1 ครั้ง</strong> ตอนเริ่ม → พิมพ์ <code>training start</code></p>
+<p>จากนั้นแต่ละ epoch: <code>on_train_batch_end</code> 3 ครั้ง (พิมพ์ <code>End of batch:1</code>, <code>:2</code>, <code>:3</code>) แล้ว <code>on_epoch_end</code> 1 ครั้ง (พิมพ์ <code>End of epoch:1</code>)</p></li>
+<li><div class="st-title">นับรวม</div>
+<p>batch ทั้งหมด \(3 \times 3 = 9\) ครั้ง, epoch 3 ครั้ง, train_begin 1 ครั้ง</p></li>
+</ol>
+<div class="answer"><p>คำสั่งพิมพ์ทั้งหมด = \(1 + 9 + 3 = 13\) บรรทัด</p></div>
+</div>
+
+<p><strong>ข้อมูลที่ callback ได้รับ (<code>logs</code>):</strong> ที่ <code>on_train_batch_end</code> มี <code>loss</code> และ <code>accuracy</code> ของ batch นั้น; ที่ <code>on_epoch_end</code> มีเพิ่ม <code>val_loss</code> และ <code>val_accuracy</code> (เพราะ validation ทำหลังจบ epoch). ที่ <code>on_train_begin</code> <code>logs</code> ว่างเปล่า.</p>
+
+<figure>
+<img src="../assets/slides/dl6-p02-builtin-callbacks-list.png" alt="Slide: Built-in callbacks: EarlyStopping, ModelCheckpoint, BackupAndRestore, LearningRateScheduler / ReduceLROnPlateau, CSVLogger and TensorBoard, each with a one-line purpose">
+<figcaption>Slide: Built-in Callbacks — 6 ตัวที่ใช้บ่อย (Lecture6, p.2)</figcaption>
+</figure>
+
+<p>ไม่ต้องเขียนเองทุกครั้ง Keras มีตัวสำเร็จรูป 6 ตัว จับคู่ "ปัญหา → callback" ได้ดังนี้:</p>
+<table class="compact">
+<tr><th>อยากได้อะไร</th><th>ใช้ callback</th><th>หัวข้อ</th></tr>
+<tr><td>หยุดเทรนเมื่อ validation ไม่ดีขึ้นแล้ว</td><td><code>EarlyStopping</code></td><td><a href="#s2">§2</a></td></tr>
+<tr><td>เซฟโมเดล/weight ระหว่างเทรน</td><td><code>ModelCheckpoint</code></td><td><a href="#s3">§3</a></td></tr>
+<tr><td>เทรนต่อได้หลังไฟดับหรือหลุด</td><td><code>BackupAndRestore</code></td><td><a href="#s4">§4</a></td></tr>
+<tr><td>ปรับ learning rate ระหว่างเทรน</td><td><code>LearningRateScheduler</code>, <code>ReduceLROnPlateau</code></td><td><a href="#s5">§5</a></td></tr>
+<tr><td>บันทึกผลทุก epoch เป็นไฟล์ csv</td><td><code>CSVLogger</code></td><td><a href="#s5">§5</a></td></tr>
+<tr><td>ดูกราฟและ histogram ของ weight</td><td><code>TensorBoard</code></td><td><a href="#s6">§6</a></td></tr>
+</table>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ถ้าไม่มี callback การจะ "หยุดตอน validation แย่ลง" หรือ "เซฟตอนดีที่สุด" ต้องเขียน loop เทรนเองทั้งหมด. Callback ให้จุดเสียบ (hook) ที่ Keras เรียกให้ ทำให้พฤติกรรมพวกนี้เป็นโค้ดหนึ่งบรรทัดที่ต่อเข้าไปได้.</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าใส่ callback หลายตัวใน list <code>callbacks=[a, b]</code> ทุกตัวถูกเรียกที่จุดเดียวกันตามลำดับใน list. ถ้า validation ทำตอน <code>fit</code> ด้วย (<code>validation_data</code>/<code>validation_split</code>) hook ของฝั่ง test (<code>on_test_begin</code>, <code>on_test_batch_end</code>) จะถูกเรียกทุกจบ epoch ด้วย — เช่น validation 50 แถว batch 32 ⇒ 2 batch ต่อ epoch.</dd>
+<dt>เชื่อมกับ</dt>
+<dd>Early stopping ที่ Lesson 4 §6 อธิบายเป็นหลักการ ที่นี่กลายเป็น callback จริง; และ "จำนวน batch ต่อ epoch" คือตัวเลขเดียวกับที่ Lesson 5 §5 คำนวณ (MNIST: 48,000 ÷ 64 = 750).</dd>
+</dl>
+</div>
+
+<h2 id="s2">2. EarlyStopping: หยุดเมื่อไม่ดีขึ้นตามเกณฑ์ที่กำหนด</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p03-earlystopping-callback.png" alt="Slide: EarlyStopping callback. Code: EarlyStopping(monitor='val_loss', patience=5, min_delta=0.001, restore_best_weights=True) passed to model.fit with epochs=50 and batch_size=150">
+<figcaption>Slide: EarlyStopping Callback (Lecture6, p.3)</figcaption>
+</figure>
+
+<p><strong>ความหมายของ 4 พารามิเตอร์ในสไลด์:</strong></p>
+<table class="compact">
+<tr><th>พารามิเตอร์</th><th>ค่าในสไลด์</th><th>ความหมาย</th></tr>
+<tr><td><code>monitor</code></td><td>'val_loss'</td><td>ค่าที่ใช้ตัดสินว่า "ดีขึ้นหรือไม่" (เล็กลง = ดี)</td></tr>
+<tr><td><code>min_delta</code></td><td>0.001</td><td>ต้องดีขึ้นอย่างน้อยเท่านี้ ถึงนับว่า "ดีขึ้นจริง" (กัน noise)</td></tr>
+<tr><td><code>patience</code></td><td>5</td><td>ยอมให้ "ไม่ดีขึ้น" ติดกันได้กี่ epoch ก่อนหยุด</td></tr>
+<tr><td><code>restore_best_weights</code></td><td>True</td><td>หยุดแล้วให้ย้อน weight กลับไปที่ epoch ที่ดีที่สุด</td></tr>
+</table>
+
+<p><strong>กติกาที่ใช้ตัดสินแต่ละ epoch:</strong></p>
+$$\text{improvement}_t = \text{best} - \text{val\_loss}_t \;\ge\; \text{min\_delta}$$
+<ul>
+<li>ถ้าเป็นจริง → นับเป็น "ดีขึ้น": อัปเดต <code>best</code> และ<strong>รีเซ็ต</strong>ตัวนับ patience เป็น 0</li>
+<li>ถ้าไม่จริง → ตัวนับ patience <strong>+1</strong>; พอตัวนับ = <code>patience</code> ก็หยุดเทรน</li>
+</ul>
+
+<figure>
+<img src="../assets/slides/dl6-p04-earlystopping-results-table.png" alt="Slide: Results table for epochs 28 to 36 with columns val_loss, best before this epoch, improvement, whether improvement is at least 0.001, and patience count, ending with 5 then STOP at epoch 36">
+<figcaption>Slide: Results — ตารางไล่ทีละ epoch ตั้งแต่ epoch 28 ถึง 36 (Lecture6, p.4)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามตารางในสไลด์ ทีละ epoch (patience = 5, min_delta = 0.001)</div>
+<div class="given">เริ่มที่ epoch 28: \(\text{val\_loss} = 0.4806\) ⇒ \(\text{best} = 0.4806\), ตัวนับ = 0</div>
+<ol class="steps">
+<li><div class="st-title">Epoch 29: val_loss = 0.4855</div>
+$$\text{improvement} = 0.4806 - 0.4855 = -0.0049 &lt; 0.001$$
+<p>ไม่ดีขึ้น (แย่ลง) ⇒ ตัวนับ = <strong>1</strong></p></li>
+<li><div class="st-title">Epoch 30: val_loss = 0.4763</div>
+$$\text{improvement} = 0.4806 - 0.4763 = 0.0043 \ge 0.001$$
+<p>ดีขึ้นจริง ⇒ <code>best</code> = 0.4763, ตัวนับ <strong>รีเซ็ตเป็น 0</strong></p></li>
+<li><div class="st-title">Epoch 31: val_loss = 0.4750</div>
+$$\text{improvement} = 0.4763 - 0.4750 = 0.0013 \ge 0.001$$
+<p>ดีขึ้นจริง (ผ่านเกณฑ์แค่นิดเดียว) ⇒ <code>best</code> = 0.4750, ตัวนับ = 0</p></li>
+<li><div class="st-title">Epoch 32–35: val_loss = 0.4887, 0.4982, 0.4904, 0.4957</div>
+<p>ทุก epoch แย่กว่า best (0.4750) เช่น \(0.4750 - 0.4887 = -0.0137\) ⇒ ตัวนับเพิ่มเป็น 1, 2, 3, 4 ตามลำดับ</p></li>
+<li><div class="st-title">Epoch 36: val_loss = 0.5149</div>
+$$0.4750 - 0.5149 = -0.0399 &lt; 0.001 \;\Rightarrow\; \text{ตัวนับ} = 5 = \text{patience}$$
+<p>ถึงเกณฑ์ ⇒ <strong>STOP</strong></p></li>
+</ol>
+<div class="answer"><p>หยุดที่ epoch 36 แต่ด้วย <code>restore_best_weights=True</code> ได้ weight ของ <strong>epoch 31</strong> (val_loss 0.4750) กลับมา — epoch 32–36 (5 epoch) เทรนแล้วทิ้งไป.</p></div>
+</div>
+
+<div class="calc">
+<div class="calc-title">เปลี่ยนค่าแล้วเกิดอะไร (ใช้ตารางเดิม): ฝึกคิดแบบข้อสอบ</div>
+<ol class="steps">
+<li><div class="st-title">ลด patience เป็น 3</div>
+<p>epoch 29 นับ 1 → epoch 30, 31 ดีขึ้นรีเซ็ต → epoch 32, 33, 34 นับ 1, 2, 3 ⇒ <strong>หยุดที่ epoch 34</strong> (เร็วขึ้น 2 epoch) weight ที่คืนมายังเป็น epoch 31 เหมือนเดิม</p></li>
+<li><div class="st-title">เพิ่ม min_delta เป็น 0.01</div>
+<p>epoch 30: \(0.4806 - 0.4763 = 0.0043 &lt; 0.01\) ไม่นับว่าดีขึ้น (ตัวนับ 2); epoch 31: \(0.4806 - 0.4750 = 0.0056 &lt; 0.01\) ไม่นับ (ตัวนับ 3) — เพราะ <code>best</code> ยังค้างที่ 0.4806; epoch 32, 33 ตัวนับเป็น 4, 5 ⇒ <strong>หยุดที่ epoch 33</strong> และคืน weight ของ <strong>epoch 28</strong> (val_loss 0.4806 ซึ่งแย่กว่า 0.4750)</p></li>
+</ol>
+<div class="answer"><p>บทเรียน: <code>min_delta</code> ใหญ่เกินไปจะมองความก้าวหน้าเล็กๆ ที่จริงเป็นของจริงว่าเป็น noise แล้วหยุดเร็วเกินและได้โมเดลที่แย่กว่า.</p></div>
+</div>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>loss บนข้อมูล validation ไม่ได้ลดเรียบๆ — มันแกว่งขึ้นลงเล็กน้อยทุก epoch (ดูตาราง: 0.4855, 0.4763, 0.4750, 0.4887 …). ถ้าหยุดทันทีที่ "แย่ลง 1 ครั้ง" จะหยุดเพราะ noise; <code>patience</code> ให้เวลาดูแนวโน้ม, <code>min_delta</code> กันไม่ให้การขยับ 0.0001 นับเป็นความก้าวหน้า, และ <code>restore_best_weights</code> แก้ปัญหาที่ตอนหยุด weight เป็นของ epoch ที่แย่กว่าที่สุดของรอบ.</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>patience เล็ก/min_delta ใหญ่ → หยุดเร็ว เสี่ยง underfit (ตัวอย่างข้างบน: หยุด epoch 33 ได้ 0.4806); patience ใหญ่ → เปลืองเวลา แต่ปลอดภัยกับ noise. ถ้าไม่ตั้ง <code>restore_best_weights</code> ได้ weight ของ epoch สุดท้าย (36, val_loss 0.5149 = แย่ที่สุดในตาราง).</dd>
+<dt>เชื่อมกับ</dt>
+<dd>เหตุผลเชิงสถิติเดียวกับ Lesson 4 §6 (early stopping = regularization ชนิดหนึ่ง: หยุดก่อนที่โมเดลจะเริ่ม overfit) และ Lesson 5 §5 ที่หา "best epoch" ด้วยมือจากกราฟ val_loss — callback นี้ทำสิ่งนั้นอัตโนมัติ.</dd>
+</dl>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>EarlyStopping</span></div>
+  <div class="qtext">จากตาราง epoch 28–36 ในสไลด์ (best = 0.4750 หลัง epoch 31; epoch 32–36 แย่กว่า best ทั้งหมด) ถ้าตั้ง <code>patience=3</code> การเทรนจะหยุดที่ epoch ใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ตัวนับรีเซ็ตที่ epoch 31 (best ใหม่) แล้วนับ 1, 2, 3 ที่ epoch 32, 33, 34 ⇒ หยุดที่ 34 (patience=5 จึงหยุดที่ 36).">epoch 33 เพราะ epoch 32 กับ 33 แย่กว่า best ติดกันแล้วจึงครบตามกติกา patience</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ตัวนับรีเซ็ตที่ epoch 31 (best ใหม่) แล้วนับ 1, 2, 3 ที่ epoch 32, 33, 34 ⇒ หยุดที่ 34 (patience=5 จึงหยุดที่ 36).">epoch 35 เพราะต้องรอให้ epoch 32 ถึง 35 แย่กว่า best ครบสี่ครั้งก่อนหยุดเสมอ</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ตัวนับรีเซ็ตที่ epoch 31 (best ใหม่) แล้วนับ 1, 2, 3 ที่ epoch 32, 33, 34 ⇒ หยุดที่ 34 (patience=5 จึงหยุดที่ 36).">epoch 34 เพราะ epoch 32, 33 และ 34 แย่กว่า best ติดกันสามครั้งตามที่กำหนด</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ตัวนับรีเซ็ตที่ epoch 31 (best ใหม่) แล้วนับ 1, 2, 3 ที่ epoch 32, 33, 34 ⇒ หยุดที่ 34 (patience=5 จึงหยุดที่ 36).">epoch 36 เพราะ patience นับจาก epoch 31 ไปจนถึง epoch ที่ val_loss แย่ที่สุด</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>EarlyStopping</span></div>
+  <div class="qtext">จากตารางเดิม ถ้าตั้ง <code>min_delta=0.01</code>, <code>patience=5</code>, <code>restore_best_weights=True</code> (best เริ่ม 0.4806 ที่ epoch 28) weight ของ epoch ใดถูกคืนมา?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. การลดที่ต้องได้ ≥ 0.01: epoch 30 ลด 0.0043 และ epoch 31 ลด 0.0056 ต่ำกว่าเกณฑ์ ไม่นับว่าดีขึ้น ⇒ best ค้างที่ epoch 28 ตัวนับไปถึง 5 ที่ epoch 33 แล้วคืน weight epoch 28.">epoch 28 เพราะไม่มี epoch ใดลด val_loss ได้ถึง 0.01 จึงไม่มี best ใหม่เลย</button>
+    <button class="opt" data-correct="false" data-note="ผิด. การลดที่ต้องได้ ≥ 0.01: epoch 30 ลด 0.0043 และ epoch 31 ลด 0.0056 ต่ำกว่าเกณฑ์ ไม่นับว่าดีขึ้น ⇒ best ค้างที่ epoch 28 ตัวนับไปถึง 5 ที่ epoch 33 แล้วคืน weight epoch 28.">epoch 31 เพราะเป็น epoch ที่ val_loss ต่ำที่สุดในตารางไม่ว่าจะตั้ง min_delta เท่าใด</button>
+    <button class="opt" data-correct="false" data-note="ผิด. การลดที่ต้องได้ ≥ 0.01: epoch 30 ลด 0.0043 และ epoch 31 ลด 0.0056 ต่ำกว่าเกณฑ์ ไม่นับว่าดีขึ้น ⇒ best ค้างที่ epoch 28 ตัวนับไปถึง 5 ที่ epoch 33 แล้วคืน weight epoch 28.">epoch 33 เพราะเป็น epoch สุดท้ายก่อนหยุด และ Keras จะคืน weight ล่าสุดเสมอ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. การลดที่ต้องได้ ≥ 0.01: epoch 30 ลด 0.0043 และ epoch 31 ลด 0.0056 ต่ำกว่าเกณฑ์ ไม่นับว่าดีขึ้น ⇒ best ค้างที่ epoch 28 ตัวนับไปถึง 5 ที่ epoch 33 แล้วคืน weight epoch 28.">epoch 30 เพราะเป็น epoch แรกที่ val_loss ลดลงจากเดิมมากกว่า 0.004 ต่อเนื่อง</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s3">3. บันทึกโมเดล: <code>save</code>, <code>save_weights</code> และ ModelCheckpoint</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p05-save-model-manually.png" alt="Slide: Save the Model (Manually). Code for model.save_weights and load_weights after rebuilding the model, and model.save('my_model.keras') with load_model; a Colab file panel shows my_model.keras and my_model.weights.h5; model.summary after loading shows Total params 785, Trainable params 261, Non-trainable params 0, Optimizer params 524">
+<figcaption>Slide: Save the Model (Manually) — เซฟ weight เทียบกับเซฟทั้งโมเดล (Lecture6, p.5)</figcaption>
+</figure>
+
+<p><strong>สองวิธีเซฟ ต่างกันที่ "เก็บอะไร":</strong></p>
+<table class="compact">
+<tr><th></th><th><code>save_weights('x.weights.h5')</code></th><th><code>save('x.keras')</code></th></tr>
+<tr><td>เก็บ</td><td>เฉพาะตัวเลข weight/bias</td><td>โครงสร้าง + weight + สถานะ optimizer</td></tr>
+<tr><td>ตอนโหลด</td><td>ต้อง <code>build_model()</code> ก่อน แล้ว <code>load_weights(...)</code></td><td><code>load_model('x.keras')</code> ได้เลย</td></tr>
+</table>
+
+<p><strong>อ่านตัวเลขจาก <code>model.summary()</code> ในสไลด์ให้เป็น (Total 785 มาจากไหน):</strong></p>
+<div class="calc">
+<div class="calc-title">คำนวณ: ทำไม Trainable = 261 และ Optimizer = 524</div>
+<div class="given">โมเดลในสไลด์: input 2 → Hidden1 (10) → Hidden2 (10) → Hidden3 (10) → Output (1) &nbsp;|&nbsp; สูตรพารามิเตอร์ของ Dense: \(n_{in} \times n_{out} + n_{out}\) (weight + bias)</div>
+<ol class="steps">
+<li><div class="st-title">นับพารามิเตอร์ทีละ layer</div>
+$$\begin{aligned}
+\text{Hidden1} &= 2\times10 + 10 = 30\\
+\text{Hidden2} &= 10\times10 + 10 = 110\\
+\text{Hidden3} &= 10\times10 + 10 = 110\\
+\text{Output} &= 10\times1 + 1 = 11
+\end{aligned}$$
+<p>ตรงกับคอลัมน์ Param # ในสไลด์ (30, 110, 110, 11)</p></li>
+<li><div class="st-title">รวมเป็น Trainable params</div>
+$$30 + 110 + 110 + 11 = 261$$</li>
+<li><div class="st-title">Optimizer params (Adam)</div>
+<p>Adam เก็บค่าเฉลี่ยเคลื่อนที่ 2 ชุดต่อทุกพารามิเตอร์ (ของ gradient และของ gradient² — Lesson 4 §5) = \(2 \times 261 = 522\) และเก็บตัวแปรเดี่ยวอีก 2 ตัว (ตัวนับรอบ กับ learning rate) ⇒ 524</p></li>
+<li><div class="st-title">Total</div>
+$$261 + 524 = 785$$</li>
+</ol>
+<div class="answer"><p>Total params 785 = Trainable 261 (ใช้ตอน predict) + Optimizer 524 (มีเฉพาะเมื่อเซฟด้วย <code>.save</code> เพื่อให้เทรนต่อได้).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl6-p06-modelcheckpoint-callback.png" alt="Slide: ModelCheckpoint callback. It saves the model or its weights during training, typically at the end of each epoch by default. Two code examples: ModelCheckpoint('my_model.keras') saving the whole model, and ModelCheckpoint('my_model.weights.h5', save_weights_only=True) saving weights only">
+<figcaption>Slide: ModelCheckpoint Callback (Lecture6, p.6)</figcaption>
+</figure>
+
+<p><code>ModelCheckpoint</code> คือการเซฟอัตโนมัติ: ค่าเริ่มต้นเซฟ<strong>ทุกจบ epoch</strong>. ถ้าตั้งชื่อไฟล์ตายตัวเช่น <code>'my_model.keras'</code> ทุก epoch เขียนทับไฟล์เดิม ดังนั้นเมื่อเทรนจบ ไฟล์คือโมเดลของ<strong>epoch สุดท้าย</strong> (ไม่ใช่ epoch ที่ดีที่สุด) — ใช้ตัวเลือกในหน้าถัดไปเพื่อเปลี่ยนพฤติกรรมนี้.</p>
+
+<figure>
+<img src="../assets/slides/dl6-p07-modelcheckpoint-save-best-only.png" alt="Slide: More Saving Criteria. save_best_only saves only when the performance measure is best in the run, monitor names the metric, mode chooses maximize or minimize (default auto). Code uses save_weights_only=True, save_best_only=True, monitor='val_accuracy', mode='max', with a note that EarlyStopping is typically used together with ModelCheckpoint">
+<figcaption>Slide: More Saving Criteria (1) — save_best_only, monitor, mode (Lecture6, p.7)</figcaption>
+</figure>
+
+<p>ตัวอย่างในสไลด์ตั้ง <code>monitor='val_accuracy'</code> (ยิ่งสูงยิ่งดี) จึงต้องคู่กับ <code>mode='max'</code> — ทั้งสามตัวเลือกทำงานร่วมกันดังนี้:</p>
+<table class="compact">
+<tr><th>ตัวเลือก</th><th>ทำอะไร</th><th>ตัวอย่างในสไลด์</th></tr>
+<tr><td><code>save_best_only=True</code></td><td>เซฟเฉพาะเมื่อค่า monitor <em>ดีที่สุดเท่าที่เคยเห็น</em></td><td>True</td></tr>
+<tr><td><code>monitor</code></td><td>ค่าที่ใช้เทียบ</td><td>'val_accuracy'</td></tr>
+<tr><td><code>mode</code></td><td>อยากให้ค่านั้น <code>'max'</code> หรือ <code>'min'</code> (auto = เดาจากชื่อ)</td><td>'max' (accuracy ยิ่งสูงยิ่งดี)</td></tr>
+</table>
+<p>คู่กับ <code>EarlyStopping</code> อย่างไร: EarlyStopping ตัดสินใจ<em>เมื่อไหร่หยุด</em> ส่วน ModelCheckpoint(<code>save_best_only</code>) เก็บ<em>ตัวที่ดีที่สุดไว้บนดิสก์</em> — ถ้าไม่ใช้ <code>save_best_only</code> ไฟล์จะเป็น weight ของ epoch ที่ตามหลัง best ไป <code>patience</code> epoch (เช่น epoch 36 แทน 31 ในตัวอย่าง §2).</p>
+
+<figure>
+<img src="../assets/slides/dl6-p08-modelcheckpoint-save-freq.png" alt="Slide: More Saving Criteria (2). save_freq controls how often the model is saved: at the end of every epoch by default, or after a fixed number of training batches if an integer. Two code blocks use save_freq=6 with epochs=5 and batch_size=64, the second using a filename pattern my_model.{epoch}.{batch}.weights.h5">
+<figcaption>Slide: More Saving Criteria (2) — save_freq เป็นจำนวน batch (Lecture6, p.8)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: <code>save_freq=6</code>, <code>epochs=5</code>, <code>batch_size=64</code> จะเซฟไฟล์อะไรบ้าง</div>
+<div class="given">กำหนด: ข้อมูล train \(m = 150\) แถว, ชื่อไฟล์ <code>my_model.{epoch}.{batch}.weights.h5</code></div>
+<ol class="steps">
+<li><div class="st-title">หาจำนวน batch ต่อ epoch</div>
+$$\lceil 150/64 \rceil = 3 \text{ batch ต่อ epoch}$$</li>
+<li><div class="st-title">นับ batch สะสมตลอดการเทรน</div>
+<p>5 epoch × 3 = 15 batch (นับต่อเนื่องข้าม epoch: batch ที่ 1, 2, 3 = epoch 1; ที่ 4, 5, 6 = epoch 2; …)</p></li>
+<li><div class="st-title">เซฟทุกครั้งที่นับสะสมครบ 6</div>
+<p>ที่ batch สะสม 6 และ 12 (18 ไม่ถึงเพราะมีแค่ 15)</p></li>
+<li><div class="st-title">แปลงเป็น (epoch, batch ภายใน epoch)</div>
+<p>batch สะสมที่ 6 = ตัวสุดท้ายของ epoch 2 ⇒ <code>my_model.2.3.weights.h5</code></p>
+<p>batch สะสมที่ 12 = ตัวสุดท้ายของ epoch 4 ⇒ <code>my_model.4.3.weights.h5</code></p></li>
+</ol>
+<div class="answer"><p>ได้ 2 ไฟล์: <code>my_model.2.3.weights.h5</code> และ <code>my_model.4.3.weights.h5</code> (ตรงกับผล <code>ls</code> ที่สอนในคาบ). สังเกต: การเซฟไม่ได้ตรงกับขอบ epoch เสมอไป ขึ้นกับว่า <code>save_freq</code> หาร 3 ลงตัวหรือไม่.</p></div>
+</div>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>เทรนนานหลายชั่วโมง ถ้าเครื่องล่มแล้วไม่มีไฟล์ = เสียงานทั้งหมด; และ epoch สุดท้ายมักไม่ใช่ epoch ที่ดีที่สุด (overfit แล้ว). ModelCheckpoint จึงเซฟระหว่างทางและเลือกเก็บเฉพาะตัวดีที่สุดได้.</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>เปลี่ยน <code>save_freq</code> เป็น 3 (= 1 epoch พอดี) จะได้ไฟล์ทุก epoch (<code>.1.3, .2.3, .3.3, .4.3, .5.3</code>); เปลี่ยนเป็น 4 จะเซฟที่ batch สะสม 4, 8, 12 = (epoch 2, batch 1), (epoch 3, batch 2), (epoch 4, batch 3). และเมื่อใช้ <code>save_best_only</code> ต้องระวัง <code>monitor</code> กับ <code>mode</code> ให้สอดคล้อง (val_loss ⇒ 'min', val_accuracy ⇒ 'max').</dd>
+<dt>เชื่อมกับ</dt>
+<dd>ตัวเลข "Optimizer params" (524) คือ moving average ของ Adam ใน Lesson 4 §5 — เหตุผลที่ <code>.save</code> เทรนต่อได้แต่ <code>save_weights</code> ไม่มีสถานะ optimizer.</dd>
+</dl>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>ModelCheckpoint</span></div>
+  <div class="qtext">ข้อมูล train 150 แถว, <code>batch_size=64</code>, <code>epochs=5</code>, <code>ModelCheckpoint('my_model.{epoch}.{batch}.weights.h5', save_freq=6)</code> จะได้ไฟล์ใดบ้าง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ⌈150/64⌉ = 3 batch/epoch; batch สะสม 6 = (epoch 2, batch 3), 12 = (epoch 4, batch 3); 18 ไม่ถึงเพราะมีแค่ 15.">my_model.1.6.weights.h5 และ my_model.2.6.weights.h5 เพราะเซฟที่ batch ที่ 6 ของสอง epoch แรก</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ⌈150/64⌉ = 3 batch/epoch; batch สะสม 6 = (epoch 2, batch 3), 12 = (epoch 4, batch 3); 18 ไม่ถึงเพราะมีแค่ 15.">my_model.2.6.weights.h5 และ my_model.4.6.weights.h5 เพราะ batch ภายใน epoch นับถึง 6 ได้</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ⌈150/64⌉ = 3 batch/epoch; batch สะสม 6 = (epoch 2, batch 3), 12 = (epoch 4, batch 3); 18 ไม่ถึงเพราะมีแค่ 15.">my_model.6.3.weights.h5 และ my_model.12.3.weights.h5 เพราะเลข epoch คือ batch สะสมหารสาม</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ⌈150/64⌉ = 3 batch/epoch; batch สะสม 6 = (epoch 2, batch 3), 12 = (epoch 4, batch 3); 18 ไม่ถึงเพราะมีแค่ 15.">my_model.2.3.weights.h5 และ my_model.4.3.weights.h5 เพราะ batch สะสม 6 และ 12 ตรงกับ batch ที่ 3</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s4">4. BackupAndRestore: เทรนต่อได้หลังถูกขัดจังหวะ</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p09-backupandrestore-callback.png" alt="Slide: BackupAndRestore callbacks. Code BackupAndRestore(backup_dir='/tmp/backup', save_freq='epoch'). Only one checkpoint file exists at any time and each backup overwrites the previous; restarting training resumes from the most recent checkpoint; the user must call .fit() again with unchanged model and compile/fit arguments; delete_checkpoint=True removes the file after successful training">
+<figcaption>Slide: BackupAndRestore Callbacks (Lecture6, p.9)</figcaption>
+</figure>
+
+<p><strong>ต่างจาก ModelCheckpoint อย่างไร:</strong> ModelCheckpoint เก็บ<em>โมเดล</em> (weight) ไว้ใช้งาน แต่ BackupAndRestore เก็บ<em>สถานะการเทรน</em> (weight + เลข epoch ที่ทำถึง + optimizer) เพื่อให้เทรนต่อจากจุดที่ขาด และมีไฟล์ backup แค่ 1 ไฟล์ ที่ถูกเขียนทับทุกครั้ง.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: เทรน 10 epoch แต่ถูกขัดที่ epoch index 4 แล้วสั่ง <code>fit</code> ใหม่</div>
+<div class="given">กำหนด: <code>epochs=10</code>, backup ทุก epoch, ถูกขัดจังหวะ (raise error) ตอน<strong>เริ่ม</strong> epoch ที่ index = 4 (index นับจาก 0)</div>
+<ol class="steps">
+<li><div class="st-title">ก่อนถูกขัด: เทรนเสร็จไปกี่ epoch</div>
+<p>epoch index 0, 1, 2, 3 = <strong>4 epoch</strong> และ backup ล่าสุดบันทึกว่า "ทำถึง epoch 4"</p></li>
+<li><div class="st-title">เรียก <code>fit(..., epochs=10)</code> อีกครั้งด้วยอาร์กิวเมนต์เดิม</div>
+<p>callback อ่าน backup แล้วเริ่มที่ epoch index 4</p></li>
+<li><div class="st-title">นับ epoch ที่เหลือ</div>
+$$10 - 4 = 6 \text{ epoch (index 4, 5, 6, 7, 8, 9)}$$</li>
+</ol>
+<div class="answer"><p>การเทรนครั้งที่สอง<strong>ไม่ใช่ 10 epoch</strong> แต่รันแค่ 6 epoch → <code>len(history.history['loss']) = 6</code> (ตรงกับสิ่งที่สอนในคาบ).</p></div>
+</div>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>เพื่อกันเสียงานเมื่อ session หลุด (เช่น Colab ตัดการเชื่อมต่อ) โดยไม่ต้องเริ่ม epoch 0 ใหม่. ที่ backup เดียวและเขียนทับ ก็เพราะต้องการแค่ "จุดล่าสุด" ไม่ใช่ประวัติทั้งหมด.</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าเรียก <code>fit</code> รอบสองด้วยโมเดลหรืออาร์กิวเมนต์ compile/fit ที่ต่างไป checkpoint จะใช้ไม่ได้ (สไลด์เน้นว่า "must remain unchanged"). ถ้าตั้ง <code>delete_checkpoint=True</code> ไฟล์ถูกลบเมื่อเทรนจบสำเร็จ จึงไม่ค้างไว้ให้สับสนกับการเทรนรอบถัดไป.</dd>
+<dt>เชื่อมกับ</dt>
+<dd>ModelCheckpoint (§3) — สองตัวมักใช้ร่วมกัน: BackupAndRestore กันการหลุด, ModelCheckpoint เก็บ "โมเดลที่ดีที่สุด".</dd>
+</dl>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>BackupAndRestore</span></div>
+  <div class="qtext">เทรน <code>epochs=10</code> พร้อม BackupAndRestore (save_freq='epoch') แต่ถูกขัดจังหวะเมื่อเริ่ม epoch index 4 จากนั้นเรียก <code>fit(..., epochs=10)</code> ซ้ำด้วยอาร์กิวเมนต์เดิม จะรันกี่ epoch?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ทำเสร็จ epoch 0–3 (4 epoch); เริ่มใหม่ที่ index 4 ถึง 9 = 6 epoch.">10 epoch เพราะ callback เริ่มนับรอบใหม่ทุกครั้งที่เรียก fit แล้วเทรนครบตามที่กำหนด</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ทำเสร็จ epoch 0–3 (4 epoch); เริ่มใหม่ที่ index 4 ถึง 9 = 6 epoch.">6 epoch เพราะเริ่มต่อที่ epoch index 4 แล้วเทรนถึง index 9 ตามจำนวนที่เหลือ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ทำเสร็จ epoch 0–3 (4 epoch); เริ่มใหม่ที่ index 4 ถึง 9 = 6 epoch.">4 epoch เพราะต้องเทรนซ้ำเฉพาะจำนวน epoch ที่ทำเสร็จก่อนถูกขัดจังหวะเท่านั้น</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ทำเสร็จ epoch 0–3 (4 epoch); เริ่มใหม่ที่ index 4 ถึง 9 = 6 epoch.">5 epoch เพราะ backup ถูกบันทึกทุกครึ่งหนึ่งของการเทรนแล้วเริ่มต่อจากจุดกึ่งกลาง</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s5">5. ปรับ Learning Rate ระหว่างเทรน และบันทึกผลลง CSV</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p10-lr-scheduler-csvlogger.png" alt="Slide: Learning Rate Scheduler / CSV Logger callback. At the beginning of every epoch the schedule function takes the epoch index (from 0) and the current learning rate and returns a new learning rate. Code defines lr_function(epoch, lr=0.01, decay_rate=0.9, decay_steps=10000) with exp = floor((1+epoch)/decay_steps) and alpha = lr * decay_rate**exp; an inset shows ReduceLROnPlateau(monitor='val_loss', patience=4, min_delta=0.001, factor=0.1, min_lr=0.001) with early_stopping_cb and CSVLogger('results.csv')">
+<figcaption>Slide: Learning Rate Scheduler / CSV Logger Callback (Lecture6, p.10)</figcaption>
+</figure>
+
+<p><strong>ทำไมต้องปรับ learning rate:</strong> ช่วงแรกอยากก้าวใหญ่ (เข้าใกล้จุดต่ำสุดเร็ว) ช่วงท้ายอยากก้าวเล็ก (ไม่กระโดดข้ามจุดต่ำสุด) — Lesson 4 §5 เห็นแล้วว่า Adam/RMSProp ปรับให้ต่อพารามิเตอร์; callback นี้ปรับให้ต่อ epoch.</p>
+
+<h3>5.1 LearningRateScheduler: ตั้งสูตรเอง</h3>
+<p>สูตรในโค้ดของสไลด์ (เมื่อ \(\alpha\) = learning rate ปัจจุบัน, \(r\) = <code>decay_rate</code>, \(s\) = <code>decay_steps</code>, \(e\) = epoch index เริ่มที่ 0):</p>
+$$\alpha_{\text{new}} = \alpha \cdot r^{\left\lfloor \frac{1+e}{s} \right\rfloor}$$
+<p class="plain-thai">ทุกๆ \(s\) epoch คูณ learning rate ด้วย \(r\) เพิ่มอีก 1 ชั้น (\(\lfloor\ \rfloor\) = ปัดลง)</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: learning rate ของ 5 epoch แรก เมื่อ \(r = 0.9\), \(s = 2\), เริ่มที่ 0.03</div>
+<div class="given">สำคัญ: Keras ส่ง <strong>learning rate ปัจจุบัน</strong> เข้ามาเป็นอาร์กิวเมนต์ตัวที่สองของฟังก์ชัน (สไลด์: "takes epoch index and <em>current learning rate</em>") — ค่า <code>lr=0.01</code> ที่ตั้งเป็น default จึงถูกเมินเสมอ</div>
+<ol class="steps">
+<li><div class="st-title">หาเลขชี้กำลัง \(\lfloor (1+e)/2 \rfloor\) ของแต่ละ epoch</div>
+<table class="compact">
+<tr><th>epoch index \(e\)</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th></tr>
+<tr><td>\(\lfloor (1+e)/2 \rfloor\)</td><td>0</td><td>1</td><td>1</td><td>2</td><td>2</td></tr>
+</table></li>
+<li><div class="st-title">คูณต่อจาก learning rate ของ epoch ก่อนหน้า</div>
+$$\begin{aligned}
+e=0:&\;\; 0.03 \times 0.9^{0} = 0.03\\
+e=1:&\;\; 0.03 \times 0.9^{1} = 0.027\\
+e=2:&\;\; 0.027 \times 0.9^{1} = 0.0243\\
+e=3:&\;\; 0.0243 \times 0.9^{2} = 0.019683\\
+e=4:&\;\; 0.019683 \times 0.9^{2} = 0.0159432
+\end{aligned}$$</li>
+<li><div class="st-title">เทียบกับที่ "คิดว่าจะได้" ถ้ารีเซ็ตจากค่าเริ่มต้น 0.03 ทุกครั้ง</div>
+$$0.03,\; 0.027,\; 0.027,\; 0.0243,\; 0.0243$$
+<p>ไม่ตรงกัน! เพราะของจริงคูณ<strong>ซ้อน</strong>ทุก epoch</p></li>
+</ol>
+<div class="answer"><p>ลำดับจริงที่ Keras ให้: 0.03, 0.027, 0.0243, 0.019683, 0.0159432 (ตรงกับที่ log ในคาบพิมพ์) — และเมื่อเทรนต่อถึง epoch 50 ค่านี้เหลือประมาณ \(7.6\times10^{-31}\) จน weight ไม่ขยับอีกเลย.</p></div>
+</div>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้ — ทำไม lr ถึงหายวับ</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>เพราะ scheduler ส่ง <em>learning rate ปัจจุบัน</em> เข้ามา สูตร <code>alpha = lr * decay_rate**exp</code> จึงคูณต่อจากค่าเดิมทุก epoch (compounding) ไม่ใช่คิดจากค่าตั้งต้นครั้งเดียว. ถ้าต้องการ "ลดทีละขั้นจากค่าตั้งต้น" ต้องเก็บค่าเริ่มต้นไว้นอกฟังก์ชัน หรือใช้ตัวคูณคงที่ต่อ epoch.</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ค่า default ของสไลด์ <code>decay_steps=10000</code> ทำให้ \(\lfloor (1+e)/10000 \rfloor = 0\) สำหรับ epoch ที่น้อยกว่า 9,999 ⇒ \(r^0 = 1\) ⇒ learning rate<strong>ไม่เปลี่ยนเลย</strong>ตลอด 50 epoch. ในทางกลับกัน \(s=2\) ทำให้เลขชี้กำลังโตเรื่อยๆ (0, 1, 1, 2, 2, 3, … ถึง 25 ที่ epoch 50) แล้วคูณซ้อน ⇒ lr ดิ่งจนเทรนไม่ได้ (val_loss ค้างที่ 0.6549 ในสคริปต์คาบ).</dd>
+<dt>เชื่อมกับ</dt>
+<dd>learning rate \(\alpha\) ในสูตรอัปเดต \(\theta := \theta - \alpha\,\nabla J\) (Lesson 1) — \(\alpha \to 0\) เท่ากับ \(\Delta\theta \to 0\) เทรนแล้วโมเดลไม่ขยับ; ต่างจากอาการ vanishing gradient (Lesson 5) ที่ตัว gradient เล็กเอง แต่ผลที่เห็นเหมือนกัน (loss ไม่ลด).</dd>
+</dl>
+</div>
+
+<h3>5.2 ReduceLROnPlateau: ลดเมื่อ "ติดแหง็ก" (ไม่ต้องเขียนสูตรเอง)</h3>
+<p>กติกา: ถ้า <code>monitor</code> ไม่ดีขึ้น (ตามเกณฑ์ <code>min_delta</code>) ติดกัน <code>patience</code> epoch ให้ลดตามสูตร</p>
+$$\alpha_{\text{new}} = \max\!\left(\alpha \times \text{factor},\; \text{min\_lr}\right)$$
+
+<div class="calc">
+<div class="calc-title">คำนวณ: <code>factor=0.1</code>, <code>min_lr=0.001</code> เริ่มที่ 0.03 (ตามสไลด์)</div>
+<ol class="steps">
+<li><div class="st-title">ติดแหง็กครั้งที่ 1</div>
+$$\max(0.03 \times 0.1,\; 0.001) = \max(0.003,\; 0.001) = 0.003$$</li>
+<li><div class="st-title">ติดแหง็กครั้งที่ 2</div>
+$$\max(0.003 \times 0.1,\; 0.001) = \max(0.0003,\; 0.001) = 0.001$$
+<p>0.0003 ต่ำกว่าพื้น ⇒ ถูก "ดันขึ้น" มาที่ 0.001</p></li>
+<li><div class="st-title">ติดแหง็กครั้งที่ 3 ขึ้นไป</div>
+$$\max(0.001 \times 0.1,\; 0.001) = 0.001$$</li>
+</ol>
+<div class="answer"><p>learning rate ไล่ 0.03 → 0.003 → 0.001 แล้วค้างที่ 0.001 ตลอดไป (ตรงกับคอลัมน์ learning_rate ตอนท้ายการเทรนในคาบ).</p></div>
+</div>
+<p>ข้อดีเทียบกับ 5.1: ไม่มีปัญหา "คูณซ้อนโดยไม่รู้ตัว" และไม่ต้องเดาล่วงหน้าว่าจะลดตอนไหน — มันลดตอน validation หยุดพัฒนาจริงๆ; ข้อเสียคือต้องตั้ง <code>patience</code>/<code>min_delta</code> ให้เหมาะ. <strong>CSVLogger</strong> (<code>CSVLogger("results.csv")</code>) แค่เขียนตัวเลข <code>logs</code> ของทุก epoch ลงไฟล์ csv ให้เอาไปวิเคราะห์ต่อ — ไม่มีการคำนวณ.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>LearningRateScheduler</span></div>
+  <div class="qtext">เริ่ม learning rate 0.03 ใช้สูตร <code>lr*decay_rate**floor((1+epoch)/decay_steps)</code> ด้วย <code>decay_rate=0.9</code>, <code>decay_steps=2</code> และ Keras ส่ง lr ปัจจุบันเข้าฟังก์ชัน learning rate ของ epoch index 3 (epoch ที่ 4) คือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ลำดับจริง: 0.03, 0.027, 0.0243, 0.019683 (คูณซ้อนต่อจาก lr ปัจจุบัน); 0.0243 คือคำตอบถ้า &#x27;ลืม&#x27; ว่า Keras ส่ง lr ปัจจุบันเข้ามา.">0.0243 เพราะสูตรคิดจากค่าเริ่มต้น 0.03 คูณ 0.9 ยกกำลัง 2 เสมอ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ลำดับจริง: 0.03, 0.027, 0.0243, 0.019683 (คูณซ้อนต่อจาก lr ปัจจุบัน); 0.0243 คือคำตอบถ้า &#x27;ลืม&#x27; ว่า Keras ส่ง lr ปัจจุบันเข้ามา.">0.027 เพราะเลขชี้กำลังของ epoch index 3 ปัดลงแล้วเหลือแค่ 1 เท่านั้น</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ลำดับจริง: 0.03, 0.027, 0.0243, 0.019683 (คูณซ้อนต่อจาก lr ปัจจุบัน); 0.0243 คือคำตอบถ้า &#x27;ลืม&#x27; ว่า Keras ส่ง lr ปัจจุบันเข้ามา.">0.02187 เพราะเลขชี้กำลังคือ 3 จึงเอา 0.03 คูณ 0.9 ยกกำลัง 3 โดยตรง</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ลำดับจริง: 0.03, 0.027, 0.0243, 0.019683 (คูณซ้อนต่อจาก lr ปัจจุบัน); 0.0243 คือคำตอบถ้า &#x27;ลืม&#x27; ว่า Keras ส่ง lr ปัจจุบันเข้ามา.">0.019683 เพราะคูณซ้อนจากค่าเดิม 0.0243 ด้วย 0.9 ยกกำลัง 2 ของ epoch นี้</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>ReduceLROnPlateau</span></div>
+  <div class="qtext"><code>ReduceLROnPlateau(patience=4, factor=0.1, min_lr=0.001)</code> เริ่มที่ lr = 0.03 หลังติดแหง็กครบ 3 รอบ (ลดครั้งที่ 1, 2, 3) learning rate จะเป็นเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. 0.03 → 0.003 → max(0.0003, 0.001) = 0.001 → max(0.0001, 0.001) = 0.001.">0.001 เพราะครั้งที่ 2 ถูกจำกัดที่ min_lr และครั้งที่ 3 ก็ยังคงอยู่ที่ค่านั้น</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 0.03 → 0.003 → max(0.0003, 0.001) = 0.001 → max(0.0001, 0.001) = 0.001.">0.00003 เพราะคูณ 0.1 สามครั้งติดกันโดยไม่มีอะไรมาจำกัดค่าต่ำสุดเลย</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 0.03 → 0.003 → max(0.0003, 0.001) = 0.001 → max(0.0001, 0.001) = 0.001.">0.0003 เพราะ min_lr ใช้จำกัดเฉพาะครั้งแรกที่ลดเท่านั้นแล้วหลังจากนั้นลดอิสระ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 0.03 → 0.003 → max(0.0003, 0.001) = 0.001 → max(0.0001, 0.001) = 0.001.">0.003 เพราะ factor ทำงานเพียงครั้งเดียวต่อการเทรนหนึ่งรอบแล้วหยุดปรับอัตโนมัติ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s6">6. TensorBoard: ดูการเทรนเป็นภาพ</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p11-tensorboard-overview.png" alt="Slide: TensorBoard, a browser-based application that monitors information during training: metrics, histograms of weights and biases, computational graphs, images. Two example loss charts labelled Model does not learn anything (loss wobbling between 10 and 15 with no trend) and Model learns all the information (loss falling from above 25 to about 10 and flattening). A histogram chart of layer1/biases annotates percentile bands: maximum, 93%, 84%, 69%, median (50%), minimum. Code: TensorBoard(log_dir=...) passed to model.fit with epochs=20 and validation_split=0.2">
+<figcaption>Slide: TensorBoard — ตัวอย่างกราฟ loss สองแบบและวิธีอ่าน histogram (Lecture6, p.11)</figcaption>
+</figure>
+
+<p><strong>อ่านกราฟ loss สองแบบในสไลด์:</strong> แบบซ้าย "Model does not learn anything" — loss แกว่งอยู่ระหว่างประมาณ 10 ถึง 15 ตลอดตั้งแต่ step ที่ 400 ถึง 2,800 โดยไม่มีแนวโน้มลดลง แปลว่า weight ไม่ได้พัฒนา; แบบขวา "Model learns" — loss ตกจากเกิน 25 ลงมาราว 10 ภายใน ~1,000 step แล้วค่อยๆ แบนราบ = การเรียนรู้ปกติ. <em>ถ้ากราฟ loss ของคุณหน้าตาแบบซ้าย ให้สงสัย learning rate, การ initialize หรือ vanishing gradient (§7)</em> ก่อนจะไปแก้เรื่องอื่น.</p>
+
+<p><strong>อ่าน histogram ของ weight/bias:</strong> แต่ละแถบสีคือ "ช่วงเปอร์เซ็นไทล์" ของค่า weight ทั้ง layer ที่แต่ละ epoch (แกนนอน = epoch) — ขอบบนสุดคือค่าสูงสุด, ขอบล่างสุดคือค่าต่ำสุด, ตรงกลางคือ median (50%). แถบที่ "บานออก" เมื่อ epoch เพิ่มขึ้น = weight กำลังกระจายออก (เรียนรู้); แถบ "แบนคงที่" = weight ไม่ขยับ.</p>
+
+<figure>
+<img src="../assets/slides/dl6-p13-tensorboard-callback.png" alt="Slide: TensorBoard Callback. Load the extension with %load_ext tensorboard, set log_folder = 'logs', launch with %tensorboard --logdir={log_folder}; use a timestamped subdirectory such as logs/fit/20210315-031559 built with datetime.datetime.now().strftime('%Y%m%d-%H%M%S'); and create TensorBoard(log_dir=log_folder, histogram_freq=1, write_graph=True, update_freq='epoch')">
+<figcaption>Slide: TensorBoard Callback — ตั้ง log_dir และพารามิเตอร์ (Lecture6, p.13)</figcaption>
+</figure>
+
+<p>โค้ดในสไลด์ตั้งพารามิเตอร์ 4 ตัว แต่ละตัวควบคุมสิ่งที่ TensorBoard จะแสดง:</p>
+<table class="compact">
+<tr><th>พารามิเตอร์</th><th>ทำอะไร</th></tr>
+<tr><td><code>log_dir</code></td><td>โฟลเดอร์เก็บ log ที่ TensorBoard ไปอ่าน</td></tr>
+<tr><td><code>histogram_freq=1</code></td><td>คำนวณ histogram ของ weight/activation ทุก 1 epoch</td></tr>
+<tr><td><code>write_graph=True</code></td><td>เก็บโครงสร้าง computational graph ให้ดูในแท็บ Graphs</td></tr>
+<tr><td><code>update_freq='epoch'</code></td><td>เขียน loss/metric ลง log ทุกจบ epoch (แทนทุก batch)</td></tr>
+</table>
+
+<p>ตัวอย่างชื่อโฟลเดอร์แบบมี timestamp ในสไลด์ <code>logs/fit/20210315-031559</code> อ่านเป็น "15 มี.ค. 2021 เวลา 03:15:59" — ตั้งแบบนี้เพื่อให้การเทรนแต่ละครั้งอยู่คนละโฟลเดอร์ แล้ว TensorBoard เทียบหลายรอบบนกราฟเดียวกันได้ (ถ้าใช้ชื่อเดิมซ้ำ log จะปนกัน จึงมีคำสั่ง <code>rm -rvf logs</code> ล้างก่อน).</p>
+
+<figure>
+<img src="../assets/slides/dl6-p14-exercise-circle-dataset.png" alt="Slide: Exercise. Code: make_circles(1000, noise=0.1) returns X_train of shape (1000, 2); code plots positives red and negatives blue; the scatter shows two overlapping noisy concentric rings">
+<figcaption>Slide: Exercise — Circle Dataset จาก <code>make_circles(1000, noise=0.1)</code> (Lecture6, p.14)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: การเทรนใน Exercise มีกี่ step ต่อ epoch</div>
+<div class="given">กำหนด: <code>X_train</code> shape (1000, 2), <code>validation_split=0.2</code>, ไม่ระบุ batch_size (ค่า default ของ Keras = 32)</div>
+<ol class="steps">
+<li><div class="st-title">แบ่ง validation ออก</div>
+$$\text{validation} = 0.2 \times 1000 = 200,\qquad \text{train} = 1000 - 200 = 800$$</li>
+<li><div class="st-title">หาจำนวน batch ต่อ epoch</div>
+$$\lceil 800/32 \rceil = 25$$</li>
+</ol>
+<div class="answer"><p>25 step ต่อ epoch — ตรงกับ progress bar <code>25/25</code> ที่เห็นตอน fit. (make_circles ให้จุดสองวงซ้อนกันที่เส้นตรงแยกไม่ได้ จึงต้องมี hidden layer.)</p></div>
+</div>
+
+<p>แท็บอื่นของ TensorBoard (สไลด์หน้า 12): <strong>Scalars</strong> = กราฟ loss/accuracy, <strong>Graphs</strong> = โครงสร้างโมเดล, <strong>Distributions/Histograms</strong> = การกระจายของ weight, และแท็บเสริม Time Series / Image / Text.</p>
+
+<h2 id="s7">7. ทดลองดู Vanishing/Exploding Gradient ด้วย TensorBoard</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p15-gradient-vanishing-problem.png" alt="Slide: Gradient Vanishing Problems. Gradients that shrink toward lower layers leave lower-layer weights virtually unchanged so training never converges. Code builds a model with five Dense(5, activation='tanh', kernel_initializer=RandomUniform(0,1)) layers plus a sigmoid output, compiled with SGD(lr=0.01, momentum=0.9), binary_crossentropy, trained for 20 epochs with validation_split=0.2">
+<figcaption>Slide: Gradient Vanishing Problems — โมเดลทดลอง: tanh 5 layer + RandomUniform(0,1) (Lecture6, p.15)</figcaption>
+</figure>
+
+<p><strong>โจทย์:</strong> ทำไมโมเดลนี้เทรนไม่ขึ้น ทั้งที่ทุกอย่างดูปกติ? ตัวการคือบรรทัด <code>kernel_initializer=RandomUniform(0,1)</code> — ค่า weight เริ่มต้นสุ่มจาก 0 ถึง 1 ซึ่ง<strong>เป็นบวกทั้งหมด เฉลี่ย 0.5</strong> (ต่างจาก Lesson 5 §2 ที่ต้องการ weight เฉลี่ย 0 และ variance ที่คุมไว้).</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณประมาณการ: weight เป็นบวกทั้งหมด ทำให้ tanh อิ่มตัวได้อย่างไร</div>
+<div class="given">สมมติ (เพื่อดูกลไก): แต่ละ layer มี 5 unit, activation จาก layer ก่อนหน้าประมาณ 0.9 ทุกตัว, weight เฉลี่ย 0.5, bias 0</div>
+<ol class="steps">
+<li><div class="st-title">หา z ของ unit หนึ่งตัว</div>
+$$z \approx \sum_{j=1}^{5} \theta_j\, a_j = 5 \times (0.5 \times 0.9) = 2.25$$
+<p>เพราะ weight เป็นบวกหมด ผลรวมจึงไม่หักล้างกัน (ต่างจาก weight ที่บวก/ลบผสม)</p></li>
+<li><div class="st-title">หา activation</div>
+$$a = \tanh(2.25) = 0.978$$
+<p>ใกล้ขอบ 1 แล้ว (และ layer ถัดไปจะได้ input ≈ 0.98 ทำให้ z ยิ่งใหญ่ขึ้น)</p></li>
+<li><div class="st-title">หาความชัน \(g'(z)\) ของ tanh (จาก Lesson 3 §5: \(g' = 1 - \tanh^2 z\))</div>
+$$g'(2.25) = 1 - 0.978^2 = 0.0435$$</li>
+<li><div class="st-title">ตัวคูณ backprop ต่อ 1 layer ≈ (weight) × g′</div>
+$$0.5 \times 0.0435 \approx 0.0217$$</li>
+<li><div class="st-title">คูณข้าม 5 layer (chain rule ของ Lesson 5 §1)</div>
+$$0.0217^{5} \approx 4.8 \times 10^{-9}$$</li>
+</ol>
+<div class="answer"><p>gradient ที่ไปถึง layer แรกสุดเหลือระดับ \(10^{-9}\) เทียบกับตอนเริ่ม ⇒ weight ของ layer ล่างแทบไม่ถูกอัปเดต (ตัวเลข 0.9 กับ 0.5 เป็นสมมติเพื่อดูกลไก แต่ข้อสรุปเชิงขนาดไม่เปลี่ยน).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl6-p16-relu-he-init-weight-histograms.png" alt="Slide: Try using ReLU and He initialization. Two TensorBoard panels per layer (bias_0 and kernel_0 histograms across 20 epochs) for dense layers 92 to 97 with the default learning rate, where bias bands widen to roughly plus or minus 0.1 to 0.2; and a lower-right pair for layers 116 and 117 trained with SGD learning rate 0.0001 and momentum 0.9 where bias bands stay within about plus or minus 2e-4 to 4e-4 and the kernel bands are flat">
+<figcaption>Slide: Try using ReLU and He initialization — histogram ของ bias/kernel แต่ละ layer (Lecture6, p.16)</figcaption>
+</figure>
+
+<p><strong>ทางแก้ 1 — ReLU + He:</strong> เปลี่ยน <code>tanh</code> เป็น <code>relu</code> (ความชัน = 1 เมื่อ \(z > 0\) ไม่อิ่มตัว) และเปลี่ยน initializer เป็น <code>he_normal</code> (variance \(2/n_{in}\) จาก Lesson 5 §2). ผลที่เห็นในแผง histogram ด้านบน: bias ของทุก layer "บานออก" จนช่วงอ่านได้ประมาณ ±0.1 ถึง ±0.2 ภายใน 20 epoch = weight กำลังเรียนรู้จริง.</p>
+
+<p><strong>ทางแก้ 2 (ตัวอย่างกรณีตรงข้าม) — learning rate เล็กเกิน:</strong> แผงล่างขวาใช้ SGD lr = 0.0001: แกนของ bias เหลือระดับ 2×10⁻⁴ ถึง 4×10⁻⁴ (เล็กกว่าแผงบนประมาณ 500 เท่า — สไลด์ไม่ได้ระบุ lr ของแผงบน จึงเทียบได้แค่ขนาดคร่าวๆ) และแถบ kernel เป็นแนวราบตลอด 20 epoch — เพราะการอัปเดตต่อก้าวคือ \(\Delta\theta = -\alpha\,\nabla J\) ยิ่ง \(\alpha\) เล็ก weight ยิ่งแทบไม่ขยับ. อาการ "กราฟแบนราบ" จึงมีอย่างน้อยสองสาเหตุที่ต้องแยก: gradient เล็ก (vanishing) กับ learning rate เล็ก.</p>
+
+<figure>
+<img src="../assets/slides/dl6-p17-exploding-gradients-problem.png" alt="Slide: Exploding Gradients Problems. Exploding gradients make the network unstable: at best it cannot learn from the training data and at worst it produces NaN weight values. Three signs: the model cannot get traction on the training data (poor loss), the model is unstable with large loss changes from update to update, and the loss goes to NaN during training">
+<figcaption>Slide: Exploding Gradients Problems — 3 อาการที่สังเกตได้ (Lecture6, p.17)</figcaption>
+</figure>
+
+<p>สไลด์ระบุ 3 อาการที่บอกว่ากำลังเจอ exploding gradient ตารางนี้จับคู่แต่ละอาการกับสิ่งที่จะเห็นจริงในกราฟ/log และสิ่งที่ควรสงสัยก่อน:</p>
+<table class="compact">
+<tr><th>อาการ (สไลด์)</th><th>สิ่งที่เห็นในกราฟ/log</th><th>ควรสงสัยอะไร</th></tr>
+<tr><td>โมเดลไม่ "จับ" ข้อมูล train (loss แย่)</td><td>loss ค้างสูง ไม่ลด</td><td>learning rate, init, vanishing</td></tr>
+<tr><td>ไม่เสถียร loss กระโดดใหญ่ระหว่างการอัปเดต</td><td>loss ขึ้นๆ ลงๆ แรงๆ</td><td>learning rate ใหญ่เกิน, gradient ใหญ่</td></tr>
+<tr><td>loss กลายเป็น NaN</td><td><code>loss: nan</code></td><td>exploding เต็มที่ (weight ล้นเป็น ∞)</td></tr>
+</table>
+<p>ตัวอย่างที่สอนในคาบ: โมเดล ReLU+He เดิมแต่เพิ่ม learning rate เป็น 0.2 (momentum 0.9) — val_accuracy ค้างประมาณ 0.5 (เท่าเดา) และ loss แกว่งรอบ 0.69 ซึ่งใกล้ \(\ln 2 \approx 0.693\) (ค่า cross-entropy ของโมเดลที่ทำนาย 0.5 ทุกตัวอย่าง — Lesson 1). ทางแก้: ลด learning rate, gradient clipping (Lesson 5 §1) หรือ Batch Normalization.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: Batch Normalization "ดึงกลับ" ค่าที่ใหญ่เกินอย่างไร (สไลด์หน้า 18)</div>
+<div class="given">กำหนด: z ของ 1 neuron ใน mini-batch 4 ตัวอย่าง = 2, 4, 6, 8 ; \(\gamma = 1,\ \beta = 0\) (ละ \(\epsilon\)) — สูตรจาก Lesson 5 §3</div>
+<ol class="steps">
+<li><div class="st-title">ค่าเฉลี่ยของ batch</div>
+$$\mu = \frac{2+4+6+8}{4} = 5$$</li>
+<li><div class="st-title">variance ของ batch</div>
+$$\sigma^2 = \frac{(2-5)^2 + (4-5)^2 + (6-5)^2 + (8-5)^2}{4} = \frac{9+1+1+9}{4} = 5$$</li>
+<li><div class="st-title">normalize: \(\hat z = (z-\mu)/\sqrt{\sigma^2}\)</div>
+$$\hat z = \frac{-3}{\sqrt5},\ \frac{-1}{\sqrt5},\ \frac{1}{\sqrt5},\ \frac{3}{\sqrt5} = -1.342,\ -0.447,\ 0.447,\ 1.342$$</li>
+</ol>
+<div class="answer"><p>ไม่ว่า z เดิมจะใหญ่แค่ไหน (เช่นถ้าเป็น 200, 400, 600, 800 ก็ได้ \(\hat z\) ชุดเดิมเป๊ะ) ค่าที่ส่งเข้า activation ถัดไปคงอยู่ราว ±1.3 เสมอ ⇒ ไม่ระเบิด และไม่ตกไปอยู่ในโซน saturation ของ tanh/sigmoid.</p></div>
+</div>
+
+<p>สไลด์หน้า 18 เป็นสไลด์หัวข้อ "Solve Vanishing/Exploding using Batch Norm." (ไม่มีเนื้อหาเพิ่ม) — ในสคริปต์คาบเทียบการวาง BN สองแบบ: หลัง activation (<code>Dense(relu)</code> → <code>BatchNormalization</code>) กับก่อน activation (<code>Dense</code> → <code>BatchNormalization</code> → <code>Activation('relu')</code>) ซึ่งตรงกับตัวเลือก "normalize z / normalize a" ใน Lesson 5 §3.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>การทดลองนี้แยก "อาการกราฟแบน" ออกเป็นสาเหตุที่ต่างกัน 3 อย่าง (initializer แย่ทำให้ activation อิ่มตัว → gradient ≈ 0; learning rate เล็กเกิน → ก้าวเล็ก; learning rate ใหญ่เกิน → ระเบิด/สั่น) แต่ละอย่างมีเครื่องมือแก้ต่างกัน (He init + ReLU; เพิ่ม lr/ใช้ schedule; ลด lr/clipping/BN) และ TensorBoard ทำให้เห็นความต่างได้ทันที.</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าเปลี่ยน <code>RandomUniform(0,1)</code> เป็น <code>RandomUniform(-1,1)</code> weight บวก/ลบผสมกัน ผลรวม z หักล้างกัน (mean = 0) ⇒ z ไม่พุ่งไปที่ 2.25 ⇒ tanh ไม่อิ่มตัวง่ายๆ — สอดคล้องกับ Lesson 5 §2 ที่การคุม mean/variance ของ z คือหัวใจของ initialization.</dd>
+<dt>เชื่อมกับ</dt>
+<dd>Lesson 5 §1 (chain rule คูณ \(g'\) หลายตัว), §2 (He/Xavier), §3 (Batch Norm) — บทนี้คือการเห็นทั้งสามเรื่องเป็นกราฟจริง.</dd>
+</dl>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>Vanishing gradient</span></div>
+  <div class="qtext">โมเดล tanh 5 layer ที่ใช้ <code>RandomUniform(0,1)</code> เทรนไม่ขึ้นเพราะเหตุผลกลไกใดมากที่สุด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. weight บวกทั้งหมดเฉลี่ย 0.5 ⇒ z ≈ 5×0.5×0.9 = 2.25 ⇒ tanh ≈ 0.978, g′ = 1−0.978² ≈ 0.0435; คูณข้าม 5 layer ได้ระดับ 10⁻⁹.">weight เป็นบวกทั้งหมด ผลรวม z จึงไม่หักล้างกันและใหญ่ ทำให้ tanh อิ่มตัวและ g′ ≈ 0</button>
+    <button class="opt" data-correct="false" data-note="ผิด. weight บวกทั้งหมดเฉลี่ย 0.5 ⇒ z ≈ 5×0.5×0.9 = 2.25 ⇒ tanh ≈ 0.978, g′ = 1−0.978² ≈ 0.0435; คูณข้าม 5 layer ได้ระดับ 10⁻⁹.">weight ที่สุ่มจาก 0 ถึง 1 มีค่าน้อยเกินไป ทำให้ z เป็นศูนย์และ activation ตายทุก unit</button>
+    <button class="opt" data-correct="false" data-note="ผิด. weight บวกทั้งหมดเฉลี่ย 0.5 ⇒ z ≈ 5×0.5×0.9 = 2.25 ⇒ tanh ≈ 0.978, g′ = 1−0.978² ≈ 0.0435; คูณข้าม 5 layer ได้ระดับ 10⁻⁹.">tanh ให้ output ระหว่าง 0 ถึง 1 เท่านั้น จึงส่ง gradient เป็นลบเข้าไปทุก layer ก่อนหน้า</button>
+    <button class="opt" data-correct="false" data-note="ผิด. weight บวกทั้งหมดเฉลี่ย 0.5 ⇒ z ≈ 5×0.5×0.9 = 2.25 ⇒ tanh ≈ 0.978, g′ = 1−0.978² ≈ 0.0435; คูณข้าม 5 layer ได้ระดับ 10⁻⁹.">RandomUniform ทำให้ทุก weight เท่ากันพอดี ทำให้ทุก unit ใน layer เดียวกันอัปเดตเหมือนกันเป๊ะ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s8">8. Hyperparameter Tuning: มีอะไรให้ปรับ และค่าเริ่มต้นที่ควรใช้</h2>
+
+<p>สไลด์หน้า 19 ตั้งต้นด้วยหลักการ: hyperparameter เหมือนปุ่มหมุนที่ต้องจูนเพื่อให้ได้ผลดีที่สุด และเพราะในโมเดลลึกการจูนด้วยมือช้าและมักไม่ดีที่สุด การจูนแบบอัตโนมัติจึงคุ้มกว่า.</p>
+
+<figure>
+<img src="../assets/slides/dl6-p20-hyperparameter-categories.png" alt="Slide: Hyperparameter Tuning categories. Network architecture (number of hidden layers, neurons per layer, activation type); Learning and optimization (learning rate and decay schedule, batch size, optimization algorithms, weight initialization, batch normalization, number of epochs); Strategies to avoid overfitting (L2 regularization, dropout layers, data augmentation)">
+<figcaption>Slide: Hyperparameter Tuning — 3 หมวดของ hyperparameter (Lecture6, p.20)</figcaption>
+</figure>
+
+<p>สไลด์แบ่ง hyperparameter เป็น 3 หมวด แต่ละหมวดตอบคำถามต่างกัน:</p>
+<table class="compact">
+<tr><th>หมวด</th><th>ตอบคำถามว่า</th><th>ตัวอย่าง</th></tr>
+<tr><td>Network architecture</td><td>โมเดล "ใหญ่" แค่ไหน</td><td>จำนวน layer, จำนวน neuron, activation</td></tr>
+<tr><td>Learning &amp; optimization</td><td>โมเดลเรียนรู้ "อย่างไร"</td><td>learning rate/schedule, batch size, optimizer, init, BN, epochs</td></tr>
+<tr><td>Avoid overfitting</td><td>ป้องกันจำข้อสอบเก่า</td><td>L2 (\(\lambda\)), dropout rate, data augmentation</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl6-p22-learning-optimization-hp.png" alt="Slide: Learning and optimization hyperparameters. Learning rate and decay schedule: use learning rate scheduling or adaptive optimizers. Batch size: common starting points 32 to 256. Optimization algorithms: SGD, RMSProp, Adam, AdamW. Weight initialization: He for ReLU and its families or Xavier (Glorot) for sigmoid and tanh. Batch normalization: momentum candidates 0.9, 0.99, 0.999. Number of epochs: use a large number of epochs and early stopping instead">
+<figcaption>Slide: Learning and optimization — ค่าเริ่มต้นที่แนะนำ (Lecture6, p.22)</figcaption>
+</figure>
+
+<p>สไลด์หน้า 21–23 ให้ "สูตรลัด" ที่ไม่ต้องค้นหาเลยในหลายเรื่อง — ตารางด้านล่างสรุปว่า<strong>ไม่ต้องจูน</strong>ตัวไหน และ<strong>ต้องจูน</strong>ตัวไหน:</p>
+<table class="compact">
+<tr><th>Hyperparameter</th><th>คำแนะนำในสไลด์</th></tr>
+<tr><td>Activation (hidden)</td><td>ReLU และตระกูลของมัน เป็น default; output layer ขึ้นกับงาน (sigmoid สำหรับ binary, softmax หลายคลาส)</td></tr>
+<tr><td>Weight init</td><td>He สำหรับ ReLU, Xavier (Glorot) สำหรับ sigmoid/tanh — เลือกตาม activation ไม่ต้องค้น</td></tr>
+<tr><td>Number of epochs</td><td>ไม่ต้องจูน: ตั้งเยอะๆ แล้วใช้ early stopping (§2)</td></tr>
+<tr><td>Batch size</td><td>เริ่มที่ 32–256 (ขึ้นกับงาน หน่วยความจำ ฮาร์ดแวร์)</td></tr>
+<tr><td>Learning rate</td><td>ใช้ schedule หรือ optimizer แบบปรับเอง (§5, Lesson 4 §5)</td></tr>
+<tr><td>Batch Norm momentum</td><td>ลองค่า 0.9 / 0.99 / 0.999</td></tr>
+<tr><td>จำนวน layer / neuron</td><td><strong>ต้องจูน</strong> — เริ่ม "ใหญ่พอ" แล้วดูผล</td></tr>
+<tr><td>L2 \(\lambda\), dropout rate, augmentation</td><td><strong>ต้องจูน</strong> — ปรับตามอาการ overfit</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: "โมเดลใหญ่เกิน" มีพารามิเตอร์เกินไปแค่ไหน (สไลด์หน้า 21)</div>
+<div class="given">สไลด์: ถ้ามีความจุมากเกิน (layer/unit เยอะ) โมเดลอาจ<em>จำ</em> training set — ลองเทียบ input 10,000 ตัว (เช่น multi-hot ของคำใน IMDB) กับ 1 hidden layer และ output 1 unit; สูตร Dense: \(n_{in}n_{out}+n_{out}\)</div>
+<ol class="steps">
+<li><div class="st-title">hidden 128 unit</div>
+$$(10000\times128 + 128) + (128\times1+1) = 1{,}280{,}128 + 129 = 1{,}280{,}257$$</li>
+<li><div class="st-title">hidden 32 unit</div>
+$$(10000\times32 + 32) + (32\times1+1) = 320{,}032 + 33 = 320{,}065$$</li>
+<li><div class="st-title">เทียบ</div>
+$$\frac{1{,}280{,}257}{320{,}065} \approx 4.0$$</li>
+</ol>
+<div class="answer"><p>เพิ่ม hidden จาก 32 เป็น 128 (×4) ทำให้พารามิเตอร์เพิ่ม ×4 เกือบพอดี เพราะ layer แรกที่คูณกับ input 10,000 ครองเกือบทั้งหมด. ถ้าข้อมูล train มีแค่ 25,000 ตัวอย่าง พารามิเตอร์ 1.28 ล้านตัวเป็นตัวการให้ overfit ได้ง่าย — นี่คือเหตุผลที่สไลด์บอกให้ "ลดจำนวน hidden unit หรือใช้วิธีลด overfitting" เมื่อเห็นอาการ.</p></div>
+</div>
+
+<p>สไลด์หน้า 24 สรุปขั้นตอนมาตรฐานของการจูน 4 ขั้น (นำไปใช้ใน §10): <strong>(1)</strong> ระบุ hyperparameter และช่วงค้นหา → <strong>(2)</strong> สร้างโมเดลที่รับค่าเหล่านั้น → <strong>(3)</strong> เลือกอัลกอริทึมค้นหา → <strong>(4)</strong> เซฟโมเดลที่ดีที่สุดแล้ววัดผลบน test set.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ไม่มี hyperparameter ชุดใดที่ดีที่สุดกับทุกปัญหา (สไลด์หน้า 32: "no magic numbers") จึงต้องมีกระบวนการค้นหา; แต่ทรัพยากรจำกัด จึงต้องรู้ว่าตัวไหน "ตั้งตามกฎ" (init, epochs, activation) แล้วเอาแรงค้นไปลงตัวที่กระทบมากจริงๆ (learning rate, ความจุ, regularization).</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าจูนทุกอย่างพร้อมกัน พื้นที่ค้นหาโตแบบทวีคูณ (ดูตัวอย่าง §9: หลายแสนชุด) แต่ถ้าล็อกตัวที่มีกฎชัดเจนไว้ก่อน พื้นที่หดลงมหาศาล — เช่นไม่จูน epochs เพราะมี early stopping ก็ตัดมิติหนึ่งทิ้งได้ทั้งมิติ.</dd>
+<dt>เชื่อมกับ</dt>
+<dd>แทบทุกข้อในตารางคือหัวข้อของ Lesson 1–5 (activation Lesson 3, init/BN Lesson 5, optimizer/batch size/dropout/L2 Lesson 4) — บทนี้คือ "เมนูปุ่มที่ต้องหมุน" ที่รวมทั้งวิชา.</dd>
+</dl>
+</div>
+
+<h2 id="s9">9. อัลกอริทึมค้นหา: Grid, Random, HyperBand, Bayesian</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p25-grid-search.png" alt="Slide: Grid Search explores predefined combinations using a systematic brute-force search; every combination is trained and evaluated; it works when the model is simple and the search space small; for deep learning it is computationally expensive; it may miss better values between or outside the grid. Figure: Grid Layout, a 3 by 3 grid of dots with a curve on top showing the important parameter's effect and a curve on the left for the unimportant parameter">
+<figcaption>Slide: Grid Search — 9 จุดแบบตาราง 3×3 (Lecture6, p.25; รูปจาก Bergstra &amp; Bengio)</figcaption>
+</figure>
+
+<p><strong>อ่านรูป (Grid Layout):</strong> แกนนอนคือพารามิเตอร์ที่ "สำคัญ" (มีผลต่อคะแนนมาก — เส้นโค้งสีเขียวด้านบนคือคะแนนที่แกนนี้) ส่วนแกนตั้งคือพารามิเตอร์ที่ "ไม่สำคัญ". จุด 9 จุดเรียงเป็น 3 แถว × 3 คอลัมน์ ⇒ แม้ลองทั้งหมด 9 ครั้ง ค่าของพารามิเตอร์สำคัญที่ถูกทดสอบมีแค่ <strong>3 ค่าไม่ซ้ำกัน</strong> (แถวที่เหลือทดสอบค่าเดิมซ้ำ แค่ไปเปลี่ยนพารามิเตอร์ที่ไม่สำคัญ).</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: Grid Search ต้องเทรนกี่ครั้งสำหรับ search space ในสไลด์หน้า 29</div>
+<div class="given">พื้นที่ค้นหา (จากโค้ดสไลด์): <code>num_layers</code> ∈ {1, 2}; <code>units_i</code> ∈ [10, 50] step 1 = 41 ค่า/layer; <code>activation</code> ∈ {relu, elu, selu} (3 ค่า ใช้ร่วมกัน); <code>dropout_i</code> ∈ {0, 0.1, …, 0.5} = 6 ค่า/layer; <code>lr</code> ต่อเนื่อง — สมมติตาราง 5 ค่า</div>
+<ol class="steps">
+<li><div class="st-title">กรณี 1 layer</div>
+$$41 \times 3 \times 6 = 738$$</li>
+<li><div class="st-title">กรณี 2 layer (units และ dropout มี 2 ชุด)</div>
+$$41^2 \times 3 \times 6^2 = 1681 \times 3 \times 36 = 181{,}548$$</li>
+<li><div class="st-title">รวม แล้วคูณจำนวนค่า lr</div>
+$$(738 + 181{,}548) \times 5 = 911{,}430$$</li>
+</ol>
+<div class="answer"><p>~ <strong>911,430 ครั้งของการเทรน</strong> (ถ้าครั้งละ 1 นาทีก็เกือบ 1.7 ปี) — ในสไลด์หน้า 31 การค้นด้วย Hyperband ใช้เพียง 211 trial ใช้เวลา 43 นาที 46 วินาที. นี่คือความหมายของ "computationally expensive" ที่สไลด์บอก: จำนวนชุดโตแบบ<em>คูณ</em>ตามจำนวนตัวเลือกทุกตัว.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl6-p26-random-search.png" alt="Slide: Random Search evaluates a specified number of randomly selected hyperparameter combinations, sampling each hyperparameter at random per trial. It is often more efficient than Grid Search when only some hyperparameters matter, but it is blind and does not use earlier results. Figure: Random Layout, nine dots scattered irregularly so that the important parameter takes nine different values along its axis">
+<figcaption>Slide: Random Search — 9 จุดกระจายสุ่ม (Lecture6, p.26)</figcaption>
+</figure>
+
+<p>ใช้งบ 9 ครั้งเท่ากัน แต่ Random Layout ทดสอบพารามิเตอร์สำคัญที่ <strong>9 ค่าไม่ซ้ำกัน</strong> (เทียบกับ Grid ที่ได้ 3 ค่า) — จึงมีโอกาสใกล้ค่าที่ดีที่สุดมากกว่ามาก นี่คือความหมายของ "fewer, more diverse combinations" ในสไลด์. ข้อเสียที่สไลด์ระบุ: มันเป็น <strong>blind search</strong> คือไม่ใช้ผลของ trial ก่อนหน้าเลย อาจพลาดย่านที่ดี.</p>
+
+<figure>
+<img src="../assets/slides/dl6-p27-hyperband.png" alt="Slide: HyperBand uses successive halving with different budgets. Configurations that survive elimination receive more budget until few remain. Figure at left: loss curves of several configurations at a small budget. Table at right for max_iter=81 and eta=3 with brackets s=4 down to s=0 listing n_i (number of configurations) and r_i (budget per configuration): s=4 has n_i of 81, 27, 9, 3, 1 and r_i of 1, 3, 9, 27, 81">
+<figcaption>Slide: HyperBand — successive halving และตารางงบประมาณ (Lecture6, p.27)</figcaption>
+</figure>
+
+<p><strong>ไอเดีย:</strong> ให้ทุก configuration ลองเทรนด้วยงบ<em>น้อย</em> (เช่น 1 epoch) ก่อน — ตัวที่แย่ตั้งแต่ต้นมักแย่ต่อไป จึงตัดทิ้ง เก็บเฉพาะตัวที่ดี (ตัวละ 1/η) แล้ว<em>เพิ่มงบ η เท่า</em> ให้ตัวรอด ทำซ้ำจนเหลือตัวเดียวที่ได้งบเต็ม. สูตรของ bracket ที่ให้ \(n\) = จำนวนเริ่มต้น, \(r\) = งบเริ่มต้น, \(\eta\) = ตัวคูณ:</p>
+$$n_i = \left\lfloor n\,\eta^{-i} \right\rfloor,\qquad r_i = r\,\eta^{\,i}$$
+
+<div class="calc">
+<div class="calc-title">คำนวณ: bracket \(s=4\) ของตารางในสไลด์ (max_iter = 81, \(\eta = 3\), \(n = 81\), \(r = 1\))</div>
+<ol class="steps">
+<li><div class="st-title">หา \((n_i, r_i)\) ทีละรอบ \(i = 0..4\)</div>
+$$\begin{aligned}
+i=0:&\; n_0 = 81,\; r_0 = 1\\
+i=1:&\; n_1 = \lfloor 81/3 \rfloor = 27,\; r_1 = 1\cdot3 = 3\\
+i=2:&\; n_2 = 9,\; r_2 = 9\\
+i=3:&\; n_3 = 3,\; r_3 = 27\\
+i=4:&\; n_4 = 1,\; r_4 = 81
+\end{aligned}$$
+<p>ตรงกับคอลัมน์ \(s=4\) ของตาราง</p></li>
+<li><div class="st-title">คิดต้นทุนของแต่ละรอบ = \(n_i \times r_i\)</div>
+$$81\times1 = 81,\quad 27\times3 = 81,\quad 9\times9 = 81,\quad 3\times27 = 81,\quad 1\times81 = 81$$
+<p>ทุกรอบใช้งบเท่ากัน 81 ⇒ ทั้ง bracket = \(5\times81 = 405\) epoch</p></li>
+<li><div class="st-title">เทียบกับการเทรนทุก configuration ให้เต็ม</div>
+$$81 \times 81 = 6561 \text{ epoch}$$
+$$\frac{6561}{405} \approx 16.2$$</li>
+</ol>
+<div class="answer"><p>ค้นหา 81 configuration ด้วยงบ 405 epoch แทน 6,561 (ถูกกว่าราว 16 เท่า) เพราะ configuration ที่แย่ถูกตัดตั้งแต่ใช้ไปแค่ 1–3 epoch. ใน KerasTuner (สไลด์หน้า 30) พารามิเตอร์ <code>max_epochs=81</code>, <code>factor=3</code> คือ \(\text{max\_iter}=81,\ \eta=3\) ตัวเดียวกันนี้.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl6-p28-bayesian-optimization.png" alt="Slide: Bayesian Optimization uses information from past trials to choose the next hyperparameters, needing fewer iterations. Two components: a surrogate model (a probabilistic model, Gaussian Process, that learns the mapping from hyperparameters to expected performance) and an acquisition function (decides where to exploit or explore). Three plots of UCB(x) = mu(x) + lambda sigma(x) for lambda=0.2, 1.2 and 5 show the true function as a dashed line, red surrogate, blue acquisition curve and green confidence interval; the note says a larger lambda favours uncertain regions (exploration) while a smaller lambda favours high predicted values (exploitation)">
+<figcaption>Slide: Bayesian Optimization — surrogate model + acquisition function (UCB) (Lecture6, p.28)</figcaption>
+</figure>
+
+<p><strong>ไอเดีย:</strong> ทุกครั้งที่ลอง ได้คู่ (hyperparameter → คะแนน) เพิ่มอีก 1 จุด. <em>Surrogate model</em> (Gaussian Process ตามตำนานรูป) เรียนรู้จากจุดที่มีแล้วบอกว่า "ที่ค่า \(x\) นี้ คาดว่าคะแนนเฉลี่ย \(\mu(x)\) และไม่แน่ใจเท่าไร \(\sigma(x)\)". จากนั้น <em>acquisition function</em> แบบ UCB ให้คะแนนจุดที่จะลองต่อไป:</p>
+$$\text{UCB}_\lambda(x) = \mu(x) + \lambda\,\sigma(x)$$
+<p class="plain-thai">คะแนนที่คาดไว้ + โบนัสให้จุดที่ยังไม่ค่อยรู้ (ยิ่งไม่แน่ใจ ยิ่งได้โบนัสมาก); \(\lambda\) คือตัวปรับว่าให้โบนัสมากแค่ไหน</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: λ ตัดสินใจว่าจะ "ขุดจุดเดิม" หรือ "สำรวจจุดใหม่"</div>
+<div class="given">มี 2 candidate: <strong>A</strong> (เคยลองใกล้ๆ แล้ว) \(\mu = 0.85,\ \sigma = 0.02\) &nbsp;|&nbsp; <strong>B</strong> (ยังไม่เคยลองแถวนี้) \(\mu = 0.80,\ \sigma = 0.20\)</div>
+<ol class="steps">
+<li><div class="st-title">\(\lambda = 0.2\) (เน้น exploit)</div>
+$$\text{UCB}(A) = 0.85 + 0.2(0.02) = 0.854,\qquad \text{UCB}(B) = 0.80 + 0.2(0.20) = 0.840$$
+<p>A สูงกว่า ⇒ ลอง A (ตามความคาดหวังเฉลี่ย)</p></li>
+<li><div class="st-title">\(\lambda = 1.2\) (เน้น explore)</div>
+$$\text{UCB}(A) = 0.85 + 1.2(0.02) = 0.874,\qquad \text{UCB}(B) = 0.80 + 1.2(0.20) = 1.040$$
+<p>B สูงกว่ามาก ⇒ ลอง B (ย่านที่ยังไม่รู้)</p></li>
+</ol>
+<div class="answer"><p>ค่าเฉลี่ยต่ำกว่า (B: 0.80) ก็ถูกเลือกได้ ถ้า λ ใหญ่พอให้โบนัสความไม่แน่ใจชนะ — ตรงกับรูป λ = 5 ในสไลด์ที่เส้นน้ำเงิน (acquisition) พุ่งสูงในย่านที่ไม่มีจุดข้อมูล.</p></div>
+</div>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>แต่ละ trial แพง (นาทีถึงชั่วโมง) จึงอยากใช้ทุกครั้งให้คุ้ม: Grid/Random ไม่เรียนรู้จากผลก่อนหน้า, Hyperband ประหยัดโดยตัดตัวแย่เร็ว, Bayesian ฉลาดเลือกจุดต่อไปจากผลที่มี — ยิ่ง trial แพง ยิ่งคุ้มกับการคิดหนักก่อนเลือก.</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าพารามิเตอร์ที่กระทบจริงมีแค่ 1 ตัวจาก 2 ตัว Grid 3×3 ใช้ 9 ครั้งเพื่อได้ 3 ค่า ส่วน Random ได้ 9 ค่า (ข้างบน) — ยิ่งมีมิติที่ "ไม่สำคัญ" มาก Grid ยิ่งเปลือง. Hyperband จะตัดผิดถ้า configuration ที่ "ช้าตอนต้นแต่ชนะตอนท้าย" (learning rate ต่ำ) ถูกตัดก่อนโตเต็มที่. ส่วน Bayesian: λ เล็ก → วนเวียนย่านเดิม, λ ใหญ่ → สุ่มกระจายเกือบเท่า Random.</dd>
+<dt>เชื่อมกับ</dt>
+<dd>Explore–exploit เป็นแนวคิดเดียวกับที่ Lesson 4 §4 ใช้ momentum (ให้น้ำหนักประวัติกับข้อมูลใหม่) ในมุมต่างกัน; และ early stopping (§2) คือ "การตัดตัวแย่เร็ว" ระดับ epoch ที่ Hyperband ทำระดับ configuration.</dd>
+</dl>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>HyperBand</span></div>
+  <div class="qtext">HyperBand ที่ <code>max_iter=81</code>, <code>η=3</code> bracket <code>s=4</code> (เริ่ม 81 configuration ด้วยงบ 1) ในรอบ <code>i=2</code> จะมี \((n_i, r_i)\) เท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. n_i = ⌊81·3^{-2}⌋ = 9, r_i = 1·3² = 9 (ต้นทุนรอบนี้ 9×9 = 81 เท่ากับทุกรอบ).">(9, 27) เพราะเหลือเก้าตัวและงบเพิ่มเป็นยี่สิบเจ็ดเท่าตัวเมื่อผ่านสองรอบแล้ว</button>
+    <button class="opt" data-correct="false" data-note="ผิด. n_i = ⌊81·3^{-2}⌋ = 9, r_i = 1·3² = 9 (ต้นทุนรอบนี้ 9×9 = 81 เท่ากับทุกรอบ).">(27, 9) เพราะยังเหลือยี่สิบเจ็ดตัวและงบเก้าซึ่งเป็นกำลังสองของสามเท่านั้น</button>
+    <button class="opt" data-correct="true" data-note="ถูก. n_i = ⌊81·3^{-2}⌋ = 9, r_i = 1·3² = 9 (ต้นทุนรอบนี้ 9×9 = 81 เท่ากับทุกรอบ).">(9, 9) เพราะเหลือ 81/3² = 9 ตัวและงบของแต่ละตัวเพิ่มเป็น 1×3² = 9</button>
+    <button class="opt" data-correct="false" data-note="ผิด. n_i = ⌊81·3^{-2}⌋ = 9, r_i = 1·3² = 9 (ต้นทุนรอบนี้ 9×9 = 81 เท่ากับทุกรอบ).">(3, 27) เพราะตัดทิ้งไปมากกว่าครึ่งหนึ่งในทุกรอบจึงเหลือเพียงสามตัวรอบนี้</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>Bayesian / UCB</span></div>
+  <div class="qtext">candidate A: μ=0.85, σ=0.02 และ B: μ=0.80, σ=0.20 ใช้ UCB = μ + λσ ที่ λ = 1.2 tuner จะเลือกลองจุดใดต่อ?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. λ=1.2: A = 0.85+0.024 = 0.874; B = 0.80+0.24 = 1.04 ⇒ เลือก B (ที่ λ = 0.2 จึงจะเป็น A: 0.854 เทียบ 0.840).">A เพราะ UCB(A) = 0.874 มากกว่า UCB(B) = 0.84 และค่าเฉลี่ยของ A สูงกว่า</button>
+    <button class="opt" data-correct="false" data-note="ผิด. λ=1.2: A = 0.85+0.024 = 0.874; B = 0.80+0.24 = 1.04 ⇒ เลือก B (ที่ λ = 0.2 จึงจะเป็น A: 0.854 เทียบ 0.840).">A เพราะ σ ของ A ต่ำกว่า จึงมั่นใจได้ว่าคะแนนจริงจะไม่ต่ำกว่าที่ทำนายไว้</button>
+    <button class="opt" data-correct="true" data-note="ถูก. λ=1.2: A = 0.85+0.024 = 0.874; B = 0.80+0.24 = 1.04 ⇒ เลือก B (ที่ λ = 0.2 จึงจะเป็น A: 0.854 เทียบ 0.840).">B เพราะ UCB(B) = 1.04 มากกว่า UCB(A) = 0.874 จากโบนัสความไม่แน่ใจ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. λ=1.2: A = 0.85+0.024 = 0.874; B = 0.80+0.24 = 1.04 ⇒ เลือก B (ที่ λ = 0.2 จึงจะเป็น A: 0.854 เทียบ 0.840).">B เพราะเลือกจุดที่ σ สูงที่สุดเสมอ ไม่ว่าค่าเฉลี่ย μ จะต่ำเพียงใดก็ตาม</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s10">10. ใช้ KerasTuner: สร้าง HyperModel → เลือก Tuner → ค้นหา → ดึงผล</h2>
+
+<figure>
+<img src="../assets/slides/dl6-p29-keras-tuner-hypermodel.png" alt="Slide: Implementation using Keras Tuner. pip install keras-tuner. A HyperModel is a function build_model(hp) that returns a compiled Keras model; hp is the HyperParameter object. Code: for i in range(hp.Int('num_layers', min_value=1, max_value=2)) add Dense(units=hp.Int('units_'+str(i), min_value=10, max_value=50, step=1), activation=hp.Choice('activation', values=['relu','elu','selu'])) and Dropout(hp.Float('dropout_'+str(i), 0, 0.5, step=0.1)); output Dense(1, sigmoid); compile with Adam(learning_rate=hp.Float('lr', 1e-4, 1e-2, sampling='log')). A boxed example shows hp.Boolean('dropout')">
+<figcaption>Slide: Implementation using Keras Tuner — build_model(hp) (Lecture6, p.29)</figcaption>
+</figure>
+
+<p><strong>แนวคิด:</strong> แทนที่จะเขียน <code>Dense(32, ...)</code> ด้วยตัวเลขตายตัว ให้เขียน <code>Dense(hp.Int("units", 10, 50))</code> — "ช่อง" ที่ tuner จะมาเติมค่าเอง. ประเภทของช่อง:</p>
+<table class="compact">
+<tr><th>ฟังก์ชัน</th><th>ความหมาย</th><th>ตัวอย่างในสไลด์</th></tr>
+<tr><td><code>hp.Int(name, min, max, step)</code></td><td>จำนวนเต็มในช่วง</td><td>num_layers 1–2; units 10–50</td></tr>
+<tr><td><code>hp.Float(name, min, max, step / sampling)</code></td><td>ทศนิยมในช่วง</td><td>dropout 0–0.5 step 0.1; lr 1e-4–1e-2 แบบ log</td></tr>
+<tr><td><code>hp.Choice(name, values)</code></td><td>เลือก 1 จากรายการ</td><td>activation ∈ {relu, elu, selu}</td></tr>
+<tr><td><code>hp.Boolean(name)</code></td><td>จริง/เท็จ</td><td>ใช้ dropout หรือไม่</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: ทำไม learning rate ต้องสุ่มแบบ <code>sampling='log'</code></div>
+<div class="given">ช่วงค้นหา 0.0001 ถึง 0.01 (กว้าง 2 "ระดับ" คือ \(10^{-4}\!\to\!10^{-3}\) และ \(10^{-3}\!\to\!10^{-2}\)) — อยากรู้ว่าสุ่มแล้วได้ค่าต่ำกว่า 0.001 กี่ %</div>
+<ol class="steps">
+<li><div class="st-title">สุ่มแบบเส้นตรง (uniform)</div>
+$$P(\text{lr} &lt; 0.001) = \frac{0.001 - 0.0001}{0.01 - 0.0001} = \frac{0.0009}{0.0099} \approx 9.1\%$$
+<p>ค่าเกือบทั้งหมดจะไปกองแถว 0.001–0.01</p></li>
+<li><div class="st-title">สุ่มแบบ log (uniform บน \(\log_{10}\))</div>
+$$P(\text{lr} &lt; 0.001) = \frac{\log_{10}0.001 - \log_{10}0.0001}{\log_{10}0.01 - \log_{10}0.0001} = \frac{-3-(-4)}{-2-(-4)} = \frac{1}{2} = 50\%$$</li>
+</ol>
+<div class="answer"><p>แบบ log ให้ความน่าจะเป็นเท่ากันทุก "ระดับ" (\(10^{-4}\!\sim\!10^{-3}\) เท่ากับ \(10^{-3}\!\sim\!10^{-2}\)) — เหมาะกับ learning rate ที่สิ่งสำคัญคือ<em>ขนาดหลัก</em> (เลขชี้กำลัง) ไม่ใช่ผลต่างเชิงเส้น.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl6-p30-keras-tuner-create-tuner.png" alt="Slide: Create a Tuner with Specific Search Algorithms. Choose a tuner class: GridSearch, RandomSearch, HyperBand or BayesianOptimization. Code: kt.Hyperband(build_model, objective='val_accuracy', max_epochs=81, factor=3, directory='kt_dir', project_name='kt_hyperband', seed=42), then tuner.search_space_summary() printing search space size 5 with num_layers (Int 1 to 2), units_0 (Int 10 to 50), activation (Choice relu/elu/selu), dropout_0 (Float 0.0 to 0.5 step 0.1) and lr (Float 0.0001 to 0.01, sampling log)">
+<figcaption>Slide: Create a Tuner — เลือกอัลกอริทึมและดู search space (Lecture6, p.30)</figcaption>
+</figure>
+
+<p>อ่าน <code>search_space_summary()</code> ในสไลด์: "Default search space size: 5" — ทั้งที่โค้ดมี <code>units_i</code> และ <code>dropout_i</code> ให้ layer ที่ 2 ด้วย แต่ tuner เห็น <code>units_0</code>, <code>dropout_0</code> เท่านั้น เพราะ hyperparameter ถูก<strong>สร้างตอนที่โค้ดรันผ่านบรรทัดนั้นจริงๆ</strong> — <code>units_1</code>/<code>dropout_1</code> จะโผล่มาเมื่อ tuner สุ่มได้ <code>num_layers = 2</code> (hyperparameter แบบมีเงื่อนไข). 4 ตัวเลือก tuner คือ 4 อัลกอริทึมของ §9 โดยส่ง <code>build_model</code> เข้าไปเหมือนกัน เปลี่ยนแค่ชื่อคลาส (<code>kt.RandomSearch</code>, <code>kt.Hyperband</code>, <code>kt.BayesianOptimization</code>, …).</p>
+
+<figure>
+<img src="../assets/slides/dl6-p31-tuner-search-query-results.png" alt="Slide: Run Tuner Search and Query the Results. tuner.search(X, y, epochs=20, validation_split=0.4, batch_size=512, callbacks=[early_stopping_cb]); output: Trial 211 Complete in 39s with val_accuracy 0.8910, best val_accuracy so far 0.8936, total elapsed time 43m46s. Then best_model = tuner.get_best_models()[0]; best_model.evaluate(Xtest, ytest) prints loss 0.2904 and accuracy 0.8845; accuracy on the first 10 test reviews is 0.8">
+<figcaption>Slide: Run Tuner Search and Query the Results (Lecture6, p.31)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">อ่านผลลัพธ์ในสไลด์หน้า 31 ทีละบรรทัด</div>
+<ol class="steps">
+<li><div class="st-title"><code>tuner.search(X, y, epochs=20, validation_split=0.4, batch_size=512, callbacks=[early_stopping_cb])</code></div>
+<p>เหมือน <code>model.fit</code> ทุกอย่าง (รวม early stopping จาก §2!) แต่ทำซ้ำต่อ 1 trial. validation 40% ⇒ IMDB 25,000 → train 15,000 / validation 10,000.</p></li>
+<li><div class="st-title"><code>Trial 211 Complete [00h 00m 39s]</code></div>
+<p>ค้นไป 211 trial (ตัวอย่างสุดท้ายใช้ 39 วินาที), <code>val_accuracy: 0.8910</code> คือคะแนนของ trial นี้</p></li>
+<li><div class="st-title"><code>Best val_accuracy So Far: 0.8936</code></div>
+<p>ดีที่สุดใน 211 trial = 89.36% (วัดบน validation ทั้งหมด) ใช้เวลารวม 43 นาที 46 วินาที</p></li>
+<li><div class="st-title"><code>best_model = tuner.get_best_models()[0]</code></div>
+<p>ดึงโมเดลของ trial ที่ดีที่สุด (ที่ epoch ที่ val ดีที่สุดของ trial นั้น)</p></li>
+<li><div class="st-title"><code>best_model.evaluate(Xtest, ytest)</code></div>
+<p>ให้ <code>[0.2904, 0.8845]</code> = [loss, accuracy] บน test set</p></li>
+</ol>
+<div class="answer"><p>validation 0.8936 สูงกว่า test 0.8845 เล็กน้อย — สมเหตุสมผล เพราะเราเลือกโมเดลจาก validation จึงมี "ความโชคดี" ปนอยู่; test set ที่ไม่เคยใช้ตัดสินใจคือตัวเลขที่ซื่อสัตย์กว่า และใช้<strong>ครั้งเดียวตอนท้าย</strong>.</p></div>
+</div>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>การแยก "build_model(hp)" ออกจาก "อัลกอริทึมค้นหา" ทำให้เปลี่ยนวิธีค้น (Random → Hyperband → Bayesian) ได้โดยไม่แตะโค้ดโมเดล และเรียก <code>callbacks=[early_stopping_cb]</code> ในทุก trial ให้แต่ละ trial ไม่เสียเวลาเทรนเกินจำเป็น (เชื่อม §2).</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าเปลี่ยน <code>objective</code> จาก <code>val_accuracy</code> เป็น <code>val_loss</code> ทิศทางกลับ (ต้อง<em>ต่ำสุด</em> แทน<em>สูงสุด</em>) และโมเดลที่ "ดีที่สุด" อาจเป็นคนละตัว (accuracy กับ loss ไม่จำเป็นต้องเห็นตรงกัน). ถ้าใช้ test set ตัดสินใจระหว่างค้น จะทำให้ตัวเลข test กลายเป็น optimistic เหมือน validation (data leakage).</dd>
+<dt>เชื่อมกับ</dt>
+<dd>Lesson 5 §5 (Keras workflow 5 ขั้น: build → compile → fit → evaluate → predict) — tuner ห่อทั้งวงจรนี้ไว้ในลูปเดียว; และการแบ่ง train/validation/test จาก Lesson 1.</dd>
+</dl>
+</div>
+
+<h2 id="s11">11. ข้อควรระวังและแนวทางปฏิบัติ (สไลด์หน้า 32)</h2>
+<p>สไลด์สรุปไว้ 3 ข้อ (หน้า 32) ซึ่งทั้งหมดผูกกับสิ่งที่คำนวณมาแล้ว:</p>
+<ol>
+<li><strong>ไม่มีตัวเลขวิเศษ</strong> — ค่าที่ดีขึ้นกับ dataset และ task จึงต้องรู้ว่าแต่ละ hyperparameter ทำอะไร (ตาราง §8) และยังต้องใช้ domain knowledge อ่านผลการค้น</li>
+<li><strong>อย่าลองทีละค่าด้วยมือ</strong> — ใช้ tuner (§9–10); ตั้งค่า global config ให้ hyperparameter ที่ไม่ได้จูน</li>
+<li><strong>Coarse-to-fine</strong> — ถ้าช้า ให้ค้นแบบหยาบก่อน ดูทิศทาง แล้วค่อยค้นละเอียดในช่วงที่ดี</li>
+</ol>
+
+<div class="calc">
+<div class="calc-title">ตัวอย่าง coarse-to-fine กับ learning rate</div>
+<ol class="steps">
+<li><div class="st-title">รอบหยาบ: ช่วง \([10^{-4},\,10^{-2}]\) แบบ log (ตัวอย่างใน §10)</div>
+<p>สมมติผลออกมา learning rate ที่ดีที่สุดอยู่แถว 0.0006 และคะแนนของค่าอื่นๆ ตกลงห่างจากแถบนี้</p></li>
+<li><div class="st-title">รอบละเอียด: ตีกรอบใหม่แคบลง เช่น \([2\times10^{-4},\,10^{-3}]\)</div>
+<p>ช่วงเดิมกว้าง \(\log_{10}(100) = 2\) ระดับ ช่วงใหม่กว้าง \(\log_{10}(5) \approx 0.7\) ระดับ ⇒ พื้นที่ค้นหาเล็กลงราว \(2/0.7 \approx 2.9\) เท่า และทุก trial ตกในย่านที่มีแนวโน้มดีแล้ว</p></li>
+</ol>
+<div class="answer"><p>ในสคริปต์ที่สอนในคาบ ผู้สอนทำแบบนี้จริง: Bayesian รอบแรกได้ learning rate ≈ 0.000624 แล้วล็อกไว้ และทดลองต่อกับ weight decay 6 ค่า (0 … 1e-4) ซึ่งให้ val_loss ต่างกันเพียง 0.2657–0.2687 (ต่างกัน &lt; 0.01) — สัญญาณว่าตัวนั้น<em>ไม่ใช่ปุ่มสำคัญ</em> ไม่ควรเสียเวลาค้นละเอียดกว่านี้.</p></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Log sampling</span></div>
+  <div class="qtext"><code>hp.Float('lr', 1e-4, 1e-2, sampling='log')</code> ความน่าจะเป็นที่ได้ lr &lt; 0.001 เท่ากับเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. log: (−3−(−4))/(−2−(−4)) = 1/2 = 50%; แบบเส้นตรงคือ 9.1%.">ประมาณ 9.1% เพราะสัดส่วนความกว้างช่วงแบบเส้นตรงคือ 0.0009 หารด้วย 0.0099</button>
+    <button class="opt" data-correct="true" data-note="ถูก. log: (−3−(−4))/(−2−(−4)) = 1/2 = 50%; แบบเส้นตรงคือ 9.1%.">50% เพราะช่วงกว้างสองระดับเท่ากัน และ 1e-4 ถึง 1e-3 คือครึ่งหนึ่งของระดับ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. log: (−3−(−4))/(−2−(−4)) = 1/2 = 50%; แบบเส้นตรงคือ 9.1%.">10% เพราะค่า 0.001 เป็นหนึ่งในสิบของค่าสูงสุดของช่วงคือ 0.01 พอดี</button>
+    <button class="opt" data-correct="false" data-note="ผิด. log: (−3−(−4))/(−2−(−4)) = 1/2 = 50%; แบบเส้นตรงคือ 9.1%.">90% เพราะค่าส่วนใหญ่ของช่วงกว้างนี้มักกระจุกอยู่ทางด้านค่าที่ต่ำกว่าเสมอ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควรตามตาราง EarlyStopping ได้ทีละ epoch (patience/min_delta), คำนวณว่า ModelCheckpoint(<code>save_freq</code>) เซฟไฟล์อะไร, คำนวณ learning rate ของ <code>LearningRateScheduler</code> (รวมข้อควรระวังเรื่องคูณซ้อน) และของ <code>ReduceLROnPlateau</code>, อธิบายว่าทำไม <code>RandomUniform(0,1)</code> ทำให้ tanh อิ่มตัว, และเปรียบเทียบ Grid/Random/HyperBand/Bayesian ด้วยตัวเลข (911,430 ชุด vs 211 trial; งบ 405 vs 6,561; UCB).
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน lecture 6.pdf (33 หน้า) — เช็คว่าอ่านครบ</h2>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>Keras Callbacks — โค้ด callback เอง</td><td>✓ <a href="#s1">§1</a> (มีรูป, คำนวณ)</td></tr>
+<tr><td>2</td><td>Built-in Callbacks</td><td>✓ <a href="#s1">§1</a> (มีรูป)</td></tr>
+<tr><td>3</td><td>EarlyStopping Callback</td><td>✓ <a href="#s2">§2</a> (มีรูป)</td></tr>
+<tr><td>4</td><td>Results — ตารางไล่ epoch 28–36</td><td>✓ <a href="#s2">§2</a> (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>5</td><td>Save the Model (Manually) + model.summary</td><td>✓ <a href="#s3">§3</a> (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>6</td><td>ModelCheckpoint Callback</td><td>✓ <a href="#s3">§3</a> (มีรูป)</td></tr>
+<tr><td>7</td><td>More Saving Criteria (save_best_only, monitor, mode)</td><td>✓ <a href="#s3">§3</a> (มีรูป)</td></tr>
+<tr><td>8</td><td>More Saving Criteria (2) — save_freq</td><td>✓ <a href="#s3">§3</a> (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>9</td><td>BackupAndRestore Callbacks</td><td>✓ <a href="#s4">§4</a> (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>10</td><td>Learning Rate Scheduler / CSV Logger</td><td>✓ <a href="#s5">§5</a> (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>11</td><td>TensorBoard — ภาพรวมและ histogram</td><td>✓ <a href="#s6">§6</a> (มีรูป)</td></tr>
+<tr><td>12</td><td>TensorBoard Main Components</td><td>✓ <a href="#s6">§6</a> (อธิบายในเนื้อหา)</td></tr>
+<tr><td>13</td><td>TensorBoard Callback</td><td>✓ <a href="#s6">§6</a> (มีรูป)</td></tr>
+<tr><td>14</td><td>Exercise — Circle Dataset</td><td>✓ <a href="#s6">§6</a> (มีรูป, คำนวณ)</td></tr>
+<tr><td>15</td><td>Gradient Vanishing Problems</td><td>✓ <a href="#s7">§7</a> (มีรูป, คำนวณ)</td></tr>
+<tr><td>16</td><td>Try using ReLU and He initialization</td><td>✓ <a href="#s7">§7</a> (มีรูป)</td></tr>
+<tr><td>17</td><td>Exploding Gradients Problems</td><td>✓ <a href="#s7">§7</a> (มีรูป)</td></tr>
+<tr><td>18</td><td>Solve Vanishing/Exploding using Batch Norm. (สไลด์หัวข้อ)</td><td>✓ <a href="#s7">§7</a> (คำนวณ BN)</td></tr>
+<tr><td>19</td><td>Hyperparameter Tuning — หลักการ</td><td>✓ <a href="#s8">§8</a></td></tr>
+<tr><td>20</td><td>Hyperparameter Tuning — 3 หมวด</td><td>✓ <a href="#s8">§8</a> (มีรูป)</td></tr>
+<tr><td>21</td><td>Network architecture</td><td>✓ <a href="#s8">§8</a> (คำนวณ)</td></tr>
+<tr><td>22</td><td>Learning and optimization</td><td>✓ <a href="#s8">§8</a> (มีรูป)</td></tr>
+<tr><td>23</td><td>Strategies to avoid overfitting</td><td>✓ <a href="#s8">§8</a> (ตาราง)</td></tr>
+<tr><td>24</td><td>Common Steps in Hyperparameters Tuning</td><td>✓ <a href="#s8">§8</a></td></tr>
+<tr><td>25</td><td>Grid Search</td><td>✓ <a href="#s9">§9</a> (มีรูป, คำนวณ)</td></tr>
+<tr><td>26</td><td>Random Search</td><td>✓ <a href="#s9">§9</a> (มีรูป)</td></tr>
+<tr><td>27</td><td>HyperBand</td><td>✓ <a href="#s9">§9</a> (มีรูป, คำนวณเต็ม)</td></tr>
+<tr><td>28</td><td>Bayesian Optimization</td><td>✓ <a href="#s9">§9</a> (มีรูป, คำนวณ)</td></tr>
+<tr><td>29</td><td>Implementation using Keras Tuner</td><td>✓ <a href="#s10">§10</a> (มีรูป)</td></tr>
+<tr><td>30</td><td>Create a Tuner with Specific Search Algorithms</td><td>✓ <a href="#s10">§10</a> (มีรูป)</td></tr>
+<tr><td>31</td><td>Run Tuner Search and Query the Results</td><td>✓ <a href="#s10">§10</a> (มีรูป, คำนวณ)</td></tr>
+<tr><td>32</td><td>Hyperparameter Tuning Issues</td><td>✓ <a href="#s11">§11</a></td></tr>
+<tr><td>33</td><td>References</td><td>etc — รายการอ้างอิง (Chollet, Géron, Ng, Heaton)</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0005-vanishing-gradients-and-initialization.html">← Lesson 5: Vanishing Gradients &amp; Init</a></span>
+  <span><a href="0001-machine-learning-foundations.html">กลับไป Lesson 1 →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
