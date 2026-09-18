@@ -41,6 +41,18 @@
 <p>สไลด์เรียกภาพนี้ว่า "Computation Graph": มองเป็นสองขั้นเรียงต่อกัน (x → u → y) แต่ละขั้นมีอนุพันธ์ของตัวเอง แล้ว "คูณไล่ตามลูกโซ่" กลับมาที่ x.</p>
 <p>โครงข่ายประสาทเทียมก็คือ computation graph ที่มีขั้นมากกว่านี้ (z[1]→a[1]→z[2]→a[2]→…) แค่นั้นเอง.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>NN คือ composite function หาอนุพันธ์ของ θ ใน layer ลึกตรงๆไม่ได้ เพราะ θ ไม่ปรากฏใน J โดยตรง แต่ปรากฏผ่านชั้น z→a→z→a→…→J หลายทอด — chain rule คือเครื่องมือเดียวที่แปลง "ผลกระทบทางอ้อมหลายทอด" ให้เป็นผลคูณของอนุพันธ์แต่ละทอดได้</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ลองหา dy/dx เมื่อ y=(3x+1)⁵ (แทน (2x−5)¹⁰): u=3x+1, y=u⁵ → dy/du=5u⁴, du/dx=3 → dy/dx=15(3x+1)⁴ — ตัวเลขคูณหน้า (15) มาจาก 5×3 (เลขชี้กำลัง×สัมประสิทธิ์ข้างใน) ตรง pattern เดียวกับ 10×2=20 ในตัวอย่างสไลด์: สูตรลัดของ (ax+b)ⁿ คือ n·a·(ax+b)ⁿ⁻¹เสมอ</dd>
+<dt>เชื่อมกับ</dt>
+<dd>pattern "อนุพันธ์=ตัวคูณจากชั้นนอก×ตัวคูณจากชั้นใน" คือกลไกเดียวกับที่หัวข้อ 2 จะขยายเป็นผลคูณ 4 เทอม (δ×θ×g'×a) — ยิ่งเครือข่ายลึกยิ่งมีชั้นให้คูณมากขึ้น</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 1</span><span>Chain Rule</span></div>
   <div class="qtext">จาก y=(2x−5)¹⁰ โดยให้ u=2x−5 (y=u¹⁰) ค่า dy/dx ตาม chain rule เท่ากับอะไร?</div>
@@ -99,6 +111,18 @@
 </ul>
 <p>รวมกันทั้ง 4 เทอม: <code>∂J/∂θ[1] = (h(x)−y)·θ[2]·a[1](1−a[1])·x</code>.</p>
 <p>สังเกตว่าสูตรนี้มี "4 ตัวคูณ" พอดีตามจำนวนขั้นในโซ่ ยิ่งเครือข่ายลึกเท่าไหร่ จำนวนตัวคูณยิ่งเยอะตาม (นี่คือรากของปัญหา vanishing/exploding gradient ที่ Lesson 5 จะพูดถึง).</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>จำนวนขั้นในโซ่ (2 ขั้นสำหรับ θ[1] vs 1 ขั้นสำหรับ θ[2]) เท่ากับ "จำนวน layer ที่ต้องผ่าน" จาก θ นั้นไปถึง output จริงๆ ไม่ใช่ตัวเลขที่ตั้งขึ้นมาเฉยๆ</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าเครือข่ายมี 3 layer (ไม่ใช่ 2) การหา ∂J/∂θ[1] (layer แรกสุด) ต้องไล่ผ่านกี่ขั้น? ต้องผ่าน z[1]→a[1]→z[2]→a[2]→z[3]→a[3]→J รวม 3 ขั้นคูณกัน (ไม่ใช่ 2) — จำนวนเทอมในผลคูณเพิ่มตาม "ระยะทาง" จาก θ ถึง output เสมอ</dd>
+<dt>เชื่อมกับ</dt>
+<dd>รากของปัญหา vanishing gradient ใน Lesson 5 โดยตรง — ยิ่งเครือข่ายลึก θ ที่อยู่ layer แรกๆยิ่งมีโซ่ยาว ยิ่งมีตัวคูณ g' เยอะ ยิ่งเสี่ยง gradient หดจนเกือบ 0</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 2</span><span>Backprop Derivation</span></div>
@@ -164,6 +188,18 @@
 <p><strong>อัปเดตค่า θ₁₁⁽²⁾ ด้วย α=0.1:</strong> <code>θ₁₁⁽²⁾ := 1 − 0.1×(−0.258) = 1 + 0.0258 = 1.0258</code>.</p>
 <p>สังเกตว่า θ เพิ่มขึ้นเล็กน้อย (ไม่ใช่ลดลง) เพราะ gradient เป็นค่าลบ (h(x)&lt;y ทำนายต่ำกว่าจริง โมเดลจึงต้อง "เพิ่ม" weight ที่ส่งผลบวกต่อ output เพื่อให้ h(x) ขยับเข้าใกล้ y=1 มากขึ้นในรอบถัดไป) ส่วน <code>θ₂₁⁽²⁾</code> (weight ที่เป็น 0) จะไม่เปลี่ยนแปลงเลยในรอบนี้ เพราะ gradient ของมันเป็น 0 พอดี.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>forward ต้องเสร็จก่อน backward ถึงเริ่มได้ เพราะ δ⁽¹⁾ ต้องใช้ค่า a⁽¹⁾ (จาก forward) ไปคำนวณ g'(z⁽¹⁾)=a⁽¹⁾(1−a⁽¹⁾) — ไม่มี a⁽¹⁾ ไม่มีทาง backward ได้เลย นี่คือเหตุผลเชิงกลไก ไม่ใช่แค่ลำดับที่สไลด์สอน</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าตัวอย่างเดิมเปลี่ยน y จาก 1 เป็น 0: δ₁⁽²⁾=0.707−0=0.707 (บวก แทนที่จะเป็นลบ) → D₁₀⁽²⁾≈0.881×0.707≈0.623 (บวก) → θ₁₁⁽²⁾:=1−0.1×0.623=0.938 (ลดลง แทนที่จะเพิ่มขึ้น) — ตรงข้ามเป๊ะ เพราะตอนนี้โมเดลทำนายสูงเกินไป (h=0.707&gt;y=0) ต้องลด weight ที่ส่งผลบวกลง</dd>
+<dt>เชื่อมกับ</dt>
+<dd>ทิศทางอัปเดตที่สลับตาม sign ของ (h(x)−y) คือกลไกเดียวกับ Lesson 1 ที่ gradient descent "กลับทิศเข้าหาจุดต่ำสุดเสมอ" — จุดต่ำสุดที่นี่คือ h(x)=y พอดี</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 3</span><span>Worked Example</span></div>
   <div class="qtext">ในตัวอย่างคำนวณเต็มรูปแบบ (θ⁽²⁾=[0,1,0]) ทำไม δ₂⁽¹⁾ (error ของ node a₂⁽¹⁾) จึงมีค่าเท่ากับ 0 เป๊ะในทั้งสองตัวอย่าง?</div>
@@ -208,6 +244,18 @@
 </ol>
 <p>สังเกตว่าตัวอย่างคำนวณมือในหัวข้อ 3 คือการรัน algorithm นี้ตรงๆแค่ 1 รอบด้วย m=2.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ต้องสะสม (accumulate) Δ ก่อนหารด้วย m ทีหลัง แทนอัปเดต θ ทันทีหลังแต่ละ example เพราะ gradient ของ cost function ที่รวมทุก example (batch gradient descent) คือค่าเฉลี่ยของ gradient แต่ละ example — อัปเดตทันทีทุก example คือ SGD (Lesson 4) ซึ่งเป็นอัลกอริทึมคนละตัว</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า m=4 และ 4 example ให้ δ ต่างกัน [−0.03,−0.02,−0.05,0.01] ค่า D จะเป็นค่าเฉลี่ย=(−0.03−0.02−0.05+0.01)/4=−0.0225 ไม่ใช่ผลรวมตรงๆ (−0.09) เพราะสูตร D=(1/m)Δ หารด้วย m เสมอ — ยิ่ง m มาก แต่ละ example ยิ่งมีน้ำหนักต่อการอัปเดตน้อยลงตามสัดส่วน</dd>
+<dt>เชื่อมกับ</dt>
+<dd>การหารด้วย m นี้คือกลไกเดียวกับ "mean" ใน MSE/cross-entropy cost function ตั้งแต่ Lesson 1 — cost function ทุกตัวในวิชานี้คือค่าเฉลี่ย ไม่ใช่ผลรวมดิบ</dd>
+</dl>
+</div>
+
 <h2>5. Activation Function และอนุพันธ์: ตัวเลือกที่ส่งผลต่อ Gradient</h2>
 <figure>
 <img src="../assets/slides/dl3-p25-sigmoid-derivative-proof.png" alt="Sigmoid function sigma(z)=1/(1+e^-z) with full derivative proof shown step by step, concluding sigma'(z)=sigma(z)(1-sigma(z)), alongside plots of the sigmoid curve (S-shaped, 0 to 1) and its derivative curve (bell-shaped, peaking at 0.25 when z=0)">
@@ -223,6 +271,18 @@
 </figure>
 <p>ReLU เรียบง่ายกว่ามาก: <code>f(x)=max(0,x)</code> อนุพันธ์เป็น <strong>0 หรือ 1 เท่านั้น</strong> (ไม่มีค่าระหว่างกลางที่ลดขนาดลงเรื่อยๆแบบ sigmoid) เมื่อ x≥0 อนุพันธ์คงที่ที่ 1 พอดี ไม่ทำให้ gradient หดตัวเลยไม่ว่าจะผ่านกี่ layer — นี่คือเหตุผลหลักที่ ReLU เป็นตัวเลือกอันดับหนึ่งของ hidden layer ในเครือข่ายลึก.</p>
 <p>แต่ก็มีข้อเสีย: เมื่อ x&lt;0 อนุพันธ์เป็น 0 เป๊ะ (node "ตาย" ไม่เรียนรู้อะไรต่ออีกถ้าเข้าโซนนี้ถาวร) เป็นที่มาของ Leaky ReLU ที่ให้ความชันเล็กน้อย (0.01) แทน 0 ไปเลยในโซน x&lt;0.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>"รูปร่าง" ของอนุพันธ์ (ไม่ใช่แค่ output range) กำหนดว่า gradient จะไหลย้อนกลับได้ไกลแค่ไหน เพราะอนุพันธ์คือตัวคูณในสูตร δ โดยตรง (g' ในหัวข้อ 2) — ฟังก์ชันที่ output range ดูดี (sigmoid บีบ [0,1]) แต่อนุพันธ์เล็ก/ไม่สม่ำเสมอ ยังทำให้เทรนยากได้</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ที่ z=2 (ไม่ใช่ z=0) sigmoid derivative เท่ากับเท่าไหร่? σ(2)=1/(1+e⁻²)≈0.881, σ'(2)=0.881×(1−0.881)=0.881×0.119≈0.105 — ลดลงมากกว่าครึ่งจากค่าสูงสุด 0.25 ทั้งที่ z=2 ไม่ได้ไกลจาก 0 มากเลย แสดงว่า sigmoid เริ่ม saturate เร็วมาก</dd>
+<dt>เชื่อมกับ</dt>
+<dd>z=2 นี้คือค่า z₁⁽¹⁾ เดียวกับในตัวอย่างคำนวณเต็มรูปแบบของหัวข้อ 3 พอดี — δ₁⁽¹⁾ ในตัวอย่างนั้นเล็ก (≈−0.0308) ส่วนหนึ่งเพราะ g'(2)≈0.105 ไม่ใช่ 0.25 (ตัวคูณที่หายไปเกินครึ่งตั้งแต่ layer เดียว)</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 5</span><span>Activation Derivative</span></div>
@@ -245,6 +305,18 @@
 <p>พอไป layer 2: <code>z₁⁽²⁾ = θ₁₀⁽²⁾+θ₁₁⁽²⁾a₁⁽¹⁾+…</code> แทนค่า a⁽¹⁾ ที่เป็น linear combination ของ x เข้าไป จะลดรูปกลับมาเป็น <code>z₁⁽²⁾ = a+bx₁+cx₂</code> (linear function ของ x₁,x₂ ตัวเดียว ไม่ว่าจะมีกี่ layer ก็ตาม).</p>
 <p>นี่คือเหตุผลที่ต้องมี non-linear activation: ถ้าไม่มี การต่อหลาย layer จะไม่ต่างอะไรกับ layer เดียว (linear regression ธรรมดา) เพราะ "linear ซ้อน linear ยังคงเป็น linear เสมอ".</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>การพิสูจน์นี้แสดงว่า "ความลึก" เพิ่ม representational power ได้ก็ต่อเมื่อมี non-linearity คั่นเท่านั้น — ถ้าไม่มี ต่อกี่ layer สูตรก็ยุบรวมเป็น linear function เดียวเสมอ (พิสูจน์ด้วยพีชคณิตล้วนๆ ไม่ใช่แค่ observation เชิงประสบการณ์)</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าใช้ linear activation ในเครือข่าย 3 layer (ไม่ใช่ 2) จะยุบเหลือ linear function เหมือนกันไหม? ใช่ — layer 3 คือ <code>z⁽³⁾=θ⁽³⁾·a⁽²⁾</code> แทน a⁽²⁾ ที่เป็น linear ของ a⁽¹⁾ ซึ่งเป็น linear ของ x อีกที จะได้ z⁽³⁾ เป็น linear combination ของ x ชั้นเดียวเสมอ ไม่ว่าจะมีกี่ layer (สมบัติ transitive ของ linear composition)</dd>
+<dt>เชื่อมกับ</dt>
+<dd>เหตุผลเดียวกับที่ Lesson 2 หัวข้อ 1 บอกว่า NN แก้ปัญหา "ต้องแจกแจง polynomial feature มือ" ได้ — ถ้าไม่มี non-linearity ที่ hidden layer เครือข่ายก็ทำได้แค่สิ่งที่ linear regression ทำได้อยู่แล้ว ไม่ต่างอะไรเลย</dd>
+</dl>
+</div>
+
 <h2>6. Output Layer และ Softmax: ต่อจาก Lesson 1</h2>
 <figure>
 <img src="../assets/slides/dl3-p38-softmax-output-node.png" alt="Softmax activation function for multi-class classification: t_i = e^(z_i^[L]), a_i^[L] = t_i divided by the sum of all t values, normalizing outputs to a probability distribution that sums to 1 across all output classes">
@@ -253,6 +325,18 @@
 <p>สูตร Softmax เหมือนที่คำนวณตัวอย่างจริงไปแล้วใน Lesson 1 หัวข้อ 8: <code>aᵢ⁽ᴸ⁾ = eᶻⁱ⁽ᴸ⁾ / Σₙ eᶻⁿ⁽ᴸ⁾</code>.</p>
 <p>สิ่งใหม่ที่นี่คือ Softmax ถูกมองเป็น "activation function ของทั้ง output layer พร้อมกัน" ไม่ใช่ทีละ node เหมือน sigmoid/ReLU (Softmax ต้องรู้ค่า z ของทุก output node พร้อมกันก่อนจะ normalize ได้ ในขณะที่ sigmoid คำนวณแยกแต่ละ node ได้อิสระ).</p>
 <p>เมื่อใช้ Softmax ที่ output ร่วมกับ Cross-Entropy Loss การพิสูจน์ δ⁽ᴸ⁾ = a⁽ᴸ⁾−y ในหัวข้อ 2-3 ยังใช้ได้เหมือนเดิมทุกตัวอักษร (เป็นคุณสมบัติพิเศษที่ Softmax+Cross-Entropy ลดรูปสวยเหมือน Sigmoid+Cross-Entropy).</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทำไม softmax ต้อง normalize ทั้ง layer พร้อมกัน ไม่แยกทีละ node แบบ sigmoid — เพราะเป้าหมายคือ "ความน่าจะเป็นของแต่ละ class ที่รวมกันได้ 1 พอดี" (mutually exclusive) ถ้าคำนวณแยก node ไม่มีทางบังคับผลรวม=1 ได้ ต้องรู้ z ของทุก node พร้อมกันก่อนหารด้วยผลรวม</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า logit เปลี่ยนจาก z=[2,1,0] เป็น z=[12,11,10] (บวก 10 ทุกตัว) probability เปลี่ยนไหม? <code>e¹²/(e¹²+e¹¹+e¹⁰) = e¹⁰(e²)/[e¹⁰(e²+e+1)] = e²/(e²+e+1)</code> เท่ากับตัวอย่างเดิมเป๊ะ (≈0.665) เพราะ <code>e^(z+c)=e^z·e^c</code> ตัว e^c หักล้างกันได้ทั้งเศษส่วน — softmax invariant ต่อการบวกค่าคงที่ให้ z ทุกตัว</dd>
+<dt>เชื่อมกับ</dt>
+<dd>คุณสมบัตินี้คือเหตุผลที่ implementation จริง (Keras/PyTorch) มักลบ max(z) ออกจาก z ก่อนคำนวณ softmax (numerical stability) โดยไม่เปลี่ยนผลลัพธ์เลย — เชื่อมกับการเขียนโค้ด Keras จริงใน Lesson 5</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 6</span><span>Softmax vs Sigmoid</span></div>
@@ -269,6 +353,18 @@
 <h2>7. Regularization และ Hyperparameter Tuning</h2>
 <p>L2 regularization เพิ่ม penalty term <code>(λ/m)ΣΣΣ(θᵢⱼ⁽ˡ⁾)²</code> เข้าไปใน cost function — สูตรเหมือน Lesson 1 หัวข้อ 11 ทุกตัวอักษร เพียงแต่ตอนนี้ผลรวมต้องไล่ทั้ง 3 ระดับ (l=layer, i=node ปลายทาง, j=node ต้นทาง) แทนแค่ผลรวมเดียวของ logistic regression.</p>
 <p>ตัวอย่างสไลด์ถาม: เครือข่าย 3 layer (input=2, hidden=10, output=1) มีกี่พารามิเตอร์ในเทอม regularization? นับจาก θ⁽¹⁾ (10×3 = 30 ตัว รวม bias) และ θ⁽²⁾ (1×11 = 11 ตัว รวม bias) รวมทั้งหมด 41 พารามิเตอร์ที่ต้องถูกบีบด้วย λ (ไม่รวม bias term เองซึ่งปกติไม่ regularize แต่ปัดตกรายละเอียดนี้ไปตามที่สไลด์นับรวม).</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>สูตร regularization ต้องไล่ผลรวม 3 ระดับ (l,i,j) แทนที่จะเป็นผลรวมเดียว เพราะ NN มีพารามิเตอร์กระจายอยู่หลาย layer พร้อมกัน (ไม่ใช่ θ ก้อนเดียวแบบ logistic regression) การบีบทุกตัวให้เล็กลงต้องไล่ครบทุกตัวทุก layer</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าเพิ่มอีก 1 hidden layer (input=2,hidden1=10,hidden2=10,output=1) แทนที่จะมี hidden เดียว จำนวนพารามิเตอร์เปลี่ยนเป็นเท่าไหร่? θ⁽¹⁾:10×3=30, θ⁽²⁾ (hidden1→hidden2):10×11=110, θ⁽³⁾:1×11=11 รวม 151 — เพิ่มจาก 41 เกือบ 4 เท่า ทั้งที่ hidden node รวมเพิ่มแค่เท่าตัว (10→20) เพราะ layer ตรงกลางเชื่อมกันแบบ 10×10=100 เส้น ไม่ใช่ 10+10=20 เส้น</dd>
+<dt>เชื่อมกับ</dt>
+<dd>นี่คือเหตุผลที่ Lesson 4 หัวข้อ 2 บอกว่า deep network เสี่ยง overfitting สูงกว่า wide network ที่พารามิเตอร์เท่ากัน — "ลึกขึ้น" ทำให้พารามิเตอร์ระเบิดเร็วกว่า "กว้างขึ้น" มาก</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 7</span><span>Regularization</span></div>
@@ -289,6 +385,18 @@
 <li><strong>Backward:</strong> <code>δ₁⁽²⁾=h(x)−y</code> แล้ว <code>δⱼ⁽¹⁾ = θ₁ⱼ⁽²⁾·δ₁⁽²⁾·g'(zⱼ⁽¹⁾)</code> สำหรับ j=1..10</li>
 </ul>
 <p>โครงสร้างสูตรเหมือนตัวอย่างหัวข้อ 3 ทุกตัวอักษร ต่างกันแค่ "จำนวน node" ที่มากขึ้น พิสูจน์ว่าสูตร backprop สเกลไปกับขนาดเครือข่ายได้โดยไม่ต้องเปลี่ยนกลไกอะไรเลย.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>สูตรทั่วไป (10 hidden node) มีรูปร่างเดียวกับตัวอย่าง 2-3 node เป๊ะ ไม่มีเทอมพิเศษเพิ่ม เพราะ backprop เป็น local operation — แต่ละ node คำนวณ δ ของตัวเองจากแค่ δ ของ node ที่มันเชื่อมต่อโดยตรงใน layer ถัดไป ไม่ต้องรู้ว่าเครือข่ายมี node ทั้งหมดกี่ตัว</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า hidden layer มี 100 node (ไม่ใช่ 10) สูตร δⱼ⁽¹⁾ สำหรับ node j ตัวใดตัวหนึ่งเปลี่ยนไหม? ไม่เปลี่ยนเลย ยังคงเป็น <code>δⱼ⁽¹⁾=θ₁ⱼ⁽²⁾·δ₁⁽²⁾·g'(zⱼ⁽¹⁾)</code> รูปเดิม (แค่ j วิ่งถึง 100 แทน 10) — สิ่งที่เปลี่ยนคือ "จำนวนครั้ง" ที่ต้องรันสูตรนี้ ไม่ใช่ตัวสูตรเอง</dd>
+<dt>เชื่อมกับ</dt>
+<dd>คุณสมบัติ "local computation ไม่ขึ้นกับขนาดเครือข่าย" นี้คือเหตุผลที่ backprop สเกลไปเทรนเครือข่ายที่มีพารามิเตอร์เป็นพันล้านตัวได้จริง (LLM ใน timeline ของ Lesson 1) — ถ้าต้องมีสูตรพิเศษต่อขนาดเครือข่าย จะ implement เป็นโค้ดทั่วไปไม่ได้เลย</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 8</span><span>Backprop Algorithm</span></div>

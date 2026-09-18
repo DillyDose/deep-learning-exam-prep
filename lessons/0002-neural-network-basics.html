@@ -41,6 +41,18 @@
 </ul>
 <p>ยิ่งตอกย้ำว่าการเพิ่ม polynomial term มือด้วยจำนวน feature ระดับพันแบบนี้เป็นไปไม่ได้เลย.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>จำนวน monomial ดีกรี≤2 จาก n input มีสูตรคือ <code>2n + n(n−1)/2</code> (เทอม linear n + เทอมยกกำลังสอง n + เทอมไขว้ C(n,2)) — โตแบบ quadratic ตาม n ไม่ใช่ linear การแจกแจงมือทุกเทอมจึงพังเร็วมาก NN แก้ด้วยการให้แต่ละ hidden node เรียนรู้ "linear combination หนึ่งชุด + nonlinearity" เอง แทนการแจกแจงทุก monomial ล่วงหน้า</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ลอง n=50 (ครึ่งหนึ่งของ 100): terms = 2(50)+50×49/2 = 100+1225 = 1,325 เทียบกับ n=100 ที่ได้ 5,150 — จำนวน feature ไม่ได้ลดลงครึ่งเดียวตาม n แต่ลดลงเกือบ 4 เท่า (5150/1325≈3.9) เพราะเทอมไขว้ n(n−1)/2 ครองสัดส่วนใหญ่และโตแบบ quadratic</dd>
+<dt>เชื่อมกับ</dt>
+<dd>กลไก "พารามิเตอร์โตเร็วกว่าข้อมูลเชิงเส้น" เดียวกับที่ Lesson 1 ใช้อธิบาย overfitting/regularization และเป็นเหตุผลเดียวกับที่ Lesson 4 หัวข้อ 2 บอกว่าเครือข่ายลึก (พารามิเตอร์เยอะ) เสี่ยง overfitting สูง</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 1</span><span>Why ANN</span></div>
   <div class="qtext">ทำไม Explicit Polynomial Feature Expansion ถึง "impractical" เมื่อจำนวน input feature มาก (เช่น 100 features)?</div>
@@ -83,6 +95,18 @@
 </ul>
 <p>นี่คือหลักฐานที่จับต้องได้ว่า "ต่อ TLU สองตัวเป็นสอง layer" แก้ปัญหาที่ TLU เดี่ยวแก้ไม่ได้.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>เกณฑ์ที่แท้จริงไม่ใช่ "XOR ยากเป็นพิเศษ" แต่คือ <em>linear separability</em>: TLU เดี่ยวตัดพื้นที่ด้วยไฮเปอร์เพลนเดียวเท่านั้น ถ้าจุดสอง class จัดเรียงแบบสลับมุม (checkerboard) อย่าง XOR ไม่มีเส้นตรงเส้นเดียวแบ่งได้ ไม่ว่าจะปรับ θ ยังไงก็ตาม — ต้องมี hidden layer มาตัดพื้นที่เป็นหลายส่วนก่อนค่อยรวมผล</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ลองเปลี่ยนโจทย์เป็น "majority of 3" (output=1 ถ้า input เป็น 1 อย่างน้อย 2 จาก 3 ตัว) — ฟังก์ชันนี้ linearly separable เพราะเรียงจุดตาม <code>x₁+x₂+x₃</code> แล้วตัดที่ threshold 1.5 ได้เลย (θ=[−1.5,1,1,1]) ต่าง XOR ตรงที่ output ไม่สลับ parity แบบ checkerboard TLU เดี่ยวจึงพอ ไม่ต้องมี hidden layer</dd>
+<dt>เชื่อมกับ</dt>
+<dd>เกณฑ์เรขาคณิตเดียวกับ decision boundary ใน Lesson 1 (เส้นตรง vs วงกลม) — "linearly separable หรือไม่" คือคำถามเดียวที่ใช้ตัดสินว่าต้องเพิ่ม layer/feature หรือไม่ตลอดทั้งวิชา</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 2</span><span>XOR Problem</span></div>
   <div class="qtext">เหตุผลเชิงคณิตศาสตร์ที่ Perceptron (TLU เดี่ยวตัวเดียว) ไม่สามารถแก้ปัญหา XOR classification ได้คืออะไร?</div>
@@ -109,6 +133,18 @@
 </figure>
 <p>สูตรหลักที่ใช้ตลอด: <code>z_j^[l] = Σᵢ θ_ji^[l] · xᵢ</code> (ผลรวมถ่วงน้ำหนักก่อนเข้า activation function) แล้ว <code>a_j^[l] = g(z_j^[l])</code> (ผลลัพธ์หลังผ่าน activation function g).</p>
 <p>bias unit <code>x₀</code> ถูกกำหนดค่าคงที่ <code>+1</code> เสมอ (ไม่ใช่ input จริงจากข้อมูล) ทำหน้าที่เดียวกับ θ₀ ใน logistic regression ของ Lesson 1 คือขยับเส้น/ระนาบให้ไม่ต้องผ่านจุดกำเนิดเสมอไป.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ลำดับ subscript (i=ปลายทาง,j=ต้นทาง) ไม่ใช่แค่ธรรมเนียม แต่ทำให้สูตร <code>z=θ·a</code> ตรงกับกฎ matrix-vector multiplication พอดี: แถวของ θ คือ index ปลายทาง i (จำนวนแถว=จำนวน node ปลายทาง) คอลัมน์คือ index ต้นทาง j (จำนวนคอลัมน์=จำนวน node ต้นทาง+1 สำหรับ bias) ตรงกับจำนวนสมาชิกใน a พอดี ถ้าสลับ i,j มิติจะคูณกันไม่ได้เลย</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า layer ก่อนหน้ามี 4 node (ไม่รวม bias) และ layer ปัจจุบันมี 2 node, θ ของ layer นี้ต้องมี dimension <code>2×(4+1)=2×5</code> — ถ้าจำ i,j สลับกันจะเผลอเขียนเป็น 4×3 ซึ่งคูณกับเวกเตอร์ a (5 สมาชิก รวม bias) ไม่ได้เลย numpy จะ error ทันที (shape mismatch)</dd>
+<dt>เชื่อมกับ</dt>
+<dd>กฎการอ่าน matrix index (แถวก่อนคอลัมน์หลัง) ในหัวข้อ 5 ของบทนี้ และ "Dimension of Parameters" ที่ Lesson 3 นำสูตรนี้ไปทำให้เป็นทางการอีกที</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 3</span><span>Notation</span></div>
@@ -157,6 +193,18 @@
 </figure>
 <p>NOT ใช้ input เดียว θ₀=10, θ₁=−20: <code>x₁=0 → g(10)≈1</code> และ <code>x₁=1 → g(10−20)=g(−10)≈0</code> — ตรงข้ามกับ input พอดี.</p>
 <p>สังเกตแพทเทิร์นที่ทั้งสามตัวอย่างใช้ร่วมกัน: <strong>ทุก logic gate คือ neuron เดียวที่เลือกค่า θ ให้ "จุดตัด" (threshold) ตรงกับเงื่อนไขของ gate นั้น</strong> — นี่คือฐานที่ Lesson 3 จะต่อยอดเป็นการ "เรียน" ค่า θ พวกนี้จากข้อมูลด้วย gradient descent แทนการตั้งมือ.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>θ ต้องมีขนาด (magnitude) ใหญ่พอ ไม่ใช่แค่ทิศทาง/สัดส่วนถูก — sigmoid ต้องเข้าใกล้ 0 หรือ 1 "ชัดเจน" (saturate) เพื่อให้ทำหน้าที่เป็น logic gate ได้แม่นยำ ถ้า |z| เล็ก sigmoid จะแกว่งอยู่แถว 0.5 ไม่ใช่ 0/1 เด็ดขาด</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ลอง scale θ ของ AND ลง 20 เท่า (θ=[−1.5,1,1] แทน [−30,20,20] ทิศทาง/สัดส่วนเดิมทุกตัว) ที่ x₁=1,x₂=1: z=−1.5+1+1=0.5 → g(0.5)≈0.62 (ไม่ใช่ ≈1 อีกต่อไป ยังแกว่งใกล้ 0.5) ทั้งที่ทิศทาง θ ถูกทุกตัว — เพราะ |z| เล็กเกินไปจนไม่ตกเขต saturation</dd>
+<dt>เชื่อมกับ</dt>
+<dd>sigmoid ที่ไม่ saturate (|z| เล็ก) มีอนุพันธ์ใกล้ 0.25 (ค่าสูงสุด) ตรงข้ามกับปัญหา vanishing gradient ใน Lesson 3/5 ที่เกิดจาก saturate มากเกินไป — นี่คือ trade-off เดียวกัน: ยิ่ง confident (saturate) ยิ่งเรียนช้า (gradient เล็ก), ยิ่งไม่ saturate ยิ่งเรียนเร็วแต่ output ไม่เด็ดขาด</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 4</span><span>Logic Gate Neuron</span></div>
@@ -219,6 +267,18 @@
 <p>ได้ <code>[2,0,4]ᵗ</code> (คือดึงคอลัมน์ที่สองของ A ออกมา) — พอเอาสองผลลัพธ์นี้มาเรียงเป็นคอลัมน์ของเมทริกซ์เดียวกัน (เทียบเท่าการคูณ A ด้วย Identity Matrix I₂ ทั้งก้อน) จะได้ A กลับมาเหมือนเดิมทุกตัว.</p>
 <p>นี่คือเหตุผลที่ <code>A×I = A</code> เสมอ: การคูณด้วย identity matrix คือการคูณด้วย "เวกเตอร์หน่วย" ของแต่ละแกนพร้อมกันทุกแกน จึงได้เมทริกซ์เดิมกลับมาไม่เปลี่ยนแปลง.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทุกสูตรของ NN (z=θ·a, cost=Σ, regularization=Σθ²) เขียนเป็น operation บนเวกเตอร์/เมทริกซ์ได้ล้วนๆ เพราะ "ผลรวมถ่วงน้ำหนัก" คือนิยามของ dot product พอดี — ถ้าไม่มีภาษานี้ทุกสูตรต้องเขียนเป็นผลรวม Σ ทีละพจน์ ทั้งช้าและอ่านยาก</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ลองหาขนาดของเวกเตอร์ [3,4,12] แทน [1,2,3]: <code>||[3,4,12]|| = √(9+16+144) = √169 = 13</code> (ลงตัวพอดี ต่างจาก √14 ที่ไม่ลงตัว) — แสดงว่าสูตรพีทาโกรัสมิติเดียวกันใช้ได้กับเวกเตอร์กี่มิติก็ได้ ไม่จำกัดแค่ 2-3 มิติที่วาดภาพได้</dd>
+<dt>เชื่อมกับ</dt>
+<dd><code>||θ||²</code> (ขนาดเวกเตอร์ยกกำลังสอง) คือนิยามเดียวกับ regularization term <code>Σθⱼ²</code> ใน Lesson 1 และ Lesson 3 พอดี — regularization ไม่ใช่สูตรใหม่ แค่ "บีบขนาดเวกเตอร์ θ ให้เล็กลง" ด้วยภาษาเดียวกับที่เพิ่งเรียน</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 6</span><span>Matrix Indexing</span></div>
   <div class="qtext">จากเมทริกซ์ A = [[3,4,38],[8,46,54]] (2 แถว, 3 คอลัมน์) องค์ประกอบ a₂₃ มีค่าเท่ากับเท่าไหร่?</div>
@@ -257,6 +317,18 @@
 <p>เขียนเป็น matrix form ได้ <code>h(X)=Xθ</code> โดย X คือ matrix 3×3 (รวมคอลัมน์ x₀=1) และ θ คือ column vector [1,2,3]ᵗ ผลคูณ matrix-vector นี้ให้ผลลัพธ์ [4,7,10]ᵗ ในการคำนวณครั้งเดียว แทนการวน for loop ทีละแถว 3 รอบ.</p>
 <p>นี่คือเหตุผลที่ NumPy เร็วกว่า Python list ธรรมดา (สไลด์หัวข้อ Vectorization หน้า 19 เปรียบเทียบเวลารันจริงระหว่าง <code>for loop</code> กับ <code>numpy array</code>).</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>การคูณ matrix แทน for loop ไม่ได้ลดจำนวนการคูณ/บวกที่ต้องทำจริง (ยังคือ O(m×n) operations เท่าเดิม) แต่เปลี่ยนวิธี "สั่งงาน" ฮาร์ดแวร์ — CPU/GPU มีหน่วยคำนวณแบบขนาน (SIMD/BLAS) ที่ทำ dot product หลายตัวพร้อมกันได้ ถ้าเขียนเป็น Python for loop ทีละตัว ฮาร์ดแวร์ใช้ความสามารถนี้ไม่ได้เลย</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าข้อมูลจาก 3 examples เป็น 3,000 examples (1,000 เท่า) จำนวน FLOPs ที่ต้องคำนวณโต 1,000 เท่าเท่ากันทั้ง for loop และ vectorized (asymptotic complexity เท่าเดิม) แต่เวลารันจริงของ vectorized โตช้ากว่ามาก เพราะคูณเวกเตอร์ยาวได้ในคำสั่งเดียว ไม่ใช่ 3,000 คำสั่งแยก — นี่คือความต่างระหว่าง "ความซับซ้อนเชิงทฤษฎี" กับ "เวลารันจริงบนฮาร์ดแวร์"</dd>
+<dt>เชื่อมกับ</dt>
+<dd>หลักการเดียวกับที่ Lesson 4 หัวข้อ 3 ใช้เลือก mini-batch size — ยิ่ง batch ใหญ่ยิ่งใช้ประโยชน์จาก matrix multiplication เต็มที่ (เร็วต่อ 1 ตัวอย่าง) แต่ต้องแลกกับหน่วยความจำ</dd>
+</dl>
+</div>
+
 <h2>7. Shallow Neural Network สร้าง XNOR จาก AND, OR, NOT</h2>
 <p>ตัวอย่างสุดท้ายก่อนเข้า Forward Computation เต็มรูปแบบ: รวม gate เดี่ยวๆจากหัวข้อ 4 (AND, OR, NOT) มาต่อกันเป็น 2 layer เพื่อสร้าง <strong>XNOR</strong> (ตรงข้ามกับ XOR — ให้ 1 เมื่อ input เหมือนกัน).</p>
 
@@ -279,6 +351,18 @@
 </figure>
 <p>โครงสร้างที่ต่อกัน: hidden layer มี 2 node — node แรกคือ AND gate (θ₀=−30,θ₁=20,θ₂=20 จากหัวข้อ 4) คำนวณ <code>x₁∧x₂</code> node ที่สองคือ "(¬x₁)∧(¬x₂)" (AND gate ที่รับ input เป็นผลลัพธ์จาก NOT gate ของ x₁,x₂ ก่อน) แล้ว output layer เป็น OR gate ที่รับผลจากทั้งสอง hidden node มารวมกัน.</p>
 <p>นี่คือภาพที่ตอบคำถามหัวข้อ 2 อย่างเป็นรูปธรรม: การต่อ node เดี่ยวๆ (ที่ทำ logic gate ง่ายๆได้) เข้าด้วยกันเป็นหลาย layer ทำให้คำนวณ function ที่ node เดียวทำไม่ได้ (XOR/XNOR) ได้สำเร็จ.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ตัวอย่างนี้พิสูจน์ compositionality: AND กับ "(¬x₁)∧(¬x₂)" เป็นฟังก์ชัน linearly separable ทั้งคู่ (TLU เดี่ยวทำได้) แต่พอเอามารวมกันด้วย OR ในอีก layer หนึ่ง ได้ฟังก์ชันที่ linearly separable ไม่ได้ (XNOR) — เพราะแต่ละ hidden node "ตัดพื้นที่คนละมุม" แล้ว output layer แค่รวมผลตัดสินใจที่ทำไปแล้ว ไม่ต้องตัดสินใจแบบ non-linear เองทั้งหมด</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าสลับ output gate จาก OR เป็น AND (เก็บ hidden 2 ตัวเดิม): hidden1(AND)=1 เฉพาะ (1,1), hidden2("(¬x₁)∧(¬x₂)")=1 เฉพาะ (0,0) — สองตัวนี้ไม่เคยเป็น 1 พร้อมกันเลย (mutually exclusive by design) ดังนั้น AND ของทั้งสองจะได้ 0 เสมอทุก input — network พังกลายเป็น output คงที่ 0 ทั้งที่โครงสร้าง 2 layer เหมือนเดิม ต่างแค่ gate สุดท้าย</dd>
+<dt>เชื่อมกับ</dt>
+<dd>หลักการ "แต่ละ hidden unit ตัดสินใจคนละเงื่อนไข แล้ว output รวมผล" คือกลไกเดียวกับที่ Lesson 3-4 ใช้อธิบายว่าทำไมเครือข่ายลึกสร้าง decision boundary ซับซ้อนได้จากหน่วยเชิงเส้นง่ายๆจำนวนมาก</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 8</span><span>XNOR Construction</span></div>
@@ -310,6 +394,18 @@
 </ul>
 <p><strong>ขั้นที่ 2 (คำนวณ layer 2/output):</strong> รวม activation ทั้ง 3 ตัวจาก layer 1 (ไม่ใช่ x₁,x₂ ดิบๆอีกแล้ว): <code>z₁⁽²⁾ = θ₁₀⁽²⁾+θ₁₁⁽²⁾a₁⁽¹⁾+θ₁₂⁽²⁾a₂⁽¹⁾+θ₁₃⁽²⁾a₃⁽¹⁾</code> แล้ว <code>h_θ(x) = a₁⁽²⁾ = g(z₁⁽²⁾)</code>.</p>
 <p>สังเกตรูปแบบที่ซ้ำกันทุก layer: "คูณ weight บวกกัน (z) แล้วผ่าน g (a)" ต่างกันแค่ layer ที่ลึกกว่าใช้ a ของ layer ก่อนหน้าเป็น input แทน x ดิบๆ — รูปแบบนี้จะขยายเป็นสูตรทั่วไปของ deep network ใน Lesson 4.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>สูตรต้องแบ่งเป็น "z แล้ว a" (ไม่คำนวณ a รวดเดียว) เพราะ backpropagation ใน Lesson 3 ต้องแยกอนุพันธ์เป็น 2 ขั้นตามลำดับนี้พอดี (∂a/∂z คือ g' และ ∂z/∂θ คือ a ของ layer ก่อนหน้า) — ถ้าไม่แยกจะไม่มี "จุดต่อ" ให้ chain rule ไล่ทีละขั้นได้</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า hidden layer มี 5 node แทน 3 node สูตร z₁⁽²⁾ เปลี่ยนจาก 4 พจน์ (bias+3 hidden) เป็น 6 พจน์ (bias+5 hidden): <code>z₁⁽²⁾=θ₁₀⁽²⁾+Σₖθ₁ₖ⁽²⁾aₖ⁽¹⁾</code> (k=1..5) และ dimension ของ θ⁽²⁾ เปลี่ยนจาก 1×4 เป็น 1×6 ตามกฎ (จำนวน node ปลายทาง)×(จำนวน node ต้นทาง+1) จากหัวข้อ 3</dd>
+<dt>เชื่อมกับ</dt>
+<dd>โครงสร้าง "z แล้ว a" นี้คือ 2 ใน 4 เทอมของสูตร backprop ที่ Lesson 3 จะพิสูจน์ (g' มาจากขั้น a=g(z), a⁽ˡ⁻¹⁾ มาจากขั้น z=θ·a) และขยายเป็นสูตรทั่วไปของ L layer ใน Lesson 4</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 9</span><span>Forward Computation</span></div>

@@ -39,6 +39,18 @@ Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" 
 <p>เทียบกับสูตร 2 layer เดิม (4 เทอมคูณกัน) สูตรนี้ก็ยังมี 4 เทอมเท่ากัน (δ, θ, g', a) เพียงแต่ตอนนี้ δ, θ, g', a ทุกตัวมี superscript [L] หรือ [L-1] ไม่ใช่ [1]/[2] ตายตัว.</p>
 <p><strong>คำอธิบายที่สไลด์ให้ (Interpretation):</strong> ถ้า weight เส้นหนึ่งเชื่อมไปยัง node ที่มี δ<sub>destination</sub> ใหญ่ (node นั้นมีส่วนทำให้ error สุดท้ายสูง) gradient ของเส้นนั้นก็จะใหญ่ตาม ทำให้ gradient descent ปรับ weight เส้นนั้นแรงกว่าเส้นอื่น — ตรรกะ "ปรับมากตรงที่ผิดมาก" เดียวกับทุก layer ไม่ว่าจะมีกี่ layer.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>สูตรทั่วไปใช้ superscript ตัวแปร l แทนตัวเลขตายตัว เพราะ backprop เป็น local operation (พิสูจน์แล้วใน Lesson 3 หัวข้อ 8) — ไม่ว่าเครือข่ายจะมีกี่ layer แต่ละ node คำนวณ δ ของตัวเองด้วยสูตรเดียวกันเสมอ ต่างแค่ "ค่า l เท่าไหร่" ที่แทนเข้าไป</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าเครือข่ายมี L=5 สูตร ∂J/∂θ₁,₁⁽³⁾ (θ ที่ layer 3 กลางเครือข่าย) มีกี่เทอมคูณกัน? จาก layer 3 ถึง output (layer 5) ต้องผ่าน z³→a³→z⁴→a⁴→z⁵→a⁵→J รวม 3 ขั้น — จำนวนขั้นเท่ากับ "ระยะทาง" (L−l) จาก layer นั้นถึง output เสมอ ไม่ใช่ค่าคงที่</dd>
+<dt>เชื่อมกับ</dt>
+<dd>ตรงกับกลไกที่ Lesson 3 หัวข้อ 2 พิสูจน์ไว้แล้ว (จำนวนขั้น = จำนวน layer ที่ต้องผ่าน) — บทนี้แค่ทำให้สูตรทั่วไปสำหรับ L ใดๆ ไม่ใช่หลักการใหม่</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 1</span><span>Deep NN Backprop</span></div>
   <div class="qtext">สูตร ∂J/∂θ₁,₁⁽ᴸ⁻¹⁾ = δ⁽ᴸ⁾·θ₁,₁⁽ᴸ⁾·g'(z₁⁽ᴸ⁻¹⁾)·a₁⁽ᴸ⁻²⁾ เทียบกับสูตร 2 layer เดิมจาก Lesson 3 ต่างกันอย่างไร?</div>
@@ -61,6 +73,18 @@ Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" 
 </ol>
 <p>บทนี้ตอบปัญหาที่ 1 ด้วย optimizer ที่เร็วกว่า และปัญหาที่ 2 ด้วยเทคนิค overfitting handling.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>4 ปัญหานี้ไม่ใช่รายการแยกกันสุ่มๆ — ปัญหา (2) overfitting และ (3) vanishing/exploding เชื่อมกันทางกลไก: ยิ่งเครือข่ายลึก (แก้ปัญหา expressiveness) ยิ่งมีพารามิเตอร์มาก (เสี่ยง overfitting) และยิ่งมีโซ่ chain rule ยาว (เสี่ยง vanishing) — "ความลึก" คือต้นตอเดียวที่ทำให้เกิดทั้งสองปัญหาพร้อมกัน</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าลดความลึกจาก 10 layer เหลือ 3 layer แต่เพิ่มความกว้างแทนให้พารามิเตอร์รวมเท่าเดิม ปัญหาไหนหายไปและปัญหาไหนยังอยู่? vanishing gradient เบาลงมาก (โซ่สั้นลง) แต่ overfitting risk อาจไม่หายไปเลยถ้าพารามิเตอร์รวมเท่าเดิม — แสดงว่า "ความลึก" กับ "จำนวนพารามิเตอร์" เป็นสาเหตุคนละกลไกที่บังเอิญมาด้วยกันบ่อยๆ ไม่ใช่สาเหตุเดียวกัน</dd>
+<dt>เชื่อมกับ</dt>
+<dd>หัวข้อ 3-5 (optimizer) ในบทนี้แก้ปัญหา (1) เทรนช้า, หัวข้อ 6-7 แก้ปัญหา (2) overfitting — ส่วนปัญหา (3) vanishing/exploding รอ Lesson 5</dd>
+</dl>
+</div>
+
 <h2>3. Batch, Stochastic, Mini-Batch Gradient Descent</h2>
 <figure>
 <img src="../assets/slides/dl4-p07-batch-gradient-descent.png" alt="Batch gradient descent diagram: the gradient path taken across the entire cost surface using all training examples at once per update step, showing a smooth, low-noise trajectory toward the minimum">
@@ -82,6 +106,18 @@ Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" 
 </figure>
 <p><strong>Mini-Batch GD:</strong> จุดกึ่งกลาง — สไลด์ยกตัวอย่าง: มี 10,000 training examples แบ่งเป็น 10 mini-batch (batch size = 1,000 ตัวอย่างต่อ batch) อัปเดต θ ทุกครั้งที่ผ่าน 1 mini-batch (คำนวณ: <code>10,000 ÷ 1,000 = 10 mini-batches</code> ต่อ 1 epoch).</p>
 <p>ได้ทั้งความเร็วจาก matrix multiplication (คำนวณทีละ 1,000 ตัวอย่างพร้อมกัน) และความเสถียรที่ดีกว่า SGD ตัวเดียว — batch size ที่นิยม (32-256, เป็นเลขยกกำลัง 2) เพราะ GPU ทำงานได้มีประสิทธิภาพกับขนาดเหล่านี้.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทั้งสามวิธีคำนวณ gradient ทิศทางเดียวกันในทางทฤษฎี (ค่าคาดหวังเท่ากัน) ต่างกันแค่ "ใช้ข้อมูลกี่ตัวอย่างประมาณค่า gradient ต่อ 1 update" — ยิ่งใช้น้อยตัวอย่าง ยิ่งประมาณค่าไม่แม่น (noise สูง) แต่ยิ่งอัปเดตบ่อย (เร็ว) นี่คือ trade-off เดียวที่ปรับผ่าน batch size ตัวเดียว ไม่ใช่ 3 อัลกอริทึมที่ไม่เกี่ยวกัน</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ข้อมูล 10,000 ตัวอย่าง ถ้าใช้ batch size=1 (SGD จริง) ได้ 10,000 update/epoch (มากแต่ noisy สุด) batch size=1,000 ได้ 10 update/epoch (น้อยแต่นิ่งกว่า) Batch GD (batch=10,000) ได้แค่ 1 update/epoch (นิ่งที่สุดแต่ช้าที่สุด) — สาม algorithm คือ "batch size" เดียวกันแค่เลื่อนค่า</dd>
+<dt>เชื่อมกับ</dt>
+<dd>batch size คือ "จำนวนตัวอย่างที่ใช้ประมาณค่าเฉลี่ยของ gradient" ตรงกับกลไกที่ Lesson 3 หัวข้อ 4 อธิบาย (D=(1/m)Δ คือค่าเฉลี่ย) — ยิ่ง m น้อย ค่าเฉลี่ยยิ่งมี variance สูง (สถิติพื้นฐาน)</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 2</span><span>Mini-batch GD</span></div>
@@ -116,6 +152,18 @@ Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" 
 <li><code>valueₜ₋₂</code> มีน้ำหนัก <code>β²(1−β)</code> (เล็กกว่าอีก)</li>
 </ul>
 <p>ยิ่ง value เก่าเท่าไหร่ ยิ่งถูกคูณด้วย β ซ้ำหลายรอบ น้ำหนักจึงเล็กลง<strong>แบบเอ็กซ์โพเนนเชียล</strong> ตามชื่อของมัน — ถ้า β=0.9 ตัวอย่างเช่น value ปัจจุบันมีน้ำหนัก 0.1 ค่าก่อนหน้ามีน้ำหนัก 0.09 ก่อนนั้นอีก 0.081 ไล่ลดลงเรื่อยๆ.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ต้องใช้ EWA (ถ่วงน้ำหนักลดหลั่นแบบ exponential) แทนค่าเฉลี่ยธรรมดา (นับทุก gradient ที่ผ่านมาเท่ากันหมด) เพราะ gradient ล่าสุดควรมีอิทธิพลมากกว่า gradient เก่ามาก (ภูมิทัศน์ cost surface ณ ตำแหน่งปัจจุบันต่างจากตอนเริ่มเทรน) ค่าเฉลี่ยธรรมดาจะ "ลาก" ทิศทางเก่าที่ไม่เกี่ยวข้องแล้วมาถ่วงทิศทางใหม่</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า β=0.5 (แทน 0.9) น้ำหนักของ 3 ค่าล่าสุดเป็นเท่าไหร่? valueₜ: (1−0.5)=0.5, valueₜ₋₁: 0.5×0.5=0.25, valueₜ₋₂: 0.5²×0.5=0.125 — ลดฮวบเร็วกว่า β=0.9 มาก (0.1, 0.09, 0.081 ใกล้เคียงกัน) β น้อยจึง "จำ" ประวัติสั้นกว่า β มาก "จำ" ประวัติยาวกว่า (โมเมนตัมมากกว่า)</dd>
+<dt>เชื่อมกับ</dt>
+<dd>β คือ hyperparameter เดียวกับที่ Adam ใช้เป็น β₁ ในหัวข้อ 5 — ควบคุม trade-off ระหว่าง "smooth มาก (β สูง แกว่งน้อยแต่ปรับตัวช้า)" กับ "ตอบสนองไว (β ต่ำ ปรับตัวเร็วแต่ noisy กว่า)"</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 3</span><span>EWA Expansion</span></div>
@@ -156,6 +204,18 @@ Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" 
 <p>ที่ t เล็ก (t=1,2,..) ตัวหาร <code>(1−β₁ᵗ)</code> จะเล็กมาก (เพราะ β₁ᵗ ยังใกล้ 1 อยู่) ทำให้ค่าที่แก้แล้วถูก "ขยาย" ขึ้นมาชดเชยพอดี.</p>
 <p>พอ t มากขึ้น <code>β₁ᵗ→0</code> ตัวหารเข้าใกล้ 1 การแก้ไขจึงแทบไม่มีผลอีกต่อไป (ค่า v ที่สะสมมามากพอแล้วไม่ bias เข้า 0 อีก).</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>RMSProp ต้องหารด้วย √(sᵢ) ไม่ใช่หารด้วย sᵢ ตรงๆ เพราะ sᵢ คือค่าเฉลี่ยของ gradient² (หน่วยเป็นกำลังสองของ gradient) การหารด้วย √sᵢ ทำให้ "หน่วย" ของผลลัพธ์กลับมาตรงกับ gradient เดิม ไม่งั้นขนาด step จะเพี้ยนหน่วยไปเลย</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า gradient คงที่ที่ 0.1 ทุก iteration (ไม่มี noise) sᵢ ลู่เข้า (0.1)²=0.01 (EWA ของค่าคงที่ลู่เข้าค่านั้นเอง) √sᵢ=0.1 พอดี — gradient/√sᵢ = 0.1/0.1 = 1 (ไม่ขึ้นกับขนาด gradient จริงอีกต่อไป!) แสดงว่า RMSProp ทำให้ step ไม่ขึ้นกับ "ขนาด" ของ gradient แต่ขึ้นกับ "ทิศทาง" เท่านั้นเมื่อ gradient นิ่ง</dd>
+<dt>เชื่อมกับ</dt>
+<dd>คุณสมบัตินี้คือเหตุผลที่ Adam/RMSProp ทนทานต่อปัญหา vanishing/exploding gradient ได้ดีกว่า plain gradient descent — Lesson 5 จะอธิบายว่า vanishing gradient ทำให้ plain GD แทบไม่ขยับ θ เลย แต่ RMSProp ยังขยับได้เพราะ normalize ขนาดออกไปแล้ว</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 4</span><span>Adam / Bias Correction</span></div>
   <div class="qtext">เหตุผลที่ Adam ต้องมี Bias Correction (หาร vᵢ ด้วย 1−β₁ᵗ) ในช่วง iteration แรกๆคืออะไร?</div>
@@ -182,6 +242,18 @@ Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" 
 <p><strong>ทำไมต้อง scale activation ตอน training (Inverted Dropout)?</strong> สมมติ dropout rate=0.1 (10% ของ node ถูกปิด) นั่นคือ keep_prob=1−0.1=0.9 — สไลด์บอกให้<strong>หารค่า activation ที่เหลือด้วย keep_prob</strong> คือหารด้วย 0.9 (เท่ากับเพิ่มค่าที่เหลือขึ้น ~11%).</p>
 <p>เหตุผล: ถ้าไม่ scale ผลรวม input ที่ node ถัดไปได้รับจะ "น้อยกว่าปรกติ" เพราะมี node หายไป 10% พอถึงเวลา test (ไม่ dropout แล้ว ทุก node กลับมาทำงานครบ) ผลรวมจะกลายเป็น "มากกว่า" ที่โมเดลเคยเห็นตอนเทรน ถ้าไม่ชดเชยไว้ตั้งแต่ตอนเทรน การกระจายของค่า activation ตอน train กับ test จะไม่ตรงกัน.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>Max-Norm กับ Dropout แก้ overfitting คนละกลไก: Max-Norm บีบ "ขนาด" ของ weight vector ไม่ให้ใหญ่เกินไป (ลด capacity ทางอ้อม) ส่วน Dropout บีบไม่ให้ node "พึ่งพา" กันมากเกินไป (ลด co-adaptation) — สองกลไกนี้ทำงานพร้อมกันได้เพราะแก้ปัญหาคนละมุม ไม่ทับซ้อนกัน</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า dropout rate เพิ่มจาก 0.1 เป็น 0.5 (ปิด node ครึ่งหนึ่ง) ต้องหารค่า activation ที่เหลือด้วยเท่าไหร่ตาม Inverted Dropout? keep_prob=1−0.5=0.5 → หารด้วย 0.5 (คือคูณ 2) เทียบกับ dropout rate=0.1 ที่หารแค่ 0.9 (คูณ ~1.11) — ยิ่ง dropout rate สูง ยิ่งต้อง "ขยาย" activation ที่เหลือมากขึ้นตามสัดส่วนเพื่อชดเชย node ที่หายไป</dd>
+<dt>เชื่อมกับ</dt>
+<dd>กลไก "ลด capacity เพื่อลด overfitting" เดียวกับ regularization L1/L2 ใน Lesson 1/3 — Max-Norm/Dropout/L2 ทั้งหมดคือวิธีต่างกันในการตอบคำถามเดียวกัน (ทำยังไงให้โมเดลไม่ "จำ" training data มากเกินไป)</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 5</span><span>Dropout Scaling</span></div>
   <div class="qtext">เมื่อ dropout rate = 0.1 (keep_prob = 0.9) เพราะเหตุใดต้องหารค่า activation ที่เหลือด้วย 0.9 ระหว่างการเทรน (Inverted Dropout)?</div>
@@ -201,6 +273,18 @@ Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" 
 <p>Early Stopping ติดตาม validation error ทุก epoch แล้วหยุดเทรนตรงจุดที่ validation error เริ่ม<strong>เพิ่มขึ้น</strong> (แม้ training error จะยังลดลงต่อเนื่องก็ตาม) — จุดตัดระหว่างสองเส้นในกราฟคือสัญญาณว่าโมเดลเริ่ม overfit (จำ training data มากเกินไปจนเสีย generalization).</p>
 <p>ข้อดีคือไม่ต้องเดา hyperparameter "จำนวน epoch ที่เหมาะสม" ล่วงหน้าเลย ตั้งจำนวน epoch ไว้สูงๆแล้วให้ early stopping หยุดเองตรงจุดที่ดีที่สุด.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>Early Stopping ใช้ได้เพราะ Jtrain กับ Jcv มีพฤติกรรมต่างกันตามเวลาเทรน (Jtrain ลดตลอด, Jcv ลดแล้วเพิ่ม) — ถ้าทั้งสองเส้นลดตลอดคู่กันตลอดไปโดยไม่มีจุดที่ Jcv เริ่มเพิ่ม early stopping จะไม่มีจุดหยุดที่ชัดเจนให้เลือกเลย</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าโมเดล underfitting (high bias จาก Lesson 1) Jtrain กับ Jcv จะมีพฤติกรรมแบบไหน และ early stopping ช่วยอะไรได้ไหม? ทั้งสองเส้นจะสูงและใกล้เคียงกันตลอด (ไม่มีช่วงที่ Jcv แยกออกไปเพิ่มขึ้น) — early stopping จึงช่วยไม่ได้เลยในกรณีนี้ เพราะปัญหาคือโมเดลไม่พอ ไม่ใช่เทรนนานเกินไป ต้องแก้ด้วยวิธีเพิ่ม capacity แทน</dd>
+<dt>เชื่อมกับ</dt>
+<dd>จุดเชื่อมกับกราฟ Jtrain/Jcv vs degree of polynomial ใน Lesson 1 หัวข้อ 10 — Early Stopping คือการหยุด "ตามเวลา" ในขณะที่หัวข้อนั้นคือการเลือก "ตาม capacity" ทั้งสองใช้สัญญาณเดียวกัน (Jcv เริ่มแย่ลง) แค่ปรับตัวแปรคนละตัว</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 6</span><span>Early Stopping</span></div>
   <div class="qtext">Early Stopping ใช้สัญญาณอะไรในการตัดสินใจว่าควรหยุดเทรนโมเดล?</div>
@@ -216,6 +300,18 @@ Sebastian Ruder, <a href="https://arxiv.org/pdf/1609.04747.pdf" target="_blank" 
 <h2>7. Data Augmentation: เพิ่มข้อมูลโดยไม่ต้องเก็บใหม่</h2>
 <p>ถ้ามี training example น้อยเกินไป (สาเหตุของ overfitting โดยตรง) แต่เก็บข้อมูลใหม่ไม่ได้ ให้สร้างข้อมูลใหม่จากข้อมูลเดิมด้วยการแปลงแบบสุ่ม (เช่น หมุนภาพ, พลิกภาพ, ครอปภาพ).</p>
 <p>โมเดลจะเห็นความหลากหลายมากขึ้นในแต่ละ epoch ทำให้ทนทานต่อการเปลี่ยนตำแหน่ง/ทิศทาง/ขนาดของวัตถุในภาพมากขึ้น โดยไม่ต้องเก็บข้อมูลจริงเพิ่มเลย.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>Data Augmentation ได้ผลเพราะการแปลงแบบสุ่ม (หมุน/พลิก/ครอป) ไม่เปลี่ยน label ของภาพ (แมวที่หมุน 15° ก็ยังเป็นแมว) แต่เปลี่ยน pixel value ที่โมเดลเห็น — เป็นการเพิ่ม "variation ที่ label คงที่" ให้โมเดลเรียนรู้ว่าอะไรคือ invariant (แมว) อะไรคือ noise ที่ไม่สำคัญ (มุม/ตำแหน่ง)</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าใช้ data augmentation กับงานอ่านตัวเลขในภาพ (แยกเลข 6 กับ 9) การหมุนภาพ 180° จะช่วยหรือทำร้ายโมเดล? ทำร้าย เพราะเลข 6 หมุน 180° กลายเป็นเลข 9 พอดี (label จริงเปลี่ยน แต่ augmentation ไม่ได้เปลี่ยน label ตาม) โมเดลจะเรียนรู้ label ผิดๆ — การแปลงที่ "ใช้ได้" ต้องเป็นการแปลงที่ label จริงๆไม่เปลี่ยนเท่านั้น ไม่ใช่ทุกการแปลงจะปลอดภัย</dd>
+<dt>เชื่อมกับ</dt>
+<dd>หลักการ "เพิ่มข้อมูลที่ label คงที่เพื่อลด overfitting" คือเป้าหมายเดียวกับ Dropout/Regularization ในหัวข้อ 6 (ลดการพึ่งพา feature ที่ไม่สำคัญ) แต่ทำที่ "ข้อมูล" แทนที่จะทำที่ "โมเดล"</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 7</span><span>Batch GD vs SGD</span></div>

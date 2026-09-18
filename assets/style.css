@@ -144,6 +144,25 @@ hr {
   font-weight: 700;
 }
 
+/* --- Mechanism box: why / what-if / connects-to, forces transfer over recall --- */
+.box.mech {
+  border-left: 4px solid var(--good);
+  background: #fff;
+}
+.box.mech .label { color: var(--good); }
+.box.mech dl { margin: 0; }
+.box.mech dt {
+  font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+  color: var(--good);
+  font-weight: 700;
+  margin: 1em 0 0.3em;
+}
+.box.mech dt:first-child { margin-top: 0; }
+.box.mech dd { margin: 0 0 0.2em; }
+
 /* --- Figures --- */
 figure { margin: 1.5em 0; }
 figure img, figure svg { width: 100%; height: auto; display: block; border-radius: 6px; border: 1px solid var(--rule); }

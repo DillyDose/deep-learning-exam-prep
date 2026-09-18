@@ -42,6 +42,18 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <p>ตรงนี้คือเหตุผลที่ ReLU (จาก Lesson 3 หัวข้อ 5) ถูกเลือกเป็นค่าเริ่มต้นสำหรับ hidden layer: อนุพันธ์ของมันเป็น 1 คงที่เมื่อ z≥0 (ไม่มี saturation ในโซนบวก) ทำให้ไม่ลดขนาด gradient ไม่ว่าจะผ่านกี่ layer.</p>
 <p>แต่ ReLU ก็แลกมาด้วยปัญหาใหม่ (ตายที่ z&lt;0 และเสี่ยง exploding เมื่อ activation บวกไม่มีขอบเขตบน) จึงต้องมี gradient clipping (ตัดค่า gradient ไม่ให้เกิน threshold ก่อน update) ช่วยแก้ฝั่ง exploding.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ปรากฏการณ์นี้เป็นผลคูณสะสม (product) ไม่ใช่ผลรวม (sum) — แม้แต่ละเทอมเบี่ยงจาก 1 แค่นิดเดียว พอคูณกันหลายสิบรอบผลลัพธ์ก็ต่างกันเป็นเลขชี้กำลัง ต่างจากผลรวมที่ไม่เบี่ยงเบนเร็วขนาดนี้</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าแต่ละเทอมเฉลี่ยที่ 0.9 (ไม่ใช่ 0.25 แบบ sigmoid saturate) 10 layer จะได้ <code>0.9¹⁰≈0.349</code> (ลดลงแค่ 65%) แต่ 50 layer จะได้ <code>0.9⁵⁰≈0.00515</code> (ลดลง 99.5%) — "จำนวน layer" ต่างหากที่ทำให้ปัญหารุนแรงแบบทวีคูณ แม้ค่าเฉลี่ยต่อเทอมดูไม่แย่มาก (0.9) ก็พังได้ถ้าเครือข่ายลึกพอ</dd>
+<dt>เชื่อมกับ</dt>
+<dd>กลไกการคูณสะสมเดียวกับ Exponential Weighted Average ใน Lesson 4 หัวข้อ 4 (β คูณตัวเองซ้ำ) — ทั้งสองเรื่องคือผลลัพธ์ของ "คูณเลขที่ใกล้ 1 ซ้ำหลายรอบ" แค่บริบทต่างกัน</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 1</span><span>Vanishing Gradient</span></div>
   <div class="qtext">ทำไมเครือข่ายที่ใช้ sigmoid ทุก layer ถึงเสี่ยงเกิด Vanishing Gradient มากกว่าเครือข่ายที่ใช้ ReLU?</div>
@@ -78,6 +90,18 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <li><strong>He/Kaiming (2015):</strong> <code>var = 2/fan_in</code> — เหมาะกับ ReLU และตัวแปรของมัน (ตัวเลข 2 ในตัวเศษชดเชยที่ ReLU "ตัดครึ่งค่าลบทิ้ง" ทำให้ variance ที่ออกมาจาก ReLU ลดลงครึ่งหนึ่งโดยธรรมชาติ ต้องเพิ่มตัวคูณ 2 มาชดเชย)</li>
 </ul>
 <p>กฎจำง่ายจากสไลด์หัวข้อถัดไป: <strong>ReLU/Leaky ReLU ใช้ He, tanh/Sigmoid ใช้ Xavier</strong>.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทำไม variance (ไม่ใช่ mean) คือตัวที่ต้องคุม? เพราะ mean=0 อยู่แล้วโดยอัตโนมัติจากการสุ่มสมมาตร (บวก/ลบเท่ากัน) แต่ variance สะสมทุกเทอมที่บวกกัน (เป็นค่าบวกเสมอ ไม่หักล้างกัน) จึงเป็นปริมาณเดียวที่ "โต" ตามจำนวน input จริงๆ ถ้าไม่คุม z จะกระจายกว้างขึ้นทุก layer ที่ลึกขึ้น</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าใช้ He init (var=2/fan_in) กับ fan_in=100: var(θᵢ)=2/100=0.02 ต่อ weight, variance ของผลรวม 100 เทอม = 100×0.02×1²=2 (คงที่ที่ 2 ไม่ว่า fan_in จะเป็นเท่าไหร่ เพราะ 2/fan_in × fan_in = 2 เสมอ) — ต่างจาก N(0,1) ธรรมดาที่ variance โตเป็น 100 ตามจำนวน input โดยไม่มีขีดจำกัด</dd>
+<dt>เชื่อมกับ</dt>
+<dd>นี่คือกลไกที่ตอบคำถามหัวข้อ 1 โดยตรง — การคุม variance ให้คงที่ทุก layer ป้องกันไม่ให้ z หลุดไปโซน saturation ตั้งแต่ layer แรก ซึ่งคือต้นตอของ vanishing gradient</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 2</span><span>Weight Init Variance</span></div>
@@ -117,6 +141,18 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 
 <p><strong>ตอน Training vs ตอน Test:</strong> ตอน train, μ_B และ σ_B² คำนวณจาก mini-batch ปัจจุบัน (เปลี่ยนไปทุก batch) แต่ตอน test ไม่มี "mini-batch" ให้คำนวณ (อาจมีแค่ 1 ตัวอย่าง) — ทางแก้คือเก็บ <em>moving average</em> ของ μ_B, σ_B² ที่สะสมมาตลอดการเทรน แล้วใช้ค่าเฉลี่ยสะสมนี้แทนตอน test (คงที่ ไม่เปลี่ยนตามข้อมูล test แต่ละตัว).</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทำไมต้อง normalize "ต่อ mini-batch" ไม่ใช่ normalize จากสถิติของทั้ง dataset ครั้งเดียวตอนเริ่มเทรน? เพราะ distribution ของ z ที่ hidden layer เปลี่ยนไปเรื่อยๆระหว่างเทรน (θ ของ layer ก่อนหน้าเปลี่ยนทุก step) — normalize ครั้งเดียวตอนต้นจะล้าสมัยทันที ต้องคำนวณใหม่ทุก mini-batch ถึงจะตามทัน</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า mini-batch มีแค่ 2 ตัวอย่าง การประมาณ μ_B, σ_B² จาก 2 จุดน่าเชื่อถือแค่ไหน? ต่ำมาก — standard error ∝ 1/√n ทำให้แต่ละ mini-batch normalize ไปคนละทิศ เพิ่ม noise ให้การเทรนแทนที่จะลด นี่คือเหตุผลที่ batch size เล็กเกินไปทำให้ BN ทำงานแย่ลง</dd>
+<dt>เชื่อมกับ</dt>
+<dd>batch size ตัวเดียวกับที่ Lesson 4 หัวข้อ 3 ใช้ trade-off ความเร็ว/ความนิ่งของ gradient ตอนนี้ยังส่งผลต่อคุณภาพของ BN ด้วย — เลือก batch size ต้องคิดถึงทั้งสองเรื่องพร้อมกัน</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 4</span><span>Batch Normalization</span></div>
   <div class="qtext">เพราะเหตุใด Batch Normalization ยังต้องมีขั้น "scale and shift" (γz_norm+β) ต่อจากขั้น normalize แทนที่จะหยุดแค่ normalize ให้ mean=0, variance=1?</div>
@@ -142,6 +178,18 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <li>เหมาะกับ Transformer ที่ batch statistics ผันแปรสูง</li>
 </ul>
 <p>นี่คือเหตุผลที่ LayerNorm เป็นตัวเลือกมาตรฐานใน Transformer/LLM ในขณะที่ BN ยังนิยมใน CNN.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทำไม LayerNorm ถึง "ไม่ต้องพึ่ง moving average" เหมือน BN? เพราะ BN ต้องพึ่ง moving average เนื่องจาก "หน่วยที่ normalize" (1 neuron ข้ามทุกตัวอย่าง) หายไปตอน test (เหลือตัวอย่างเดียว) แต่ LayerNorm normalize "ข้าม neuron ภายในตัวอย่างเดียวกัน" ซึ่งมีอยู่ครบทั้งตอน train และ test เสมอ</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า layer มี neuron แค่ 2 ตัว การคำนวณ LayerNorm (mean/variance จาก 2 ค่า) น่าเชื่อถือไหมเทียบกับ layer ที่มี 512 neuron? ไม่น่าเชื่อถือเท่า — LayerNorm มีปัญหาตรงข้ามกับ BN: ยิ่ง layer มี neuron น้อย ยิ่งประมาณสถิติแย่ (เหมือนปัญหา batch size เล็กของ BN แต่ย้ายแกนมาเป็น "layer width เล็ก" แทน)</dd>
+<dt>เชื่อมกับ</dt>
+<dd>ทั้ง BN และ LayerNorm มีจุดอ่อนเดียวกันทางสถิติ (ประมาณ mean/variance จากตัวอย่างน้อยไม่แม่น) แค่แกนที่ใช้นับต่างกัน (ข้ามตัวอย่าง vs ข้าม neuron) — batch ใหญ่เลือก BN, layer กว้างเลือก LayerNorm</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 5</span><span>Layer vs Batch Norm</span></div>
@@ -186,6 +234,18 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <p>จำนวน mini-batch ต่อ epoch คำนวณตรงไปตรงมาตามสูตร Lesson 4 หัวข้อ 3: <code>#mini-batches = #training examples ÷ batch size = 48,000 ÷ 64 = 750 batches</code>.</p>
 <p>เครือข่ายจะอัปเดต θ ทั้งหมด 750 ครั้งต่อ 1 epoch และเทรนซ้ำ 40 epoch (รวม 30,000 ครั้งของการอัปเดต θ ทั้งหมด).</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทำไมการนับพารามิเตอร์และ mini-batch ใน Keras ไม่ใช่ความรู้ใหม่ แต่คือสูตรเดิมจาก Lesson 2 (dimension ของ θ) และ Lesson 4 (batch size) ที่ใส่ตัวเลขจริง? เพราะ Keras แค่ implement สูตรคณิตศาสตร์ที่เรียนมาทั้งวิชา ไม่มีกลไกใหม่ — ต้องมั่นใจสูตรมือก่อน แล้วโค้ดจะตรงกับที่คำนวณได้</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าโมเดลเปลี่ยนเป็น 784→32→10 (ตัด hidden layer หนึ่งชั้นออก แต่ให้ชั้นที่เหลือกว้างขึ้น) พารามิเตอร์รวมเท่าไหร่? Layer1: 32×(784+1)=25,120, Layer2: 10×(32+1)=330, รวม 25,450 — มากกว่าโมเดลเดิม (13,002) เกือบ 2 เท่า ทั้งที่ตัด layer ออก เพราะ layer แรกที่คูณกับ 784 อยู่แล้วยิ่งกว้างยิ่งโตเร็ว</dd>
+<dt>เชื่อมกับ</dt>
+<dd>ตรงกับกลไกที่ Lesson 3 หัวข้อ 7 พิสูจน์ไว้ (ความกว้างกับความลึกส่งผลต่อจำนวนพารามิเตอร์คนละแบบ) — ลด layer แต่เพิ่มความกว้างไม่ได้แปลว่าพารามิเตอร์จะลดลงเสมอไป</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 6</span><span>Keras Parameter Count</span></div>
   <div class="qtext">โมเดล Keras มีโครงสร้าง 784→16→16→10 (Dense ทุก layer) จำนวนพารามิเตอร์ของ layer แรก (784→16) เท่ากับเท่าไหร่ ตามกฎ #node ปัจจุบัน × (#node ก่อนหน้า+1)?</div>
@@ -214,6 +274,18 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <p>เมื่อ label เป็น integer เดี่ยว (เช่น MNIST แต่ละภาพมี label เป็นเลข 0-9 ตัวเดียว ไม่ใช่ one-hot vector) ใช้ <code>loss="sparse_categorical_crossentropy"</code> แทน <code>categorical_crossentropy</code> (ซึ่งต้องการ one-hot) — ประหยัดทั้งโค้ดแปลงข้อมูลและหน่วยความจำ.</p>
 <p>ส่วน <code>Softmax</code> layer (ที่เรียนสูตรใน Lesson 3 หัวข้อ 6) ในบางกรณีเขียนแยกเป็น layer ต่างหากต่อจาก Dense layer สุดท้าย แทนที่จะฝัง activation='softmax' ไว้ใน Dense เลย — โครงสร้าง <code>Input → Flatten → Dense → Softmax</code> เป็นอีกวิธีเขียนโมเดลแบบ explicit ที่ให้ผลเหมือนกัน.</p>
 
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทำไม sparse_categorical_crossentropy กับ categorical_crossentropy ให้ค่า loss เท่ากันทุกตัวเลข? เพราะทั้งสองคำนวณสูตรเดียวกันทุกตัวอักษร (<code>−Σyₖlog(h(x)ₖ)</code> จาก Lesson 1) ต่างกันแค่วิธีเก็บ y: one-hot เก็บเป็น vector ส่วน sparse เก็บเป็น index เดียว แล้ว Keras แปลงเป็น one-hot ให้เองข้างในตอนคำนวณ</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้า label จริงคือ y=3 (จาก 10 class) sparse เก็บเป็น "3" ตรงๆ ส่วน one-hot ต้องเก็บ [0,0,0,1,0,0,0,0,0,0] (10 ตัวเลข) — 60,000 ตัวอย่าง sparse ใช้พื้นที่ 60,000 ตัวเลข ส่วน one-hot ใช้ 600,000 (มากกว่า 10 เท่า เพราะ K=10) ยิ่ง K มาก ความต่างของพื้นที่เก็บยิ่งมาก</dd>
+<dt>เชื่อมกับ</dt>
+<dd>สูตร cross-entropy loss เดียวกับ Lesson 1 หัวข้อ multi-class — sparse/categorical คือแค่รูปแบบการเก็บ y คนละแบบ ไม่ใช่สูตร loss คนละตัว</dd>
+</dl>
+</div>
+
 <div class="quiz">
   <div class="qhead"><span>คำถาม 8</span><span>Sparse Categorical Crossentropy</span></div>
   <div class="qtext">เพราะเหตุใดจึงใช้ loss="sparse_categorical_crossentropy" กับ label ของ MNIST แทน "categorical_crossentropy"?</div>
@@ -233,6 +305,18 @@ Glorot &amp; Bengio (2010), <a href="https://proceedings.mlr.press/v9/glorot10a/
 <li>เพิ่ม <code>layers.Dropout(rate)</code> เป็น layer แยกต่อท้าย layer ที่ต้องการทำ dropout</li>
 </ul>
 <p>ทั้งสองคือการ "แปลสูตรทฤษฎีที่เรียนมาทั้งวิชา" เป็นโค้ด 1 บรรทัดเท่านั้น ไม่มีคณิตศาสตร์ใหม่.</p>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>ทำไมโค้ด 1 บรรทัด (kernel_regularizer, Dropout) แทนสูตรคณิตศาสตร์ทั้งหมดได้? เพราะ Keras แยกสถาปัตยกรรม (layer ต่อกันยังไง) ออกจากพฤติกรรมตอนเทรน (บวก penalty term หรือสุ่มปิด node ยังไง) — ผู้ใช้แค่ประกาศเจตนา แล้ว autodiff (Lesson 3 หัวข้อ 4) จัดการอนุพันธ์ของ penalty term ให้เองหมด</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>ถ้าใส่ทั้ง kernel_regularizer=l2(λ) และ Dropout(0.5) ใน layer เดียวกัน จะขัดแย้งกันไหม? ไม่ขัดแย้ง เพราะคนละกลไก (L2 บีบขนาด θ ตอน update ทุก step, Dropout สุ่มปิด node ตอน forward pass) ใช้ร่วมกันได้ปกติ เป็นเทคนิคที่นิยมทำคู่กันจริงเพื่อลด overfitting จากสองมุมพร้อมกัน</dd>
+<dt>เชื่อมกับ</dt>
+<dd>ตรงกับกลไกที่ Lesson 4 หัวข้อ 6 อธิบายไว้ (Max-Norm/Dropout/L2 แก้ overfitting คนละมุม ไม่ทับซ้อนกัน) — โค้ดนี้คือการ implement หลักการเดียวกันนั้นจริงๆ</dd>
+</dl>
+</div>
 
 <div class="quiz">
   <div class="qhead"><span>คำถาม 9</span><span>Gradient Clipping</span></div>
