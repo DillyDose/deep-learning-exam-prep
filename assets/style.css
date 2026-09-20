@@ -350,3 +350,12 @@ ol.steps > li p { margin: 0.3em 0; }
 /* Compact tables (calculation tables inside .calc / worked examples) */
 table.compact { font-size: 0.85em; }
 table.compact th, table.compact td { padding: 0.3em 0.55em; }
+
+/* Verbatim instructor emphasis (slide text the lecturer coloured) */
+mark.src { background: #fff1a8; color: inherit; padding: 0 0.12em; border-radius: 2px; }
+.box.exam { border-left: 4px solid #c0392b; background: #fff; }
+.box.exam .label { color: #c0392b; }
+.box.exam ul { margin: 0.3em 0 0; }
+.box.prereq { border-left: 4px solid #7a5cc7; background: #fff; }
+.box.prereq .label { color: #7a5cc7; }
+table.codeexp td:first-child { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.85em; white-space: pre-wrap; }
