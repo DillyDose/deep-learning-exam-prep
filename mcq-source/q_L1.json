@@ -1,0 +1,1226 @@
+[
+ {
+  "id": "L1-01",
+  "lesson": 1,
+  "topic": "นิยาม ML (A. Samuel 1952)",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตามนิยามของ A. Samuel (1952) Machine Learning คืออะไร และ \"ทิศ\" ของมันต่างจาก Symbolic AI อย่างไร?",
+  "options": [
+   "สาขาวิชาที่ให้คอมพิวเตอร์เรียนรู้ได้โดยไม่ต้องถูกโปรแกรมอย่างเจาะจง; ป้อน Answer แล้วได้ Rule",
+   "สาขาวิชาที่ให้คอมพิวเตอร์เรียนรู้ได้โดยไม่ต้องถูกโปรแกรมอย่างเจาะจง; ป้อน Rule แล้วได้ Answer",
+   "โปรแกรมคอมพิวเตอร์ที่ถูกเขียนกฎไว้ครบถ้วนอย่างเจาะจง; ป้อน Answer แล้วได้ Rule ออกมาเอง",
+   "สาขาวิชาที่ให้คอมพิวเตอร์ถูกโปรแกรมแบบ implicitly ทีละกฎ; ป้อน Rule แล้วได้ Answer ออกมา"
+  ],
+  "answer": 0,
+  "explanation": "นิยามที่ทำสีบนสไลด์: ML คือ <b>the field of study</b> that gives computers the <b>ability to learn</b> without being <b>explicitly programmed</b>. แผนภาพบนสไลด์เทียบสองทิศ: Symbolic AI = Rule → Programming → Answer (คนเขียนกฎ), Machine Learning = Answer → Programming → Rule (ป้อนคำตอบ/ข้อมูลจริง แล้วเครื่องสรุปกฎเอง เช่น Google Suggest เรียนจากประวัติการค้น).",
+  "why_wrong": [
+   "นิยามถูกแต่ทิศกลับ — Rule → Answer คือ Symbolic AI",
+   "ML เป็น 'สาขาวิชา' ไม่ใช่โปรแกรม และหัวใจคือไม่ต้องเขียนกฎเอง",
+   "เปลี่ยน explicitly เป็น implicitly และทิศเป็นของ Symbolic AI"
+  ],
+  "ref": "Lesson 1 §0A (p.7, p.20)"
+ },
+ {
+  "id": "L1-02",
+  "lesson": 1,
+  "topic": "AI / ML / DL และนิยาม ANN",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ข้อใดตรงกับสไลด์เรื่องความสัมพันธ์ของ DL กับ ML และนิยามของ ANN?",
+  "options": [
+   "DL เป็น subfield ของ ML; ANN คือ mathematical model ที่มี stacked layers ของ nodes",
+   "DL เป็น subfield ของ ML; ANN คือ biological model ที่จำลองเซลล์สมองจริงทุกเซลล์",
+   "ML เป็น subfield ของ DL; ANN คือ mathematical model ที่มี stacked layers ของ nodes",
+   "DL แยกขาดจาก ML; ANN คือโปรแกรมที่ต้องให้มนุษย์กำหนด feature ให้ทุกชั้นเอง"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.8: \"Deep Learning (DL) is a specific subfield of Machine Learning\" และลำดับการซ้อนคือ AI ⊃ ML ⊃ Representation Learning ⊃ ANN/DL. สไลด์ p.9: ANN เป็น <b>mathematical model</b> ประกอบด้วย stacked layers ของ nodes ที่ <i>ได้แรงบันดาลใจ</i> จาก neural units ในสมอง — แค่ยืมรูปทรง ไม่ใช่จำลองสมองจริง. จุดเด่นของ DL ที่ทำสีไว้คือ complex network + automatically learning features from data.",
+  "why_wrong": [
+   "ANN ไม่ใช่ biological model — เป็นแบบจำลองทางคณิตศาสตร์",
+   "กลับลำดับการซ้อน: DL อยู่ใน ML ไม่ใช่ ML อยู่ใน DL",
+   "DL เรียน feature เองอัตโนมัติ และเป็นส่วนหนึ่งของ ML"
+  ],
+  "ref": "Lesson 1 §0A (p.8–9)"
+ },
+ {
+  "id": "L1-03",
+  "lesson": 1,
+  "topic": "Timeline AI/ML/DL",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตาม timeline บนสไลด์ ปีใดที่ Yann LeCun รวม convolutional neural network เข้ากับ backpropagation จนอ่านตัวเลขลายมือได้สำเร็จ?",
+  "options": [
+   "1989",
+   "1943",
+   "2010",
+   "2014"
+  ],
+  "answer": 0,
+  "explanation": "ปีที่ทำสีบนสไลด์: <b>1943</b> McCulloch–Pitts (artificial neuron แรก), <b>1989</b> LeCun: CNN + backpropagation อ่านลายมือ (first successful practical application of neural nets), <b>2010</b> DL take off, <b>2014</b> GANs, <b>2017</b> Transformer. ช่องว่าง 1943 → 1989 → 2010 บอกว่าทฤษฎีมีมานาน สิ่งที่มาทีหลังคือข้อมูลและ GPU.",
+  "why_wrong": [
+   "1943 คือ McCulloch–Pitts สร้างแบบจำลอง neuron ยังไม่มี backprop",
+   "2010 คือช่วงที่ deep learning เริ่มพุ่ง",
+   "2014 คือปีของ GANs"
+  ],
+  "ref": "Lesson 1 §0A (p.11)"
+ },
+ {
+  "id": "L1-04",
+  "lesson": 1,
+  "topic": "ทำไม DL ดังในยุคนี้",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "จากกราฟของ Andrew Ng (performance เทียบจำนวนข้อมูลฝึก) ข้อสรุปใดถูกต้อง?",
+  "options": [
+   "traditional algorithms แบนราบเมื่อข้อมูลเยอะ ส่วน neural network ใหญ่ยังดีขึ้นต่อเมื่อข้อมูลเพิ่ม",
+   "neural network ใหญ่ดีกว่า traditional algorithms เสมอ แม้ในช่วงที่มีข้อมูลฝึกน้อยมาก ๆ",
+   "traditional algorithms ดีขึ้นเรื่อย ๆ เมื่อข้อมูลเพิ่ม ส่วน neural network แบนราบเร็วกว่า",
+   "DL เพิ่งดังเพราะอัลกอริทึม neural network เพิ่งถูกคิดค้นขึ้นหลังปี 2010 เป็นต้นมา"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.14 ให้สองเหตุผลที่ DL ดังตอนนี้: <b>Hugh quantity of data available</b> และ <b>Processing Capabilities</b> (GPU). ในกราฟ เส้น traditional learning algorithms ไต่ขึ้นแล้วแบน (ความจุตัน) ส่วนเส้น small → medium → large NN ยังไต่ต่อ. แต่ที่ข้อมูลน้อย เส้นทั้งหมดแทบทับกัน — โครงข่ายใหญ่จึงไม่ได้ดีกว่าเสมอ.",
+  "why_wrong": [
+   "ช่วงข้อมูลน้อยเส้นแทบทับกัน ข้อได้เปรียบโผล่เมื่อข้อมูลมากพอ",
+   "สลับพฤติกรรมของสองกลุ่ม",
+   "ทฤษฎีมีตั้งแต่ 1943/1989 ที่เปลี่ยนคือข้อมูลกับพลังประมวลผล"
+  ],
+  "ref": "Lesson 1 §1 (p.14)"
+ },
+ {
+  "id": "L1-05",
+  "lesson": 1,
+  "topic": "Deep Learning Challenges",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "โรงพยาบาลต้องการระบบวินิจฉัยโรคที่ต้องอธิบายเหตุผลของการตัดสินใจให้แพทย์ได้ ข้อจำกัดของ DL ข้อใดเป็นปัญหาหลัก?",
+  "options": [
+   "Given good predictions, but not easily interpretable (ธรรมชาติแบบ black box)",
+   "Deep learning is data hungry (ต้องใช้ข้อมูลฝึกและทรัพยากรคำนวณจำนวนมาก)",
+   "No common sense (ทำนายนอกขอบเขตของสิ่งที่เคยเรียนมาได้ไม่ดีนัก)",
+   "Overfitting (จำข้อมูลฝึกมากเกินไปจนใช้กับข้อมูลใหม่ไม่ได้ดี)"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.19 มีสามข้อจำกัด: data hungry, <b>not easily interpretable</b>, no common sense. สไลด์ระบุตรง ๆ ว่า black box's nature อาจเป็นปัญหาในงาน financial trades หรือ <b>medical diagnosis</b> ที่ผู้ใช้อยากรู้ว่าระบบตัดสินใจอย่างไร — โจทย์เน้น \"ต้องอธิบายเหตุผล\" จึงตรงกับข้อนี้.",
+  "why_wrong": [
+   "เป็นข้อจำกัดจริง แต่ไม่ใช่ประเด็น 'อธิบายเหตุผล'",
+   "คือการเดาเลยขอบเขตข้อมูล (ตัวอย่างแมวถูกทาย Dog) ไม่ใช่การอธิบาย",
+   "overfitting ไม่ใช่หนึ่งในสามข้อจำกัดบนสไลด์นี้ และเป็นคนละเรื่อง"
+  ],
+  "ref": "Lesson 1 §1 (p.19)"
+ },
+ {
+  "id": "L1-06",
+  "lesson": 1,
+  "topic": "Steps to get the model",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ลำดับ Steps to get the model ของโมเดลแบบพารามิเตอร์ตามสไลด์คือข้อใด?",
+  "options": [
+   "Model Representation → Define Cost Function → Parameter Learning",
+   "Model Representation → Parameter Learning → Define Cost Function",
+   "Define Cost Function → Model Representation → Feature Scaling",
+   "Feature Scaling → Model Representation → Parameter Learning"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.23: (1) <b>Model Representation</b> — เลือกรูปสูตรและพารามิเตอร์, (2) <b>Define Cost Function</b> — \"define feedback signal used for learning\", (3) <b>Parameter Learning</b> — \"determine how learning proceeds\" (เช่น gradient descent). ต้องมี cost ก่อนจึงจะรู้ว่าจะขยับพารามิเตอร์ไปทางไหน.",
+  "why_wrong": [
+   "สลับ cost function กับ parameter learning — ต้องนิยามสัญญาณป้อนกลับก่อน",
+   "เอา feature scaling มาแทนขั้น parameter learning และสลับลำดับ",
+   "feature scaling ไม่ใช่หนึ่งในสามขั้นของสไลด์นี้"
+  ],
+  "ref": "Lesson 1 §1A (p.23)"
+ },
+ {
+  "id": "L1-07",
+  "lesson": 1,
+  "topic": "Types of ML: supervised/unsupervised",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "งาน \"แบ่งลูกค้าเป็นกลุ่มตามพฤติกรรมการซื้อ โดยไม่มีป้ายกำกับใด ๆ\" จัดเป็นแบบใด และ \\(h\\) มีบทบาทอย่างไร?",
+  "options": [
+   "Unsupervised learning; \\(h\\) เป็น descriptive model",
+   "Unsupervised learning; \\(h\\) เป็น predictive model",
+   "Supervised classification; \\(h\\) เป็น descriptive model",
+   "Supervised regression; \\(h\\) เป็น predictive model"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.24: มี Correct Answers given = supervised (regression ทำนาย continuous, classification ทำนาย discrete) ซึ่ง \\(h\\) เป็น <b>predictive model</b>; No Correct Answers given = unsupervised ที่ \\(h\\) เป็น <b>descriptive model</b> — บรรยายโครงสร้างข้อมูล เช่น clustering (k-means) ไม่ได้ทำนาย label.",
+  "why_wrong": [
+   "ประเภทถูกแต่บทบาทผิด — unsupervised ไม่ทำนาย",
+   "ไม่มีป้ายคำตอบ จึงไม่ใช่ supervised",
+   "ไม่มีค่าตัวเลขเป้าหมายให้ทำนาย จึงไม่ใช่ regression"
+  ],
+  "ref": "Lesson 1 §1B (p.24, p.60)"
+ },
+ {
+  "id": "L1-08",
+  "lesson": 1,
+  "topic": "Dataset notation m, n",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "ตารางข้อมูลบ้านมี 50 แถว แต่ละแถวมีคอลัมน์ขนาด, ห้องนอน, ห้องน้ำ, อายุบ้าน และคอลัมน์ price เป็น \\(y\\) ถ้าใช้ linear regression หลายตัวแปร ค่า \\(m\\), \\(n\\) และจำนวนพารามิเตอร์ \\(\\theta\\) คือเท่าใด?",
+  "options": [
+   "\\(m=50,\\ n=4\\), มี 5 พารามิเตอร์",
+   "\\(m=50,\\ n=4\\), มี 4 พารามิเตอร์",
+   "\\(m=4,\\ n=50\\), มี 5 พารามิเตอร์",
+   "\\(m=50,\\ n=5\\), มี 6 พารามิเตอร์"
+  ],
+  "answer": 0,
+  "explanation": "\\(m\\) = number of training examples = จำนวนแถว = 50; \\(n\\) = จำนวน feature (ไม่นับ \\(y\\)) = 4. Hypothesis \\(h_\\theta(x)=\\theta_0+\\theta_1x_1+\\dots+\\theta_4x_4\\) มี \\(n+1=5\\) พารามิเตอร์ เพราะมี \\(\\theta_0\\) (intercept/bias) เพิ่มมาอีกตัว (เคล็ด \\(x_0=1\\)).",
+  "why_wrong": [
+   "ลืม \\(\\theta_0\\) — n feature ต้องมี n+1 พารามิเตอร์",
+   "สลับ m (แถว) กับ n (feature)",
+   "นับ price (y) เป็น feature ด้วย"
+  ],
+  "ref": "Lesson 1 §1B (p.26), §2 (p.28)"
+ },
+ {
+  "id": "L1-09",
+  "lesson": 1,
+  "topic": "Linear regression hypothesis",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "ให้ \\(h_\\theta(x)=\\theta_0+\\theta_1x_1+\\theta_2x_2\\) โดย \\(\\theta_0=10,\\ \\theta_1=2,\\ \\theta_2=5\\) และ \\(x_1=3,\\ x_2=4\\) ค่าทำนายคือเท่าใด?",
+  "options": [
+   "36",
+   "26",
+   "33",
+   "31"
+  ],
+  "answer": 0,
+  "explanation": "แทนค่าทีละเทอม: \\(10 + 2(3) + 5(4) = 10 + 6 + 20 = 36\\). เขียนรูปรวมได้ว่า \\(h_\\theta(x)=\\sum_{i=0}^{n}\\theta_ix_i\\) โดยกำหนด \\(x_0=1\\) ทำให้ \\(\\theta_0x_0=\\theta_0\\) (ถ้า \\(x_0=0\\) เทอม intercept จะหายไป).",
+  "why_wrong": [
+   "ลืม \\(\\theta_0=10\\) (เหมือนตั้ง \\(x_0=0\\))",
+   "สลับค่า x: 10 + 2(4) + 5(3) = 33",
+   "จับคู่ \\(\\theta_2\\) กับ \\(x_1\\): 10 + 6 + 15 = 31"
+  ],
+  "ref": "Lesson 1 §2 (p.28)"
+ },
+ {
+  "id": "L1-10",
+  "lesson": 1,
+  "topic": "MSE cost function",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "ข้อมูล 2 จุด \\((1,2)\\) และ \\((2,4)\\) ใช้เส้น \\(h(x)=x\\) ค่า cost ตามสูตร MSE บนสไลด์ \\(J=\\frac{1}{m}\\sum(h(x^{(i)})-y^{(i)})^2\\) เท่ากับเท่าใด?",
+  "options": [
+   "2.5",
+   "1.5",
+   "5.0",
+   "-1.5"
+  ],
+  "answer": 0,
+  "explanation": "ค่าทำนาย 1 และ 2; error \\(e_i = h-y\\) คือ \\(1-2=-1\\) และ \\(2-4=-2\\). ยกกำลังสอง: \\(1+4=5\\), หารด้วย \\(m=2\\) ⇒ \\(J=2.5\\). กำลังสองทำให้ error ติดลบไม่หักล้างกัน และลงโทษ error ใหญ่หนักกว่า; ถ้าเป็น MAE จะได้ \\((1+2)/2=1.5\\).",
+  "why_wrong": [
+   "นั่นคือ MAE (ค่าสัมบูรณ์) ไม่ใช่ MSE",
+   "ลืมหารด้วย m",
+   "เฉลี่ย error ดิบโดยไม่ยกกำลังสอง — cost ติดลบไม่ได้"
+  ],
+  "ref": "Lesson 1 §3.1 (p.29)"
+ },
+ {
+  "id": "L1-11",
+  "lesson": 1,
+  "topic": "Gradient descent: simultaneous update",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ในการอัปเดต \\(\\theta_0,\\theta_1\\) ด้วย gradient descent สไลด์ใช้ตัวแปรพัก \\(\\text{Tmp}_0,\\text{Tmp}_1\\) เพราะเหตุใด?",
+  "options": [
+   "ให้ทุก gradient คำนวณจาก \\(\\theta\\) ชุดเดิมก่อน แล้วค่อยแทนค่าพร้อมกัน (simultaneous update)",
+   "ให้ \\(\\theta_1\\) ใช้ค่า \\(\\theta_0\\) ตัวใหม่ทันที เพื่อให้แต่ละรอบลู่เข้าเร็วขึ้นกว่าเดิม",
+   "เพื่อเก็บค่า \\(\\theta\\) รอบก่อนไว้ย้อนกลับ ถ้าค่า cost รอบนี้สูงขึ้นกว่ารอบที่แล้ว",
+   "เพื่อลดหน่วยความจำ เพราะ gradient ของแต่ละพารามิเตอร์ใช้พื้นที่มากเกินไป"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.30 เน้น <b>simultaneously update the parameters</b>: คำนวณ \\(\\text{Tmp}_0=\\theta_0-\\alpha\\,\\partial J/\\partial\\theta_0\\) และ \\(\\text{Tmp}_1=\\theta_1-\\alpha\\,\\partial J/\\partial\\theta_1\\) จากจุดที่ยืนอยู่ตอนนี้ก่อน แล้วค่อย \\(\\theta_0:=\\text{Tmp}_0,\\ \\theta_1:=\\text{Tmp}_1\\). ถ้าอัปเดต \\(\\theta_0\\) ก่อนแล้วใช้ค่าใหม่ไปคำนวณ gradient ของ \\(\\theta_1\\) ความชันนั้นไม่ใช่ความชันของจุดที่ยืนอยู่จริง — เป็นคนละอัลกอริทึมและอาจไม่ลู่เข้า.",
+  "why_wrong": [
+   "นี่คือความผิดพลาดที่ simultaneous update ป้องกัน",
+   "gradient descent พื้นฐานบนสไลด์ไม่มีการย้อนค่า",
+   "ไม่เกี่ยวกับหน่วยความจำ — เป็นเรื่องความถูกต้องของความชัน"
+  ],
+  "ref": "Lesson 1 §3.2 (p.30)"
+ },
+ {
+  "id": "L1-12",
+  "lesson": 1,
+  "topic": "Gradient descent: one step",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "ให้ \\(J(\\theta)=\\theta^2\\) (อนุพันธ์คือ \\(2\\theta\\)) เริ่มที่ \\(\\theta=3\\) และ \\(\\alpha=0.1\\) หลังอัปเดต 1 ครั้งด้วย \\(\\theta:=\\theta-\\alpha\\,\\partial J/\\partial\\theta\\) ได้ \\(\\theta\\) เท่าใด?",
+  "options": [
+   "2.4",
+   "3.6",
+   "2.7",
+   "2.1"
+  ],
+  "answer": 0,
+  "explanation": "ความชันที่ \\(\\theta=3\\) คือ \\(2(3)=6\\) (บวก = ยืนบนทางขึ้นฝั่งขวาของชาม). อัปเดต: \\(3-0.1(6)=3-0.6=2.4\\) — ลดลง เข้าหาจุดต่ำสุดที่ \\(\\theta=0\\). เครื่องหมายลบทำให้เดินสวนความชันเสมอ: ความชันบวก ⇒ \\(\\theta\\) ลด, ความชันลบ ⇒ \\(\\theta\\) เพิ่ม, ความชัน 0 ⇒ หยุด.",
+  "why_wrong": [
+   "บวก gradient แทนลบ = gradient ascent",
+   "ใช้ \\(\\theta\\) แทนอนุพันธ์ \\(2\\theta\\) (ลืมคูณ 2)",
+   "ใช้ค่า \\(J=9\\) แทนความชัน"
+  ],
+  "ref": "Lesson 1 §3.2 (p.30–31)"
+ },
+ {
+  "id": "L1-13",
+  "lesson": 1,
+  "topic": "Learning rate: cost overshoot",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "พล็อต \\(J(\\theta)\\) เทียบจำนวน iteration แล้วพบว่า cost สูงขึ้นเรื่อย ๆ จนระเบิด (Cost Overshoot) ควรแก้อย่างไร?",
+  "options": [
+   "ลด learning rate \\(\\alpha\\) เพราะก้าวใหญ่จนข้ามก้นชามไปฝั่งที่สูงกว่า",
+   "เพิ่มจำนวน iteration เพราะโมเดลยังเดินลงไปไม่ถึงก้นชามสักที",
+   "เพิ่ม learning rate \\(\\alpha\\) เพราะก้าวเล็กเกินจนติดอยู่บนเนินเขา",
+   "เปลี่ยนเครื่องหมายสูตรเป็นบวก เพื่อให้ cost ย้อนกลับลงมาเอง"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.32–33 (<b>Debugging gradient descent</b>): plot the cost function เทียบ iteration; ideally \\(J(\\theta)\\) should decrease. ถ้า \\(\\alpha\\) ใหญ่เกิน แต่ละก้าวข้ามจุดต่ำสุดไปอีกฝั่งที่สูงกว่า ⇒ diverge (ตัวอย่างบทเรียน \\(\\alpha=0.25\\) ระยะห่างจากคำตอบโต 1 → 1.33 → 1.78). วิธีแก้คือลด \\(\\alpha\\).",
+  "why_wrong": [
+   "เพิ่มรอบยิ่งทำให้ระเบิดหนักขึ้น",
+   "\\(\\alpha\\) เล็กเกินทำให้ช้า ไม่ทำให้ cost พุ่ง — และเพิ่ม \\(\\alpha\\) ยิ่งแย่",
+   "เครื่องหมายบวกคือ gradient ascent ไต่ขึ้นเขา"
+  ],
+  "ref": "Lesson 1 §3.3 (p.32–33)"
+ },
+ {
+  "id": "L1-14",
+  "lesson": 1,
+  "topic": "Why parameter learning (analytical vs GD)",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตามสไลด์ p.37 ข้อใดถูกต้องเกี่ยวกับการแก้หา \\(\\theta\\) แบบ analytical (normal equation) เทียบกับ gradient descent?",
+  "options": [
+   "ถ้าแก้ analytical ได้ควรใช้ก่อน แต่ต้อง invert matrix จึงแพงมากเมื่อข้อมูล/feature ใหญ่",
+   "gradient descent ดีกว่าเสมอทุกกรณี เพราะ normal equation ให้คำตอบที่ไม่แม่นยำ",
+   "ถ้าแก้ analytical ได้ควรใช้ก่อน แต่ข้อจำกัดคือใช้ได้กับข้อมูลที่มี feature เดียว",
+   "ควรใช้การไล่ลองทุกชุดพารามิเตอร์ เพราะถูกจำกัดแค่จำนวนข้อมูล ไม่ใช่ทรัพยากร"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์แนะนำว่า when analytical solutions are feasible ให้แก้ตรง ๆ ก่อน; เมื่อ <b>analytical solutions are not possible</b> จึงใช้ optimization algorithms เช่น gradient descent. ข้อจำกัดของ normal equation \\(\\theta=(X^\\top X)^{-1}X^\\top y\\) คือต้อง inverting a matrix ซึ่งแพงสำหรับ big data. อีกสองเหตุผล: กราฟ cost อาจไม่ visible ในมิติสูง และการไล่เทียบทุกชุดถูกจำกัดด้วย computational resources.",
+  "why_wrong": [
+   "normal equation ให้คำตอบแม่นยำ จุดอ่อนคือราคาคำนวณ",
+   "ใช้กับหลาย feature ได้ ปัญหาคือแพงเมื่อ feature เยอะ",
+   "สไลด์บอกว่าการไล่ลองถูกจำกัดด้วย computational resources"
+  ],
+  "ref": "Lesson 1 §3A (p.37)"
+ },
+ {
+  "id": "L1-15",
+  "lesson": 1,
+  "topic": "Min-max normalization",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "feature หนึ่งมีช่วงค่าใน training set คือ [20, 100] ค่า \\(x=40\\) หลังทำ min-max normalization เป็นเท่าใด?",
+  "options": [
+   "0.25",
+   "0.40",
+   "0.20",
+   "0.50"
+  ],
+  "answer": 0,
+  "explanation": "\\(x_{new}=\\dfrac{x-\\min}{\\max-\\min}=\\dfrac{40-20}{100-20}=\\dfrac{20}{80}=0.25\\). min-max transforms a feature ให้ทุกค่าอยู่ในช่วง 0 ถึง 1 (min → 0, max → 1). ต้องเก็บ min/max ของ training set ไว้ใช้กับ test set ด้วย.",
+  "why_wrong": [
+   "หารด้วย max อย่างเดียว (40/100)",
+   "ลืมลบ min ที่ตัวส่วน: 20/100",
+   "เดาว่าอยู่กึ่งกลาง แต่กึ่งกลางช่วงคือ 60"
+  ],
+  "ref": "Lesson 1 §4 (p.35)"
+ },
+ {
+  "id": "L1-16",
+  "lesson": 1,
+  "topic": "Feature scaling & z-score",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ข้อใดถูกต้องเกี่ยวกับ feature scaling และ mean normalization (z-score)?",
+  "options": [
+   "scaling ทำให้ contour กลมขึ้น GD ลู่เข้าเร็วขึ้น; z-score ไม่มี min/max ตายตัว",
+   "scaling ทำให้ค่า cost ต่ำสุดลดลง; z-score บีบทุกค่าให้อยู่ในช่วง 0 ถึง 1",
+   "scaling ทำให้ contour กลมขึ้น GD ลู่เข้าเร็วขึ้น; z-score บีบค่าอยู่ใน [−1, 1]",
+   "scaling ใช้เฉพาะกับ test set; z-score คือ (x − min) หารด้วย (max − min)"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.34: the idea is to make sure that features are almost in a same scale — ถ้าสเกลต่างกัน (size 1000–5000 vs bedroom 1–5) contour เป็นวงรีแคบ GD เดินซิกแซก; ปรับสเกลแล้ว contour กลม เดินตรงเข้าก้นชาม. สไลด์ p.36: \\(x_{new}=(x-\\mu)/\\sigma\\) เรียกว่า <b>z-score</b> ซึ่ง <b>no predefined minimum and maximum</b> (เช่น 1000, 2000, 3000 ได้ −1.22, 0, +1.22) และเหมาะเมื่อข้อมูลมี normal distribution shape.",
+  "why_wrong": [
+   "scaling เร่ง GD ไม่ได้เปลี่ยนคุณภาพจุดต่ำสุด; ช่วง [0,1] คือ min-max",
+   "z-score ไม่มีช่วงตายตัว ติดลบหรือเกิน 1 ได้",
+   "ต้อง scale ทุกชุดด้วยค่าจาก train; สูตรนั้นคือ min-max"
+  ],
+  "ref": "Lesson 1 §4 (p.34–36)"
+ },
+ {
+  "id": "L1-17",
+  "lesson": 1,
+  "topic": "Logistic regression output",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ผลลัพธ์ \\(h_\\theta(x)\\) ของ logistic regression และ logistic function มีความหมายตามสไลด์อย่างไร?",
+  "options": [
+   "\\(h_\\theta(x)\\) คือความน่าจะเป็นที่ \\(y=1\\); logistic map จาก [−inf, inf] ไป [0,1]",
+   "\\(h_\\theta(x)\\) คือความน่าจะเป็นที่ \\(y=1\\); logistic map จาก [0,1] ไป [−inf, inf]",
+   "\\(h_\\theta(x)\\) คือคลาส 0/1 โดยตรง; logistic map จาก [−inf, inf] ไป [0,1]",
+   "\\(h_\\theta(x)\\) คือความน่าจะเป็นที่ \\(y=0\\); logistic map จาก [−inf, inf] ไป [−1,1]"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.40: logistic regression utilizes the probability to determine the likelihood of x being classified as a <b>positive class ('1')</b>: \\(h_\\theta(x)\\to P(y=1\\mid x)\\). สไลด์ p.41: Logistic function คือ <b>inverse of logit</b> ซึ่งเป็น transformation จาก [-inf, inf] ไป [0,1] — เอาผลลัพธ์เชิงเส้น \\(z\\) มาบีบให้เป็นความน่าจะเป็น แล้วต้องมี threshold อีกชั้นจึงได้คลาส.",
+  "why_wrong": [
+   "ทิศนั้นคือ logit ไม่ใช่ logistic",
+   "ผลลัพธ์เป็นความน่าจะเป็น ต้องผ่าน threshold ก่อนเป็นคลาส",
+   "เป็นของคลาสบวก (1) และช่วงคือ [0,1]"
+  ],
+  "ref": "Lesson 1 §5 (p.40–41)"
+ },
+ {
+  "id": "L1-18",
+  "lesson": 1,
+  "topic": "Decision boundary: linear",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "ให้ \\(\\theta_0=-3,\\ \\theta_1=1,\\ \\theta_2=1\\) และทำนาย \\(y=1\\) เมื่อ \\(\\theta_0+\\theta_1x_1+\\theta_2x_2\\ge 0\\) ที่จุด \\(x_1=1,\\ x_2=1\\) โมเดลทำนายอะไร และ \\(h\\) เทียบกับ 0.5 เป็นอย่างไร?",
+  "options": [
+   "\\(y=0\\) เพราะ \\(z=-1\\) จึงได้ \\(h<0.5\\)",
+   "\\(y=1\\) เพราะ \\(z=+1\\) จึงได้ \\(h>0.5\\)",
+   "\\(y=1\\) เพราะ \\(z=-1\\) จึงได้ \\(h>0.5\\)",
+   "\\(y=0\\) เพราะ \\(z=-5\\) จึงได้ \\(h<0.5\\)"
+  ],
+  "answer": 0,
+  "explanation": "\\(z=-3+1(1)+1(1)=-1<0\\) ⇒ \\(g(-1)<0.5\\) ⇒ ทำนาย \\(y=0\\). ไม่ต้องคำนวณ sigmoid จริง ดูแค่เครื่องหมายของ \\(z\\): \\(z>0\\Rightarrow 1\\), \\(z<0\\Rightarrow 0\\), \\(z=0\\Rightarrow\\) unpredictable (0.5). Decision boundary คือ \\(z=0\\): \\(x_1+x_2=3\\) — จุด (1,1) มีผลรวม 2 จึงอยู่ฝั่ง \\(y=0\\).",
+  "why_wrong": [
+   "ลืม \\(\\theta_0=-3\\) หรือกลับเครื่องหมาย",
+   "\\(z\\) ติดลบ ⇒ sigmoid < 0.5 เสมอ",
+   "คิด \\(\\theta_0\\) ผิดเป็น −3−1−1"
+  ],
+  "ref": "Lesson 1 §5 (p.42–43)"
+ },
+ {
+  "id": "L1-19",
+  "lesson": 1,
+  "topic": "Decision boundary: non-linear (circle)",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "โมเดล \\(h_\\theta(x)=g(\\theta_0+\\theta_1x_1^2+\\theta_2x_2^2)\\) มี \\(\\theta_0=-9,\\ \\theta_1=1,\\ \\theta_2=1\\) decision boundary คือรูปใด และจุด (2, 2) ถูกทำนายเป็นคลาสใด?",
+  "options": [
+   "วงกลมรัศมี 3; จุด (2,2) ได้ \\(y=0\\)",
+   "วงกลมรัศมี 9; จุด (2,2) ได้ \\(y=0\\)",
+   "วงกลมรัศมี 3; จุด (2,2) ได้ \\(y=1\\)",
+   "เส้นตรง \\(x_1+x_2=9\\); จุด (2,2) ได้ \\(y=0\\)"
+  ],
+  "answer": 0,
+  "explanation": "Boundary คือ \\(z=0\\): \\(-9+x_1^2+x_2^2=0\\Rightarrow x_1^2+x_2^2=9=3^2\\) ⇒ วงกลมรัศมี 3 รอบจุดกำเนิด. จุด (2,2): \\(z=-9+4+4=-1<0\\) ⇒ อยู่ในวงกลม ⇒ \\(y=0\\). ความโค้งมาจาก feature \\(x^2\\) ขณะที่สมการยังเชิงเส้นใน \\(\\theta\\) — แนวคิดเดียวกับตัวอย่างสไลด์ที่ \\(\\theta_0=-4\\) ได้วงกลมรัศมี 2.",
+  "why_wrong": [
+   "ลืมถอดราก: \\(r^2=9\\) ⇒ \\(r=3\\)",
+   "(2,2) อยู่ในวงกลม (4+4=8<9) ได้ z ลบ",
+   "feature ยกกำลังสองทำให้ boundary โค้ง ไม่ใช่เส้นตรง"
+  ],
+  "ref": "Lesson 1 §5 (p.43)"
+ },
+ {
+  "id": "L1-20",
+  "lesson": 1,
+  "topic": "Log loss: single example",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "ตัวอย่างหนึ่งมี \\(y=0\\) แต่โมเดลทำนาย \\(h_\\theta(x)=0.9\\) ค่า cost (log loss, ใช้ ln) ของตัวอย่างนี้เท่ากับเท่าใด? (\\(\\ln 0.1\\approx-2.303,\\ \\ln 0.9\\approx-0.105\\))",
+  "options": [
+   "2.303",
+   "0.105",
+   "-2.303",
+   "0.693"
+  ],
+  "answer": 0,
+  "explanation": "\\(\\text{Cost}=-y\\log h-(1-y)\\log(1-h)\\). เมื่อ \\(y=0\\) เทอมแรกหาย เหลือ \\(-\\log(1-h)=-\\ln(0.1)=2.303\\). สไลด์ p.44: กรณี \\(y=0\\): if \\(h\\to0\\) Cost → 0, if \\(h\\to1\\) Cost → ∞ — ที่นี่มั่นใจผิด (0.9 ทั้งที่ y=0) จึงโดนลงโทษหนัก.",
+  "why_wrong": [
+   "ใช้เทอมของ y=1 (−ln h) ผิดข้าง",
+   "ลืมเครื่องหมายลบหน้าสูตร — cost ติดลบไม่ได้",
+   "นั่นคือ −ln 0.5 ของการเดาสุ่ม"
+  ],
+  "ref": "Lesson 1 §6 (p.44)"
+ },
+ {
+  "id": "L1-21",
+  "lesson": 1,
+  "topic": "Why log loss instead of MSE",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ทำไม logistic regression จึงใช้ Cross-Entropy (Log Loss) แทน MSE?",
+  "options": [
+   "MSE ร่วมกับ sigmoid ให้ cost ไม่นูน มีหลายหลุม ส่วน log loss นูน",
+   "MSE คำนวณไม่ได้เมื่อ y เป็น 0 หรือ 1 เพราะหารด้วยศูนย์",
+   "log loss ให้ค่าติดลบได้ จึงช่วยให้ gradient descent เร็วขึ้น",
+   "log loss ไม่ต้องใช้ gradient descent เพราะมีคำตอบปิดเสมอ"
+  ],
+  "answer": 0,
+  "explanation": "ถ้าเอา \\(h=g(z)\\) (sigmoid) ใส่ MSE ผิวของ cost จะ <b>ไม่นูน</b> มีหลุมหลอกหลายจุด GD อาจติด; cross-entropy ให้ผิวนูน (สไลด์ให้ลิงก์ proof). และยังลงโทษการมั่นใจผิดแบบไม่มีเพดาน. ที่น่าสนใจคือสูตรอัปเดต (p.45) ออกมาหน้าตาเหมือน linear regression: \\(\\theta_j:=\\theta_j-\\frac{\\alpha}{m}\\sum(h-y)x_j\\) ต่างแค่ \\(h\\) ผ่าน sigmoid.",
+  "why_wrong": [
+   "MSE คำนวณได้ ปัญหาคือความไม่นูน",
+   "log loss ไม่ติดลบ (มีเครื่องหมายลบหน้า log)",
+   "logistic regression ไม่มีคำตอบปิด ต้องใช้ GD"
+  ],
+  "ref": "Lesson 1 §6 (p.44–45)"
+ },
+ {
+  "id": "L1-22",
+  "lesson": 1,
+  "topic": "Confusion matrix metrics",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "ผลทำนาย 100 ตัวอย่าง: TP = 30, FP = 10, FN = 20, TN = 40 ค่า precision และ recall คือเท่าใด?",
+  "options": [
+   "precision 0.75, recall 0.60",
+   "precision 0.60, recall 0.75",
+   "precision 0.75, recall 0.70",
+   "precision 0.70, recall 0.60"
+  ],
+  "answer": 0,
+  "explanation": "precision = \\(\\frac{TP}{TP+FP}=\\frac{30}{40}=0.75\\) (ที่ทำนายว่าบวก ถูกกี่ %); recall = \\(\\frac{TP}{TP+FN}=\\frac{30}{50}=0.60\\) (บวกจริงทั้งหมด จับได้กี่ %). accuracy = \\((30+40)/100=0.70\\); \\(F_1=\\frac{2(0.75)(0.6)}{1.35}\\approx0.667\\).",
+  "why_wrong": [
+   "สลับตัวส่วนของ precision (TP+FP) กับ recall (TP+FN)",
+   "เอา accuracy 0.70 มาเป็น recall",
+   "เอา accuracy 0.70 มาเป็น precision"
+  ],
+  "ref": "Lesson 1 §7 (p.46)"
+ },
+ {
+  "id": "L1-23",
+  "lesson": 1,
+  "topic": "Precision–recall trade-off (threshold)",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ระบบคัดกรองมะเร็งต้องการ \"ห้ามพลาดผู้ป่วยจริง\" ควรเลื่อน threshold ของ logistic regression อย่างไร และจะเกิดผลอะไร?",
+  "options": [
+   "ลด threshold ⇒ recall สูงขึ้น แต่ precision มักลดลง",
+   "เพิ่ม threshold ⇒ recall สูงขึ้น แต่ precision มักลดลง",
+   "ลด threshold ⇒ ทั้ง precision และ recall สูงขึ้นพร้อมกัน",
+   "เพิ่ม threshold ⇒ precision สูงขึ้น และ recall ก็สูงขึ้นด้วย"
+  ],
+  "answer": 0,
+  "explanation": "\"ห้ามพลาดผู้ป่วยจริง\" = ลด FN = ต้องการ recall สูง. ลด threshold ⇒ ทำนายบวกมากขึ้น ⇒ FN ลด (recall ↑) แต่ FP เพิ่ม (precision ↓). สไลด์ p.46: <b>increasing precision reduces recall (vice versa)</b> — ตัวเลขบนสไลด์: 6/8 กับ 6/6, 4/5 กับ 4/6, 3/3 กับ 3/6.",
+  "why_wrong": [
+   "threshold สูงขึ้น ทำนายบวกน้อยลง recall จึงลด",
+   "สองค่านี้มักสวนทางกันเมื่อเลื่อน threshold",
+   "ขัดกับ trade-off บนสไลด์"
+  ],
+  "ref": "Lesson 1 §7 (p.46)"
+ },
+ {
+  "id": "L1-24",
+  "lesson": 1,
+  "topic": "ROC curve & AUC",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ข้อใดอธิบาย ROC curve และ AUC ได้ถูกต้อง?",
+  "options": [
+   "พล็อต TPR (แกนตั้ง) เทียบ FPR (แกนนอน) ทุก threshold; AUC 0.5 เท่ากับเดาสุ่ม",
+   "พล็อต FPR (แกนตั้ง) เทียบ TPR (แกนนอน) ทุก threshold; AUC 0.5 เท่ากับเดาสุ่ม",
+   "พล็อต precision เทียบ recall ทุก threshold; AUC 1.0 เท่ากับการเดาสุ่ม",
+   "พล็อต TPR (แกนตั้ง) เทียบ FPR (แกนนอน) ทุก threshold; AUC 0 เท่ากับเดาสุ่ม"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.47: ROC Curve แสดง performance of a binary classifier เมื่อเปลี่ยน threshold โดยพล็อต <b>true positive rate (TPR)</b> = TP/(TP+FN) เทียบ <b>false positive rate (FPR)</b> = FP/(FP+TN). เส้นเริ่มที่ (0,0) จบที่ (1,1); ยิ่งเข้าใกล้ (0,1) ยิ่งดี. เส้นทแยงคือเดาสุ่ม (TPR = FPR) ⇒ AUC = 0.5; แยกได้สมบูรณ์ AUC = 1.0.",
+  "why_wrong": [
+   "สลับแกน",
+   "นั่นคือ PR curve และ AUC 1.0 คือสมบูรณ์แบบ",
+   "เดาสุ่มได้ 0.5 ไม่ใช่ 0"
+  ],
+  "ref": "Lesson 1 §7 (p.47)"
+ },
+ {
+  "id": "L1-25",
+  "lesson": 1,
+  "topic": "Multiclass: One-vs-Rest vs Softmax",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "งานจำแนก 4 คลาส ถ้าใช้ One-vs-Rest ต้องเทรนกี่โมเดล และตอน predict เลือกคลาสอย่างไร (เทียบกับ softmax)?",
+  "options": [
+   "4 โมเดล เลือกคลาสที่ \\(h^{(i)}\\) สูงสุด; softmax ใช้โมเดลเดียว",
+   "4 โมเดล เลือกคลาสที่ \\(h^{(i)}\\) ต่ำสุด; softmax ใช้โมเดลเดียว",
+   "1 โมเดล เลือกคลาสที่ \\(h^{(i)}\\) สูงสุด; softmax ใช้ 4 โมเดล",
+   "3 โมเดล เลือกคลาสที่ \\(h^{(i)}\\) สูงสุด; softmax ใช้โมเดลเดียว"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.49: One-vs-Rest train the logistic regression classifier \\(h_\\theta^{(i)}(x)\\) <b>for each class</b> ⇒ k คลาส = k โมเดล; ตอน predict เลือกคลาสที่ <b>maximizes</b> \\(h_\\theta^{(i)}(x)\\). สไลด์ p.50: softmax คือ extension ของ logistic regression ที่ use only <b>one single model</b> และใช้ softmax function แทน sigmoid; ผลรวมทุกคลาส = 1 (ต่างจาก OvR ที่รวมกันไม่จำเป็นต้องเป็น 1).",
+  "why_wrong": [
+   "ต้องเลือกค่าสูงสุด ไม่ใช่ต่ำสุด",
+   "สลับจำนวนโมเดลของสองวิธี",
+   "OvR ต้องมีโมเดลละคลาส ไม่ใช่ k−1"
+  ],
+  "ref": "Lesson 1 §8 (p.49–50)"
+ },
+ {
+  "id": "L1-26",
+  "lesson": 1,
+  "topic": "Softmax & cross-entropy",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "ชั้นสุดท้ายมี 4 คลาส ได้ logit \\(z=[3,3,3,3]\\) ความน่าจะเป็นของแต่ละคลาสหลัง softmax และ loss \\(-\\sum_k y_k\\ln a_k\\) (one-hot) เป็นเท่าใด? (\\(\\ln 2\\approx0.693\\))",
+  "options": [
+   "0.25 ทุกคลาส; loss = 1.386",
+   "0.75 ทุกคลาส; loss = 0.288",
+   "0.25 ทุกคลาส; loss = 0.693",
+   "0.25 ทุกคลาส; loss = 5.545"
+  ],
+  "answer": 0,
+  "explanation": "\\(e^3\\) เท่ากันทุกตัว ⇒ \\(a_i=\\frac{e^3}{4e^3}=0.25\\) (ค่า z เท่ากัน ค่าจริงของ z ไม่สำคัญ). one-hot ทำให้ผลรวมเหลือเทอมเดียว: loss \\(=-\\ln(0.25)=\\ln 4=2\\ln2\\approx1.386\\) — คือ loss ของโมเดลที่เดาสุ่มบน K=4 คลาส (\\(\\ln K\\)); 2 คลาส = 0.693, 3 คลาส = 1.099.",
+  "why_wrong": [
+   "คิดว่า 3/4 — softmax หารด้วยผลรวมของ \\(e^z\\)",
+   "นั่นคือ ln 2 (2 คลาส) ไม่ใช่ ln 4",
+   "รวมทั้ง 4 เทอม — one-hot มี y=1 แค่คลาสเดียว"
+  ],
+  "ref": "Lesson 1 §8 (p.50)"
+ },
+ {
+  "id": "L1-27",
+  "lesson": 1,
+  "topic": "Softmax: why exponential",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ทำไม softmax ใช้ \\(e^{z_i}\\) แทนการเอา \\(z_i/\\sum z_n\\) ตรง ๆ?",
+  "options": [
+   "z บางตัวอาจติดลบ และ \\(e^z\\) ขยายค่าสูงสุดให้โมเดล less neutral",
+   "\\(e^z\\) ทำให้ทุกคลาสได้ความน่าจะเป็นเท่ากัน จึงยุติธรรมกว่า",
+   "\\(e^z\\) คำนวณเร็วกว่าการหารบน GPU จึงนิยมใช้ในทุกกรณี",
+   "z อาจเกิน 1 ทำให้การหารตรง ๆ ได้ผลรวมมากกว่า 1 เสมอ"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.50 ให้สองเหตุผล: (1) <b>some output might be negative</b> — เช่น \\(z=[2,-1,-1]\\) ผลรวมเป็น 0 หารไม่ได้; \\(e^z\\) เป็นบวกเสมอ. (2) exponential <b>amplifies the maximum value</b> ทำให้โมเดล \"less neutral\": \\(z=[2,1,0]\\) อัตราส่วน 2:1 กลายเป็น 0.665:0.245 (≈2.7 เท่า).",
+  "why_wrong": [
+   "ตรงข้าม — ขยายความต่าง ไม่ได้ทำให้เท่ากัน",
+   "สไลด์ไม่ได้ให้เหตุผลเรื่องความเร็ว",
+   "การหารด้วยผลรวมให้ผลรวม = 1 เสมอ ปัญหาคือค่าติดลบ"
+  ],
+  "ref": "Lesson 1 §8 (p.50)"
+ },
+ {
+  "id": "L1-28",
+  "lesson": 1,
+  "topic": "Train/Validation/Test roles",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ข้อใดจับคู่ชุดข้อมูลกับหน้าที่ได้ถูกต้องตามสไลด์ Model Evaluation?",
+  "options": [
+   "train ใช้หา \\(\\theta\\); validation ใช้เลือกโมเดล/hyperparameter; test ประเมิน generalization ครั้งเดียว",
+   "train ใช้หา \\(\\theta\\); test ใช้เลือกโมเดล/hyperparameter; validation ประเมิน generalization ครั้งเดียว",
+   "train ใช้เลือกโมเดล/hyperparameter; validation ใช้หา \\(\\theta\\); test ประเมิน generalization ครั้งเดียว",
+   "train ใช้หา \\(\\theta\\); validation ใช้หา \\(\\theta\\) เพิ่มเติม; test ใช้เลือก hyperparameter ทุกรอบ"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.51: Goal คือดูว่าโมเดลทำงาน how well บน <b>unseen examples</b>. ขั้นตอน: Train the model (\\(J_{train}\\)) → model selections ด้วย validation/hold-out (\\(J_{cv}\\)) → วัด generalization error ด้วย test set (\\(J_{test}\\)). สัดส่วนตัวอย่าง 70-15-15 หรือ 60-20-20 (หรือ 80-20/70-30 + cross validation) และทั้งสามชุดต้องมี similar statistical properties.",
+  "why_wrong": [
+   "ใช้ test เลือกโมเดลทำให้ตัวเลข test ดูดีเกินจริง",
+   "สลับหน้าที่ของ train กับ validation",
+   "validation ไม่ใช้ปรับ θ และ test ห้ามใช้ระหว่างเลือก"
+  ],
+  "ref": "Lesson 1 §9 (p.51)"
+ },
+ {
+  "id": "L1-29",
+  "lesson": 1,
+  "topic": "k-fold cross validation",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "หลังแบ่ง train-test 80-20 ส่วน train มี 500 แถว ทำ 5-fold cross validation ในแต่ละรอบโมเดลถูก fit ด้วยกี่แถว และวัดผลบนกี่แถว?",
+  "options": [
+   "fit 400 แถว, วัดผล 100 แถว",
+   "fit 100 แถว, วัดผล 400 แถว",
+   "fit 500 แถว, วัดผล 100 แถว",
+   "fit 400 แถว, วัดผล 125 แถว"
+  ],
+  "answer": 0,
+  "explanation": "แบ่ง train 500 แถวเป็น k = 5 folds ขนาดใกล้เคียงกัน ⇒ fold ละ 100. แต่ละรอบกัน 1 fold ไว้เป็น validation (100 แถว) และ fit ด้วยอีก \\(k-1=4\\) folds (400 แถว). ทำครบ 5 รอบ ข้อมูลทุกแถวเป็น validation 1 ครั้งพอดี แล้วเฉลี่ย error ทั้ง 5 รอบ (error estimates should be average). Cross-validation เป็น <b>resampling procedure</b>; test 20% ไม่ถูกแตะ.",
+  "why_wrong": [
+   "กลับด้าน — เทรนด้วย k−1 folds ไม่ใช่ 1 fold",
+   "ถ้า fit ทั้ง 500 แถว fold ที่ใช้วัดผลจะถูกเห็นแล้ว",
+   "หาร 500 ด้วย 4 ผิด — ต้องแบ่งเป็น 5 folds"
+  ],
+  "ref": "Lesson 1 §9 (p.52–53)"
+ },
+ {
+  "id": "L1-30",
+  "lesson": 1,
+  "topic": "Bias vs Variance diagnosis",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "โมเดลหนึ่งได้ \\(J_{train}=0.30\\) และ \\(J_{cv}=0.32\\) (ทั้งคู่สูงกว่าที่ต้องการมาก) วินิจฉัยว่าอะไรและควรแก้อย่างไร?",
+  "options": [
+   "High bias (underfit) — เพิ่ม feature/degree หรือลด λ",
+   "High variance (overfit) — เพิ่มข้อมูลหรือเพิ่ม λ ให้แรงขึ้น",
+   "High bias (underfit) — เก็บตัวอย่างข้อมูลเพิ่มให้มากขึ้น",
+   "High variance (overfit) — ลด degree ของ polynomial ลง"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.55: <b>high bias (underfitting)</b>: both \\(J_{train}\\) and \\(J_{cv}\\) will be high (และใกล้กัน); <b>high variance</b>: \\(J_{train}\\) low แต่ \\(J_{cv}\\) high. ที่นี่ทั้งคู่สูงและใกล้กัน ⇒ โมเดล too simple. วิธีแก้ underfitting (p.56): increase number of features, add relevant features, increase higher degree of features, decrease regularization parameter.",
+  "why_wrong": [
+   "overfit ต้องเห็น J_train ต่ำแต่ J_cv สูงกว่ามาก",
+   "More examples ไม่ช่วยมากในกรณี high bias (p.58)",
+   "วินิจฉัยผิดฝั่ง และลด degree ยิ่ง underfit"
+  ],
+  "ref": "Lesson 1 §10–10A (p.54–56)"
+ },
+ {
+  "id": "L1-31",
+  "lesson": 1,
+  "topic": "More examples: high variance vs high bias",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตามสไลด์ p.58 การเก็บตัวอย่างข้อมูลเพิ่ม (more examples) ช่วยในกรณีใด?",
+  "options": [
+   "ช่วยกรณี high variance แต่ไม่ช่วยมากในกรณี high bias",
+   "ช่วยกรณี high bias แต่ไม่ช่วยมากในกรณี high variance",
+   "ช่วยทั้งสองกรณีเท่ากัน เพราะข้อมูลยิ่งมากยิ่งดีเสมอ",
+   "ไม่ช่วยทั้งสองกรณี ต้องใช้ regularization อย่างเดียว"
+  ],
+  "answer": 0,
+  "explanation": "<b>More examples does help in high variance case! (not help much in high bias case)</b>. เส้นตรง \\(\\theta_0+\\theta_1x\\) พลาดเท่าเดิมไม่ว่ามีกี่จุด เพราะข้อจำกัดอยู่ที่สมการ; ส่วน polynomial degree 50 ที่บิดตัวไปมาตอนข้อมูลน้อย จะถูกจุดข้อมูลที่แน่นขึ้นบีบให้เรียบ. จึงต้องวินิจฉัยด้วย \\(J_{train}, J_{cv}\\) ก่อนลงทุนเก็บข้อมูล.",
+  "why_wrong": [
+   "สลับสองกรณี — กับดักที่พบบ่อยที่สุด",
+   "high bias เติมข้อมูลไปก็ไม่ช่วย",
+   "สไลด์บอกชัดว่าช่วย high variance"
+  ],
+  "ref": "Lesson 1 §11 (p.58)"
+ },
+ {
+  "id": "L1-32",
+  "lesson": 1,
+  "topic": "L2 regularization penalty",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "ใช้ L2 ตามสไลด์ \\(\\frac{\\lambda}{m}\\sum_{j=1}^{n}\\theta_j^2\\) กับ \\(\\theta_0=5,\\ \\theta_1=2,\\ \\theta_2=-1\\), \\(\\lambda=2\\), \\(m=4\\) ค่าปรับที่บวกเข้า cost คือเท่าใด?",
+  "options": [
+   "2.5",
+   "15.0",
+   "1.5",
+   "5.0"
+  ],
+  "answer": 0,
+  "explanation": "ผลรวมเริ่มที่ \\(j=1\\) ⇒ ไม่ปรับ \\(\\theta_0\\): \\(\\theta_1^2+\\theta_2^2=4+1=5\\). คูณ \\(\\lambda/m=2/4=0.5\\) ⇒ \\(2.5\\). กำลังสองทำให้ \\(\\theta_2=-1\\) ถูกปรับเท่ากับ +1. regularization แบบนี้ keep all features แต่กด \\(\\theta\\) ให้เล็กลง towards zero but not zero.",
+  "why_wrong": [
+   "รวม \\(\\theta_0^2=25\\) ด้วย (เริ่มที่ j=0) ⇒ 30 × 0.5",
+   "ใช้ \\(\\theta_2\\) แบบไม่ยกกำลังสอง: (4 − 1) × 0.5",
+   "ลืมคูณตัวประกอบ \\(\\lambda/m\\) ทั้งก้อน"
+  ],
+  "ref": "Lesson 1 §11 (p.57)"
+ },
+ {
+  "id": "L1-33",
+  "lesson": 1,
+  "topic": "Regularization: meaning & λ too large",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ข้อใดอธิบาย L2 regularization และผลของ \\(\\lambda\\) ที่ใหญ่เกินไปได้ถูกต้อง?",
+  "options": [
+   "เก็บ feature ครบแต่บีบ \\(\\theta\\) ให้เล็ก; λ ใหญ่เกิน ⇒ \\(h\\approx\\theta_0\\) underfit",
+   "ตัด feature ที่ไม่สำคัญทิ้ง; λ ใหญ่เกิน ⇒ เหลือ feature เดียว overfit",
+   "เก็บ feature ครบแต่บีบ \\(\\theta\\) ให้เล็ก; λ ใหญ่เกิน ⇒ โมเดล overfit หนัก",
+   "L2 เรียกว่า lasso บีบ \\(\\theta\\) ทุกตัวรวม \\(\\theta_0\\) ให้เป็นศูนย์พอดี"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.57: Regularization — <b>Keep all features</b> (each contributes a bit) แต่ constrains or regularizes พารามิเตอร์ให้เล็ก (towards zero but not zero). L1 = lasso, L2 = ridge (more widely used). ถ้า \\(\\lambda\\) too large ⇒ ค่าปรับครอง cost ⇒ \\(\\theta_1..\\theta_n\\to0\\) ⇒ \\(h_\\theta(x)\\approx\\theta_0\\) เส้นแบน = underfitting/high bias.",
+  "why_wrong": [
+   "การตัด feature คือวิธีแรก (reduce features) ไม่ใช่ regularization",
+   "λ ใหญ่ทำให้ underfit ไม่ใช่ overfit",
+   "L2 = ridge, ไม่ปรับ θ₀ และไม่ถึงศูนย์พอดี"
+  ],
+  "ref": "Lesson 1 §11 (p.57)"
+ },
+ {
+  "id": "L1-34",
+  "lesson": 1,
+  "topic": "Parameter vs Hyperparameter",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ข้อใดเป็น model parameter (ไม่ใช่ hyperparameter) ตามสไลด์ p.59?",
+  "options": [
+   "coefficients และ intercept (\\(\\theta_0,\\dots,\\theta_n\\))",
+   "learning rate \\(\\alpha\\) ที่ใช้ใน gradient descent",
+   "regularization parameter \\(\\lambda\\) ใน cost function",
+   "degree ของ polynomial ที่เลือกให้โมเดล"
+  ],
+  "answer": 0,
+  "explanation": "Model parameters = properties of the model that perform predictions, <b>learned during the training process</b> — ไม่ได้ provided by practitioners; สไลด์ระบุ \"(coefficients and intercept are parameters)\". Model hyperparameters = external configurations ที่ตั้งก่อนเทรน <b>can't be learned from the training data</b> ต้อง tuned — ตัวอย่าง: regularization parameter, degree of polynomial, learning rate. เกณฑ์เร็ว: GD อัปเดตเฉพาะ θ ไม่เคยแตะ α.",
+  "why_wrong": [
+   "α เป็น hyperparameter ที่เราตั้งเอง",
+   "λ เป็น hyperparameter",
+   "degree เป็น hyperparameter (K ของ k-means ก็เช่นกัน)"
+  ],
+  "ref": "Lesson 1 §11A (p.59)"
+ },
+ {
+  "id": "L1-35",
+  "lesson": 1,
+  "topic": "K-means clustering",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "K-means 1 มิติ K = 2 ข้อมูล 1, 3, 8, 10 เริ่ม centroid \\(\\mu_1=1,\\ \\mu_2=3\\) หลังขั้น Assign และ Update รอบแรก \\(\\mu_2\\) มีค่าเท่าใด?",
+  "options": [
+   "7.0",
+   "5.5",
+   "9.0",
+   "3.0"
+  ],
+  "answer": 0,
+  "explanation": "Assign: จุด 1 → \\(\\mu_1\\) (ระยะ 0 vs 2); จุด 3 → \\(\\mu_2\\); จุด 8 → \\(\\mu_2\\) (7 vs 5); จุด 10 → \\(\\mu_2\\) (9 vs 7). Update: \\(\\mu_k\\) := average of points assigned to cluster k ⇒ \\(\\mu_2=(3+8+10)/3=7\\), \\(\\mu_1=1\\). วนต่อจน <b>cluster assignments stop changing</b> หรือ <b>reach max iterations</b> — ไม่มี gradient descent และไม่มี label.",
+  "why_wrong": [
+   "เฉลี่ยทุกจุดรวมจุด 1 ด้วย",
+   "ลืมจุด 3 ที่ถูก assign ให้ μ₂",
+   "ยังไม่ได้ทำ Update — centroid ต้องย้ายไปที่ค่าเฉลี่ย"
+  ],
+  "ref": "Lesson 1 §12 (p.60)"
+ },
+ {
+  "id": "L1-36",
+  "lesson": 1,
+  "topic": "K-means stopping & nature",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "K-means หยุดวนเมื่อใด ตามที่สไลด์ทำสีไว้?",
+  "options": [
+   "เมื่อ cluster assignments หยุดเปลี่ยน หรือถึง max iterations",
+   "เมื่อ gradient ของ cost function เท่ากับศูนย์พอดีทุกตัว",
+   "เมื่อค่า cost function ของทุก cluster ลดลงเป็นศูนย์พอดี",
+   "เมื่อความแม่นยำบน validation set เริ่มลดลงติดกันหลายรอบ"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.60: Randomly initialize K centroids → วน Assign (closest centroid) / Update (average) → <b>iterate until the cluster assignments stop changing or reach max iterations</b>. K-means ไม่ใช้ gradient descent และไม่มี label ให้วัด accuracy (no correct answers, descriptive model). K เป็นค่าที่เรากำหนดเอง ⇒ hyperparameter.",
+  "why_wrong": [
+   "K-means ไม่ใช้ gradient descent",
+   "ระยะภายในกลุ่มไม่จำเป็นต้องเป็นศูนย์",
+   "ไม่มี label จึงไม่มี accuracy — นั่นคือแนวคิด early stopping"
+  ],
+  "ref": "Lesson 1 §12 (p.60)"
+ },
+ {
+  "id": "L1-37",
+  "lesson": 1,
+  "topic": "ex1: sigmoid",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "easy",
+  "stem": "ในฟังก์ชัน <code>sigmoid</code> ของ ex1 บรรทัดที่ต้องเติมคือข้อใด?",
+  "code": "def sigmoid(z):\n  z = np.array(z)\n  g = np.zeros(z.shape)\n  #Fill your code (1 line)\n  ________\n  return g",
+  "options": [
+   "g = 1/(1+np.exp(-z))",
+   "g = 1/(1+np.exp(z))",
+   "g = 1/(1-np.exp(-z))",
+   "g = 1/(1+math.exp(-z))"
+  ],
+  "answer": 0,
+  "explanation": "\\(g(z)=\\frac{1}{1+e^{-z}}\\) ⇒ <code>g = 1/(1+np.exp(-z))</code> — ใช้ <code>np.exp</code> จึงคำนวณทั้ง array ได้ในบรรทัดเดียว (vectorization ตามวัตถุประสงค์ของ ex1 คือ \"ลดการ For Loop\"). ตรวจด้วยมือ: \\(z=0\\Rightarrow 1/(1+1)=0.5\\); \\(z=2\\Rightarrow 1/(1+0.135)=0.881\\). เซลล์ถัดไปเรียก <code>sigmoid(np.arange(-8,8,0.01))</code> ซึ่งเป็น array 1600 ตัว — บรรทัดที่ใช้ <code>math.exp</code> จะพังทันที.",
+  "why_wrong": [
+   "ลืมเครื่องหมายลบ ได้ g(−z) = 1 − g(z) กลับด้าน",
+   "ตัวส่วนผิดเครื่องหมาย ที่ z = 0 หารด้วยศูนย์",
+   "สูตรถูก แต่ math.exp รับ numpy array ไม่ได้ — ต้องใช้ np.exp จึงจะ vectorize ทั้งก้อนตามวัตถุประสงค์ของ ex1"
+  ],
+  "ref": "ex1 cell (4)"
+ },
+ {
+  "id": "L1-38",
+  "lesson": 1,
+  "topic": "ex1: sigmoidGradient",
+  "source": "ex1",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "ex1 นิยาม <code>sigmoidGradient(z) = sigmoid(z) * (1 - sigmoid(z))</code> ค่าสูงสุดของกราฟนี้ (ที่พล็อตช่วง −8 ถึง 8) อยู่ที่ z เท่าใด และมีค่าเท่าใด?",
+  "options": [
+   "z = 0, ค่า 0.25",
+   "z = 0, ค่า 0.5",
+   "z = 8, ค่า 1.0",
+   "z = 0, ค่า 1.0"
+  ],
+  "answer": 0,
+  "explanation": "\\(g'(z)=g(z)(1-g(z))\\). ที่ z = 0: g = 0.5 ⇒ 0.5 × 0.5 = 0.25 — เป็นค่าสูงสุด (ผลคูณ p(1−p) สูงสุดที่ p = 0.5). เมื่อ |z| ใหญ่ g เข้าใกล้ 0 หรือ 1 ⇒ gradient เข้าใกล้ 0 (กราฟรูประฆัง).",
+  "why_wrong": [
+   "นั่นคือค่า sigmoid(0) ไม่ใช่ gradient",
+   "ที่ z ใหญ่ gradient เกือบเป็นศูนย์",
+   "gradient ของ sigmoid ไม่เคยถึง 1"
+  ],
+  "ref": "ex1 cell (6)–(7)"
+ },
+ {
+  "id": "L1-39",
+  "lesson": 1,
+  "topic": "ex1: randInitializeWeights",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "เรียก <code>randInitializeWeights(2, 1)</code> (epsilon_init = 0.12) จะได้ W shape เท่าใด และค่าอยู่ในช่วงใด?",
+  "code": "def randInitializeWeights(L_in, L_out, epsilon_init=0.12):\n    W = np.zeros((L_out, 1 + L_in))\n    W = np.random.rand(L_out, 1 + L_in) * 2 * epsilon_init - epsilon_init\n    return W",
+  "options": [
+   "shape (1, 3), ค่าใน [−0.12, 0.12)",
+   "shape (1, 2), ค่าใน [−0.12, 0.12)",
+   "shape (3, 1), ค่าใน [−0.12, 0.12)",
+   "shape (1, 3), ค่าใน [0, 0.24)"
+  ],
+  "answer": 0,
+  "explanation": "W มี shape <code>(L_out, 1 + L_in)</code> = (1, 3): 1 output node, 2 inputs + 1 bias. <code>np.random.rand</code> ให้ [0,1) → ×2ε ได้ [0, 0.24) → −ε ได้ [−0.12, 0.12). ในโน้ตบุ๊ก seed 10 ได้ W ≈ [0.065, −0.115, 0.032] — ค่าเล็ก ๆ ใกล้ 0.",
+  "why_wrong": [
+   "ลืมคอลัมน์ bias (+1)",
+   "สลับแถว/คอลัมน์ — แถว = L_out",
+   "ลืมลบ epsilon_init ท้ายสูตร"
+  ],
+  "ref": "ex1 cell (10)"
+ },
+ {
+  "id": "L1-40",
+  "lesson": 1,
+  "topic": "ex1: forward shapes",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "ใน <code>nnCostFunction</code> ถ้า X มี shape (600, 2) และ Theta1 shape (1, 3) ค่า <code>z1</code> มี shape เท่าใด?",
+  "code": "a0 = np.concatenate([np.ones((m, 1)), X], axis=1)\nz1 = np.dot(a0, Theta1.T)\na1 = sigmoid(z1)",
+  "options": [
+   "(600, 1)",
+   "(1, 600)",
+   "(600, 3)",
+   "(600, 2)"
+  ],
+  "answer": 0,
+  "explanation": "<code>a0 = concatenate([ones((m,1)), X], axis=1)</code> เติมคอลัมน์ 1 (bias, \\(x_0=1\\)) ⇒ (600, 3). <code>z1 = a0 @ Theta1.T</code> = (600, 3) @ (3, 1) = (600, 1) — ค่า z หนึ่งตัวต่อหนึ่งตัวอย่าง แล้ว a1 = sigmoid(z1) ก็ (600, 1).",
+  "why_wrong": [
+   "นั่นคือ Theta1 @ a0.T (ทรานสโพสกลับ)",
+   "นั่นคือ shape ของ a0",
+   "shape ของ X ก่อนเติม bias"
+  ],
+  "ref": "ex1 cell (9)"
+ },
+ {
+  "id": "L1-41",
+  "lesson": 1,
+  "topic": "ex1: gradient line",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "ใน <code>nnCostFunction</code> (logistic regression 1 node) บรรทัดใดคำนวณ <code>Theta1_grad</code> ได้ถูกต้อง ตรงกับสูตร \\(\\frac{1}{m}\\sum(h-y)x_j\\)?",
+  "options": [
+   "np.dot((a1 - y_matrix).T, a0) / m",
+   "np.dot((y_matrix - a1).T, a0) / m",
+   "np.dot((a1 - y_matrix).T, X) / m",
+   "np.dot(a0.T, (a1 - y_matrix)) * m"
+  ],
+  "answer": 0,
+  "explanation": "โค้ดจริง: <code>delta_1 = a1 - y_matrix</code> (600,1); <code>Delta1 = delta_1.T @ a0</code> = (1,600)@(600,3) = (1,3); <code>Theta1_grad = (1/m) * Delta1</code>. นี่คือ \\(\\frac{1}{m}\\sum_i(h^{(i)}-y^{(i)})x_j^{(i)}\\) ของสไลด์ p.45 แบบ vectorized — ใช้ a0 (มี bias) เพื่อให้ได้ gradient ของ \\(\\theta_0\\) ด้วย และ shape (1,3) ตรงกับ Theta1.",
+  "why_wrong": [
+   "กลับเครื่องหมาย ⇒ GD จะเดินขึ้นเขา",
+   "ใช้ X ไม่มี bias ⇒ ขาด gradient ของ θ₀ ได้ shape (1,2)",
+   "คูณ m แทนหาร (และได้ shape (3,1))"
+  ],
+  "ref": "ex1 cell (9); Lesson 1 §6 (p.45)"
+ },
+ {
+  "id": "L1-42",
+  "lesson": 1,
+  "topic": "ex1: epsilon in log",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "ใน cost ของ ex1 มี <code>epsilon = 1e-5</code> บวกเข้าไปใน <code>np.log(a1+epsilon)</code> และ <code>np.log(1 - a1+epsilon)</code> เพื่ออะไร?",
+  "options": [
+   "กัน log(0) = −inf เมื่อ a1 เป็น 0 หรือ 1 พอดี",
+   "ทำหน้าที่เป็น regularization บีบ θ ให้เล็กลง",
+   "ทำหน้าที่เป็น learning rate ของการอัปเดตแต่ละรอบ",
+   "ทำให้ sigmoid ส่งค่าออกได้เกินช่วง [0, 1]"
+  ],
+  "answer": 0,
+  "explanation": "log loss \\(-[y\\log h+(1-y)\\log(1-h)]\\) มี \\(\\log h\\) ที่ \\(\\to-\\infty\\) เมื่อ \\(h\\to0\\). ถ้า sigmoid ให้ค่าที่ปัดเป็น 0 หรือ 1 พอดีในทศนิยมของคอมพิวเตอร์ จะได้ log(0) = −inf/nan. บวก epsilon เล็ก ๆ ทำให้ค่าในลอการิทึมไม่เป็นศูนย์ — เป็นเรื่องเสถียรภาพเชิงตัวเลข ไม่ได้เปลี่ยนแนวคิดของ cost.",
+  "why_wrong": [
+   "ไม่มีเทอม λθ² — cost ใน ex1 ไม่มี regularization",
+   "learning rate อยู่ใน optimize1 (alpha = 0.01)",
+   "epsilon อยู่ใน log ไม่ได้แก้ค่า sigmoid"
+  ],
+  "ref": "ex1 cell (9)"
+ },
+ {
+  "id": "L1-43",
+  "lesson": 1,
+  "topic": "ex1: gradient descent update",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "easy",
+  "stem": "ในฟังก์ชัน <code>optimize1</code> บรรทัดอัปเดตพารามิเตอร์ที่ต้องเติมคือข้อใด?",
+  "code": "for i in range(num_iterations):\n    cost, grad = nnCostFunction(w, input_layer_size, num_labels, X, y)\n    ________\n    if i % 100 == 0:\n        costs.append(cost)",
+  "options": [
+   "w = w - learning_rate * grad",
+   "w = w + learning_rate * grad",
+   "w = w - grad / learning_rate",
+   "w = learning_rate * grad"
+  ],
+  "answer": 0,
+  "explanation": "เป็นสูตร \\(\\theta:=\\theta-\\alpha\\,\\partial J/\\partial\\theta\\) แบบ vectorized: <code>w</code> คือพารามิเตอร์ทั้ง 3 ตัวที่ unroll แล้ว และ <code>grad</code> จาก nnCostFunction มี shape เดียวกัน ⇒ อัปเดตทุกตัวพร้อมกัน (simultaneous update) ในบรรทัดเดียว.",
+  "why_wrong": [
+   "บวก = gradient ascent",
+   "หารด้วย α ทำให้ก้าวใหญ่มาก",
+   "ทิ้งค่า w เดิม ไม่ใช่การอัปเดต"
+  ],
+  "ref": "ex1 cell (24)"
+ },
+ {
+  "id": "L1-44",
+  "lesson": 1,
+  "topic": "ex1: initial cost ≈ ln 2",
+  "source": "ex1",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "optimize1 พิมพ์ <code>Cost after iteration 0: 0.726</code> ทำไมค่าเริ่มต้นจึงใกล้ 0.693 (= ln 2)?",
+  "options": [
+   "weights เริ่มเล็กมาก z ≈ 0 ⇒ sigmoid ≈ 0.5 ⇒ cost ≈ −ln 0.5",
+   "weights เริ่มเป็นศูนย์ทั้งหมด ⇒ cost ของทุกตัวอย่างเท่ากับศูนย์",
+   "learning rate 0.01 ทำให้ cost เริ่มต้นเท่ากับ ln 2 เสมอทุกครั้ง",
+   "ข้อมูลมี label 1 ครึ่งหนึ่ง ⇒ cost เท่ากับสัดส่วนนั้นคูณ 1.4"
+  ],
+  "answer": 0,
+  "explanation": "randInitializeWeights ให้ค่าใน [−0.12, 0.12) ⇒ z เล็ก ⇒ \\(h\\approx0.5\\) ทุกตัวอย่าง ⇒ log loss \\(\\approx-\\ln0.5=\\ln2=0.693\\) = ระดับเดาสุ่มของ 2 คลาส. ได้ 0.726 เพราะ z ไม่ถึงศูนย์พอดี. ค่าหลังเทรนนิ่งที่ 0.511 — ต่ำกว่า ln 2 แปลว่าเรียนรู้ได้บ้าง.",
+  "why_wrong": [
+   "ไม่ได้เริ่มที่ศูนย์ และ h = 0.5 ให้ cost 0.693 ไม่ใช่ 0",
+   "cost ที่ iteration 0 คำนวณก่อนใช้ α",
+   "ไม่มีความสัมพันธ์แบบนี้ในสูตร log loss"
+  ],
+  "ref": "ex1 cell (24); Lesson 1 §6"
+ },
+ {
+  "id": "L1-45",
+  "lesson": 1,
+  "topic": "ex1: predict",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "ใน <code>predict</code> ของ ex1 บรรทัด <code>p = np.round(sigmoid(z1))</code> ทำหน้าที่อะไร?",
+  "options": [
+   "ตัดสินคลาสด้วย threshold 0.5 เท่ากับดูเครื่องหมายของ z1",
+   "ปัดค่า z1 ให้เป็นจำนวนเต็มที่ใกล้ที่สุด แล้วใช้เป็นคลาส",
+   "คำนวณความน่าจะเป็นของคลาส 0 แล้วปัดเป็นทศนิยมสองตำแหน่ง",
+   "ตัดสินคลาสด้วย threshold 0.7 เพื่อให้ precision สูงขึ้น"
+  ],
+  "answer": 0,
+  "explanation": "sigmoid ให้ความน่าจะเป็น \\(P(y=1\\mid x)\\) ใน [0,1]; ปัดเศษ ⇒ มากกว่า 0.5 เป็น 1, น้อยกว่า 0.5 เป็น 0. เพราะ \\(g(z)>0.5\\iff z>0\\) นี่คือการใช้ decision boundary \\(z=0\\) (สไลด์ p.42). จากนั้น accuracy = <code>np.mean(pred == y) * 100</code>.",
+  "why_wrong": [
+   "ปัด sigmoid(z1) ไม่ใช่ z1",
+   "sigmoid ให้ P(y=1) และ round ปัดเป็นจำนวนเต็ม",
+   "np.round ใช้จุดตัด 0.5"
+  ],
+  "ref": "ex1 cell (13), (26)"
+ },
+ {
+  "id": "L1-46",
+  "lesson": 1,
+  "topic": "ex1: data split",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "easy",
+  "stem": "ข้อมูล result.csv มี 800 แถว โค้ดแบ่งตามนี้ ข้อใดถูกต้อง?",
+  "code": "X = data[0:600,0:2]\nXval = data[600:700,0:2]\nXtest = data[700:800,0:2]\ny = data[0:600,2]",
+  "options": [
+   "X 600 แถวแรกใช้เทรน, Xval แถว 600–699 เป็น validation, Xtest 100 แถวท้าย",
+   "X 600 แถวแรกเป็น test, Xval แถว 600–699 ใช้เทรน, Xtest 100 แถวท้าย",
+   "X 600 แถวแรกใช้เทรน, Xval แถว 601–700 เป็น validation, Xtest 99 แถวท้าย",
+   "X 600 แถวแรกใช้เทรน รวมคอลัมน์ label ด้วย, Xval และ Xtest ใช้เทรนเพิ่ม"
+  ],
+  "answer": 0,
+  "explanation": "<code>data[0:600]</code> = index 0–599 (600 แถว) ใช้เทรน; <code>data[600:700]</code> = index 600–699 (100 แถว) = validation; <code>data[700:800]</code> = 100 แถวท้าย = test (75/12.5/12.5). <code>[:, 0:2]</code> คือคอลัมน์ x, y (features) และ <code>[:, 2]</code> คือ label.",
+  "why_wrong": [
+   "สลับบทบาท train/validation",
+   "slice ของ Python ใช้ index เริ่มที่ 0 และไม่รวมปลาย",
+   "0:2 ไม่รวมคอลัมน์ index 2 (label)"
+  ],
+  "ref": "ex1 cell (19)"
+ },
+ {
+  "id": "L1-47",
+  "lesson": 1,
+  "topic": "ex1: 70% accuracy on spiral",
+  "source": "ex1",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "หลังเทรน 2000 รอบ cost นิ่งที่ ≈ 0.511 และ training accuracy = 70% บน Spiral Dataset สาเหตุหลักและวิธีแก้คือข้อใด?",
+  "options": [
+   "โมเดลให้ boundary เส้นตรง (high bias) — เพิ่ม feature ยกกำลัง/hidden layer",
+   "learning rate ใหญ่เกินจน diverge — ลด α ลง 10 เท่าแล้วเทรนต่อ",
+   "โมเดล overfit (high variance) — เพิ่ม regularization λ ให้แรงขึ้น",
+   "จำนวนรอบน้อยเกินไป — เพิ่มเป็น 20,000 รอบจะได้ accuracy 100%"
+  ],
+  "answer": 0,
+  "explanation": "nnCostFunction ของ ex1 คือ 1 node = logistic regression ⇒ decision boundary \\(\\theta_0+\\theta_1x_1+\\theta_2x_2=0\\) เป็นเส้นตรง แต่ข้อมูลเป็นเกลียว (non-linear). cost ไม่ลดต่อ (0.5115 → 0.5111) แปลว่าลู่เข้าแล้ว — ปัญหาคือความจุโมเดล (too simple) ⇒ แก้ด้วย increase higher degree of features หรือเพิ่ม hidden layer (Lesson 2).",
+  "why_wrong": [
+   "cost ลดลงแล้วนิ่ง ไม่ได้ระเบิด",
+   "overfit ต้องเห็น train ดีมาก แต่ train แค่ 70%",
+   "cost แบนแล้ว เพิ่มรอบไม่ช่วยเพราะ boundary ยังเป็นเส้นตรง"
+  ],
+  "ref": "ex1 cell (24)–(26); Lesson 1 §5, §10A"
+ },
+ {
+  "id": "L1-48",
+  "lesson": 1,
+  "topic": "ex1: scipy optimize (jac=True)",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "ใน <code>optimize.minimize(costFunction, initial_nn_params, jac=True, method='TNC')</code> พารามิเตอร์ <code>jac=True</code> หมายถึงอะไร?",
+  "options": [
+   "costFunction คืนค่าทั้ง cost และ gradient เป็น tuple (J, grad)",
+   "ให้ scipy คำนวณ gradient เองด้วยวิธีตัวเลขโดยไม่ใช้ grad ของเรา",
+   "ให้ costFunction คืนค่าเฉพาะ gradient โดยไม่ต้องคืนค่า cost",
+   "ให้ scipy ใช้ learning rate คงที่เท่ากับ alpha ที่ตั้งไว้ข้างบน"
+  ],
+  "answer": 0,
+  "explanation": "nnCostFunction <code>return J, grad</code> และ lambda <code>costFunction = lambda p: nnCostFunction(p, ...)</code> ทำให้เหลืออาร์กิวเมนต์เดียวคือพารามิเตอร์ที่ unroll แล้ว. <code>jac=True</code> บอก scipy ว่าฟังก์ชันคืน (cost, gradient) มาด้วยกัน จึงใช้ gradient ที่เราเขียนเอง; ผลลัพธ์อยู่ใน <code>res.x</code>. ไม่ต้องตั้ง α เอง — optimizer เลือกขนาดก้าวเอง.",
+  "why_wrong": [
+   "นั่นคือกรณีไม่ส่ง jac (ใช้ประมาณเชิงตัวเลข)",
+   "ต้องคืนทั้ง cost และ grad",
+   "TNC เลือกก้าวเอง ไม่ใช้ alpha ของ optimize1"
+  ],
+  "ref": "ex1 cell (28)"
+ },
+ {
+  "id": "L1-49",
+  "lesson": 1,
+  "topic": "ex1: plotDecisionBoundary",
+  "source": "ex1",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "<code>plotDecisionBoundary</code> คำนวณ <code>plot_y = (-1./theta[2]) * (theta[1]*plot_x + theta[0])</code> สูตรนี้มาจากอะไร?",
+  "options": [
+   "แก้ \\(\\theta_0+\\theta_1x_1+\\theta_2x_2=0\\) หา \\(x_2\\) (จุดที่ sigmoid = 0.5)",
+   "แก้ \\(\\theta_0+\\theta_1x_1+\\theta_2x_2=0.5\\) หา \\(x_2\\) (จุดที่ sigmoid = 0.5)",
+   "แก้ \\(\\theta_0+\\theta_1x_1+\\theta_2x_2=1\\) หา \\(x_2\\) (จุดที่ sigmoid = 1)",
+   "แก้ \\(\\theta_0+\\theta_1x_1+\\theta_2x_2=0\\) หา \\(x_1\\) (จุดที่ sigmoid = 0)"
+  ],
+  "answer": 0,
+  "explanation": "Decision boundary คือ \\(z=0\\) เพราะ \\(g(0)=0.5\\). ย้ายข้าง: \\(\\theta_2x_2=-(\\theta_1x_1+\\theta_0)\\Rightarrow x_2=-\\frac{1}{\\theta_2}(\\theta_1x_1+\\theta_0)\\) ตรงกับโค้ด (plot_x คือ \\(x_1\\), plot_y คือ \\(x_2\\)). ใช้แค่ 2 จุดก็ลากเส้นตรงได้ — และเพราะเป็นเส้นตรง จึงแยก spiral ไม่ได้.",
+  "why_wrong": [
+   "ความน่าจะเป็น 0.5 เกิดที่ z = 0 ไม่ใช่ z = 0.5",
+   "sigmoid ไม่เคยเท่ากับ 1 พอดี",
+   "โค้ดแก้หา x₂ และ z = 0 ให้ sigmoid 0.5 ไม่ใช่ 0"
+  ],
+  "ref": "ex1 cell (29); Lesson 1 §5 (p.42)"
+ },
+ {
+  "id": "L1-50",
+  "lesson": 1,
+  "topic": "ทำไม DL ทรงพลัง (scale + representation learning)",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "สไลด์ \"Why Deep Learning is so Powerful\" (p.12–13) ยกเหตุผลไว้สองข้อ คือข้อใด?",
+  "options": [
+   "Scale for complex tasks (non-linear boundary และ feature จำนวนมาก) และ automate feature engineering คือเรียน feature เองจากข้อมูล",
+   "Scale for complex tasks (non-linear boundary และ feature จำนวนมาก) และต้องให้ผู้เชี่ยวชาญออกแบบ feature ให้ครบก่อนเข้าโมเดลเสมอ",
+   "เหมาะกับข้อมูลตารางขนาดเล็กที่มี feature ไม่กี่คอลัมน์ และ automate feature engineering คือเรียน feature เองจากข้อมูล",
+   "รับประกันว่าเจอ global minimum ของ cost เสมอ และใช้ cost function คนละชนิดกับ machine learning แบบดั้งเดิมโดยสิ้นเชิง"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.12 ข้อแรก <b>Scale for complex tasks</b> แตกเป็นสองกรณี: งานที่ต้องการ \"complex non-linear decision boundary\" และงานที่ \"involve data with many input features\" — นับจริง: ภาพสี RGB ขนาด 100×100 มี \\(100\\times100\\times3=30{,}000\\) feature ต่อหนึ่งภาพ. สไลด์ p.13 ข้อที่สอง <b>Automate feature engineering (i.e., representation learning)</b>: \"learn features from the input data, without the need for human guidance\" และ \"this is one of the reasons why DL can handle unstructured data very well\". แผนภาพ Car/Not Car เทียบกันตรง ๆ: เส้นทาง ML มีสามกล่อง (Input → Feature extraction ที่คนทำ → Classification) ส่วนเส้นทาง DL เหลือสองกล่องเพราะ feature extraction ถูกดูดเข้าไปอยู่ในโครงข่ายเดียวกับ classification.",
+  "why_wrong": [
+   "กลับด้านข้อที่สอง — จุดเด่นคือเรียน feature เองโดยไม่ต้องมี human guidance",
+   "DL ได้เปรียบที่สุดกับ unstructured data (ภาพ เสียง ข้อความ) ไม่ใช่ตารางเล็ก ๆ",
+   "สไลด์ไม่เคยรับประกัน global minimum และ cost function ก็เป็นชุดเดียวกัน (MSE / log loss)"
+  ],
+  "ref": "Lesson 1 §1 (p.12–13)"
+ },
+ {
+  "id": "L1-51",
+  "lesson": 1,
+  "topic": "Binary classification: positive / negative class",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "สไลด์ Binary Classification นิยาม \\(y\\in\\{0,1\\}\\) ไว้อย่างไร และในงานกรองสแปม \"spam\" ควรเป็นคลาสใด?",
+  "options": [
+   "1 = positive class (finding something), 0 = negative class (absenting something); spam คือคลาส 1",
+   "1 = positive class (finding something), 0 = negative class (absenting something); spam คือคลาส 0",
+   "1 = คลาสที่เป็นผลดีต่อผู้ใช้, 0 = คลาสที่เป็นผลเสียต่อผู้ใช้ตามความหมายทั่วไป; spam คือคลาส 0",
+   "1 = คลาสที่พบบ่อยกว่าในชุดข้อมูล, 0 = คลาสที่พบน้อยกว่าในชุดข้อมูลนั้น; spam คือคลาส 0"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์ p.39: Binary Classification คือ predicting discrete output ที่มีเพียง 2 คลาส โดย <b>\"1\" denotes positive class (finding something)</b> และ <b>\"0\" denotes negative class (absenting something)</b>. คำว่า positive แปลว่า \"เจอสิ่งที่กำลังตามหา\" ไม่ได้แปลว่า \"ดี\" — ในตัวอย่าง Email classification บนสไลด์ สิ่งที่ตามหาคือสแปม ดังนั้น spam = 1 = positive ทั้งที่สแปมเป็นเรื่องแย่. จุดนี้ผูกตรงกับ §7 เพราะ precision \\(=TP/(TP+FP)\\) และ recall \\(=TP/(TP+FN)\\) นับเฉพาะคลาส positive ถ้ากำหนด positive ผิดตัว ตัวเลขทั้งชุดจะพลิกทันที.",
+  "why_wrong": [
+   "นิยามถูก แต่สิ่งที่ระบบ \"ตามหา\" ในงานกรองสแปมคือสแปม จึงต้องเป็นคลาส 1",
+   "positive ไม่ได้แปลว่าผลดี — สไลด์นิยามว่า finding something เท่านั้น",
+   "สไลด์ไม่ได้ผูกเลข 0/1 กับความถี่ของคลาส แต่ผูกกับ 'สิ่งที่ตามหา'"
+  ],
+  "ref": "Lesson 1 §5 (p.39), §7 (p.46)"
+ },
+ {
+  "id": "L1-52",
+  "lesson": 1,
+  "topic": "Accuracy หลอกได้เมื่อข้อมูลไม่สมดุล",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "ชุดทดสอบ 100 ตัวอย่างมีคลาส positive จริงเพียง 1 ตัว ถ้าโมเดลตอบ \"negative\" ทุกข้อ ค่า accuracy และ recall เป็นเท่าใด?",
+  "options": [
+   "accuracy = 0.99 และ recall = 0 — ตัวเลข accuracy สวยแต่จับคลาสบวกไม่ได้เลย",
+   "accuracy = 0.99 และ recall = 0.99 — โมเดลทำงานได้ดีมากทั้งสองตัวชี้วัดพร้อมกัน",
+   "accuracy = 0.01 และ recall = 0 — โมเดลแย่ทั้งสองตัวชี้วัดอย่างชัดเจนตรงไปตรงมา",
+   "accuracy = 0.99 และ recall = 1.00 — จับคลาสบวกได้ครบเพราะทำนายเป็นลบทุกข้อ"
+  ],
+  "answer": 0,
+  "explanation": "นับสี่ช่องก่อน: ไม่มีอะไรถูกทำนายเป็นบวกเลย ⇒ \\(TP=0,\\ FP=0\\); บวกจริง 1 ตัวถูกพลาด ⇒ \\(FN=1\\); ลบจริง 99 ตัวตอบถูกหมด ⇒ \\(TN=99\\). จากสูตรบนสไลด์ p.46: \\(\\text{accuracy}=\\frac{TP+TN}{TP+TN+FP+FN}=\\frac{0+99}{100}=0.99\\) และ \\(\\text{recall}=\\frac{TP}{TP+FN}=\\frac{0}{0+1}=0\\). (precision คำนวณไม่ได้เพราะ \\(TP+FP=0\\)). นี่คือกับดักที่บทเรียนเตือนไว้ตรง ๆ ว่า accuracy หลอกได้เมื่อข้อมูลไม่สมดุล — ต้องอ่าน recall / precision / \\(F_1\\) ประกอบเสมอ โดยเฉพาะงานคัดกรองโรคที่คลาสบวกหายาก.",
+  "why_wrong": [
+   "recall นับเฉพาะคลาสบวกจริง: \\(TP/(TP+FN)=0/1=0\\) ไม่ใช่ 0.99",
+   "accuracy นับ \\(TN\\) รวมด้วย จึงได้ 99/100 ไม่ใช่ 1/100",
+   "ทำนายลบทุกข้อแปลว่า \\(TP=0\\) จึงจับคลาสบวกไม่ได้เลย recall = 0"
+  ],
+  "ref": "Lesson 1 §7 (p.46)"
+ },
+ {
+  "id": "L1-53",
+  "lesson": 1,
+  "topic": "แก้หา θ จากตารางบ้าน 3 แถว (p.28)",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "ตารางบนสไลด์ p.28 ให้ (size \\(x_1\\), #bedroom \\(x_2\\), price \\(y\\)) = (100, 3, 1{,}000{,}000), (200, 2, 2{,}000{,}000), (300, 3, 3{,}000{,}000) และ \\(h_\\theta(x)=\\theta_0+\\theta_1x_1+\\theta_2x_2\\) ค่า \\(\\theta_1\\) และสมการสุดท้ายคือข้อใด?",
+  "options": [
+   "\\(\\theta_1=10{,}000\\); สมการคือ \\(h_\\theta(x)=10{,}000\\,x_1\\) เพราะ \\(\\theta_0=\\theta_2=0\\)",
+   "\\(\\theta_1=10{,}000\\); สมการคือ \\(h_\\theta(x)=10{,}000\\,x_1+3x_2\\) เพราะ \\(\\theta_2=3\\)",
+   "\\(\\theta_1=5{,}000\\); สมการคือ \\(h_\\theta(x)=5{,}000\\,x_1\\) เพราะ \\(\\theta_0=\\theta_2=0\\)",
+   "\\(\\theta_1=10{,}000\\); สมการคือ \\(h_\\theta(x)=10{,}000\\,x_1+1{,}000{,}000\\) เพราะ \\(\\theta_0\\ne 0\\)"
+  ],
+  "answer": 0,
+  "explanation": "เลือกคู่แถวที่ \\(x_2\\) เท่ากันเพื่อให้ \\(\\theta_2\\) ตัดทิ้ง คือแถว 3 ลบแถว 1 (ทั้งคู่มี \\(x_2=3\\)): \\(200\\theta_1 = 3{,}000{,}000-1{,}000{,}000 = 2{,}000{,}000 \\Rightarrow \\theta_1 = 10{,}000\\). แทนกลับ: แถว 1 ได้ \\(\\theta_0+3\\theta_2=1{,}000{,}000-100(10{,}000)=0\\) และแถว 2 ได้ \\(\\theta_0+2\\theta_2=2{,}000{,}000-200(10{,}000)=0\\); ลบกันได้ \\(\\theta_2=0\\) จึง \\(\\theta_0=0\\) ด้วย ⇒ \\(h_\\theta(x)=10{,}000\\,x_1\\). ตรวจกลับ: \\(10{,}000\\times200=2{,}000{,}000\\) ✓. บทเรียนของตัวอย่างนี้คือ \\(\\theta_j=0\\) เป็นวิธีที่โมเดลบอกว่า \"feature นี้ไม่ช่วยอะไร\" — แนวคิดเดียวกับ regularization ใน §11 ที่บีบ \\(\\theta\\) ของ feature ไร้ประโยชน์ให้เข้าใกล้ศูนย์.",
+  "why_wrong": [
+   "สับสนระหว่างค่าของ \\(x_2\\) (= 3) กับสัมประสิทธิ์ \\(\\theta_2\\) ซึ่งแก้ออกมาได้ 0",
+   "ผลต่างของ \\(x_1\\) ระหว่างแถว 1 กับ 3 คือ 200 ไม่ใช่ 400 จึงได้ \\(\\theta_1=10{,}000\\)",
+   "แทน \\(\\theta_1\\) กลับเข้าแถว 1 และ 2 แล้วได้ \\(\\theta_0=0\\) ไม่ใช่ 1,000,000"
+  ],
+  "ref": "Lesson 1 §2 (p.28)"
+ }
+]

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deep Learning MCQ Review</title>
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<script defer src="assets/katex/katex.min.js"></script>
+<script defer src="assets/katex/auto-render.min.js"></script>
+<style>
+:root {
+  --bg: #ffffff;
+  --ink: #1a1a1a;
+  --ink-soft: #55554f;
+  --rule: #e2ddd2;
+  --accent: #a5502c;
+  --accent-soft: #f6ece3;
+  --good: #2f6d3e;
+  --good-bg: #e8f3ea;
+  --bad: #a5342c;
+  --bad-bg: #f9e9e7;
+  --code-bg: #f4f2eb;
+  --panel: #faf9f5;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body {
+  color: var(--ink);
+  font-family: -apple-system, "Helvetica Neue", "Noto Sans Thai", "Sukhumvit Set", Arial, sans-serif;
+  font-size: 17px; line-height: 1.6;
+  max-width: 820px; margin: 0 auto; padding: 2rem 16px 5rem;
+}
+h1 { font-size: 1.7rem; margin: 0 0 .2em; }
+.sub { color: var(--ink-soft); margin: 0 0 1.2em; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 16px; margin: 0 0 14px; }
+.panel h2 { font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--rule); border-radius: 999px; padding: 4px 11px; font-size: .88rem; background: #fff; cursor: pointer; user-select: none; }
+.chip input { margin: 0; }
+button { font: inherit; font-size: .9rem; border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 6px 12px; cursor: pointer; color: var(--ink); }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.stat { background: #fff; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; }
+.stat .k { font-size: .75rem; color: var(--ink-soft); }
+.stat .v { font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bar { height: 5px; background: var(--rule); border-radius: 3px; margin-top: 5px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--good); }
+.weak { margin: 10px 0 0; padding-left: 1.2em; font-size: .92rem; }
+.weak li { margin: 2px 0; }
+.weak a { color: var(--bad); }
+.progress { font-size: .9rem; color: var(--ink-soft); margin: 18px 0 8px; }
+.q { border: 1px solid var(--rule); border-radius: 12px; padding: 16px 18px; margin: 0 0 16px; background: #fff; scroll-margin-top: 12px; }
+.q.done-good { border-left: 5px solid var(--good); }
+.q.done-bad { border-left: 5px solid var(--bad); }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: .74rem; margin-bottom: 8px; }
+.tag { border-radius: 4px; padding: 1px 7px; background: var(--accent-soft); color: var(--accent); }
+.tag.t-code { background: #e7eef8; color: #2b5a91; }
+.tag.t-calc { background: #efe8f6; color: #6a3d8f; }
+.tag.d-easy { background: #eaf3e8; color: #3d6b33; }
+.tag.d-medium { background: #f7f0dc; color: #7a5b12; }
+.tag.d-hard { background: #f8e4e1; color: #8e3a2f; }
+.num { font-weight: 700; color: var(--ink-soft); margin-right: 4px; }
+.stem { margin: 0 0 10px; }
+pre { background: var(--code-bg); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font-size: .84rem; line-height: 1.45; margin: 8px 0 12px; }
+code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .9em; }
+:not(pre) > code { background: var(--code-bg); padding: 1px 4px; border-radius: 4px; }
+.opts { display: grid; gap: 8px; }
+.opt { display: flex; gap: 10px; text-align: left; width: 100%; padding: 9px 12px; border-radius: 9px; border: 1px solid var(--rule); background: #fff; font-size: .97rem; line-height: 1.5; }
+.opt .L { font-weight: 700; min-width: 1.4em; color: var(--ink-soft); }
+.opt:not([disabled]):hover { background: var(--panel); border-color: var(--accent); }
+.opt[disabled] { cursor: default; color: var(--ink); }
+.opt.correct { background: var(--good-bg); border-color: var(--good); }
+.opt.correct .L { color: var(--good); }
+.opt.wrong { background: var(--bad-bg); border-color: var(--bad); }
+.opt.wrong .L { color: var(--bad); }
+.verdict { margin: 10px 0 0; font-weight: 600; }
+.verdict.good { color: var(--good); }
+.verdict.bad { color: var(--bad); }
+.actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.explain { margin-top: 10px; padding: 12px 14px; background: var(--panel); border-radius: 9px; border: 1px solid var(--rule); font-size: .95rem; }
+.explain h4 { margin: 10px 0 4px; font-size: .85rem; color: var(--accent); }
+.explain h4:first-child { margin-top: 0; }
+.explain ul { margin: 4px 0; padding-left: 1.2em; }
+.explain .ref { margin-top: 8px; font-size: .82rem; color: var(--ink-soft); }
+.empty { color: var(--ink-soft); padding: 30px 0; text-align: center; }
+.katex { font-size: 1.02em; }
+@media (max-width: 560px) { body { font-size: 16px; } .q { padding: 14px 12px; } }
+</style>
+</head>
+<body>
+<h1>Deep Learning MCQ Review</h1>
+<p class="sub">ข้อสอบทบทวน Lesson 1-6 + ex1-3 + notebook ในห้อง · สุ่มลำดับทุกครั้ง · ตอบแล้วเห็นผลทันที กด “ดูเฉลย” เมื่อไม่เข้าใจ</p>
+
+<div class="panel">
+  <h2>เลือกชุดที่จะทำ</h2>
+  <div class="row" id="lessonFilters"></div>
+  <div class="row" style="margin-top:8px" id="typeFilters"></div>
+  <div class="row" style="margin-top:8px">
+    <label class="chip"><input type="radio" name="mode" value="all" checked> ทุกข้อ</label>
+    <label class="chip"><input type="radio" name="mode" value="unanswered"> ยังไม่ได้ทำ</label>
+    <label class="chip"><input type="radio" name="mode" value="wrong"> เฉพาะข้อที่ผิด (ทำซ้ำ)</label>
+  </div>
+  <div class="row" style="margin-top:10px">
+    <button class="primary" id="shuffleBtn">สุ่มลำดับใหม่</button>
+    <button id="resetBtn">ล้างคำตอบทั้งหมด</button>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>คะแนนและจุดอ่อน</h2>
+  <div class="stats" id="stats"></div>
+  <div id="weakWrap"></div>
+</div>
+
+<div class="progress" id="progress"></div>
+<div id="list"></div>
+
+<script>
+const QUESTIONS = __DATA__;
+const LESSON_NAMES = {1:"L1 ML Foundations",2:"L2 NN Basics",3:"L3 Cost & Backprop",4:"L4 Deep NN & Optimizers",5:"L5 Init / BN / Keras",6:"L6 Callbacks & Tuning"};
+const TYPE_NAMES = {concept:"แนวคิด", code:"code", calc:"คำนวณ"};
+const DIFF_NAMES = {easy:"ง่าย", medium:"กลาง", hard:"ยาก"};
+const SOURCE_NAMES = {lesson:"lesson", ex1:"ex1", ex2:"ex2", ex3:"ex3", ex_shallow_nn:"ex_shallow_nn (Lecture 4)", mnist_notebook:"MNIST notebook (Lecture 5)", callbacks_notebook:"Callbacks notebook (Lecture 6)", tensorboard_notebook:"TensorBoard notebook (Lecture 6)", tuning_notebook:"Tuning notebook (Lecture 6)"};
+const LETTERS = ["A","B","C","D"];
+const KEY = "dl-mcq-review-v1";
+
+let answers = {};   // id -> {choice, correct, tries}
+try { answers = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { answers = {}; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(answers)); } catch (e) {} }
+
+const byId = Object.fromEntries(QUESTIONS.map(q => [q.id, q]));
+let order = [];
+let sessionAnswered = {}; // for "wrong" mode: questions re-answered in this view
+const openExplain = new Set();
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function buildFilters() {
+  const lf = document.getElementById("lessonFilters");
+  for (const n of [1,2,3,4,5,6]) {
+    const c = QUESTIONS.filter(q => q.lesson === n).length;
+    lf.insertAdjacentHTML("beforeend", `<label class="chip"><input type="checkbox" class="lf" value="${n}" checked> ${LESSON_NAMES[n]} <span style="color:var(--ink-soft)">(${c})</span></label>`);
+  }
+  const tf = document.getElementById("typeFilters");
+  for (const t of ["concept","calc","code"]) {
+    const c = QUESTIONS.filter(q => q.type === t).length;
+    tf.insertAdjacentHTML("beforeend", `<label class="chip"><input type="checkbox" class="tf" value="${t}" checked> ${TYPE_NAMES[t]} <span style="color:var(--ink-soft)">(${c})</span></label>`);
+  }
+  document.querySelectorAll(".lf,.tf,input[name=mode]").forEach(el => el.addEventListener("change", () => { sessionAnswered = {}; newOrder(); }));
+}
+
+function currentPool() {
+  const ls = new Set([...document.querySelectorAll(".lf:checked")].map(e => +e.value));
+  const ts = new Set([...document.querySelectorAll(".tf:checked")].map(e => e.value));
+  const mode = document.querySelector("input[name=mode]:checked").value;
+  return QUESTIONS.filter(q => ls.has(q.lesson) && ts.has(q.type)).filter(q => {
+    const a = answers[q.id];
+    if (mode === "unanswered") return !a || sessionAnswered[q.id];
+    if (mode === "wrong") return (a && !a.correct) || sessionAnswered[q.id];
+    return true;
+  });
+}
+
+function newOrder() { order = shuffle(currentPool().map(q => q.id)); openExplain.clear(); render(); }
+
+function renderMath(el) {
+  if (typeof renderMathInElement !== "function") return;
+  renderMathInElement(el, { delimiters: [ {left:"$$",right:"$$",display:true}, {left:"\\[",right:"\\]",display:true}, {left:"\\(",right:"\\)",display:false} ], ignoredTags: ["script","noscript","style","textarea","pre","code"], throwOnError: false });
+}
+
+function cardHTML(q, idx) {
+  const a = sessionAnswered[q.id] || (document.querySelector("input[name=mode]:checked").value === "wrong" ? null : answers[q.id]);
+  const done = !!a;
+  const cls = done ? (a.choice === q.answer ? "done-good" : "done-bad") : "";
+  let opts = q.options.map((o, i) => {
+    let c = "opt";
+    if (done && i === q.answer) c += " correct";
+    if (done && i === a.choice && i !== q.answer) c += " wrong";
+    return `<button class="${c}" data-q="${q.id}" data-i="${i}" ${done ? "disabled" : ""}><span class="L">${LETTERS[i]}.</span><span>${o}</span></button>`;
+  }).join("");
+  let verdict = "";
+  if (done) {
+    verdict = a.choice === q.answer
+      ? `<div class="verdict good">ถูกต้อง — คำตอบคือ ${LETTERS[q.answer]}</div>`
+      : `<div class="verdict bad">ยังไม่ถูก — คุณตอบ ${LETTERS[a.choice]} · คำตอบที่ถูกคือ ${LETTERS[q.answer]}</div>`;
+    verdict += `<div class="actions"><button data-explain="${q.id}">${openExplain.has(q.id) ? "ซ่อนเฉลย" : "ดูเฉลย"}</button></div>`;
+    if (openExplain.has(q.id)) {
+      const ww = q.options.map((o, i) => i === q.answer ? "" : `<li><b>${LETTERS[i]}.</b> ${q.why_wrong_map[i]}</li>`).join("");
+      verdict += `<div class="explain"><h4>ทำไม ${LETTERS[q.answer]} ถูก</h4><div>${q.explanation}</div><h4>ตัวเลือกอื่นผิดเพราะ</h4><ul>${ww}</ul><div class="ref">ทบทวนที่: ${esc(q.ref)}</div></div>`;
+    }
+  }
+  const code = q.code ? `<pre><code>${esc(q.code)}</code></pre>` : "";
+  return `<div class="q ${cls}" id="card-${q.id}">
+    <div class="meta"><span class="tag">${LESSON_NAMES[q.lesson]}</span><span class="tag t-${q.type}">${TYPE_NAMES[q.type]}</span><span class="tag d-${q.difficulty}">${DIFF_NAMES[q.difficulty]}</span>${q.source !== "lesson" ? `<span class="tag">${esc(SOURCE_NAMES[q.source] || q.source)}</span>` : ""}<span class="tag" style="background:#f1f1ee;color:var(--ink-soft)">${esc(q.topic)}</span></div>
+    <div class="stem"><span class="num">${idx + 1}.</span>${q.stem}</div>${code}
+    <div class="opts">${opts}</div>${verdict}</div>`;
+}
+
+function render() {
+  const list = document.getElementById("list");
+  if (!order.length) { list.innerHTML = `<div class="empty">ไม่มีข้อในชุดนี้ ${document.querySelector("input[name=mode]:checked").value === "wrong" ? "— ยังไม่มีข้อที่ตอบผิด 🎉" : ""}</div>`; }
+  else list.innerHTML = order.map((id, i) => cardHTML(byId[id], i)).join("");
+  renderMath(list);
+  const done = order.filter(id => answers[id]).length;
+  document.getElementById("progress").textContent = order.length ? `กำลังแสดง ${order.length} ข้อ · ทำไปแล้วในชุดนี้ ${done} ข้อ` : "";
+  renderStats();
+}
+
+function rerenderCard(id) {
+  const el = document.getElementById("card-" + id);
+  const idx = order.indexOf(id);
+  const tmp = document.createElement("div");
+  tmp.innerHTML = cardHTML(byId[id], idx);
+  const nu = tmp.firstElementChild;
+  el.replaceWith(nu);
+  renderMath(nu);
+  renderStats();
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button.opt");
+  if (b && !b.disabled) {
+    const q = byId[b.dataset.q], i = +b.dataset.i;
+    const prev = answers[q.id];
+    answers[q.id] = { choice: i, correct: i === q.answer, tries: (prev ? prev.tries : 0) + 1, everWrong: (prev && prev.everWrong) || i !== q.answer };
+    sessionAnswered[q.id] = answers[q.id];
+    save();
+    rerenderCard(q.id);
+    return;
+  }
+  const x = e.target.closest("button[data-explain]");
+  if (x) { const id = x.dataset.explain; openExplain.has(id) ? openExplain.delete(id) : openExplain.add(id); rerenderCard(id); }
+});
+
+function pct(c, n) { return n ? Math.round(100 * c / n) : 0; }
+function renderStats() {
+  const st = document.getElementById("stats");
+  const all = QUESTIONS.filter(q => answers[q.id]);
+  const cor = all.filter(q => answers[q.id].correct).length;
+  let html = `<div class="stat"><div class="k">ทำไปแล้ว</div><div class="v">${all.length}/${QUESTIONS.length}</div><div class="bar"><i style="width:${pct(all.length, QUESTIONS.length)}%"></i></div></div>`;
+  html += `<div class="stat"><div class="k">ถูก (ล่าสุด)</div><div class="v">${cor}/${all.length} · ${pct(cor, all.length)}%</div><div class="bar"><i style="width:${pct(cor, all.length)}%"></i></div></div>`;
+  for (const n of [1,2,3,4,5,6]) {
+    const qs = QUESTIONS.filter(q => q.lesson === n && answers[q.id]);
+    const c = qs.filter(q => answers[q.id].correct).length;
+    html += `<div class="stat"><div class="k">${LESSON_NAMES[n]}</div><div class="v">${qs.length ? pct(c, qs.length) + "%" : "–"}</div><div class="k">${c}/${qs.length} ข้อที่ทำ</div><div class="bar"><i style="width:${pct(c, qs.length)}%"></i></div></div>`;
+  }
+  for (const t of ["concept","calc","code"]) {
+    const qs = QUESTIONS.filter(q => q.type === t && answers[q.id]);
+    const c = qs.filter(q => answers[q.id].correct).length;
+    html += `<div class="stat"><div class="k">ประเภท: ${TYPE_NAMES[t]}</div><div class="v">${qs.length ? pct(c, qs.length) + "%" : "–"}</div><div class="k">${c}/${qs.length}</div><div class="bar"><i style="width:${pct(c, qs.length)}%"></i></div></div>`;
+  }
+  st.innerHTML = html;
+  const wrong = QUESTIONS.filter(q => answers[q.id] && !answers[q.id].correct);
+  const w = document.getElementById("weakWrap");
+  if (!wrong.length) { w.innerHTML = `<p class="k" style="color:var(--ink-soft);font-size:.9rem;margin:10px 0 0">ยังไม่มีข้อที่ผิด — จุดอ่อนจะขึ้นที่นี่ พร้อมตำแหน่งที่ควรกลับไปอ่าน</p>`; return; }
+  w.innerHTML = `<p style="margin:12px 0 0;font-size:.9rem"><b>หัวข้อที่ยังผิดอยู่ (${wrong.length})</b> — กดเพื่อไปที่ข้อ หรือเลือกโหมด “เฉพาะข้อที่ผิด” เพื่อทำซ้ำ</p><ul class="weak">` +
+    wrong.sort((a, b) => a.lesson - b.lesson).map(q => `<li><a href="#card-${q.id}" data-jump="${q.id}">L${q.lesson} · ${esc(q.topic)}</a> <span style="color:var(--ink-soft)">— ${esc(q.ref)}</span></li>`).join("") + `</ul>`;
+}
+
+document.getElementById("weakWrap").addEventListener("click", e => {
+  const a = e.target.closest("a[data-jump]");
+  if (!a) return;
+  if (!document.getElementById("card-" + a.dataset.jump)) { e.preventDefault(); alert("ข้อนี้ไม่อยู่ในชุดที่กรองไว้ตอนนี้ — เปิดตัวกรองบท/ประเภทให้ครอบคลุมก่อน"); }
+});
+
+document.getElementById("shuffleBtn").addEventListener("click", () => { sessionAnswered = {}; newOrder(); window.scrollTo({ top: 0 }); });
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("ล้างคำตอบทั้งหมดแล้วเริ่มใหม่?")) return;
+  answers = {}; sessionAnswered = {}; save(); newOrder();
+});
+
+document.addEventListener("DOMContentLoaded", () => { buildFilters(); newOrder(); });
+</script>
+</body>
+</html>

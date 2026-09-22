@@ -1,0 +1,1277 @@
+[
+ {
+  "id": "L3-01",
+  "lesson": 3,
+  "topic": "Cost function: นิยาม",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตามสไลด์หน้า 1 (ข้อความที่อาจารย์ทำสี) cost function ถูกนิยามว่าใช้ทำอะไร?",
+  "options": [
+   "measure the accuracy of the hypothesis function",
+   "measure the accuracy of the activation function",
+   "update every weight toward the correct answer",
+   "measure the slope of the loss at each node"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์นิยามคำต่อคำว่า cost function ใช้ <b>measure the accuracy of the hypothesis function</b> คือวัดว่าฟังก์ชันทำนาย \\(h_\\theta(x)\\) แม่นแค่ไหนเมื่อเทียบกับ \\(y\\) จริง โดยแปลง &quot;ความผิด&quot; ให้เป็นตัวเลขตัวเดียวที่นำไปหาอนุพันธ์ต่อได้. การอัปเดต weight เป็นงานของ gradient descent ไม่ใช่ของ cost function.",
+  "why_wrong": [
+   "สลับคำ hypothesis เป็น activation — activation เป็นแค่ส่วนประกอบใน node ไม่ใช่สิ่งที่ cost วัด",
+   "การอัปเดต weight เป็นหน้าที่ของ gradient descent ที่ใช้ gradient ของ cost",
+   "ความชันของ loss ต่อ node คือ δ ที่ backprop คำนวณ ไม่ใช่นิยามของ cost"
+  ],
+  "ref": "Lesson 3 §0 Cost Function (p.1)"
+ },
+ {
+  "id": "L3-02",
+  "lesson": 3,
+  "topic": "Cost function: cross-entropy เมื่อ y=0",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "cost แบบ classification (1 output node) คือ \\(J=-\\frac{1}{m}\\sum[y\\log h+(1-y)\\log(1-h)]\\). สำหรับตัวอย่างที่ \\(y=0\\) เทอมที่เหลือทำงานจริงคือข้อใด?",
+  "options": [
+   "\\(-\\log(1-h)\\) เพราะตัวคูณ \\(y=0\\) ลบเทอมแรกทิ้ง",
+   "\\(-\\log h\\) เพราะตัวคูณ \\((1-y)=0\\) ลบเทอมหลังทิ้ง",
+   "\\((h-y)^2\\) เพราะ y=0 ทำให้กลับไปใช้ squared error",
+   "\\(-\\log h-\\log(1-h)\\) เพราะทั้งสองเทอมยังทำงาน"
+  ],
+  "answer": 0,
+  "explanation": "สูตรมี &quot;สวิตช์&quot; ในตัว: เมื่อ \\(y=0\\) เทอม \\(y\\log h\\) ถูกคูณด้วย 0 จึงหายไป เหลือ \\((1-0)\\log(1-h)\\) ⇒ ค่าปรับคือ \\(-\\log(1-h)\\). ถ้าโมเดลทำนาย \\(h\\) ใกล้ 1 (มั่นใจผิดทาง) \\(1-h\\) ใกล้ 0 และ \\(-\\log(1-h)\\) พุ่งสูง ⇒ ลงโทษหนัก. ส่วนกรณี \\(y=1\\) จะเหลือ \\(-\\log h\\) แทน — มีเพียงเทอมเดียวทำงานเสมอ.",
+  "why_wrong": [
+   "เป็นกรณีของ y=1 (สลับสวิตช์)",
+   "squared error เป็น cost ของ regression ไม่ใช่ classification",
+   "ลืมว่าตัวคูณ y หรือ (1−y) ตัวหนึ่งเป็นศูนย์เสมอ"
+  ],
+  "ref": "Lesson 3 §0 Cost Function (p.1)"
+ },
+ {
+  "id": "L3-03",
+  "lesson": 3,
+  "topic": "Parameter learning: nonconvex / local optima",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "สไลด์หน้า 2 ทำสีคำว่า nonconvex – Local Optima Problems ข้อใดสรุปจุดยืนของสไลด์ได้ถูกต้อง?",
+  "options": [
+   "cost ของ NN ไม่ใช่ชามใบเดียว อาจติด local minimum แต่ในทางปฏิบัติพบยากและมักใกล้ global",
+   "cost ของ NN เป็น convex เหมือน logistic regression จึงไม่มีปัญหา local minimum เลยแม้แต่น้อย",
+   "cost ของ NN เป็น nonconvex ทำให้ gradient descent เทรนเครือข่ายไม่สำเร็จในทางปฏิบัติจริง",
+   "cost ของ NN เป็น nonconvex จึงต้องตั้ง weight เริ่มต้นเป็นศูนย์ทุกตัวเพื่อให้ได้ global"
+  ],
+  "answer": 0,
+  "explanation": "พื้นผิว cost ของ NN มีหลายหุบ (nonconvex) gradient descent จึงอาจตกหุบเล็ก — และนี่คือเหตุผลที่เทรนสองครั้งได้ weight คนละชุด. แต่สไลด์อ้าง Hands-on ML ว่า <i>&quot;this is rather rare in practice and usually fairly close to the global optimum&quot;</i> ⇒ เป็นปัญหาทางทฤษฎี ไม่ใช่ปัญหาร้ายแรงในทางปฏิบัติ.",
+  "why_wrong": [
+   "convex เป็นสมบัติของ linear/logistic regression ไม่ใช่ NN",
+   "เกินจริง — สไลด์บอกว่าในทางปฏิบัติไม่ค่อยร้ายแรง",
+   "ตั้งศูนย์ทุกตัวทำให้เกิด symmetry (redundant hidden units) ไม่ได้ช่วยหา global"
+  ],
+  "ref": "Lesson 3 §0 Parameter Learning (p.2)"
+ },
+ {
+  "id": "L3-04",
+  "lesson": 3,
+  "topic": "Backprop: ทำหน้าที่อะไร",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตามสไลด์หน้า 2–3 ข้อใดอธิบายหน้าที่ของ backpropagation algorithm ได้ถูกต้อง?",
+  "options": [
+   "คำนวณ partial derivative (gradient) ของ cost เทียบกับ weight แต่ละตัว",
+   "อัปเดต weight ทุกตัวด้วยสูตร θ := θ − α·gradient ให้ cost ลดลง",
+   "คำนวณ h(x) จากซ้ายไปขวาเพื่อให้ได้ค่าทำนายของตัวอย่างแต่ละตัว",
+   "สุ่มค่าเริ่มต้นของ weight ให้อยู่ในช่วง −ε ถึง ε เพื่อ break symmetry"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์นิยามว่า backprop ใช้ <b>compute partial derivative</b> (= <b>gradient</b>) ของ output error (= <b>cost</b>) เทียบกับ parameter (= <b>weight</b>) เพื่อส่งต่อให้ <b>gradient descent</b> ใช้เรียนรู้ — สรุปสั้นคือ &quot;how much each weight connection contributed to the error&quot;. ลำดับงานคือ backprop คำนวณ \\(\\partial J/\\partial\\theta\\) → gradient descent นำไปอัปเดต.",
+  "why_wrong": [
+   "นี่คืองานของ gradient descent ที่รับ gradient จาก backprop ไปใช้",
+   "นี่คือ forward computation ซึ่งเป็นแค่ขั้นแรกที่ต้องทำก่อน backward",
+   "นี่คือ parameter initialization (p.21) คนละขั้นตอน"
+  ],
+  "ref": "Lesson 3 §1 Chain Rule (p.3)"
+ },
+ {
+  "id": "L3-05",
+  "lesson": 3,
+  "topic": "Chain rule: โครงสร้างของ ∂J/∂θ[1]",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "เครือข่าย input → hidden → output (\\(L=2\\)). ผลคูณตาม chain rule ของ \\(\\partial J/\\partial\\theta^{[1]}\\) ในสไลด์หน้า 6 คือข้อใด?",
+  "options": [
+   "\\(\\frac{\\partial J}{\\partial z^{[2]}}\\frac{\\partial z^{[2]}}{\\partial a^{[1]}}\\frac{\\partial a^{[1]}}{\\partial z^{[1]}}\\frac{\\partial z^{[1]}}{\\partial\\theta^{[1]}}\\)",
+   "\\(\\frac{\\partial J}{\\partial z^{[2]}}\\frac{\\partial z^{[2]}}{\\partial\\theta^{[2]}}\\frac{\\partial a^{[1]}}{\\partial z^{[1]}}\\frac{\\partial z^{[1]}}{\\partial\\theta^{[1]}}\\)",
+   "\\(\\frac{\\partial J}{\\partial z^{[1]}}\\frac{\\partial z^{[1]}}{\\partial a^{[1]}}\\frac{\\partial a^{[1]}}{\\partial z^{[2]}}\\frac{\\partial z^{[2]}}{\\partial\\theta^{[1]}}\\)",
+   "\\(\\frac{\\partial J}{\\partial z^{[2]}}\\frac{\\partial z^{[2]}}{\\partial a^{[1]}}\\frac{\\partial z^{[1]}}{\\partial\\theta^{[1]}}\\)"
+  ],
+  "answer": 0,
+  "explanation": "ไล่ &quot;เส้นทาง&quot; ที่ \\(\\theta^{[1]}\\) ส่งผลถึง \\(J\\): \\(\\theta^{[1]}\\to z^{[1]}\\to a^{[1]}\\to z^{[2]}\\to J\\) มี 4 ทอด ⇒ 4 ตัวคูณ อ่านจาก cost ย้อนกลับ: \\(\\frac{\\partial J}{\\partial z^{[2]}}\\) (= \\(\\delta^{[2]}\\)) · \\(\\frac{\\partial z^{[2]}}{\\partial a^{[1]}}\\) (= \\(\\theta^{[2]}\\)) · \\(\\frac{\\partial a^{[1]}}{\\partial z^{[1]}}\\) (= \\(g'\\)) · \\(\\frac{\\partial z^{[1]}}{\\partial\\theta^{[1]}}\\) (= \\(x\\)). ส่วน \\(\\theta^{[2]}\\) มีแค่ 2 ทอด — จำนวนทอด = ระยะทางจาก weight ถึง cost.",
+  "why_wrong": [
+   "ใส่ ∂z[2]/∂θ[2] ซึ่งเป็นทอดของ weight ชั้นสุดท้าย ไม่ได้อยู่บนเส้นทางของ θ[1]",
+   "กลับทิศโซ่ (อ่านจาก input ไป output) ทำให้แต่ละทอดไม่ต่อกัน",
+   "ขาดทอด ∂a[1]/∂z[1] (g′) — ลืมผ่าน activation"
+  ],
+  "ref": "Lesson 3 §2 Apply Chain Rule (p.6)"
+ },
+ {
+  "id": "L3-06",
+  "lesson": 3,
+  "topic": "δ: นิยาม",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตามสูตรที่ใช้จริงในสไลด์หน้า 8 ค่า \\(\\delta_j^{(l)}\\) ของ node \\(j\\) ใน layer \\(l\\) เท่ากับข้อใด?",
+  "options": [
+   "\\(\\partial J/\\partial z_j^{[l]}\\)",
+   "\\(\\partial J/\\partial a_j^{[l]}\\)",
+   "\\(\\partial J/\\partial \\theta_{ij}^{[l]}\\)",
+   "\\(\\partial a_j^{[l]}/\\partial z_j^{[l]}\\)"
+  ],
+  "answer": 0,
+  "explanation": "\\(\\delta_j^{(l)}=\\dfrac{\\partial J}{\\partial z_j^{[l]}}\\) — &quot;ถ้าดัน \\(z\\) ของ node นี้ขึ้นนิดเดียว cost เปลี่ยนเท่าไร&quot; (ส่วนแบ่งความผิดของ node). คำบรรยายในสไลด์เขียนว่า error of cost for \\(a_j^{[l]}\\) แต่สูตรหารเทียบ \\(z\\); ถ้าใช้ \\(a\\) สูตร \\(\\delta^{[L]}=a^{[L]}-y\\) จะไม่จริง. เหตุผลที่ตั้งชื่อ \\(\\delta\\): เทอม \\(\\partial J/\\partial z\\) ปรากฏซ้ำในทุก gradient ที่อยู่ก่อนหน้า จึงคำนวณครั้งเดียวแล้วใช้ซ้ำ. gradient ของ weight จึงเป็น \\(a_j^{[l-1]}\\delta_i^{(l)}\\).",
+  "why_wrong": [
+   "เป็นข้อความบรรยายในสไลด์ แต่ไม่ใช่สูตรที่ใช้จริง (กับดักที่ระบุไว้)",
+   "นี่คือ gradient ของ weight = a·δ ซึ่งได้หลังจากมี δ แล้ว",
+   "นี่คือ g′(z) เป็นแค่ตัวคูณหนึ่งตัวในสูตร δ ของ hidden"
+  ],
+  "ref": "Lesson 3 §2.2 นิยาม δ (p.8)"
+ },
+ {
+  "id": "L3-07",
+  "lesson": 3,
+  "topic": "Backprop: ทำไมต้อง forward ก่อน backward",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "สไลด์บอกว่า backprop ต่อ 1 ตัวอย่างมี 2 consecutive steps (forward แล้ว backward). เหตุผลเชิงกลไกที่ต้อง forward ก่อนคือข้อใด?",
+  "options": [
+   "backward ต้องใช้ z และ a ที่ forward เก็บไว้ ทั้งใน g′(z)=a(1−a) และ gradient a·δ",
+   "forward ต้องใช้ δ ของทุก layer เพื่อคำนวณ h(x) ถ้าไม่มี δ มาก่อนจะทำนายไม่ได้เลย",
+   "forward เป็นขั้นที่อัปเดต θ ให้เสร็จก่อน backward จึงจะวัด error ของ θ ชุดใหม่ได้",
+   "ลำดับไม่สำคัญ สลับเป็น backward ก่อน forward ก็ได้ค่า gradient เท่ากันทุกครั้ง"
+  ],
+  "answer": 0,
+  "explanation": "backward ต้องการตัวเลขจาก forward สามจุด: \\(\\delta^{(L)}=a^{[L]}-y\\) ต้องมี \\(a^{[L]}\\); \\(g'(z^{[l]})=a^{[l]}(1-a^{[l]})\\) ต้องมี \\(a^{[l]}\\); และ gradient \\(\\partial J/\\partial\\theta_{ij}^{[l]}=a_j^{[l-1]}\\delta_i^{(l)}\\) ต้องมี \\(a^{[l-1]}\\). ไม่มีค่าที่ cache จาก forward ก็ backward ไม่ได้ — นี่คือความหมายของ <b>2 consecutive steps</b>. การอัปเดต θ ไม่ใช่ขั้นย่อยของ backprop ต่อ example.",
+  "why_wrong": [
+   "กลับด้าน — forward ผลิตแค่ z กับ a ไม่ได้ใช้ δ",
+   "update ทำหลังเฉลี่ย D ครบทุกตัวอย่าง ไม่ใช่ใน forward",
+   "backward ต้องใช้ค่าจาก forward จึงสลับไม่ได้เด็ดขาด"
+  ],
+  "ref": "Lesson 3 §2 (p.6) และ §3 กลไก"
+ },
+ {
+  "id": "L3-08",
+  "lesson": 3,
+  "topic": "Backprop: สูตร δ ของ hidden layer",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "สูตรส่ง error ย้อนกลับในสไลด์หน้า 18 ข้อใดเขียนถูกต้อง (\\(*\\) = element-wise)?",
+  "options": [
+   "\\(\\delta^{(l-1)}=(\\theta^{[l]})^{\\top}\\delta^{(l)} * g'(z^{[l-1]})\\)",
+   "\\(\\delta^{(l-1)}=(\\theta^{[l]})^{\\top}\\delta^{(l)} * g'(z^{[l]})\\)",
+   "\\(\\delta^{(l-1)}=\\theta^{[l]}\\,\\delta^{(l)} * g'(z^{[l-1]})\\)",
+   "\\(\\delta^{(l-1)}=(\\theta^{[l-1]})^{\\top}\\delta^{(l)} * g'(z^{[l-1]})\\)"
+  ],
+  "answer": 0,
+  "explanation": "อ่านทีละตัวคูณ: \\((\\theta^{[l]})^\\top\\) = weight ที่เชื่อม layer \\(l-1\\) ไป layer \\(l\\) (transpose เพื่อกระจาย error ย้อนทิศ), \\(\\delta^{(l)}\\) = error ปลายทาง, \\(g'(z^{[l-1]})\\) = ความชันของ activation <i>ที่ layer ที่กำลังหา δ ให้</i>. ตรวจด้วยมิติ: \\(\\theta^{[2]}\\) ขนาด \\(1\\times4\\) ⇒ \\(\\theta^{[2]\\top}\\delta^{[2]}\\) เป็น \\(4\\times1\\) ตัดแถว bias เหลือ \\(3\\times1\\) ตรงกับ \\(g'(z^{[1]})\\) ขนาด \\(3\\times1\\).",
+  "why_wrong": [
+   "subscript ผิดชั้น — g′ ต้องเป็นของ layer l−1 ที่กำลังหา δ ไม่ใช่ layer ต้นทางของ δ",
+   "ลืม transpose — θ[l] ขนาด (s_l × s_{l−1}+1) คูณกับ δ[l] ไม่ได้ในทิศย้อนกลับ",
+   "ใช้ weight ผิดชุด — θ[l−1] เชื่อม layer l−2 กับ l−1 ไม่ได้เชื่อมกับ δ[l]"
+  ],
+  "ref": "Lesson 3 §4 Backprop Algorithm (p.18)"
+ },
+ {
+  "id": "L3-09",
+  "lesson": 3,
+  "topic": "g'(z)=a(1−a): ความหมาย",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "hidden node หนึ่งใช้ sigmoid และจาก forward ได้ \\(a=0.9\\). ค่า \\(g'(z)\\) ที่ใช้ใน δ ของ node นี้คือเท่าใด และบอกอะไร?",
+  "options": [
+   "0.09 — ใกล้อิ่มตัว gradient ผ่าน node นี้เหลือไม่ถึง 1/10",
+   "0.81 — ยกกำลังสองของ a จึงผ่าน gradient ได้เกือบเต็มที่",
+   "0.19 — เป็น 1 − a² แบบ tanh จึงเหลือ gradient ราวหนึ่งในห้า",
+   "0.25 — sigmoid มีอนุพันธ์คงที่ 0.25 ไม่ว่า a จะมีค่าเท่าใด"
+  ],
+  "answer": 0,
+  "explanation": "สำหรับ sigmoid \\(g'(z)=a(1-a)=0.9\\times0.1=0.09\\). จุดสำคัญคือคำนวณจาก \\(a\\) ที่ forward เก็บไว้ได้เลย ไม่ต้องคำนวณ \\(e^{-z}\\) ใหม่. ค่านี้เป็นตัวคูณใน \\(\\delta^{(l-1)}\\) ⇒ ถ้า \\(a\\) ใกล้ 0 หรือ 1 (อิ่มตัว) \\(g'\\) เล็กมาก gradient ที่ไหลผ่านก็เล็กตาม. ยอดสูงสุด 0.25 เกิดเฉพาะตอน \\(a=0.5\\) (\\(z=0\\)).",
+  "why_wrong": [
+   "เอา a² แทน a(1−a) — ไม่ใช่สูตรอนุพันธ์ใดในบท",
+   "ใช้สูตรของ tanh (1 − f²) กับ sigmoid",
+   "0.25 คือค่าสูงสุดที่ z=0 เท่านั้น ไม่ใช่ค่าคงที่"
+  ],
+  "ref": "Lesson 3 §5A.1 Sigmoid Derivative (p.25)"
+ },
+ {
+  "id": "L3-10",
+  "lesson": 3,
+  "topic": "Backprop: สะสม Δ แล้วเฉลี่ย D",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ในอัลกอริทึมหน้า 17–18 ขั้นตอนใดเรียงถูกต้องสำหรับการได้ gradient \\(D\\) ของ training set ขนาด \\(m\\)?",
+  "options": [
+   "ตั้ง \\(\\Delta:=0\\) → วนทุกตัวอย่าง \\(\\Delta \\mathrel{+}= a\\delta\\) → \\(D=\\Delta/m\\) → อัปเดต θ",
+   "วนทุกตัวอย่าง อัปเดต θ ทันทีด้วย \\(a\\delta\\) → จบแล้วค่อยตั้ง \\(\\Delta:=0\\)",
+   "ตั้ง \\(\\Delta:=0\\) → วนทุกตัวอย่าง \\(\\Delta \\mathrel{+}= a\\delta\\) → อัปเดต θ ด้วย \\(\\Delta\\) ตรงๆ",
+   "ตั้ง \\(\\Delta:=1\\) → วนทุกตัวอย่าง \\(\\Delta \\mathrel{*}= a\\delta\\) → \\(D=\\Delta/m\\) → อัปเดต θ"
+  ],
+  "answer": 0,
+  "explanation": "cost เป็นค่าเฉลี่ยของทุกตัวอย่าง ⇒ gradient ต้องเป็นค่าเฉลี่ยของ gradient รายตัวอย่างเช่นกัน. จึงต้อง (1) ล้าง \\(\\Delta_{ij}^{(l)}:=0\\) (ไม่งั้นของรอบก่อนบวกทบ) (2) สะสม \\(\\Delta_{ij}^{(l)} \\mathrel{+}= a_j^{[l-1]}\\delta_i^{(l)}\\) ทุกตัวอย่าง (3) \\(D=\\frac{1}{m}\\Delta\\) (4) \\(\\theta:=\\theta-\\alpha D\\). นี่คือ batch gradient descent.",
+  "why_wrong": [
+   "อัปเดตทีละตัวอย่างคือ SGD — อัลกอริทึมคนละตัว",
+   "ลืมหาร m — ก้าวจะโตตามจำนวนข้อมูล (ต่างจาก D ถึง m เท่า)",
+   "gradient ของผลรวมคือผลรวม (บวกสะสม) ไม่ใช่ผลคูณ"
+  ],
+  "ref": "Lesson 3 §4 Backprop Algorithm (p.17–18)"
+ },
+ {
+  "id": "L3-11",
+  "lesson": 3,
+  "topic": "Backprop intuition: gradient ใหญ่เมื่อไร",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "กล่อง Intuition หน้า 18: gradient ของ weight \\(\\theta_{ij}^{[l]}\\) จะใหญ่เมื่อใด?",
+  "options": [
+   "เมื่อ \\(\\delta_i\\) ของ node ปลายทางใหญ่ และ \\(a_j\\) ของ node ต้นทางไม่เล็ก",
+   "เมื่อค่าของ weight \\(\\theta_{ij}^{[l]}\\) ตัวนั้นเองมีขนาดใหญ่กว่าตัวอื่น",
+   "เมื่อ \\(\\delta_j\\) ของ node ต้นทางใหญ่ และ \\(a_i\\) ของ node ปลายทางไม่เล็ก",
+   "เมื่อ learning rate \\(\\alpha\\) ใหญ่ เพราะ α อยู่ในสูตร \\(\\partial J/\\partial\\theta\\)"
+  ],
+  "answer": 0,
+  "explanation": "\\(\\partial J/\\partial\\theta_{ij}^{[l]}=a_j^{[l-1]}\\delta_i^{(l)}\\) = (error ของปลายทาง) × (ค่าที่ไหลมาจากต้นทาง). สไลด์: &quot;if some weight leads to the node that largely contributes to the final loss (\\(\\delta_{\\text{destination}}\\) is large), the algorithm will calculate larger gradient&quot;. ตัวอย่างในบท: node ที่ \\(\\delta=0\\) ได้ gradient 0 แม้ \\(a\\) จะมีค่า 0.88.",
+  "why_wrong": [
+   "ขนาด weight ไม่อยู่ในสูตร gradient ของตัวมันเอง (ไม่นับ regularization)",
+   "สลับต้นทาง/ปลายทาง — δ เป็นของปลายทาง (i), a เป็นของต้นทาง (j)",
+   "α ใช้ตอน update ไม่อยู่ในค่า gradient"
+  ],
+  "ref": "Lesson 3 §4 Intuition (p.18)"
+ },
+ {
+  "id": "L3-12",
+  "lesson": 3,
+  "topic": "Autodiff: forward vs reverse mode",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตามสไลด์หน้า 19 ทำไม deep learning จึงใช้ reverse-mode automatic differentiation?",
+  "options": [
+   "NN มีพารามิเตอร์จำนวนมากแต่ loss เป็นสเกลาร์ตัวเดียว รอบย้อนเดียวได้ครบ",
+   "reverse-mode ให้อนุพันธ์ที่แม่นยำกว่า forward-mode เสมอในทุกโครงข่ายประสาท",
+   "NN มี input น้อยแต่ output เยอะ reverse-mode จึงส่งอนุพันธ์จาก input ไป output",
+   "reverse-mode ไม่ต้องใช้ chain rule จึงคำนวณได้เร็วกว่าการ derive ด้วยมือมาก"
+  ],
+  "answer": 0,
+  "explanation": "forward-mode ส่งอนุพันธ์ inputs→outputs (คุ้มเมื่อ input น้อย output เยอะ) ส่วน reverse-mode ส่ง gradient output→inputs. สไลด์ทำตัวหนา: <b>many parameters → one scalar loss</b> making reverse-mode particularly suitable. ถ้ามีพารามิเตอร์ 1,000,000 ตัว forward-mode ต้องรัน 1,000,000 รอบ ส่วน reverse-mode รันรอบเดียว. และ &quot;backpropagation is its application&quot; — backprop คือ reverse-mode AD ที่ใช้กับ NN.",
+  "why_wrong": [
+   "ความแม่นเท่ากัน ต่างกันที่ต้นทุนการคำนวณ",
+   "สลับทั้งลักษณะงานและทิศ — นั่นคือกรณีที่ forward-mode เหมาะ",
+   "AD ทุกโหมดใช้ chain rule บน computational graph"
+  ],
+  "ref": "Lesson 3 §4A.1 Autodiff (p.19)"
+ },
+ {
+  "id": "L3-13",
+  "lesson": 3,
+  "topic": "Autodiff: ลำดับโค้ด PyTorch",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "easy",
+  "stem": "โค้ดบนสไลด์หน้า 19 ต้องเรียงอย่างไรจึงถูกต้องสำหรับการเทรน 1 รอบ?",
+  "code": "y_pred = model(x)          # forward pass\nloss = criterion(y_pred, y)\nloss.backward()            # reverse-mode autodiff / backprop\noptimizer.step()           # update parameters",
+  "options": [
+   "model(x) → criterion(y_pred, y) → loss.backward() → optimizer.step()",
+   "model(x) → criterion(y_pred, y) → optimizer.step() → loss.backward()",
+   "model(x) → loss.backward() → criterion(y_pred, y) → optimizer.step()",
+   "model(x) → criterion(y_pred, y) → model.backward() → optimizer.step()"
+  ],
+  "answer": 0,
+  "explanation": "ลำดับ = forward (<code>y_pred = model(x)</code>) → คำนวณ loss สเกลาร์ → <code>loss.backward()</code> คือ reverse-mode autodiff/backprop ที่เติม \\(\\partial J/\\partial\\theta\\) ลงช่อง <code>.grad</code> (ยังไม่เปลี่ยน θ) → <code>optimizer.step()</code> อ่าน .grad แล้วอัปเดต \\(\\theta:=\\theta-\\alpha\\,\\partial J/\\partial\\theta\\).",
+  "why_wrong": [
+   "step ก่อน backward จะอัปเดตด้วย gradient เก่า/ว่าง",
+   "ยังไม่มี loss จะ backward จากอะไร — backward เรียกจากสเกลาร์ loss",
+   "backward เรียกจาก loss ไม่ใช่จาก model"
+  ],
+  "ref": "Lesson 3 §4A.1 (p.19)"
+ },
+ {
+  "id": "L3-14",
+  "lesson": 3,
+  "topic": "Dimension of parameters: b×(a+1)",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "เครือข่าย input 3 → hidden 5 → output 2. ตามกฎ \\(b\\times(a+1)\\) มิติของ \\(\\theta^{[1]}\\) และ \\(\\theta^{[2]}\\) คือข้อใด?",
+  "options": [
+   "\\(\\theta^{[1]}\\): 5×4, \\(\\theta^{[2]}\\): 2×6",
+   "\\(\\theta^{[1]}\\): 4×5, \\(\\theta^{[2]}\\): 6×2",
+   "\\(\\theta^{[1]}\\): 5×3, \\(\\theta^{[2]}\\): 2×5",
+   "\\(\\theta^{[1]}\\): 6×3, \\(\\theta^{[2]}\\): 3×5"
+  ],
+  "answer": 0,
+  "explanation": "กฎหน้า 20: ถ้า layer \\(l-1\\) มี \\(a\\) unit (<i>not include</i> \\(x_0\\)) และ layer \\(l\\) มี \\(b\\) unit ⇒ \\(\\theta^{[l]}\\) เป็น \\(b\\times(a+1)\\). แถว = node ปลายทาง, คอลัมน์ = node ต้นทาง + 1 ช่อง bias. \\(\\theta^{[1]}\\): \\(5\\times(3+1)=5\\times4\\) (20 ตัว); \\(\\theta^{[2]}\\): \\(2\\times(5+1)=2\\times6\\) (12 ตัว) รวม 32.",
+  "why_wrong": [
+   "transpose — สลับแถว/คอลัมน์ (a+1)×b",
+   "ลืม +1 ของ bias unit",
+   "ใส่ +1 ผิดฝั่งเป็น (b+1)×a"
+  ],
+  "ref": "Lesson 3 §4A.2 Dimension of Parameters (p.20)"
+ },
+ {
+  "id": "L3-15",
+  "lesson": 3,
+  "topic": "Dimension of parameters: นับรวมทั้งเครือข่าย",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "เครือข่าย 4 → 6 → 6 → 1 (นับ bias ตามกฎ b×(a+1)) มีพารามิเตอร์ θ ทั้งหมดกี่ตัว?",
+  "options": [
+   "79",
+   "66",
+   "73",
+   "82"
+  ],
+  "answer": 0,
+  "explanation": "\\(\\theta^{[1]}\\): \\(6\\times(4+1)=30\\); \\(\\theta^{[2]}\\): \\(6\\times(6+1)=42\\); \\(\\theta^{[3]}\\): \\(1\\times(6+1)=7\\) ⇒ \\(30+42+7=79\\). สังเกตว่าชั้นกลางเชื่อมกันแบบทุกคู่ (6×6 เส้น + bias 6 = 42) จึงกินพารามิเตอร์มากที่สุด.",
+  "why_wrong": [
+   "ลืม +1 ของ bias ทุกชั้น: 24+36+6 = 66",
+   "ลืม bias เฉพาะชั้นกลาง: 30+36+7 = 73",
+   "ใส่ +1 ผิดฝั่งเป็น (b+1)×a: 28+42+12 = 82"
+  ],
+  "ref": "Lesson 3 §4A.2 (p.20)"
+ },
+ {
+  "id": "L3-16",
+  "lesson": 3,
+  "topic": "Initialization: ทำไมห้ามเริ่มที่ศูนย์",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ถ้าตั้ง weight ทุกตัวเป็น 0 (หรือค่าเท่ากันหมด) จะเกิดอะไรตามสไลด์หน้า 21?",
+  "options": [
+   "hidden unit ทุกตัวคำนวณเหมือนกันตลอด เกิด redundant hidden units ต้อง break symmetry",
+   "gradient ระเบิด (exploding) ตั้งแต่รอบแรก เพราะทุก node ส่ง error เข้าหากันพร้อมกัน",
+   "เครือข่าย overfit ทันที เพราะ hidden unit ทุกตัวจำข้อมูลฝึกได้เหมือนกันหมดทุก node",
+   "cost เท่ากับศูนย์ตั้งแต่รอบแรก จึงไม่มี gradient ให้ใช้อัปเดต weight ได้เลยสักตัว"
+  ],
+  "answer": 0,
+  "explanation": "เมื่อ weight เท่ากัน \\(z_1^{[1]}=z_2^{[1]}\\) ⇒ \\(a_1=a_2\\) ⇒ \\(\\delta_1=\\delta_2\\) ⇒ gradient เท่ากัน ⇒ อัปเดตเท่ากัน ⇒ ยังเท่ากันตลอดไป. ตารางในบทแสดงว่า h ยังขยับเข้าหา 1 ได้ แต่แถวของ \\(\\theta^{[1]}\\) เท่ากันทุกรอบ — 100 node ก็มีความสามารถเท่า 1 node. สไลด์: <i>Randomly initialize the weights, you break the symmetry</i> โดยสุ่มเล็กๆ \\(-\\varepsilon<\\theta<\\varepsilon\\).",
+  "why_wrong": [
+   "weight ศูนย์ทำให้ z เล็ก ไม่ได้ทำให้ระเบิด",
+   "overfitting เป็นปัญหาจากโมเดลใหญ่เกิน ไม่ใช่จาก symmetry",
+   "cost ไม่เป็นศูนย์ (h=0.5 ไม่เท่ากับ y) — ยังมี gradient แต่เท่ากันทุก node"
+  ],
+  "ref": "Lesson 3 §4A.3 Initialization (p.21)"
+ },
+ {
+  "id": "L3-17",
+  "lesson": 3,
+  "topic": "Unrolling parameters: เหตุผล",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ทำไมต้อง unroll Theta1 และ Theta2 ด้วย np.concatenate([Theta1.ravel(), Theta2.ravel()]) ตามสไลด์หน้า 22?",
+  "options": [
+   "optimizer รับพารามิเตอร์เป็นเวกเตอร์ 1 มิติก้อนเดียว แต่ Theta คนละรูปกัน",
+   "เพื่อให้ Theta1 และ Theta2 มีขนาดเท่ากัน จะได้คูณเมทริกซ์ใน forward ได้ถูกต้อง",
+   "เพื่อสุ่มลำดับของพารามิเตอร์ใหม่ทุกรอบ ซึ่งช่วย break the symmetry ของ node",
+   "เพื่อลดจำนวนพารามิเตอร์ของเครือข่ายลง ทำหน้าที่เหมือน regularization แบบ L2"
+  ],
+  "answer": 0,
+  "explanation": "ฟังก์ชันอย่าง <code>scipy.optimize.minimize</code> (และลูป <code>w = w - lr*grads</code> ใน notebook) ทำงานกับเวกเตอร์ก้อนเดียว. แต่ \\(\\theta^{[1]}\\) เป็น \\(10\\times3\\) และ \\(\\theta^{[2]}\\) เป็น \\(1\\times11\\) — จึงคลี่แต่ละเมทริกซ์ (ravel, row-major) แล้วต่อกันเป็นเวกเตอร์ยาว 30+11=41 และ reshape กลับเมื่อจะใช้คำนวณ.",
+  "why_wrong": [
+   "unroll ไม่เปลี่ยนขนาดใดๆ และ forward ใช้รูปเมทริกซ์เดิมหลัง reshape",
+   "ravel/concatenate ไม่สุ่มลำดับ และต้องคงลำดับไว้เพื่อ reshape กลับ",
+   "จำนวนสมาชิกเท่าเดิม (41) ไม่ได้ลด"
+  ],
+  "ref": "Lesson 3 §4A.4 Unrolling (p.22)"
+ },
+ {
+  "id": "L3-18",
+  "lesson": 3,
+  "topic": "Tanh: อนุพันธ์และยอด",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ข้อใดถูกต้องเกี่ยวกับอนุพันธ์ของ tanh \\(f(x)\\) ตามสไลด์หน้า 26–27?",
+  "options": [
+   "\\(f'(x)=1-f(x)^2\\) มีค่าสูงสุด 1 ที่ \\(x=0\\) สูงกว่ายอดของ sigmoid 4 เท่า",
+   "\\(f'(x)=f(x)(1-f(x))\\) มีค่าสูงสุด 0.25 ที่ \\(x=0\\) เท่ากับยอดของ sigmoid",
+   "\\(f'(x)=1-f(x)^2\\) มีค่าสูงสุด 0.25 ที่ \\(x=0\\) ต่ำกว่ายอดของ sigmoid",
+   "\\(f'(x)=1-f(x)^2\\) ไม่ลดลงเมื่อ \\(|x|\\) ใหญ่ จึงไม่มีปัญหา slow ที่ปลาย"
+  ],
+  "answer": 0,
+  "explanation": "จาก quotient rule ได้ \\(f'(x)=1-f(x)^2\\). ที่ \\(x=0\\): \\(f=0\\) ⇒ \\(f'=1\\) ขณะที่ sigmoid มียอด \\(0.5\\times0.5=0.25\\) ⇒ ต่างกัน 4 เท่า ⇒ gradient ไหลดีกว่า (การทดลองหน้า 29 ได้ gradient ±1.5 vs ±0.4). แต่สไลด์ย้ำ <b>Both sigmoid and tanh slow when x is too large/small</b> — tanh ที่ \\(x=4\\) เหลือ 0.0013.",
+  "why_wrong": [
+   "เป็นสูตรและยอดของ sigmoid ไม่ใช่ tanh",
+   "สูตรถูกแต่ยอดผิด — 1−0² = 1 ไม่ใช่ 0.25",
+   "tanh ก็ saturate ที่ปลายเช่นเดียวกับ sigmoid"
+  ],
+  "ref": "Lesson 3 §5A.2–5A.3 (p.26–27)"
+ },
+ {
+  "id": "L3-19",
+  "lesson": 3,
+  "topic": "ปัญหา not zero-centered ของ sigmoid",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "ถ้า hidden layer ใช้ sigmoid, gradient ของ weight ทุกเส้นที่เข้า output node เดียวกันคือ \\((h-y)\\,a_j^{[1]}\\). ผลที่ตามมาตามสไลด์หน้า 28 คือข้อใด?",
+  "options": [
+   "เพราะ \\(a_j>0\\) ทุกตัว gradient ทั้งแถวเครื่องหมายเดียวกัน จึงต้องเดินซิกแซก",
+   "เพราะ \\(a_j<0\\) บางตัว gradient ทั้งแถวหักล้างกันเป็นศูนย์ จึงไม่เรียนรู้เลย",
+   "เพราะ \\(a_j\\) อยู่ใน [−1,1] gradient แต่ละตัวอิสระต่อกัน จึงเดินเฉียงตรงได้",
+   "เพราะ \\(a_j>0\\) ทุกตัว gradient ทุกตัวเป็นบวกเสมอ weight จึงลดลงพร้อมกันทุกรอบ"
+  ],
+  "answer": 0,
+  "explanation": "sigmoid ให้ \\(a_j\\in(0,1)\\) บวกเสมอ ⇒ เครื่องหมายของ gradient ทุกตัวในแถวถูกกำหนดโดย \\((h-y)\\) ตัวเดียว ⇒ weight ทั้งแถวได้แค่ &quot;ขึ้นพร้อมกัน&quot; หรือ &quot;ลงพร้อมกัน&quot;. ถ้าเป้าหมายอยู่ทิศ \\(w_1\\) ขึ้น \\(w_2\\) ลง ต้องสลับไปมาเป็นซิกแซก ⇒ ช้า. tanh (zero-centered, [−1,1]) ไม่มีข้อจำกัดนี้ — จึงเป็น &quot;outputs - not zero-centered&quot; ในช่องข้อเสียของ sigmoid.",
+  "why_wrong": [
+   "sigmoid ไม่ให้ค่าลบ และเครื่องหมายเดียวกันไม่หักล้างกัน",
+   "นี่คือพฤติกรรมของ tanh ไม่ใช่ sigmoid",
+   "เครื่องหมายขึ้นกับ (h−y) ซึ่งเป็นได้ทั้งบวกและลบ ไม่ใช่บวกเสมอ"
+  ],
+  "ref": "Lesson 3 §5A.4 (p.28)"
+ },
+ {
+  "id": "L3-20",
+  "lesson": 3,
+  "topic": "ตารางเปรียบเทียบ activation (หน้า 32)",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตามตารางหน้า 32 ข้อใดจับคู่ activation กับข้อดี/ข้อเสียในตารางได้ถูกต้อง?",
+  "options": [
+   "ReLU: fast calculation (better convergence) / output can be Infinite, information loss on x&lt;0",
+   "Tanh: fast calculation (better convergence) / output can be Infinite, outputs not zero-centered",
+   "Sigmoid: outputs zero-centered, easy to understand / output can be Infinite when x is &lt; 0",
+   "Leaky ReLU: Output is in [-1,1] → classification / slow when x is too large or too small"
+  ],
+  "answer": 0,
+  "explanation": "ช่องที่อาจารย์ทำสีแดงช่องเดียวคือ <b>fast calculation (better convergence)</b> ของ ReLU — เร็วเพราะแค่เทียบกับ 0 และ \\(g'=1\\) ไม่หั่น gradient. ข้อเสียของ ReLU: output can be Infinite ([0,∞]) และ information loss on x&lt;0 (??). Sigmoid: ข้อดี easy to understand / [0,1] → classification; ข้อเสีย slow ที่ปลาย + not zero-centered. Tanh: [−1,1], zero-centered; ข้อเสีย slow ที่ปลาย. Leaky ReLU: fast calculation / output can be Infinite.",
+  "why_wrong": [
+   "ยกข้อดี/ข้อเสียของ ReLU ให้ tanh — tanh เป็น zero-centered และมีขอบเขต [−1,1]",
+   "sigmoid ไม่ zero-centered และมีขอบเขต [0,1] ไม่ Infinite",
+   "เป็นข้อดี/ข้อเสียของ tanh ไม่ใช่ Leaky ReLU"
+  ],
+  "ref": "Lesson 3 §5B.3 ตารางหน้า 32"
+ },
+ {
+  "id": "L3-21",
+  "lesson": 3,
+  "topic": "ReLU vs Leaky ReLU: อนุพันธ์ฝั่งลบ",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "ที่ \\(x=-5\\) ค่า \\(f'(x)\\) ของ ReLU และ Leaky ReLU (ตามสไลด์หน้า 30–31) คือเท่าใดตามลำดับ?",
+  "options": [
+   "0 และ 0.01",
+   "0 และ −0.05",
+   "1 และ 0.01",
+   "0.01 และ 0"
+  ],
+  "answer": 0,
+  "explanation": "ReLU: \\(f'(x)=0\\) เมื่อ \\(x<0\\) ⇒ ฝั่งลบไม่มี gradient ไหลเลย (node อาจ &quot;ตาย&quot;). Leaky ReLU: \\(f(x)=0.01x\\) เมื่อ \\(x<0\\) ⇒ \\(f'(x)=0.01\\) (ค่าของฟังก์ชันคือ \\(f(-5)=-0.05\\) แต่อนุพันธ์คือความชัน 0.01). เล็กแต่ไม่ใช่ศูนย์ ⇒ gradient ยังเล็ดลอดกลับได้.",
+  "why_wrong": [
+   "สับสนค่าฟังก์ชัน f(−5)=−0.05 กับอนุพันธ์",
+   "1 คืออนุพันธ์ของ ReLU ฝั่ง x≥0",
+   "สลับสองฟังก์ชันกัน"
+  ],
+  "ref": "Lesson 3 §5B.1–5B.2 (p.30–31)"
+ },
+ {
+  "id": "L3-22",
+  "lesson": 3,
+  "topic": "Activation ที่ hidden layer",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตามสไลด์หน้า 33 ข้อใดสรุปคำแนะนำเรื่อง activation ของ hidden layer ได้ถูกต้อง?",
+  "options": [
+   "ใช้ ReLU ก่อน เพราะ gradient เป็น 0 หรือค่าคงที่ ถ้าไม่เวิร์คลอง leaky ReLU, ELU, SELU",
+   "ใช้ sigmoid ก่อน เพราะ output อยู่ใน [0,1] ถ้าไม่เวิร์คค่อยเปลี่ยนเป็น ReLU หรือ Softmax",
+   "ใช้ Softplus แทน ReLU เสมอ เพราะหาอนุพันธ์ได้ทุกจุดบนกราฟและคำนวณเร็วกว่า ReLU มาก",
+   "ใช้ ReLU ก่อน เพราะแก้ได้เฉพาะ vanishing gradient ถ้าไม่เวิร์คลอง Softmax ที่ hidden"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์: ReLU <i>are the current state of the art</i> และ &quot;Because the gradient of a ReLU is either zero or a constant, it is possible to reign in the vanishing exploding gradient issue&quot; — ผลคูณหลายชั้นเป็นได้แค่ 0 หรือ 1 ไม่หดทีละนิด (0.25¹⁰) และไม่โตทีละนิด. ถ้าไม่เวิร์คให้ลอง leaky ReLU หรือ variances เช่น ELU, SELU, GELU. Softplus \\(\\ln(1+e^x)\\) คือ smooth version ของ ReLU (differentiable everywhere) แต่ช้ากว่า.",
+  "why_wrong": [
+   "sigmoid ไม่ใช่ state of the art ของ hidden และ Softmax เป็นของ output layer",
+   "Softplus ช้ากว่า (ต้องคำนวณ exp, ln) และสไลด์ไม่ได้บอกให้แทน ReLU",
+   "สไลด์เขียนคู่ vanishing/exploding และ Softmax ไม่ใช้ที่ hidden"
+  ],
+  "ref": "Lesson 3 §5B.4 (p.33)"
+ },
+ {
+  "id": "L3-23",
+  "lesson": 3,
+  "topic": "ผลทดลอง sigmoid/tanh/relu (Spiral)",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "จากการทดลองบน Spiral dataset (หน้า 29, 34) เปลี่ยนแค่ activation ของ hidden layer ผลใดถูกต้อง?",
+  "options": [
+   "relu ได้ 100% โดยใช้ 4000 รอบ น้อยกว่า sigmoid และ tanh ที่ใช้ 6000 รอบ",
+   "sigmoid ได้ training accuracy สูงสุด เพราะ output อยู่ใน [0,1] เหมาะกับ binary",
+   "tanh ได้ 100% โดยใช้ 6000 รอบ ส่วน relu ได้เพียง 99.833333% ที่ 4000 รอบ",
+   "relu ได้ 100% แต่ต้องใช้รอบมากที่สุดคือ 10000 รอบ มากกว่าอีกสองตัวที่ใช้ 6000"
+  ],
+  "answer": 0,
+  "explanation": "ตัวเลขในสไลด์: sigmoid 98.666667 (6000 รอบ, gradient ±0.4), tanh 99.833333 (6000 รอบ, ±1.5), relu 100.000000 (4000 รอบ, ±1.0) — ได้คะแนนเต็มด้วยรอบน้อยกว่า = &quot;better convergence&quot;. ข้อควรระวัง: เป็นค่าบน training set จึงบอกแค่ความสามารถ fit ไม่ได้บอกว่า generalize ดี.",
+  "why_wrong": [
+   "sigmoid ได้ต่ำสุด (98.666667%) ไม่ใช่สูงสุด",
+   "สลับทั้ง accuracy และจำนวนรอบของ tanh กับ relu",
+   "relu ใช้รอบน้อยที่สุด (4000) และสไลด์ไม่มีการรัน 10000 รอบ"
+  ],
+  "ref": "Lesson 3 §5A.5, §5B.5 (p.29, 34)"
+ },
+ {
+  "id": "L3-24",
+  "lesson": 3,
+  "topic": "Why not linear activation",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "เครือข่าย 1 input ใช้ \\(f(x)=x\\) ทุก node: layer 1 \\(z^{[1]}=2x+1\\), layer 2 \\(z^{[2]}=3a^{[1]}-4\\). ข้อใดถูกต้อง?",
+  "options": [
+   "\\(z^{[2]}=6x-1\\) ยังเป็น linear function ของ \\(x\\) ซ้อนกี่ชั้นก็ไม่เพิ่มความสามารถ",
+   "\\(z^{[2]}=6x^2-1\\) ดีกรีเพิ่มตามจำนวน layer จึงเรียนรู้ความสัมพันธ์ซับซ้อนได้",
+   "\\(z^{[2]}=6x+7\\) ยังเป็น linear function ของ \\(x\\) ซ้อนกี่ชั้นก็ไม่เพิ่มความสามารถ",
+   "\\(z^{[2]}=0\\) เสมอ เพราะ linear activation ทำให้ gradient หายไปทั้งเครือข่าย"
+  ],
+  "answer": 0,
+  "explanation": "\\(a^{[1]}=z^{[1]}=2x+1\\) ⇒ \\(z^{[2]}=3(2x+1)-4=6x+3-4=6x-1\\) — ผลรวมเชิงเส้นของผลรวมเชิงเส้นยังเป็นเชิงเส้น. สไลด์หน้า 35 สรุปว่าได้ \\(z_1^{[2]}=a+bx_1+cx_2\\) (<i>Linear Function</i>) และ &quot;Not capable to learn complex relationship&quot; ⇒ hidden layer ต้องมี non-linearity ความลึกจึงมีความหมาย.",
+  "why_wrong": [
+   "ซ้อน linear ไม่ทำให้ดีกรีเพิ่ม",
+   "กระจายผิด: 3×1 − 4 = −1 ไม่ใช่ +7",
+   "เครือข่ายยังให้ค่าไม่เป็นศูนย์และเทรนได้ แค่ได้เส้นตรง"
+  ],
+  "ref": "Lesson 3 §5C (p.35)"
+ },
+ {
+  "id": "L3-25",
+  "lesson": 3,
+  "topic": "Activation ที่ output layer",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตามสไลด์หน้า 36 (ตัวที่มี *** คือที่แนะนำ) ข้อใดจับคู่ชนิดงานกับ activation ที่ output ได้ถูกต้อง?",
+  "options": [
+   "Regression: linear · Binary: sigmoid · Multiclass: Softmax",
+   "Regression: sigmoid · Binary: linear · Multiclass: Softmax",
+   "Regression: linear · Binary: Softmax · Multiclass: sigmoid",
+   "Regression: ReLU · Binary: tanh · Multiclass: Softmax"
+  ],
+  "answer": 0,
+  "explanation": "ที่ output เลือกตาม &quot;ชนิดงาน&quot;: Regression → linear (หรือไม่ใส่) \\(f(x)=x\\) เพราะต้องทำนายค่าเท่าไรก็ได้; Binary → sigmoid*** ให้ค่าใน [0,1] ตีความเป็นความน่าจะเป็น; Multiclass → Softmax*** (Rescaling outputs so they add up to 1.0) หรือ sigmoid ทีละ node. linear ใช้ที่ output ได้เพราะไม่มีชั้นถัดไปมายุบรวม.",
+  "why_wrong": [
+   "sigmoid ที่ regression บีบค่าเหลือ [0,1] ทำนายราคาจริงไม่ได้",
+   "Softmax 1 node ให้ 1 เสมอ; binary ใช้ sigmoid",
+   "ReLU ไม่ใช่คำตอบของสไลด์สำหรับ regression และตัวแนะนำของ binary คือ sigmoid"
+  ],
+  "ref": "Lesson 3 §6 (p.36)"
+ },
+ {
+  "id": "L3-26",
+  "lesson": 3,
+  "topic": "Softmax: คำนวณด้วยมือ",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "output layer 3 node ให้ logit \\(z=[\\ln 3,\\ 0,\\ 0]\\). ผลของ Softmax \\(a_i=e^{z_i}/\\sum e^{z_j}\\) คือข้อใด?",
+  "options": [
+   "[0.6, 0.2, 0.2]",
+   "[1.0, 0.0, 0.0]",
+   "[0.5, 0.25, 0.25]",
+   "[0.33, 0.33, 0.33]"
+  ],
+  "answer": 0,
+  "explanation": "ขั้นที่ 1: \\(t=[e^{\\ln3},e^0,e^0]=[3,1,1]\\). ขั้นที่ 2: \\(\\sum t=5\\). ขั้นที่ 3: \\(a=[3/5,1/5,1/5]=[0.6,0.2,0.2]\\) รวมได้ 1 ✓. ถ้าใช้สัดส่วนตรงๆ กับ logit จะได้ \\([1,0,0]\\) (หาร ln3 ด้วย ln3) — exponential ทำให้ทุกคลาสได้ค่าบวก (จัดการค่าติดลบ/ศูนย์) และขยายตัวที่มากที่สุดให้โมเดล &quot;less neutral&quot;.",
+  "why_wrong": [
+   "หารด้วยผลรวมของ logit ตรงๆ โดยไม่ยก e",
+   "ใช้ z=[ln 2,0,0] (ผลคือ 2/4) — อ่าน ln3 ผิด",
+   "คิดว่า softmax ให้ค่าเท่ากันเสมอ ลืมยก e ของ ln3"
+  ],
+  "ref": "Lesson 3 §6 Softmax (p.38)"
+ },
+ {
+  "id": "L3-27",
+  "lesson": 3,
+  "topic": "Softmax: เหตุผลของ exponential และ loss",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ข้อใดตรงกับ note ของสไลด์หน้า 38 เรื่องเหตุผลที่ softmax ใช้ exponential?",
+  "options": [
+   "บาง output อาจติดลบ และ exponential ขยายค่าสูงสุดให้โมเดล \"less neutral\"",
+   "exponential คำนวณเร็วกว่าการหารด้วยผลรวม และบีบค่าให้อยู่ในช่วง [−1,1]",
+   "exponential ทำให้แต่ละ node คำนวณแยกกันได้โดยไม่ต้องรู้ z ของ node อื่น",
+   "exponential ทำให้ผลรวมของ output มากกว่า 1 จึงใช้กับงาน multi-label ได้"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์: &quot;The reason why using exponential is that some output might be negative ... and it also amplifies the maximum value relative to the other values, forcing the model to be 'less neutral'&quot;. เช่น \\(z=[-1,-2]\\) ถ้าหารผลรวมตรงๆ ได้ [0.333, 0.667] (กลับลำดับ) แต่ \\(e^z\\) บวกเสมอ ได้ [0.731, 0.269]. softmax ต้องรู้ z ของทุก node ก่อน normalize และให้ผลรวม = 1 (คลาส mutually exclusive).",
+  "why_wrong": [
+   "ไม่ใช่เรื่องความเร็ว และช่วง [−1,1] เป็นของ tanh",
+   "softmax ต้องใช้ z ทุก node (หารด้วยผลรวม) — ต่างจาก sigmoid",
+   "softmax บังคับผลรวม = 1 เสมอ เหมาะกับคลาสที่ mutually exclusive"
+  ],
+  "ref": "Lesson 3 §6 Softmax (p.38)"
+ },
+ {
+  "id": "L3-28",
+  "lesson": 3,
+  "topic": "Train/Validation/Test",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตามสไลด์หน้า 39 ข้อใดถูกต้องเกี่ยวกับการแบ่งข้อมูลแบบสามส่วน?",
+  "options": [
+   "สัดส่วน 60-20-20; ใช้ validation เลือก architecture/λ; ทุกชุดมาจาก distribution เดียวกัน",
+   "สัดส่วน 80-20; ใช้ test เลือก architecture/λ; แต่ละชุดควรมาจาก distribution ที่ต่างกัน",
+   "สัดส่วน 60-20-20; ใช้ test set เลือก architecture/λ; ทุกชุดต้องมีจำนวนตัวอย่างเท่ากันเป๊ะ",
+   "สัดส่วน 70-15-15; ใช้ training เลือก architecture/λ; test ใช้ปรับ θ ในรอบสุดท้าย"
+  ],
+  "answer": 0,
+  "explanation": "เป้าหมาย (Goal) คือวัดผลบน <b>unseen examples</b>. สไลด์ให้ 60-20-20 หรือ 70-15-15 (80-20 / 70-30 เป็นของแนวทาง train/test + cross validation). training ปรับ θ; validation &quot;Evaluate an array of different architectures (#hidden units, #layer, lambda…)&quot;; test รายงานผลครั้งเดียว. และต้อง <b>same distribution</b> เพื่อ <i>preventing data leakage</i>.",
+  "why_wrong": [
+   "80-20 เป็นของแนวทางที่สอง และ test ห้ามใช้ตัดสินใจ",
+   "test ห้ามใช้เลือก hyperparameter และเหตุผลไม่ใช่เรื่องขนาดเท่ากัน",
+   "training ใช้ปรับ θ ไม่ใช่เลือก architecture และ test ห้ามใช้ปรับ θ"
+  ],
+  "ref": "Lesson 3 §6A Model Evaluation (p.39)"
+ },
+ {
+  "id": "L3-29",
+  "lesson": 3,
+  "topic": "k-fold cross validation",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "training set 1,000 ตัวอย่าง ทำ 5-fold cross validation ตามสไลด์หน้า 39. แต่ละรอบเทรนและวัดผลด้วยกี่ตัวอย่าง และทำกี่รอบ?",
+  "options": [
+   "เทรน 800 วัดผล 200 ทำซ้ำ 5 รอบ",
+   "เทรน 200 วัดผล 800 ทำซ้ำ 5 รอบ",
+   "เทรน 800 วัดผล 200 ทำซ้ำ 4 รอบ",
+   "เทรน 750 วัดผล 250 ทำซ้ำ 4 รอบ"
+  ],
+  "answer": 0,
+  "explanation": "k-fold: &quot;dividing the dataset into k subsets (folds). The model is trained on k-1 folds and validated on the remaining fold, with this process repeated k times&quot;. \\(1000/5=200\\) ต่อ fold ⇒ เทรน \\(4\\times200=800\\), วัด 200, ทำ 5 รอบ (ทุก fold ได้เป็นตัววัด 1 ครั้ง) แล้วเฉลี่ยคะแนน 5 รอบ.",
+  "why_wrong": [
+   "สลับเป็นเทรนบน 1 fold วัดบน k−1 fold",
+   "นับรอบเป็น k−1 — ต้องทำครบ k รอบ",
+   "แบ่งเป็น 4 fold แทน 5"
+  ],
+  "ref": "Lesson 3 §6A Cross Validation (p.39)"
+ },
+ {
+  "id": "L3-30",
+  "lesson": 3,
+  "topic": "Bias vs Variance: วินิจฉัยและแก้",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "โมเดลมี \\(J_{\\text{train}}\\) สูง และ \\(J_{cv}\\) สูงพอๆ กัน ตามสไลด์หน้า 40 ควรแก้อย่างไร?",
+  "options": [
+   "High bias: เพิ่ม feature ที่เกี่ยวข้อง เทรนนานขึ้น เพิ่ม #layer",
+   "High variance: หาข้อมูลเพิ่ม ใช้ regularization และลด #hidden/#layer",
+   "High bias: หาข้อมูลเพิ่ม ใช้ regularization และเพิ่ม dropout ให้แรงขึ้น",
+   "High variance: เพิ่ม feature ที่เกี่ยวข้อง เทรนนานขึ้น เพิ่ม #layer"
+  ],
+  "answer": 0,
+  "explanation": "train error สูงและ cv สูงใกล้กัน = ไม่ fit แม้ข้อมูลฝึก = <b>High Bias</b> (underfitting) ⇒ ทำให้โมเดล &quot;ฉลาดขึ้น&quot;: Add relevant features, Train longer, Increase #hidden/#layer. ส่วน High Variance (train ต่ำ cv สูง ช่องว่างกว้าง) ใช้ Get more data, Remove features, Remove #hidden/#layer, Regularization, Dropout, Early stopping, Data augmentation — สองรายการนี้ตรงข้ามกัน.",
+  "why_wrong": [
+   "วินิจฉัยผิดโรค — variance คือ train ต่ำแต่ cv สูง",
+   "วินิจฉัยถูกแต่ใช้ยาของ variance — เพิ่มข้อมูลไม่ช่วยเมื่อ fit ข้อมูลเดิมยังไม่ได้",
+   "วินิจฉัยผิด และใช้ยาของ bias"
+  ],
+  "ref": "Lesson 3 §6A Bias vs Variance (p.40)"
+ },
+ {
+  "id": "L3-31",
+  "lesson": 3,
+  "topic": "Regularization: L1/L2 และข้อควรจำ",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตามสไลด์หน้า 41–43 ข้อใดถูกต้องเกี่ยวกับ regularization?",
+  "options": [
+   "L2 (Ridge) ใช้กำลังสองของพารามิเตอร์ และเทอมนี้ใส่ใน cost เฉพาะตอนเทรนเท่านั้น",
+   "L2 (Lasso) ใช้ค่าสัมบูรณ์ของพารามิเตอร์ และเทอมนี้ใส่ใน cost เฉพาะตอนเทรนเท่านั้น",
+   "L2 (Ridge) ใช้กำลังสองของพารามิเตอร์ และต้องรายงาน cost ที่รวมเทอมนี้ตอนประเมินผล",
+   "L2 (Ridge) ตัด feature ที่ไม่สำคัญทิ้ง ทำให้เหลือ feature น้อยลงหลังเทรนเสร็จ"
+  ],
+  "answer": 0,
+  "explanation": "L2 = Ridge = <i>square of the value of parameters</i>; L1 = Lasso = <i>absolute value</i>. วิชานี้เน้น L2 เพราะ Lasso &quot;not amenable to gradient descent&quot; และแกว่งเมื่อ feature correlated. หลักการคือ <b>Keep all features</b> แต่บีบ weight ให้เล็ก (towards zero but not zero). และตัวหนาหน้า 42: regularization term should only be added to the cost function during training — ตอนประเมินใช้ค่าที่ไม่มี penalty.",
+  "why_wrong": [
+   "จับคู่ L2 กับ Lasso/ค่าสัมบูรณ์ผิด",
+   "ตอนประเมินต้องใช้ unregularized performance measure",
+   "regularization keep all features ไม่ได้ตัดทิ้ง"
+  ],
+  "ref": "Lesson 3 §7 Regularization (p.41–43)"
+ },
+ {
+  "id": "L3-32",
+  "lesson": 3,
+  "topic": "Regularization: gradient แยก j=0",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "เมื่อใส่ L2 regularization สูตร gradient ในสไลด์หน้า 43 ของ \\(\\theta_{ij}^{(l)}\\) คือข้อใด?",
+  "options": [
+   "\\(j=0\\): \\(\\frac{1}{m}\\Delta_{ij}\\); \\(j\\ge1\\): \\(\\frac{1}{m}\\Delta_{ij}+\\frac{\\lambda}{m}\\theta_{ij}\\)",
+   "ทุก \\(j\\): \\(\\frac{1}{m}\\Delta_{ij}+\\frac{\\lambda}{m}\\theta_{ij}\\) รวมคอลัมน์ bias ด้วย",
+   "\\(j=0\\): \\(\\frac{1}{m}\\Delta_{ij}\\); \\(j\\ge1\\): \\(\\frac{1}{m}\\Delta_{ij}-\\frac{\\lambda}{m}\\theta_{ij}\\)",
+   "\\(j=0\\): \\(\\frac{1}{m}\\Delta_{ij}+\\frac{\\lambda}{m}\\theta_{ij}\\); \\(j\\ge1\\): \\(\\frac{1}{m}\\Delta_{ij}\\)"
+  ],
+  "answer": 0,
+  "explanation": "คอลัมน์ \\(j=0\\) คือ bias — ไม่ถูก regularize. คอลัมน์ \\(j\\ge1\\) บวก \\(\\frac{\\lambda}{m}\\theta\\) (มาจากอนุพันธ์ของ \\(\\frac{\\lambda}{2m}\\sum\\theta^2\\) — note หน้า 43 เรื่องหาร 2). เทอมนี้มีเครื่องหมายเดียวกับ θ ⇒ ใน \\(\\theta-\\alpha D\\) มันดึง θ เข้าหาศูนย์ทุกรอบ (weight decay). กฎอัปเดต \\(\\theta:=\\theta-\\alpha D\\) เหมือนเดิม.",
+  "why_wrong": [
+   "ลืมยกเว้น bias (j=0)",
+   "เครื่องหมายผิด — ลบแล้วจะผลัก θ ออกจากศูนย์",
+   "สลับว่า j ไหนเป็น bias"
+  ],
+  "ref": "Lesson 3 §7 Gradient Descent with L2 (p.43)"
+ },
+ {
+  "id": "L3-33",
+  "lesson": 3,
+  "topic": "Parameter vs Hyperparameter",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตามสไลด์หน้า 45 ข้อใดเป็น parameter (ไม่ใช่ hyperparameter)?",
+  "options": [
+   "weight θ ที่สุ่มค่าเริ่มต้นแล้วเรียนรู้เองด้วย gradient descent",
+   "learning rate α ที่กำหนดขนาดก้าวของ gradient descent แต่ละรอบ",
+   "lambda (λ) ที่ควบคุมความแรงของ regularization ในสูตร cost",
+   "จำนวน iteration ที่ใช้ในการเทรนเครือข่ายทั้งหมดจนจบการเทรน"
+  ],
+  "answer": 0,
+  "explanation": "Parameter = \\(\\theta\\) (initialized randomly, โมเดลเรียนเอง). Hyper Parameter = &quot;a parameter that control θ&quot; ที่เราตั้งเองก่อนเทรน: <b>Learning rate α</b>, <b>#layer, #hidden units</b> (สองกลุ่มที่ทำสีแดง), lambda, keep_prob, activation functions, #iterations — ไม่มีตัวไหนถูกอัปเดตโดย gradient descent.",
+  "why_wrong": [
+   "α เป็น hyperparameter (ทำสีแดงในสไลด์)",
+   "λ เป็น hyperparameter",
+   "#iterations เป็น hyperparameter ตามรายการในสไลด์"
+  ],
+  "ref": "Lesson 3 §7A (p.45)"
+ },
+ {
+  "id": "L3-34",
+  "lesson": 3,
+  "topic": "Hyperparameter tuning guideline & best practice",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ข้อใดตรงกับ Best Practice (หน้า 44) และ Tuning Guideline (หน้า 46)?",
+  "options": [
+   "เริ่มจากเล็ก ขยายจน validation loss ได้ผลน้อยลง; #layer 1-5; #hidden 5-100 เท่ากันทุกชั้น",
+   "เริ่มจากใหญ่ ลดขนาดจน training loss หยุดลด; #layer 10-20; #hidden เป็นพีระมิดลดหลั่น",
+   "เริ่มจากเล็ก ขยายจน training loss หยุดลด; #layer 1-5; #hidden 100-1000 ยิ่งมากยิ่งดี",
+   "เริ่มจากเล็ก ขยายจน validation loss ได้ผลน้อยลง; #layer 1-5; #hidden จัดเป็นพีระมิดลดหลั่นลง"
+  ],
+  "answer": 0,
+  "explanation": "หน้า 44: Starting with relatively few layers → Gradually increase ... until you see diminishing returns with regards to <b>validation loss</b> → use techniques to overcome overfitting. หน้า 46: Number of Layers typically 1-5 (1 hidden layer by default, 2 might be good enough); Hidden units ช่วง 5 ถึง 100; รูปพีระมิด &quot;has been largely abandoned&quot; เพราะจำนวนเท่ากันทุกชั้นได้ผลพอกันหรือดีกว่า และมี hyperparameter ให้จูนตัวเดียว.",
+  "why_wrong": [
+   "ผิดทุกส่วน — ทิศการขยาย เกณฑ์ จำนวน layer และพีระมิด",
+   "ดู training loss (ซึ่งลดได้เรื่อยๆ) และช่วง hidden ผิด",
+   "ถูกครึ่งแรก แต่พีระมิดถูกเลิกใช้ไปแล้ว"
+  ],
+  "ref": "Lesson 3 §7A (p.44, 46)"
+ },
+ {
+  "id": "L3-35",
+  "lesson": 3,
+  "topic": "Binary classification exercise: จำนวน δ และ gradient",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "เครือข่ายใน exercise หน้า 47–48 (input 2, hidden 10, output 1, sigmoid). ต้องคำนวณ \\(\\delta\\) ของ hidden layer กี่ค่า และ gradient ของ \\(\\theta^{[1]}\\) กี่ค่าต่อตัวอย่าง?",
+  "options": [
+   "δ 10 ค่า, gradient ของ θ[1] 30 ค่า",
+   "δ 11 ค่า, gradient ของ θ[1] 33 ค่า",
+   "δ 10 ค่า, gradient ของ θ[1] 20 ค่า",
+   "δ 3 ค่า, gradient ของ θ[1] 30 ค่า"
+  ],
+  "answer": 0,
+  "explanation": "\\(\\delta_j^{(1)}=\\theta_{1j}^{[2]}\\delta_1^{(2)}g'(z_j^{[1]})\\) สำหรับ \\(j=1..10\\) — \\(a_0^{[1]}\\) (bias) ไม่มี δ เพราะเป็นค่าคงที่ 1 ไม่ได้มาจาก z ⇒ 10 ค่า. gradient \\(\\partial J/\\partial\\theta_{ji}^{[1]}=\\delta_j^{(1)}x_i\\) มี \\(10\\times(2+1)=30\\) ค่า และของ \\(\\theta^{[2]}\\) อีก 11 ค่า รวม 41 = จำนวนพารามิเตอร์ในโจทย์ regularization หน้า 42. สูตรเหมือนเครือข่าย 2 node ทุกตัวอักษร เปลี่ยนแค่ช่วงของ j.",
+  "why_wrong": [
+   "คิด δ ให้ bias unit ด้วย — มิติเพี้ยนทั้งเครือข่าย",
+   "ลืมคอลัมน์ bias ของ x (x₀) — ต้องเป็น 10×3",
+   "ใช้รูปเครือข่าย 3 hidden node ของหน้า 20"
+  ],
+  "ref": "Lesson 3 §8 (p.47–48)"
+ },
+ {
+  "id": "L3-36",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: sigmoidGradient",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "easy",
+  "stem": "เรียก <code>sigmoidGradient(0)</code> จากโค้ดด้านล่าง จะได้ค่าเท่าใด และค่านี้มีความหมายอย่างไร?",
+  "code": "def sigmoidGradient(z):\n  z  =  np.array(z)\n  g = np.zeros(z.shape)\n  g = sigmoid(z) * (1 - sigmoid(z))\n  return g",
+  "options": [
+   "0.25 — ค่าสูงสุดของอนุพันธ์ sigmoid",
+   "0.5 — ค่าสูงสุดของอนุพันธ์ sigmoid",
+   "1.0 — ค่าสูงสุดของอนุพันธ์ sigmoid",
+   "0.0 — จุดที่อนุพันธ์ sigmoid ตาย"
+  ],
+  "answer": 0,
+  "explanation": "<code>sigmoid(0)</code> \\(=1/(1+e^0)=0.5\\) ⇒ \\(0.5\\times(1-0.5)=0.25\\). ฟังก์ชันนี้คือ \\(g'(z)=\\sigma(z)(1-\\sigma(z))\\) ที่ใช้ใน <code>delta_1</code>. 0.25 เป็นค่าสูงสุด (ที่ z=0) และลดลงเมื่อ |z| โต — ถ้าพล็อตตามแบบฝึกหัด (1) ด้วย <code>x=np.arange(-8,8,0.01)</code> จะเห็นกราฟระฆังยอด 0.25.",
+  "why_wrong": [
+   "0.5 คือ sigmoid(0) ไม่ใช่อนุพันธ์",
+   "1.0 คือยอดอนุพันธ์ของ tanh",
+   "อนุพันธ์ sigmoid ไม่เป็น 0 ที่ z=0 (เข้าใกล้ 0 เมื่อ |z| ใหญ่)"
+  ],
+  "ref": "ex_shallow_nn cell sigmoidGradient / (1)"
+ },
+ {
+  "id": "L3-37",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: เติมบรรทัด reshape Theta2",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "ใน <code>nnCostFunction</code> บรรทัดใดเติมช่อง <code>Theta2 = ...</code> ได้ถูกต้อง?",
+  "code": "Theta1 = np.reshape(nn_params[:hidden_layer_size * (input_layer_size + 1)],\n                    (hidden_layer_size, (input_layer_size + 1)))\nTheta2 = #### your code #####",
+  "options": [
+   "np.reshape(nn_params[hidden_layer_size * (input_layer_size + 1):], (num_labels, hidden_layer_size + 1))",
+   "np.reshape(nn_params[:hidden_layer_size * (input_layer_size + 1)], (num_labels, hidden_layer_size + 1))",
+   "np.reshape(nn_params[hidden_layer_size * (input_layer_size + 1):], (hidden_layer_size + 1, num_labels))",
+   "np.reshape(nn_params[hidden_layer_size * input_layer_size:], (num_labels, hidden_layer_size + 1))"
+  ],
+  "answer": 0,
+  "explanation": "Theta1 ใช้ช่วงแรก \\(h(i+1)\\) ตัว (= \\(10\\times3=30\\)) ⇒ Theta2 คือ &quot;ที่เหลือ&quot; จึง slice เป็น <code>[h*(i+1):]</code> (เครื่องหมาย : อยู่หลัง) แล้วพับเป็น \\(b\\times(a+1)\\) = <code>(num_labels, hidden_layer_size + 1)</code> = (1, 11). ลำดับ row-major ต้องตรงกับตอน ravel.",
+  "why_wrong": [
+   "ใช้ slice ช่วงแรกซึ่งเป็นข้อมูลของ Theta1",
+   "shape เป็น transpose (a+1)×b — ผิดกฎ b×(a+1)",
+   "ลืม +1 ใน offset — เริ่มตัดที่ 20 แทน 30 ข้อมูลเหลื่อมกัน"
+  ],
+  "ref": "ex_shallow_nn (2) nnCostFunction; Lesson 3 §4A.4"
+ },
+ {
+  "id": "L3-38",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: ทำไมต้องต่อคอลัมน์ 1",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "easy",
+  "stem": "บรรทัด <code>a0 = np.concatenate([np.ones((m, 1)), X], axis=1)</code> ทำหน้าที่อะไร?",
+  "options": [
+   "เติม bias unit x₀=1 ให้ทุกตัวอย่าง a0 จึงมี 3 คอลัมน์ตรงกับ Theta1",
+   "เติมแถวของเลข 1 ต่อท้าย X เพื่อให้จำนวนตัวอย่างเป็น m+1 ตรงกับ Theta1",
+   "เติมคอลัมน์ 1 เป็น label ของทุกตัวอย่าง เพื่อใช้คำนวณ cost ร่วมกับ y",
+   "normalize X ให้ทุกคอลัมน์มีค่าเฉลี่ยเป็น 1 ก่อนส่งเข้า hidden layer"
+  ],
+  "answer": 0,
+  "explanation": "X มีขนาด (m, 2); ต่อคอลัมน์ของ 1 ด้านหน้า (<code>axis=1</code>) ได้ (m, 3) = \\([x_0=1, x_1, x_2]\\). จากนั้น <code>z1 = np.dot(a0, Theta1.T)</code> = (m,3)·(3,10) = (m,10). ถ้าไม่เติม bias มิติจะไม่ตรงกับ Theta1 ที่มี \\(a+1=3\\) คอลัมน์ — เป็นเหตุผลเดียวกับ &quot;(add bias)&quot; ในสไลด์หน้า 17.",
+  "why_wrong": [
+   "axis=1 ต่อเป็นคอลัมน์ ไม่ใช่แถว",
+   "y ถูกใช้แยกต่างหาก ไม่ได้ต่อเข้า X",
+   "concatenate ไม่ได้ normalize ค่า"
+  ],
+  "ref": "ex_shallow_nn nnCostFunction forward"
+ },
+ {
+  "id": "L3-39",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: บรรทัด delta_1",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "ตาม Hint ใน notebook บรรทัดใดคำนวณ <code>delta_1</code> ได้ถูกต้อง (m ตัวอย่าง, hidden 10)?",
+  "code": "delta_2 = a2 - y_matrix\n# Hint2: ... index with [:, 1:] to exclude the result from bias unit\n# Hint3: ... element-wise operations with sigmoid gradient\ndelta_1 = #### your code #####",
+  "options": [
+   "np.dot(delta_2, Theta2)[:, 1:] * sigmoidGradient(z1)",
+   "np.dot(delta_2, Theta2)[:, 1:] * sigmoidGradient(z2)",
+   "np.dot(delta_2, Theta2) * sigmoidGradient(z1)",
+   "np.dot(delta_2, Theta2)[:, 1:] @ sigmoidGradient(z1)"
+  ],
+  "answer": 0,
+  "explanation": "นี่คือ \\(\\delta^{(1)}=(\\theta^{[2]\\top}\\delta^{(2)})*g'(z^{[1]})\\) ในรูป row-per-example: <code>delta_2</code> (m,1) · <code>Theta2</code> (1,11) = (m,11). ตัดคอลัมน์ bias ด้วย <code>[:, 1:]</code> เหลือ (m,10) เพราะ \\(a_0^{[1]}\\) ไม่มี δ แล้วคูณ element-wise (<code>*</code>) กับ <code>sigmoidGradient(z1)</code> (m,10). ครบ 3 องค์ประกอบตาม Hint1: delta2, Theta2, sigmoid gradient.",
+  "why_wrong": [
+   "ใช้ g′ ของ layer ผิด (z2 ขนาด (m,1)) — ต้องเป็นของ layer ที่กำลังหา δ",
+   "ไม่ตัดคอลัมน์ bias ได้ (m,11) คูณกับ (m,10) ไม่ได้",
+   "ใช้ matrix product แทน element-wise (Hint3)"
+  ],
+  "ref": "ex_shallow_nn (2) Backpropagation"
+ },
+ {
+  "id": "L3-40",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: shape ของ Theta1_grad",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "รัน <code>nnCostFunction</code> กับ X ขนาด (600, 2), hidden 10, output 1. <code>Delta1 = np.dot(delta_1.T, a0)</code> และ <code>Theta1_grad = (1/m)*Delta1</code> มี shape เท่าใด?",
+  "options": [
+   "(10, 3)",
+   "(600, 10)",
+   "(3, 10)",
+   "(10, 2)"
+  ],
+  "answer": 0,
+  "explanation": "<code>delta_1</code> เป็น (600,10) ⇒ <code>delta_1.T</code> (10,600); <code>a0</code> (600,3) ⇒ ผลคูณ (10,600)·(600,3) = (10,3). การคูณเมทริกซ์ผ่านมิติ m ทำหน้าที่ &quot;สะสม Δ ทุกตัวอย่าง&quot; ในครั้งเดียว แล้วหาร m ได้ D. gradient ต้องมี shape เดียวกับ Theta1 เสมอ = \\(b\\times(a+1)\\) = 10×3 (และ Theta2_grad = (1,11)).",
+  "why_wrong": [
+   "เป็น shape ของ delta_1 (ยังไม่ได้รวมตัวอย่าง)",
+   "transpose ของคำตอบ (คูณสลับข้าง)",
+   "ลืมคอลัมน์ bias ของ a0"
+  ],
+  "ref": "ex_shallow_nn (2) accumulate gradient"
+ },
+ {
+  "id": "L3-41",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: ความยาวของ grad ใน cell ทดสอบ",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "cell ทดสอบใช้ Theta1 = [[1,1,0],[1,0,1]] และ Theta2 = [[0,1,0]] (input 2, hidden 2, output 1). เวกเตอร์ <code>grads1</code> ที่คืนมามีความยาวเท่าใด?",
+  "code": "initial_Theta1_test = np.array([[1,1,0],[1,0,1]])\ninitial_Theta2_test = np.array([[0,1,0]])\ninitial_nn_params1 = np.concatenate([initial_Theta1_test.ravel(), initial_Theta2_test.ravel()], axis=0)\ncost1, grads1 = nnCostFunction(initial_nn_params1, 2, 2, 1, X1, y1)",
+  "options": [
+   "9",
+   "6",
+   "7",
+   "12"
+  ],
+  "answer": 0,
+  "explanation": "<code>grad = np.concatenate([Theta1_grad.ravel(), Theta2_grad.ravel()])</code> — Theta1_grad มีขนาด \\(2\\times(2+1)=6\\), Theta2_grad มี \\(1\\times(2+1)=3\\) ⇒ 9 (เท่ากับจำนวนพารามิเตอร์ที่ unroll มา). (รันจริงได้ gradient ของ Theta2 เป็น [−0.293, −0.258, −0.258] ตรงกับตัวอย่างในสไลด์หน้า 11–13.)",
+  "why_wrong": [
+   "ลืมคอลัมน์ bias ทั้งสองชั้น: 2×2 + 1×2 = 6",
+   "นับ Theta1_grad ครบ 6 แต่นับ Theta2_grad เป็น 1 ค่า",
+   "ใส่ bias ผิดฝั่งเป็น (b+1)×(a+1): 3×3 + 1×3 = 12"
+  ],
+  "ref": "ex_shallow_nn cell ทดสอบ cost/gradient"
+ },
+ {
+  "id": "L3-42",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: predict และ decision boundary",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "<code>predict</code> ใช้ <code>np.round(sigmoid(z2))</code> ส่วน <code>plotDecisionBoundary</code> วาด contour ของ <code>z2</code> ที่ระดับ 0. ทำไมสองอย่างนี้สอดคล้องกัน?",
+  "code": "p = np.round(sigmoid(z2))          # predict\n...\nz[i, j] = np.dot(a1, Theta2.T)      # plotDecisionBoundary\nplt.contour(u, v, z, 0, linewidths=2, colors='g')",
+  "options": [
+   "z2=0 ⇔ sigmoid(z2)=0.5 คือจุดที่ round เปลี่ยนคำทำนายจาก 0 เป็น 1",
+   "z2=0 ⇔ sigmoid(z2)=0 ซึ่งเป็นจุดที่ round เปลี่ยนคำทำนายจาก 0 เป็น 1",
+   "z2=0 ⇔ sigmoid(z2)=1 ซึ่งเป็นจุดที่โมเดลมั่นใจว่าเป็นคลาส 1 เต็มที่",
+   "z2=0 ⇔ sigmoid'(z2)=0 ซึ่งเป็นจุดที่ gradient หายและโมเดลหยุดเรียนรู้"
+  ],
+  "answer": 0,
+  "explanation": "\\(\\sigma(0)=0.5\\). <code>np.round</code> ปัดค่า ≥0.5 เป็น 1 และ &lt;0.5 เป็น 0 ⇒ เส้นแบ่งการตัดสินใจคือที่ \\(h=0.5\\) หรือ \\(z^{[2]}=0\\) ตรงกับกฎ \\(\\hat y=1\\) เมื่อ \\(h\\ge0.5\\) ในสไลด์หน้า 47. ใน plotDecisionBoundary ตัวแปร z เก็บค่า <code>np.dot(a1, Theta2.T)</code> (ก่อน sigmoid) จึงวาดที่ระดับ 0.",
+  "why_wrong": [
+   "sigmoid(0)=0.5 ไม่ใช่ 0",
+   "sigmoid เข้าใกล้ 1 เมื่อ z ใหญ่มาก ไม่ใช่ที่ z=0",
+   "อนุพันธ์ที่ z=0 คือ 0.25 (สูงสุด) ไม่ใช่ 0"
+  ],
+  "ref": "ex_shallow_nn predict / plotDecisionBoundary; Lesson 3 §8 (p.47)"
+ },
+ {
+  "id": "L3-43",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: data split และการเทรน",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "จากโค้ดด้านล่าง (ข้อมูล 800 แถว) ข้อใดอธิบายได้ถูกต้อง?",
+  "code": "X = data[0:600,0:2];   Xval = data[600:700,0:2];   Xtest = data[700:800,0:2]\n\ndef optimize1(initial_nn_params, X, y, num_iterations, learning_rate):\n  w = initial_nn_params\n  for i in range(num_iterations):\n    cost, grads = nnCostFunction(w, input_layer_size, hidden_layer_size, num_labels, X, y)\n    w = w-learning_rate*grads\n  return w\n\ntheta = optimize1(initial_nn_params, X, y, 10000, 0.3)",
+  "options": [
+   "แบ่ง train/val/test = 600/100/100 และลูปทำ batch gradient descent 10000 รอบด้วย α=0.3",
+   "แบ่ง train/val/test = 600/100/100 และลูปทำ stochastic GD ทีละตัวอย่าง 10000 รอบ α=0.3",
+   "แบ่ง train/val/test = 600/200/0 และลูปทำ batch gradient descent 10000 รอบด้วย α=0.3",
+   "แบ่ง train/val/test = 600/100/100 และลูปทำ batch gradient descent 0.3 รอบด้วย α=10000"
+  ],
+  "answer": 0,
+  "explanation": "<code>data[0:600]</code>, <code>[600:700]</code>, <code>[700:800]</code> ⇒ 600/100/100 (75-12.5-12.5%). ในแต่ละรอบ <code>nnCostFunction</code> ใช้ X ทั้ง 600 แถวคำนวณ grad (เฉลี่ยด้วย 1/m) แล้ว <code>w = w - learning_rate*grads</code> ⇒ batch gradient descent แบบ \\(\\theta:=\\theta-\\alpha D\\). <code>iter</code>=10000 และ <code>lr</code>=0.3 เป็น hyperparameter. ผลที่พิมพ์: Training Set Accuracy 99.5%.",
+  "why_wrong": [
+   "grad คำนวณจากทั้ง 600 ตัวอย่างพร้อมกัน ไม่ใช่ทีละตัว",
+   "อ่าน slice ผิด — 700:800 คือ test 100 แถว",
+   "สลับ iter กับ lr"
+  ],
+  "ref": "ex_shallow_nn Data Preparation / Data Modelling"
+ },
+ {
+  "id": "L3-44",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: randInitializeWeights",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "<code>randInitializeWeights(10, 1)</code> (epsilon_init=0.12) คืน W ที่มี shape และช่วงค่าใด?",
+  "code": "def randInitializeWeights(L_in, L_out, epsilon_init=0.12):\n    W = np.zeros((L_out, 1 + L_in))\n    W = np.random.rand(L_out, 1 + L_in) * 2 * epsilon_init - epsilon_init\n    return W",
+  "options": [
+   "shape (1, 11) ค่าอยู่ในช่วง [−0.12, 0.12)",
+   "shape (11, 1) ค่าอยู่ในช่วง [−0.12, 0.12)",
+   "shape (1, 11) ค่าอยู่ในช่วง [0, 0.24)",
+   "shape (1, 10) ค่าอยู่ในช่วง [−0.12, 0.12)"
+  ],
+  "answer": 0,
+  "explanation": "<code>L_in=10, L_out=1</code> ⇒ <code>(L_out, 1 + L_in)</code> = (1, 11) ตาม \\(b\\times(a+1)\\) = Theta2 ของเครือข่าย 2→10→1. <code>np.random.rand</code> ให้ [0,1) → <code>* 2 * 0.12</code> ได้ [0, 0.24) → <code>- 0.12</code> ได้ [−0.12, 0.12) คร่อมศูนย์ ตาม \\(-\\varepsilon<\\theta<\\varepsilon\\) เพื่อ break symmetry.",
+  "why_wrong": [
+   "transpose — +1 อยู่ที่คอลัมน์ (ฝั่ง L_in)",
+   "ลืมขั้น − epsilon_init ค่าจึงเป็นบวกล้วน",
+   "ลืม +1 ของ bias"
+  ],
+  "ref": "ex_shallow_nn randInitializeWeights; Lesson 3 §4A.3"
+ },
+ {
+  "id": "L3-45",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: epsilon ใน log ของ cost",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "easy",
+  "stem": "ใน <code>nnCostFunction</code> ทำไมจึงบวก <code>epsilon = 1e-5</code> เข้าไปใน <code>np.log(a2+epsilon)</code>?",
+  "code": "epsilon = 1e-5\nJ = (-1 / m) * np.sum((np.log(a2+epsilon) * y_matrix) + np.log(1 - a2+epsilon) * (1 - y_matrix))",
+  "options": [
+   "กันไม่ให้เกิด log(0) เมื่อ a2 อิ่มตัวเป็น 0 หรือ 1 จน cost เป็น nan",
+   "เป็นเทอม regularization ที่บีบ weight ให้เล็กลงเพื่อลด overfitting",
+   "เป็น learning rate ของ gradient descent ที่ใช้ภายในการคำนวณ cost",
+   "เป็นค่า ε ของการสุ่ม weight เริ่มต้นเพื่อ break the symmetry ของ node"
+  ],
+  "answer": 0,
+  "explanation": "cost cross-entropy มี \\(\\log h\\) และ \\(\\log(1-h)\\). เมื่อ sigmoid อิ่มตัว <code>a2</code> อาจกลายเป็น 0 หรือ 1 เป๊ะในเลขทศนิยม ⇒ \\(\\log 0=-\\infty\\) ⇒ cost เป็น inf/nan. บวก 1e-5 เล็กๆ เพื่อความเสถียรเชิงตัวเลข โดยแทบไม่เปลี่ยนค่า cost. ไม่มีผลต่อ gradient เพราะ <code>delta_2 = a2 - y_matrix</code> ไม่ได้ใช้ epsilon.",
+  "why_wrong": [
+   "regularization ต้องเป็น λ/m·Σθ² ไม่ใช่ค่าคงที่ใน log",
+   "learning rate คือ lr=0.3 ใน optimize1",
+   "ε ของการสุ่มคือ epsilon_init=0.12 คนละตัว"
+  ],
+  "ref": "ex_shallow_nn (2) nnCostFunction cost"
+ },
+ {
+  "id": "L3-46",
+  "lesson": 3,
+  "topic": "Chain rule: โจทย์ฝึกหน้า 5",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "โจทย์ฝึกในสไลด์หน้า 5: \\(y=(2x-5)^{10}\\) โดยให้ \\(u=2x-5\\). ค่า \\(dy/dx\\) เท่ากับข้อใด?",
+  "options": [
+   "\\(20(2x-5)^{9}\\)",
+   "\\(10(2x-5)^{9}\\)",
+   "\\(10(2x-5)^{10}\\)",
+   "\\(2(2x-5)^{9}\\)"
+  ],
+  "answer": 0,
+  "explanation": "แยกเป็นสองทอดตาม hint: \\(u=2x-5,\\ y=u^{10}\\). ทอดแรก \\(dy/du = 10u^{9}\\) (กฎ \\(\\frac{d}{du}u^n = nu^{n-1}\\)); ทอดที่สอง \\(du/dx = 2\\) (ค่าคงที่ −5 หายไป). คูณตาม chain rule: \\(\\frac{dy}{dx}=10u^{9}\\times 2 = 20(2x-5)^{9}\\). ตรวจที่ \\(x=3\\) (\\(u=1\\)): สูตรให้ 20 และการขยับจริงจาก 3 เป็น 3.000001 ให้ความชัน 20.0002 ✓. สูตรลัดที่ใช้ซ้ำได้: \\((ax+b)^n \\to n\\,a\\,(ax+b)^{n-1}\\).",
+  "why_wrong": [
+   "ลืมคูณ \\(du/dx=2\\) — คิดว่าอนุพันธ์ของก้อนข้างในไม่มีผล",
+   "ลืมลดเลขชี้กำลังลงหนึ่งขั้น (ต้องเป็น \\(u^{9}\\) ไม่ใช่ \\(u^{10}\\))",
+   "เอาแต่ \\(du/dx=2\\) มาใช้ ลืมตัวคูณ 10 จากเลขชี้กำลัง"
+  ],
+  "ref": "Lesson 3 §1 Chain Rule (p.4–5)"
+ },
+ {
+  "id": "L3-47",
+  "lesson": 3,
+  "topic": "นิยาม L และ δ ที่ output",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "สไลด์หน้า 8 นิยาม \\(L\\) = total number of layers in the network (not counting input layer). สำหรับเครือข่าย input 2 → hidden 3 → output 1 ค่า \\(L\\) เท่าใด และ \\(\\delta^{(L)}\\) คำนวณจากอะไร?",
+  "options": [
+   "\\(L=2\\) และ \\(\\delta^{(2)}=a^{[2]}-y\\) คือผลต่างของค่าทำนายกับคำตอบจริง",
+   "\\(L=3\\) และ \\(\\delta^{(3)}=a^{[3]}-y\\) เพราะต้องนับ input layer รวมเข้าไปด้วย",
+   "\\(L=2\\) และ \\(\\delta^{(2)}=g'(z^{[2]})\\) คือความชันของ activation ที่ output",
+   "\\(L=3\\) และ \\(\\delta^{(3)}=(\\theta^{[3]})^{\\top}\\delta^{(2)}\\) คือ error ที่ส่งย้อนมา"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์กำกับชัดว่า \\(L\\) นับเฉพาะ layer ที่มีการคำนวณ (hidden + output) ไม่นับ input layer ⇒ เครือข่าย input→hidden→output มี \\(L=2\\) ไม่ใช่ 3. และขั้นที่ 3 ของอัลกอริทึมหน้า 18 คือ \\(\\delta^{(L)}=a^{[L]}-y\\) — error ที่ชั้นนอกสุดคือ &quot;ทำนาย − จริง&quot; ตรงๆ ไม่ต้องคูณ \\(g'\\) (ผลของการที่ cross-entropy จับคู่กับ sigmoid พอดี). สูตร \\((\\theta)^{\\top}\\delta * g'\\) ใช้กับ layer ที่อยู่ก่อนหน้าเท่านั้น.",
+  "why_wrong": [
+   "นับ input layer เข้าไปด้วย — สไลด์เขียน not counting input layer ไว้ชัด",
+   "\\(g'\\) เป็นตัวคูณใน \\(\\delta\\) ของ hidden layer ไม่ใช่ค่าของ \\(\\delta\\) ที่ output",
+   "สูตรส่งย้อนกลับใช้กับ layer ก่อนหน้า และ \\(L\\) ก็ไม่ใช่ 3"
+  ],
+  "ref": "Lesson 3 §2.2 (p.8) และ §4 (p.18)"
+ },
+ {
+  "id": "L3-48",
+  "lesson": 3,
+  "topic": "ระบบ index ของ θ",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตามระบบ index ที่สไลด์ใช้ (หน้า 7) สัญลักษณ์ \\(\\theta_{12}^{[2]}\\) หมายถึงอะไร?",
+  "options": [
+   "weight ของ layer 2 จาก node 2 ของ layer ก่อนหน้า ไปยัง node 1 ของ layer 2",
+   "weight ของ layer 2 จาก node 1 ของ layer ก่อนหน้า ไปยัง node 2 ของ layer 2",
+   "weight ของ layer 1 จาก node 2 ของ layer ก่อนหน้า ไปยัง node 2 ของ layer 1",
+   "weight จาก bias unit ของ layer 2 ไปยัง node ที่ 12 ของ layer ถัดไป"
+  ],
+  "answer": 0,
+  "explanation": "อ่านจากขวาไปซ้าย: ตัวยก \\([2]\\) = layer ปลายทาง, ตัวห้อยตัวแรก (1) = node ปลายทางใน layer นั้น, ตัวห้อยตัวที่สอง (2) = node ต้นทางใน layer ก่อนหน้า. ลำดับ &quot;ปลายทางก่อน ต้นทางทีหลัง&quot; ดูกลับด้านกับสามัญสำนึก แต่ทำให้เขียนเป็นเมทริกซ์แล้วคูณ \\(z=\\theta a\\) ได้พอดี (แถว = ปลายทาง, คอลัมน์ = ต้นทาง) ซึ่งตรงกับกฎมิติ \\(b\\times(a+1)\\) หน้า 20. ส่วน \\(\\theta_{10}^{[2]}\\) ที่ต้นทางเป็น 0 คือ weight ของ bias unit \\(a_0^{[1]}=1\\).",
+  "why_wrong": [
+   "สลับต้นทางกับปลายทาง — ตัวห้อยตัวแรกคือปลายทางเสมอ",
+   "อ่าน layer ผิด — ตัวยก [2] บอกว่าเป็น weight ของ layer 2",
+   "index ของ bias คือต้นทางเท่ากับ 0 เช่น \\(\\theta_{10}^{[2]}\\) ไม่ใช่ตัวเลข 12"
+  ],
+  "ref": "Lesson 3 §2.1 Forward Computation (p.7)"
+ },
+ {
+  "id": "L3-49",
+  "lesson": 3,
+  "topic": "ทำไม δ ที่ output ไม่มี g′",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "ทำไม \\(\\delta^{[L]}\\) ของ output layer จึงเป็น \\(a^{[L]}-y\\) ตรงๆ โดยไม่มีตัวคูณ \\(g'\\) เหมือนสูตร \\(\\delta\\) ของ hidden layer?",
+  "options": [
+   "เพราะ \\(\\partial J/\\partial a=(a-y)/[a(1-a)]\\) ไปหักล้างกับ \\(g'=a(1-a)\\) พอดี",
+   "เพราะที่ output layer ค่า \\(g'(z)\\) เท่ากับ 1 เสมอไม่ว่า \\(z\\) จะเป็นเท่าใด",
+   "เพราะ cross-entropy ไม่ได้ใช้ activation ที่ output จึงไม่มี \\(g'\\) ให้คูณเลย",
+   "เพราะ \\(\\delta\\) ที่ output นิยามจาก \\(\\partial J/\\partial a\\) ไม่ใช่ \\(\\partial J/\\partial z\\)"
+  ],
+  "answer": 0,
+  "explanation": "โซ่มี 2 ทอด: \\(\\dfrac{\\partial J}{\\partial z^{[2]}}=\\dfrac{\\partial J}{\\partial a}\\cdot\\dfrac{\\partial a}{\\partial z^{[2]}}\\). ทอดแรกจาก cross-entropy \\(J=-[y\\ln a+(1-y)\\ln(1-a)]\\): \\(\\dfrac{\\partial J}{\\partial a}=-\\dfrac{y}{a}+\\dfrac{1-y}{1-a}=\\dfrac{a-y}{a(1-a)}\\). ทอดที่สองคือ \\(g'=a(1-a)\\). คูณกันแล้ว \\(a(1-a)\\) หักล้างพอดี เหลือ \\(a-y\\). นี่ไม่ใช่ความบังเอิญ — cross-entropy ถูกออกแบบคู่กับ sigmoid เพื่อให้ตัวคูณ \\(g'\\) ที่ output หายไป ⇒ เมื่อโมเดล &quot;มั่นใจผิด&quot; (\\(a\\) ใกล้ 0 แต่ \\(y=1\\)) gradient ยังใหญ่พอจะแก้ตัว ไม่ถูก \\(g'\\approx0\\) ฆ่าทิ้งแบบที่จะเกิดถ้าใช้ MSE.",
+  "why_wrong": [
+   "\\(g'\\) ของ sigmoid สูงสุดแค่ 0.25 ที่ \\(z=0\\) ไม่ใช่ 1",
+   "output layer ก็ใช้ activation (sigmoid) — \\(g'\\) มีอยู่ แต่ถูกหักล้าง",
+   "นิยามที่ใช้จริงคือ \\(\\delta=\\partial J/\\partial z\\) เหมือนกันทุก layer"
+  ],
+  "ref": "Lesson 3 §2.4 พิสูจน์ ① (p.10)"
+ },
+ {
+  "id": "L3-50",
+  "lesson": 3,
+  "topic": "weight ขาออกเป็นศูนย์กับการไหลของ gradient",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "ใน backward computation ถ้า weight ขาออกจาก hidden node หนึ่งไปยัง output node เป็น 0 พอดี ค่า \\(\\delta\\) ของ hidden node นั้นในรอบนั้นเป็นเท่าใด และแปลว่าอะไร?",
+  "options": [
+   "เป็น 0 — รอบนี้ไม่มี gradient ไหลย้อนผ่าน แม้ \\(a\\) ของ node จะไม่เป็นศูนย์",
+   "เป็น 0 — node นี้จะไม่มีวันได้เรียนรู้อีกเลยตลอดการเทรนที่เหลือทั้งหมด",
+   "เท่ากับ \\(g'(z)\\) ของ node นั้น เพราะเหลือตัวคูณเดียวที่ยังไม่เป็นศูนย์",
+   "เท่ากับ \\(\\delta\\) ของ output เพราะ error ถูกส่งต่อมาทั้งก้อนโดยไม่ลดทอน"
+  ],
+  "answer": 0,
+  "explanation": "\\(\\delta_j^{(1)}=\\theta_{1j}^{[2]}\\,\\delta_1^{(2)}\\,g'(z_j^{[1]})\\) เป็นผลคูณ 3 ตัว — ตัวใดเป็น 0 ผลคูณก็เป็น 0. ความหมาย: &quot;ฉันไม่ได้ส่งอะไรไปให้ปลายทางเลย จึงไม่ต้องรับผิด&quot; ⇒ gradient ของ weight ขาเข้าทุกเส้นของ node นี้เป็น 0 ในรอบนี้. แต่ข้อสำคัญคือ weight ขาออกตัวนั้นเอง **ถูกอัปเดต** เพราะ gradient ของมันคือ \\(a_j^{[1]}\\delta^{(2)}\\neq0\\) ⇒ รอบถัดไปมันจะไม่เป็น 0 อีก และ node กลับมาเรียนรู้ได้. การปิดกั้นจึงเป็นของรอบปัจจุบันเท่านั้น ไม่ใช่ตลอดไป.",
+  "why_wrong": [
+   "เกินจริง — weight ขาออกเองมี gradient ไม่เป็นศูนย์ จึงพ้นจาก 0 ในรอบถัดไป",
+   "ผลคูณที่มีตัวประกอบเป็น 0 ย่อมเป็น 0 ไม่ใช่เหลือ \\(g'\\)",
+   "ไม่มีการส่งผ่านเลย เพราะตัวคูณ \\(\\theta\\) ที่เชื่อมเป็นศูนย์"
+  ],
+  "ref": "Lesson 3 §3 Backward ตัวอย่างที่ 1 (p.12) และ §2.2"
+ },
+ {
+  "id": "L3-51",
+  "lesson": 3,
+  "topic": "นิยาม activation function",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตามนิยามที่อาจารย์ทำสีไว้ในสไลด์หน้า 23 activation function คืออะไร?",
+  "options": [
+   "nonlinear function ที่แปลงหรือบีบค่าที่รวมถ่วงน้ำหนักแล้ว ให้เป็น activation ของ node",
+   "linear function ที่รวมค่า input ทุกตัวแบบถ่วงน้ำหนักด้วย weight ของแต่ละเส้นที่เข้ามา",
+   "ฟังก์ชันที่บีบค่าทุกตัวให้อยู่ในช่วง [0,1] เสมอ ไม่ว่าจะเลือกใช้ฟังก์ชันตัวใดก็ตาม",
+   "ฟังก์ชันที่สุ่ม weight เริ่มต้นของแต่ละ node เพื่อทำลาย symmetry ก่อนเริ่มการเทรน"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์เขียนว่า activation function คือ nonlinear function ที่ &quot;transforms or compresses the weighted and summed input values in a node, yielding the neuron's activation&quot; — การทำงานใน node มีสองจังหวะเสมอ: \\(z=\\sum_{i=0}^{n}\\theta_i x_i\\) (รวมถ่วงน้ำหนัก รวม bias ที่ \\(i=0\\)) แล้วจึง \\(a=g(z)\\). คำว่า nonlinear ต้องอยู่ในนิยาม เพราะถ้าเป็น linear เครือข่ายจะยุบเป็นเส้นตรง (§5C).",
+  "why_wrong": [
+   "นั่นคือขั้น \\(z=\\sum\\theta x\\) ซึ่งเกิดก่อน activation ไม่ใช่ตัว activation",
+   "จริงเฉพาะ sigmoid — ReLU ให้ \\([0,\\infty]\\) และ tanh ให้ \\([-1,1]\\)",
+   "นั่นคือ parameter initialization ในสไลด์หน้า 21 คนละเรื่องกัน"
+  ],
+  "ref": "Lesson 3 §5 Activation Function (p.23)"
+ },
+ {
+  "id": "L3-52",
+  "lesson": 3,
+  "topic": "ตารางหน้า 32: แถว Output Range",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ตามแถว Output Range ของตารางเปรียบเทียบหน้า 32 ข้อใดจับคู่ได้ถูกต้องครบทั้งสี่ตัว?",
+  "options": [
+   "Sigmoid [0,1] · Tanh [−1,1] · ReLU [0,∞] · Leaky ReLU [−∞,∞]",
+   "Sigmoid [0,1] · Tanh [−1,1] · ReLU [−∞,∞] · Leaky ReLU [0,∞]",
+   "Sigmoid [−1,1] · Tanh [0,1] · ReLU [0,∞] · Leaky ReLU [−∞,∞]",
+   "Sigmoid [0,1] · Tanh [−1,1] · ReLU [0,1] · Leaky ReLU [−1,1]"
+  ],
+  "answer": 0,
+  "explanation": "อ่านจากรูปฟังก์ชันได้เลยโดยไม่ต้องท่อง: sigmoid บีบเป็น \\([0,1]\\); tanh บีบเป็น \\([-1,1]\\) (จึง zero-centered); ReLU ตัดฝั่งลบทิ้งแต่ฝั่งบวกปล่อยผ่านไม่จำกัด ⇒ \\([0,\\infty]\\); Leaky ReLU ให้ฝั่งลบเป็น \\(0.01x\\) ซึ่งก็ไม่มีขอบล่าง ⇒ \\([-\\infty,\\infty]\\). ตารางระบุข้อเสีย &quot;output can be Infinite&quot; ให้ทั้ง ReLU และ Leaky ReLU ด้วยเหตุผลนี้.",
+  "why_wrong": [
+   "สลับช่วงของ ReLU กับ Leaky ReLU — ReLU ไม่มีค่าติดลบ",
+   "สลับช่วงของ sigmoid กับ tanh — sigmoid ไม่ให้ค่าลบ",
+   "ReLU และ Leaky ReLU ไม่มีขอบบน จึงไม่ใช่ [0,1] หรือ [−1,1]"
+  ],
+  "ref": "Lesson 3 §5B.3 ตารางหน้า 32"
+ },
+ {
+  "id": "L3-53",
+  "lesson": 3,
+  "topic": "Multi-class ด้วย sigmoid ทีละ node + one-hot",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "งาน multi-class 4 คลาส ถ้าใช้ sigmoid แยกทีละ output node ตามสไลด์หน้า 37 ข้อใดถูกต้อง?",
+  "options": [
+   "ต้องแปลง y เป็น one-hot ก่อน และผลรวมของ output ทั้งสี่ไม่จำเป็นต้องเท่ากับ 1",
+   "ต้องแปลง y เป็น one-hot ก่อน และผลรวมของ output ทั้งสี่จะเท่ากับ 1 เสมอทุกครั้ง",
+   "ใช้ y เป็นเลข 0–3 ได้เลย และผลรวมของ output ทั้งสี่จะเท่ากับ 1 โดยอัตโนมัติ",
+   "ใช้ y เป็นเลข 0–3 ได้เลย เพราะโมเดลตีความลำดับของคลาสได้ถูกต้องอยู่แล้ว"
+  ],
+  "answer": 0,
+  "explanation": "หนึ่ง: ต้อง one-hot เพราะถ้าปล่อยคำตอบเป็นเลข 0,1,2,3 โมเดลจะเข้าใจผิดว่าคลาส 3 &quot;มากกว่า&quot; คลาส 1 สามเท่า ทั้งที่มันเป็นแค่ชื่อ (ฟุตบอล/บาส/เทนนิส/ปิงปอง) — one-hot ทำให้ทุกคลาสห่างกันเท่ากันและได้ output 1 node ต่อ 1 คลาส. สอง: เพราะแต่ละ node ทำ binary classification ของตัวเองอย่างอิสระ (&quot;ใช่ฟุตบอลไหม&quot;, &quot;ใช่บาสไหม&quot;) ผลรวมจึงไม่ถูกบังคับ — อาจได้ \\([0.9,0.8,0.1,0.7]\\) รวม 2.5 ⇒ ตีความเป็นความน่าจะเป็นไม่ได้. นี่คือจุดอ่อนที่ softmax หน้า 38 มาแก้.",
+  "why_wrong": [
+   "ผลรวม = 1 เป็นสมบัติของ softmax ไม่ใช่ของ sigmoid แยก node",
+   "ไม่ one-hot จะใส่ลำดับปลอมให้คลาส และผลรวมก็ไม่เท่ากับ 1",
+   "คลาสในงานนี้ไม่มีลำดับ การใช้เลข 0–3 ตรงๆ จึงผิด"
+  ],
+  "ref": "Lesson 3 §6 Multi-class ด้วย sigmoid (p.37)"
+ },
+ {
+  "id": "L3-54",
+  "lesson": 3,
+  "topic": "Softmax loss: ทำไมเหลือพจน์เดียว",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "loss ของ softmax ในสไลด์หน้า 38 คือ \\(J=-\\frac{1}{m}\\sum_i\\sum_k y_k^{(i)}\\log(h)_k\\) ทำไมจึงไม่มีเทอม \\((1-y)\\log(1-h)\\) แบบสูตรหน้า 37?",
+  "options": [
+   "เพราะ \\(y_k=1\\) เฉพาะคลาสที่ถูก ที่เหลือเป็น 0 ⇒ ผลรวม \\(\\sum_k\\) เหลือพจน์เดียว",
+   "เพราะ softmax ให้ค่าเป็นบวกเสมอ จึงไม่จำเป็นต้องลงโทษคลาสที่ทำนายผิดเลย",
+   "เพราะ softmax ใช้ได้กับงาน 2 คลาสเท่านั้น ผลรวม \\(\\sum_k\\) จึงมีแค่สองพจน์",
+   "เพราะเทอม \\((1-y)\\log(1-h)\\) ถูกย้ายไปรวมอยู่ในเทอม regularization แทน"
+  ],
+  "answer": 0,
+  "explanation": "สไลด์กำกับว่า \\(y_k^{(i)}=1\\) only for the correct class, 0 otherwise ⇒ ในผลรวม \\(\\sum_k\\) มีพจน์เดียวที่ไม่เป็นศูนย์ คือของคลาสที่ถูก ⇒ cost \\(=-\\log(\\)ความน่าจะเป็นที่ให้กับคำตอบที่ถูก\\()\\). เช่น \\(a=[0.1112,0.8214,0.0674]\\): ถ้าคำตอบจริงคือคลาสที่ 2 ⇒ \\(-\\ln0.8214=0.197\\) (ต่ำ ดี); ถ้าเป็นคลาสที่ 3 ⇒ \\(-\\ln0.0674=2.697\\) (โดนปรับหนัก). ไม่ต้องมีเทอม \\((1-y)\\log(1-h)\\) เพราะ softmax บังคับผลรวม = 1 อยู่แล้ว การดันคลาสถูกขึ้นจึงกดคลาสผิดลงโดยอัตโนมัติ.",
+  "why_wrong": [
+   "คลาสผิดถูกกดลงโดยอ้อมผ่านข้อบังคับผลรวม = 1 ไม่ใช่ไม่ลงโทษ",
+   "softmax เป็น generalization ของ logistic สำหรับหลายคลาส ไม่ได้จำกัด 2 คลาส",
+   "regularization เป็นเทอมของ \\(\\theta\\) ไม่เกี่ยวกับรูปของ loss"
+  ],
+  "ref": "Lesson 3 §6 Softmax (p.38)"
+ },
+ {
+  "id": "L3-55",
+  "lesson": 3,
+  "topic": "ex_shallow_nn: เติมสองบรรทัดของ forward",
+  "source": "ex_shallow_nn",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "ใน nnCostFunction ช่องที่ต้องเติมคือ <code>a1 = ...</code> และ <code>z2 = ...</code> (ก่อนเติม bias ค่า a1 มี shape (m,10) และ Theta2 มี shape (1,11)). ข้อใดถูกต้อง?",
+  "code": "a0 = np.concatenate([np.ones((m, 1)), X], axis=1)\nz1 = np.dot(a0, Theta1.T)\na1 = sigmoid(z1)\na1 = #### your code #####\nz2 = #### your code #####\na2 = sigmoid(z2)",
+  "options": [
+   "a1 = np.concatenate([np.ones((m,1)), a1], axis=1) ; z2 = np.dot(a1, Theta2.T)",
+   "a1 = np.concatenate([np.ones((m,1)), a1], axis=0) ; z2 = np.dot(a1, Theta2.T)",
+   "a1 = np.concatenate([np.ones((m,1)), a1], axis=1) ; z2 = np.dot(a1, Theta2)",
+   "a1 = np.concatenate([a1, np.ones((m,1))], axis=1) ; z2 = np.dot(Theta2, a1)"
+  ],
+  "answer": 0,
+  "explanation": "ขั้นแรกคือ &quot;(add bias)&quot; ของสไลด์หน้า 17: ต่อคอลัมน์ของเลข 1 ไว้ <em>ด้านหน้า</em> ด้วย axis=1 ⇒ a1 กลายเป็น (m,11) ตรงกับ 11 คอลัมน์ของ Theta2 ที่คอลัมน์ 0 เป็นช่อง bias. ขั้นที่สอง: Theta2 มี shape (1,11) ⇒ ต้อง transpose เป็น (11,1) ก่อน ⇒ (m,11)·(11,1) = (m,1) ซึ่งตรงกับ y_matrix ที่เป็น (m,1). รูปแบบนี้เหมือนบรรทัด z1 = np.dot(a0, Theta1.T) ทุกประการ.",
+  "why_wrong": [
+   "axis=0 ต่อเป็นแถว ทำให้จำนวนตัวอย่างเพิ่มแทนที่จะเพิ่มคอลัมน์ bias",
+   "ไม่ transpose — (m,11)·(1,11) คูณกันไม่ได้ มิติไม่ตรง",
+   "วาง bias ไว้คอลัมน์สุดท้ายและสลับลำดับ dot ทำให้ไม่ตรงกับ Theta2"
+  ],
+  "ref": "ex_shallow_nn (2) nnCostFunction forward; Lesson 3 §4 (p.17)"
+ }
+]
