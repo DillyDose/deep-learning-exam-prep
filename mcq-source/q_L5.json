@@ -6,7 +6,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "ตามสไลด์หน้า 1 เมื่อเกิด <b>Gradient Vanishing</b> ผลที่อาจารย์ระบุคืออะไร?",
+  "stem": "เมื่อเกิด <b>Gradient Vanishing</b> ในเครือข่ายลึก ผลที่เกิดขึ้นคืออะไร?",
   "options": [
    "weight ของ layer ล่าง (ใกล้ input) แทบ unchanged และเทรนไม่ลู่เข้าคำตอบที่ดี",
    "weight ของ layer บน (ใกล้ output) แทบ unchanged และเทรนไม่ลู่เข้าคำตอบที่ดี",
@@ -14,7 +14,7 @@
    "weight ทุก layer เปลี่ยนเท่ากันหมดทุกรอบ จนทุก node กลายเป็น node เดียวกัน"
   ],
   "answer": 0,
-  "explanation": "gradient ของ layer ต้นๆ ต้องคูณผ่านโซ่ \\(\\theta\\cdot g'\\) ยาวที่สุด (สไลด์: <i>incurs multiple steps of calculation</i>). ถ้าตัวคูณแต่ละชั้น &lt; 1 ผลคูณหดแบบเลขชี้กำลัง ⇒ gradient <b>smaller</b> ⇒ weight ของ <b>lower layers</b> แทบ <i>unchanged</i> และ <i>training never converges to a good solution</i>. ส่วน layer ท้ายโซ่สั้นจึงแทบไม่โดน.",
+  "explanation": "gradient ของ layer ต้น ๆ ต้องคูณผ่านโซ่ \\(\\theta\\cdot g'\\) ยาวที่สุด (<i>incurs multiple steps of calculation</i>). ถ้าตัวคูณแต่ละชั้น &lt; 1 ผลคูณหดแบบเลขชี้กำลัง ⇒ gradient <b>smaller</b> ⇒ weight ของ <b>lower layers</b> แทบ <i>unchanged</i> และ <i>training never converges to a good solution</i>. ส่วน layer ท้ายโซ่สั้นจึงแทบไม่โดน.",
   "why_wrong": [
    "สลับทิศ: layer ท้ายมีโซ่สั้นที่สุด โดนผลน้อยที่สุด",
    "นี่คือนิยามของ Gradient Exploding (larger → diverges)",
@@ -29,7 +29,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "คำใดบนสไลด์หน้า 1 อธิบายผลของ <b>Gradient Exploding</b> ได้ถูกต้อง?",
+  "stem": "ข้อใดอธิบายผลของ <b>Gradient Exploding</b> ได้ถูกต้อง?",
   "options": [
    "gradient โตขึ้น ทำให้ weight ได้อัปเดตใหญ่มหาศาล และอัลกอริทึม diverges",
    "gradient โตขึ้น ทำให้ weight ได้อัปเดตใหญ่มหาศาล และอัลกอริทึม converges ช้า",
@@ -37,9 +37,9 @@
    "gradient ถูกตัดด้วย threshold ก่อนก้าว gradient descent เพื่อกันก้าวใหญ่"
   ],
   "answer": 0,
-  "explanation": "สไลด์จับคู่ไว้ชัด: <b>larger</b> ⇒ <i>insanely large weight updates</i> ⇒ <b>diverges</b> (วิ่งออกห่างจุดต่ำสุด). ตัวอย่างตัวเลข: ตัวคูณ 1.1 ต่อชั้น ลึก 50 ชั้น ⇒ \\(1.1^{50}\\approx117\\) เท่า ก้าวเดียวกระโดดข้ามหุบ.",
+  "explanation": "คู่ที่ต้องจำ: <b>larger</b> ⇒ <i>insanely large weight updates</i> ⇒ <b>diverges</b> (วิ่งออกห่างจุดต่ำสุด). ตัวอย่างตัวเลข: ตัวคูณ 1.1 ต่อชั้น ลึก 50 ชั้น ⇒ \\(1.1^{50}\\approx117\\) เท่า ก้าวเดียวกระโดดข้ามหุบ.",
   "why_wrong": [
-   "near-miss: คำบนสไลด์คือ diverges (ลู่ออก) ไม่ใช่ลู่เข้าช้า",
+   "near-miss: ผลคือ diverges (ลู่ออก) ไม่ใช่ลู่เข้าช้า",
    "นี่คือ vanishing (smaller)",
    "นี่คือ gradient clipping ซึ่งเป็นทางแก้ ไม่ใช่ผลของ exploding"
   ],
@@ -75,7 +75,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "สไลด์หน้า 2 กำหนดว่า activation ใน hidden layer <b>should not saturate</b> เพราะเหตุใด?",
+  "stem": "ทำไม activation ใน hidden layer จึง <b>should not saturate</b>?",
   "options": [
    "เพราะเมื่อ saturate อนุพันธ์เข้าใกล้ 0 มาก gradient ที่ส่งไป layer ล่างจึงหาย",
    "เพราะเมื่อ saturate อนุพันธ์มีค่ามากเกินไป gradient ที่ส่งไป layer ล่างจึงระเบิด",
@@ -98,7 +98,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "ตามสไลด์หน้า 3 ข้อใดเป็น<b>ข้อเสีย</b>ของ ReLU ที่นำไปสู่การใช้ gradient clipping?",
+  "stem": "ข้อใดเป็น<b>ข้อเสีย</b>ของ ReLU ที่นำไปสู่การใช้ gradient clipping?",
   "options": [
    "ฝั่งบวกไม่มีเพดาน activation อาจ blow up จนเกิด exploding gradient",
    "อนุพันธ์สูงสุดแค่ 0.25 จึงทำให้ gradient หดลงทุกชั้นที่ผ่านไป",
@@ -121,19 +121,19 @@
   "source": "lesson",
   "type": "calc",
   "difficulty": "hard",
-  "stem": "gradient \\(g=[6,\\ -8]\\) ถูก clip แบบ <b>by norm</b> ด้วย threshold 5 (เช่น <code>SGD(clipnorm=5.0)</code>) จะได้ gradient ใหม่เท่าใด?",
+  "stem": "gradient \\(g=[-9,\\ 12]\\) ถูก clip แบบ <b>by norm</b> ด้วย threshold 3 (เช่น <code>SGD(clipnorm=3.0)</code>) จะได้ gradient ใหม่เท่าใด?",
   "options": [
-   "[3, −4]",
-   "[1, −1]",
-   "[5, −5]",
-   "[0.6, −0.8]"
+   "[−1.8, 2.4]",
+   "[−1, 1]",
+   "[−3, 3]",
+   "[−0.6, 0.8]"
   ],
   "answer": 0,
-  "explanation": "ขั้น 1: \\(\\|g\\|=\\sqrt{6^2+8^2}=\\sqrt{100}=10\\). ขั้น 2: 10 &gt; 5 จึงย่อทั้งเวกเตอร์ด้วย \\(5/10=0.5\\) ⇒ \\([3,-4]\\) (ความยาว 5 พอดี ทิศเดิม). เทียบ clip by value (\\(c=5\\)) จะได้ \\([5,-5]\\) ซึ่งบิดทิศ. clipping ใช้แก้ <b>exploding</b> และทำก่อนก้าว gradient descent.",
+  "explanation": "ขั้น 1: \\(\\|g\\|=\\sqrt{9^2+12^2}=\\sqrt{225}=15\\). ขั้น 2: 15 &gt; 3 จึงย่อทั้งเวกเตอร์ด้วย \\(3/15=0.2\\) ⇒ \\([-1.8,\\ 2.4]\\) (ความยาว 3 พอดี ทิศเดิม). เทียบ clip by value (\\(c=3\\)) จะได้ \\([-3,\\ 3]\\) ซึ่งบิดทิศ. clipping ใช้แก้ <b>exploding</b> และทำก่อนก้าว gradient descent.",
   "why_wrong": [
    "นั่นคือ clip by value ด้วย threshold 1",
-   "นั่นคือ clip by value ด้วย threshold 5 (ทิศเปลี่ยน)",
-   "หารด้วย norm จนเหลือความยาว 1 ลืมคูณ threshold 5"
+   "นั่นคือ clip by value ด้วย threshold 3 (ทิศเปลี่ยน)",
+   "หารด้วย norm จนเหลือความยาว 1 ลืมคูณ threshold 3"
   ],
   "ref": "Lesson 5 §1.2 กล่องคำนวณ gradient clipping"
  },
@@ -152,10 +152,10 @@
    "hidden node แต่ละตัวแยกกันเรียน feature ต่างกันได้เร็วกว่าการสุ่ม weight"
   ],
   "answer": 0,
-  "explanation": "ไล่เลข 2→2→1: forward ได้ \\(a^{[1]}_1=a^{[1]}_2=g(0)=0.5\\); backward \\(\\delta^{[1]}=\\theta^{[2]}\\delta^{[2]}g'=0\\) และ gradient ของ \\(\\theta^{[2]}\\) ทั้งสองตัวเท่ากัน (−0.25) ⇒ หลังอัปเดตยังเท่ากัน วนซ้ำตลอด. สไลด์หน้า 4: weight ต้อง <b>random (not the same)</b> เพื่อเลี่ยง <b>redundant nodes</b> = symmetry breaking.",
+  "explanation": "ไล่เลข 2→2→1: forward ได้ \\(a^{[1]}_1=a^{[1]}_2=g(0)=0.5\\); backward \\(\\delta^{[1]}=\\theta^{[2]}\\delta^{[2]}g'=0\\) และ gradient ของ \\(\\theta^{[2]}\\) ทั้งสองตัวเท่ากัน ⇒ หลังอัปเดตยังเท่ากัน วนซ้ำตลอด. weight ต้อง <b>random (not the same)</b> เพื่อเลี่ยง <b>redundant nodes</b> = symmetry breaking.",
   "why_wrong": [
    "zero init ทำให้ gradient เป็น 0/เท่ากัน ไม่ได้ระเบิด",
-   "ไม่ใช่แค่ช้า — node ซ้ำกันตลอดกาล (cost ค้าง 0.693 ในการทดลอง)",
+   "ไม่ใช่แค่ช้า — node ซ้ำกันตลอดกาล cost ค้างที่ระดับเดาสุ่ม",
    "กลับด้าน: ความสมมาตรทำให้ทุก node เรียนเหมือนกัน"
   ],
   "ref": "Lesson 5 §2.1 (สไลด์หน้า 4)"
@@ -167,7 +167,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "สไลด์หน้า 4 สรุปจาก <i>empirical evidence</i> ว่าอะไรมีผลต่อ optimization และ generalization มากที่สุดตอนตั้งค่าเริ่มต้น?",
+  "stem": "จากหลักฐานเชิงทดลอง (empirical evidence) ปัจจัยใดของการตั้งค่า weight เริ่มต้นมีผลต่อ optimization และ generalization มากที่สุด?",
   "options": [
    "ขนาด (scale) ของ weight เริ่มต้น มากกว่าชนิดของการแจกแจงที่ใช้สุ่ม",
    "ชนิดของการแจกแจง (uniform หรือ Gaussian) มากกว่าขนาดของ weight",
@@ -175,10 +175,10 @@
    "การตั้ง weight ทุกตัวให้เท่ากัน เพื่อให้ทุก node เริ่มจากจุดที่เป็นกลาง"
   ],
   "answer": 0,
-  "explanation": "ข้อความที่อาจารย์ทำสี: การเลือก uniform หรือ Gaussian แทบไม่ต่างกัน แต่ <b>scale of the initial weights matters</b>. เหตุผลเชิงตัวเลข (หน้า 5): input 100 ตัว weight \\(N(0,1)\\) ⇒ \\(\\operatorname{Var}(z)=100\\) ⇒ sigmoid saturate; ถ้าลด variance เป็น \\(1/100\\) ⇒ \\(\\operatorname{Var}(z)=1\\) อยู่ในช่วงเชิงเส้น.",
+  "explanation": "การเลือกสุ่มจาก uniform หรือ Gaussian แทบไม่ต่างกัน แต่ <b>scale of the initial weights matters</b>. เหตุผลเชิงตัวเลข: input 100 ตัว weight \\(N(0,1)\\) ⇒ \\(\\operatorname{Var}(z)=100\\) ⇒ sigmoid saturate; ถ้าลด variance เป็น \\(1/100\\) ⇒ \\(\\operatorname{Var}(z)=1\\) อยู่ในช่วงเชิงเส้น.",
   "why_wrong": [
-   "สลับกับข้อความบนสไลด์",
-   "สไลด์หน้า 5 บอกว่า it is fine to set bias = 0",
+   "สลับความสำคัญ — ขนาดสำคัญกว่าชนิดของการแจกแจง",
+   "ตั้ง bias = 0 ได้ตามปกติ (fine to set bias = 0)",
    "นั่นคือ zero/constant init ที่ทำให้เกิด redundant nodes"
   ],
   "ref": "Lesson 5 §2 (สไลด์หน้า 4)"
@@ -190,7 +190,7 @@
   "source": "lesson",
   "type": "calc",
   "difficulty": "hard",
-  "stem": "ดัดแปลงโจทย์สไลด์หน้า 5: input 400 ตัว มีค่าเท่ากับ 1 ทุกตัว, weight สุ่มอิสระจาก \\(N(0,1)\\), bias = 0. <b>ส่วนเบี่ยงเบนมาตรฐาน</b>ของ \\(z\\) เท่ากับเท่าใด?",
+  "stem": "input 400 ตัว มีค่าเท่ากับ 1 ทุกตัว, weight สุ่มอิสระจาก \\(N(0,1)\\), bias = 0 <b>ส่วนเบี่ยงเบนมาตรฐาน</b>ของ \\(z=\\sum\\theta_ix_i\\) เท่ากับเท่าใด?",
   "options": [
    "20",
    "400",
@@ -198,7 +198,7 @@
    "0"
   ],
   "answer": 0,
-  "explanation": "\\(\\operatorname{Var}(z)=\\sum_{i=1}^{400}x_i^2\\operatorname{Var}(\\theta_i)=400\\times1\\times1=400\\) ⇒ \\(\\sigma_z=\\sqrt{400}=20\\). (mean = 0 เพราะบวก-ลบหักล้าง แต่ variance เป็นบวกเสมอจึงสะสม) นี่คือ Problem บนสไลด์: <i>variance of inputs grows with the number of inputs</i>. Solution: \\(var=1/n=1/400\\) ⇒ \\(\\operatorname{Var}(z)=1\\).",
+  "explanation": "\\(\\operatorname{Var}(z)=\\sum_{i=1}^{400}x_i^2\\operatorname{Var}(\\theta_i)=400\\times1\\times1=400\\) ⇒ \\(\\sigma_z=\\sqrt{400}=20\\). (mean = 0 เพราะบวก-ลบหักล้าง แต่ variance เป็นบวกเสมอจึงสะสม) นี่คือปัญหา <i>variance of inputs grows with the number of inputs</i>. ทางแก้: \\(\\operatorname{Var}(\\theta)=1/n=1/400\\) ⇒ \\(\\operatorname{Var}(z)=1\\).",
   "why_wrong": [
    "ตอบ variance ไม่ใช่ส่วนเบี่ยงเบนมาตรฐาน",
    "คิดว่า variance ไม่สะสมเมื่อบวกกัน",
@@ -213,7 +213,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "สูตร \\(\\operatorname{Var}(\\theta)=\\dfrac{2}{\\text{fan\\_in}}\\) คือวิธี initialization ใด และสไลด์แนะนำให้ใช้กับ activation ใด?",
+  "stem": "สูตร \\(\\operatorname{Var}(\\theta)=\\dfrac{2}{\\text{fan\\_in}}\\) คือวิธี initialization ใด และเหมาะกับ activation ใด?",
   "options": [
    "He — ReLU และตระกูลของมัน",
    "Xavier — sigmoid และ tanh",
@@ -221,7 +221,7 @@
    "He — sigmoid และ tanh"
   ],
   "answer": 0,
-  "explanation": "ตารางสไลด์หน้า 6: LeCun \\(1/\\text{fan\\_in}\\) (SELU), Glorot/Xavier \\(2/(\\text{fan\\_in}+\\text{fan\\_out})\\) (sigmoid/tanh/softmax), He \\(2/\\text{fan\\_in}\\) (ReLU และตระกูล). สไลด์หน้า 8: <i>ReLU/Leaky ReLU exploding gradients can be solved with He</i>, <i>Tanh/Sigmoid vanishing gradients can be solved with Xavier</i>. ใน Keras: <code>kernel_initializer='he_normal'</code>.",
+  "explanation": "LeCun \\(1/\\text{fan\\_in}\\) (SELU), Glorot/Xavier \\(2/(\\text{fan\\_in}+\\text{fan\\_out})\\) (sigmoid/tanh/softmax), He \\(2/\\text{fan\\_in}\\) (ReLU และตระกูล). <i>ReLU/Leaky ReLU exploding gradients can be solved with He</i>, <i>Tanh/Sigmoid vanishing gradients can be solved with Xavier</i>. ใน Keras: <code>kernel_initializer='he_normal'</code>.",
   "why_wrong": [
    "Xavier คือ 2/(fan_in+fan_out)",
    "LeCun คือ 1/fan_in",
@@ -232,19 +232,19 @@
  {
   "id": "L5-11",
   "lesson": 5,
-  "topic": "Xavier variance ของ layer 784→16",
+  "topic": "Xavier variance ของ layer 300→100",
   "source": "lesson",
   "type": "calc",
   "difficulty": "hard",
-  "stem": "layer Dense ที่ต่อจาก 784 input ไปยัง 16 node ใช้ Glorot/Xavier (normal) จะมี \\(\\operatorname{Var}(\\theta)\\) เท่าใด?",
+  "stem": "layer Dense ที่ต่อจาก 300 input ไปยัง 100 node ใช้ Glorot/Xavier (normal) จะมี \\(\\operatorname{Var}(\\theta)\\) เท่าใด?",
   "options": [
-   "0.0025",
-   "0.00255",
-   "0.125",
-   "0.00125"
+   "0.005",
+   "0.0067",
+   "0.02",
+   "0.0025"
   ],
   "answer": 0,
-  "explanation": "fan_in = 784, fan_out = 16 ⇒ \\(\\operatorname{Var}=\\dfrac{2}{784+16}=\\dfrac{2}{800}=0.0025\\). (ถ้าเป็น He จะเป็น \\(2/784\\approx0.00255\\); ถ้าเป็นแบบ uniform limit ต้องใส่ราก \\(\\sqrt{6/800}\\approx0.0866\\)).",
+  "explanation": "fan_in = 300, fan_out = 100 ⇒ \\(\\operatorname{Var}=\\dfrac{2}{300+100}=\\dfrac{2}{400}=0.005\\). (ถ้าเป็น He จะเป็น \\(2/300\\approx0.0067\\))",
   "why_wrong": [
    "นั่นคือ He: 2/fan_in",
    "ใช้ 2/fan_out ลืม fan_in",
@@ -278,11 +278,11 @@
  {
   "id": "L5-13",
   "lesson": 5,
-  "topic": "Circle experiment: zero vs random vs He",
+  "topic": "Zero initialization: ทำไม cost ค้าง",
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "ในการทดลองสไลด์หน้า 7 (Circle Dataset) ทำไม cost ของ <b>Zero Initialization</b> ค้างอยู่ที่ประมาณ 0.693 ตลอดการเทรน?",
+  "stem": "เทรนเครือข่าย binary classification (output sigmoid) ด้วย <b>zero initialization</b> แล้วพบว่า cost ค้างอยู่ที่ประมาณ 0.693 ตลอดการเทรน เพราะอะไร?",
   "options": [
    "โมเดลทำนาย 0.5 ให้ทุกตัวอย่าง cost จึงเป็น −ln 0.5 ≈ 0.693 ไม่ขยับ",
    "learning rate สูงเกิน gradient จึงระเบิดแล้วค้างอยู่ที่ค่า 0.693",
@@ -290,11 +290,11 @@
    "ข้อมูลวงกลมแยกไม่ได้ ทุกวิธี init จึงได้ cost 0.693 เท่ากันหมด"
   ],
   "answer": 0,
-  "explanation": "zero init ⇒ \\(z=0\\) ทุก node ⇒ \\(h=g(0)=0.5\\) ⇒ \\(J=-\\ln0.5=0.6931\\) และความสมมาตรไม่ถูกทำลาย จึงเปลี่ยนน้อยกว่า 0.0001 ทั้งกราฟ. Random init: ค้างแถว 0.70 หลายบล็อกก่อนลงถึง ~0.30 (train acc 84.14%); He: ลงถึง ~0.30 ภายในไม่กี่บล็อกแรก เพราะคุม variance ตั้งแต่ก้าวแรก.",
+  "explanation": "zero init ⇒ \\(z=0\\) ทุก node ⇒ \\(h=g(0)=0.5\\) ⇒ \\(J=-\\ln0.5=0.6931\\) และความสมมาตรไม่ถูกทำลาย node ทุกตัวได้ gradient เท่ากัน cost จึงแทบไม่ขยับ. ส่วน random init และ He init ทำลายความสมมาตรได้จึงลด cost ลงได้ — He ลดเร็วกว่าเพราะคุม variance ตั้งแต่ก้าวแรก.",
   "why_wrong": [
    "ไม่ใช่ exploding — gradient เป็น 0/สมมาตร",
-   "นั่นคือคำอธิบายของ He ที่ cost ลดเร็ว",
-   "Random และ He ลด cost ลงถึง ~0.30 ได้"
+   "นั่นคือคำอธิบายของ He init ที่ cost ลดเร็ว",
+   "random init และ He init ลด cost ลงได้ ไม่ได้ค้างทุกวิธี"
   ],
   "ref": "Lesson 5 §2.4 (สไลด์หน้า 7)"
  },
@@ -305,7 +305,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "ทำไมสไลด์หน้า 8 จึงบอกว่า weight initialization <b>not totally eliminate</b> ปัญหา vanishing/exploding?",
+  "stem": "ทำไม weight initialization จึง <b>not totally eliminate</b> ปัญหา vanishing/exploding?",
   "options": [
    "มันคุม variance ของ output แต่ละ layer ได้แค่รอบแรก weight รอบต่อไปเปลี่ยนได้",
    "มันทำลายความสมมาตรระหว่าง node ไม่ได้ จึงต้องใช้ dropout เข้ามาช่วยเสริม",
@@ -313,11 +313,11 @@
    "มันบังคับให้ใช้ learning rate ต่ำมาก การเทรนจึงช้าจนแทบใช้งานไม่ได้เลย"
   ],
   "answer": 0,
-  "explanation": "สองบรรทัดย่อยบนสไลด์: initialization คุมได้แค่ <i>variance of the outputs of each layer</i> และเฉพาะ <i>during the first iteration of gradient descent</i>; พอ <i>the weights will change in the next iterations</i> ค่าก็หลุดได้อีก. ตัวที่คอยจัดระเบียบทุกรอบคือ Batch Normalization. (สไลด์ยังบอกว่า init ช่วย <b>break the symmetry</b> ได้)",
+  "explanation": "initialization คุมได้แค่ <i>variance of the outputs of each layer</i> และเฉพาะ <i>during the first iteration of gradient descent</i>; พอ <i>the weights will change in the next iterations</i> ค่าก็หลุดได้อีก. ตัวที่คอยจัดระเบียบทุกรอบคือ Batch Normalization. (initialization ยังช่วย <b>break the symmetry</b> ได้)",
   "why_wrong": [
-   "สไลด์บอกว่า initialization break the symmetry ได้",
+   "initialization break the symmetry ได้",
    "ReLU มีปัญหา exploding ที่แก้ด้วย He",
-   "ไม่ใช่เหตุผลบนสไลด์ (BN ต่างหากที่ช่วยให้ใช้ lr สูง)"
+   "ไม่ใช่เหตุผลที่ถูก (BN ต่างหากที่ช่วยให้ใช้ lr สูง)"
   ],
   "ref": "Lesson 5 §2.5 (สไลด์หน้า 8)"
  },
@@ -328,7 +328,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "สไลด์หน้า 9: feature หนึ่งอยู่ช่วง 0–100 อีกตัวอยู่ช่วง −40 ถึง 40 การ normalize (ลบ mean แล้วหาร σ) ช่วย gradient descent อย่างไร?",
+  "stem": "feature หนึ่งอยู่ช่วง 0–100 อีกตัวอยู่ช่วง −40 ถึง 40 การ normalize (ลบ mean แล้วหาร σ) ช่วย gradient descent อย่างไร?",
   "options": [
    "contour ของ cost กลมขึ้น gradient ชี้ตรงไปหาจุดต่ำสุด ไม่ต้องเดินซิกแซ็ก",
    "contour ของ cost ยืดเป็นวงรียาว gradient จึงก้าวได้ยาวขึ้นในแต่ละ step",
@@ -336,7 +336,7 @@
    "ลดจำนวนพารามิเตอร์ของโมเดลลง ทำให้แต่ละ step คำนวณได้เร็วขึ้นมาก"
   ],
   "answer": 0,
-  "explanation": "สเกลต่างกันทำให้ contour เป็นวงรีแคบยาว GD เดินซิกแซ็กข้ามหุบ. สองขั้นบนสไลด์ <i>shift toward zero mean</i> และ <i>rescale to similar spread</i> (z-score \\(X_{new}=(X-\\mu)/\\sigma\\)) ทำให้ contour กลม. แล้วขยายไปยัง deep network: ควร <b>normalize z (pre-activation) or a (post-activation)</b> ของทุก hidden layer ด้วย ไม่ใช่แค่ input.",
+  "explanation": "สเกลต่างกันทำให้ contour เป็นวงรีแคบยาว GD เดินซิกแซ็กข้ามหุบ. สองขั้น <i>shift toward zero mean</i> และ <i>rescale to similar spread</i> (z-score \\(X_{new}=(X-\\mu)/\\sigma\\)) ทำให้ contour กลม. แล้วขยายไปยัง deep network: ควร <b>normalize z (pre-activation) or a (post-activation)</b> ของทุก hidden layer ด้วย ไม่ใช่แค่ input.",
   "why_wrong": [
    "กลับด้าน: วงรียาวคือปัญหาก่อน normalize",
    "normalize ไม่ได้เปลี่ยนความ convex ของ cost",
@@ -382,7 +382,7 @@
    "γ, β คือ moving mean และ moving variance ส่วน ε คือค่า momentum"
   ],
   "answer": 0,
-  "explanation": "ตามสไลด์หน้า 12: ตัวห้อย B = mini-batch, \\(m_B\\) = จำนวนตัวอย่างใน batch, \\(\\epsilon\\) = เลขจิ๋วกันหารศูนย์ (ปกติ \\(10^{-7}\\)), \\(\\gamma\\) = scale, \\(\\beta\\) = shift/offset — <i>two new parameter vectors per layer</i> ที่<b>เรียนรู้ได้</b>เหมือน \\(\\theta\\). moving mean/variance เป็นอีกคู่ที่ non-trainable ใช้ตอน test.",
+  "explanation": "ตัวห้อย B = mini-batch, \\(m_B\\) = จำนวนตัวอย่างใน batch, \\(\\epsilon\\) = เลขจิ๋วกันหารศูนย์ (ปกติ \\(10^{-7}\\)), \\(\\gamma\\) = scale, \\(\\beta\\) = shift/offset — <i>two new parameter vectors per layer</i> ที่<b>เรียนรู้ได้</b>เหมือน \\(\\theta\\). moving mean/variance เป็นอีกคู่ที่ non-trainable ใช้ตอน test.",
   "why_wrong": [
    "γ, β เป็น trainable ไม่ใช่ hyperparameter",
    "ε ไม่เกี่ยวกับ learning rate",
@@ -397,16 +397,16 @@
   "source": "lesson",
   "type": "code",
   "difficulty": "medium",
-  "stem": "โค้ดแบบ \"BN before activation\" จากสไลด์หน้า 13 นี้ <code>model.summary()</code> จะรายงาน <b>Non-trainable params</b> เท่าใด?",
-  "code": "model = models.Sequential()\nmodel.add(Flatten(input_shape=(28,28)))\nmodel.add(Dense(16))\nmodel.add(BatchNormalization())\nmodel.add(Activation('relu'))\nmodel.add(Dense(16))\nmodel.add(BatchNormalization())\nmodel.add(Activation('relu'))\nmodel.add(Dense(10))\nmodel.add(BatchNormalization())\nmodel.add(Activation('softmax'))\nmodel.summary()",
+  "stem": "โมเดลแบบ \"BN before activation\" นี้ <code>model.summary()</code> จะรายงาน <b>Non-trainable params</b> เท่าใด?",
+  "code": "model = models.Sequential()\nmodel.add(Flatten(input_shape=(20,20)))\nmodel.add(Dense(32))\nmodel.add(BatchNormalization())\nmodel.add(Activation('relu'))\nmodel.add(Dense(8))\nmodel.add(BatchNormalization())\nmodel.add(Activation('relu'))\nmodel.add(Dense(3))\nmodel.add(BatchNormalization())\nmodel.add(Activation('softmax'))\nmodel.summary()",
   "options": [
-   "84",
-   "168",
-   "42",
+   "86",
+   "172",
+   "43",
    "0"
   ],
   "answer": 0,
-  "explanation": "BN หนึ่งชั้นที่มี \\(n\\) node มี \\(4n\\) พารามิเตอร์: γ, β (trainable \\(2n\\)) + moving mean, moving variance (non-trainable \\(2n\\)). BN อยู่หลัง Dense 16, 16, 10 ⇒ non-trainable \\(=2(16+16+10)=84\\). Total \\(=13{,}002+64+64+40=13{,}170\\), trainable \\(=13{,}086\\) ตรงกับสไลด์.",
+  "explanation": "BN หนึ่งชั้นที่มี \\(n\\) node มี \\(4n\\) พารามิเตอร์: γ, β (trainable \\(2n\\)) + moving mean, moving variance (non-trainable \\(2n\\)). BN อยู่หลัง Dense 32, 8, 3 ⇒ non-trainable \\(=2(32+8+3)=86\\). ตรวจรวม: Dense \\(32\\times401+8\\times33+3\\times9=13{,}123\\) + BN \\(4\\times43=172\\) ⇒ total 13,295, trainable 13,209.",
   "why_wrong": [
    "นับทั้ง 4n เป็น non-trainable",
    "นับแค่ n ต่อชั้น (ลืมว่ามีทั้ง mean และ variance)",
@@ -421,15 +421,15 @@
   "source": "lesson",
   "type": "code",
   "difficulty": "hard",
-  "stem": "สไลด์หน้า 14 เปิดใช้ BN ชั้นแรกต่อจาก <code>Flatten(input_shape=(28,28))</code> ชั้น BN นี้เพิ่มพารามิเตอร์กี่ตัว และ trainable กี่ตัว?",
+  "stem": "ใส่ BatchNormalization เป็นชั้นแรกต่อจาก <code>Flatten(input_shape=(20,20))</code> ชั้น BN นี้เพิ่มพารามิเตอร์กี่ตัว และ trainable กี่ตัว?",
   "options": [
-   "3,136 (trainable 1,568)",
-   "1,568 (trainable 1,568)",
-   "3,136 (trainable 3,136)",
-   "3,140 (trainable 1,570)"
+   "1,600 (trainable 800)",
+   "800 (trainable 800)",
+   "1,600 (trainable 1,600)",
+   "1,604 (trainable 802)"
   ],
   "answer": 0,
-  "explanation": "Flatten ให้ 784 ค่า ⇒ BN มี \\(4\\times784=3{,}136\\) (γ, β = 1,568 trainable; moving mean/var = 1,568 non-trainable). ตรวจกับสไลด์: total \\(13{,}002+3{,}136+64+64=16{,}266\\), non-trainable \\(2(784+16+16)=1{,}632\\), trainable 14,634. สไลด์ย้ำว่าถ้า <b>add a BN layer as the first layer</b> ก็ <b>not need to standardize your training set</b>.",
+  "explanation": "Flatten ให้ \\(20\\times20=400\\) ค่า ⇒ BN มี \\(4\\times400=1{,}600\\) (γ, β = 800 trainable; moving mean/var = 800 non-trainable). ถ้า <b>add a BN layer as the first layer</b> ก็ <b>not need to standardize your training set</b> เพราะ BN ชั้นแรกทำ z-score ให้เอง.",
   "why_wrong": [
    "นับแค่ 2n (ลืม moving stats)",
    "คิดว่า moving stats ก็ trainable",
@@ -452,7 +452,7 @@
    "Dense(16) → Dropout(0.2) → BatchNormalization()"
   ],
   "answer": 0,
-  "explanation": "ต้องแยก Dense (ไม่ใส่ activation ⇒ ได้ \\(z\\) ดิบ) → BN normalize \\(z\\) → Activation. ถ้าเขียน <code>Dense(16, activation='relu')</code> Keras จะทำ ReLU ทันทีในชั้นเดียว BN ที่ตามมาจึง normalize \\(a\\) = แบบ post-activation (สไลด์หน้า 14). Dropout ก่อน BN ขัดคำแนะนำหน้า 17.",
+  "explanation": "ต้องแยก Dense (ไม่ใส่ activation ⇒ ได้ \\(z\\) ดิบ) → BN normalize \\(z\\) → Activation. ถ้าเขียน <code>Dense(16, activation='relu')</code> Keras จะทำ ReLU ทันทีในชั้นเดียว BN ที่ตามมาจึง normalize \\(a\\) = แบบ post-activation. และไม่ควรวาง Dropout ก่อน BN.",
   "why_wrong": [
    "นี่คือ post-activation (normalize a)",
    "ก็ยังเป็น post-activation เพียงแต่แยก Activation ออกมา",
@@ -475,7 +475,7 @@
    "μ = 0 และ σ = 1 ตายตัวเสมอ โดยไม่ได้สะสมค่าใดไว้ระหว่างเทรน"
   ],
   "answer": 0,
-  "explanation": "สไลด์หน้า 15: training time ใช้ <i>the mean and standard deviation of each input over the current mini-batch</i>; test time ใช้ <i>moving average of means and standard deviations of all mini-batch</i> โดยมี <b>Momentum</b> เป็น hyperparameter. ภาพเดียวคำนวณ σ ไม่ได้ (\\(z-\\mu=0\\) ⇒ output เป็น β ล้วน) และผลทำนายไม่ควรขึ้นกับว่าภาพอยู่กลุ่มกับใคร.",
+  "explanation": "ตอนเทรนใช้ <i>the mean and standard deviation of each input over the current mini-batch</i>; ตอน test ใช้ <i>moving average of means and standard deviations of all mini-batch</i> โดยมี <b>momentum</b> เป็น hyperparameter. ภาพเดียวคำนวณ σ ไม่ได้ (\\(z-\\mu=0\\) ⇒ output เป็น β ล้วน) และผลทำนายไม่ควรขึ้นกับว่าภาพอยู่กลุ่มกับใคร.",
   "why_wrong": [
    "near-miss: ใช้ค่าเฉลี่ยเคลื่อนที่ ไม่ใช่ batch ก้อนเดียว",
    "ภาพเดียว z−μ = 0 ข้อมูลหายหมด",
@@ -490,19 +490,19 @@
   "source": "lesson",
   "type": "calc",
   "difficulty": "medium",
-  "stem": "BN มี moving mean สะสมไว้ = 10 และ mini-batch ล่าสุดได้ \\(\\mu_B=20\\) ถ้า momentum = 0.9 moving mean ใหม่เท่ากับเท่าใด?",
+  "stem": "BN มี moving mean สะสมไว้ = 4 และ mini-batch ล่าสุดได้ \\(\\mu_B=14\\) ถ้า momentum = 0.8 moving mean ใหม่เท่ากับเท่าใด?",
   "options": [
-   "11",
-   "19",
-   "15",
-   "20"
+   "6",
+   "12",
+   "9",
+   "14"
   ],
   "answer": 0,
-  "explanation": "\\(v_{new}=\\text{momentum}\\cdot v_{old}+(1-\\text{momentum})\\cdot\\mu_B=0.9(10)+0.1(20)=9+2=11\\). \"เชื่อของเก่า 90%\" ค่าจึงขยับช้าและนิ่ง. momentum ยิ่งใกล้ 1 (เช่น 0.99 default ของ Keras) ยิ่งนิ่งแต่ตามช้า.",
+  "explanation": "\\(v_{new}=\\text{momentum}\\cdot v_{old}+(1-\\text{momentum})\\cdot\\mu_B=0.8(4)+0.2(14)=3.2+2.8=6\\). \"เชื่อของเก่า 80%\" ค่าจึงขยับช้าและนิ่ง. momentum ยิ่งใกล้ 1 (เช่น 0.99 default ของ Keras) ยิ่งนิ่งแต่ตามช้า.",
   "why_wrong": [
-   "สลับน้ำหนัก: 0.1(10)+0.9(20)",
+   "สลับน้ำหนัก: 0.2(4)+0.8(14)",
    "เฉลี่ยธรรมดาสองค่า",
-   "แทนด้วยค่า batch ล่าสุดตรงๆ"
+   "แทนด้วยค่า batch ล่าสุดตรง ๆ"
   ],
   "ref": "Lesson 5 §3.3 กล่อง Moving Average"
  },
@@ -513,7 +513,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "ข้อความใดตรงกับข้อดีของ Batch Normalization ตามสไลด์หน้า 16?",
+  "stem": "ข้อความใดตรงกับข้อดีของ Batch Normalization?",
   "options": [
    "แต่ละ epoch ช้าลงเพราะคำนวณเพิ่ม แต่อาจลู่เข้าเร็วขึ้นเพราะใช้ epoch น้อยลง",
    "แต่ละ epoch เร็วขึ้นเพราะ gradient นิ่งขึ้น และจึงลู่เข้าเร็วขึ้นในภาพรวมด้วย",
@@ -521,7 +521,7 @@
    "ต้องระวังการตั้งค่า initialization มากขึ้น เพราะ BN จะขยาย variance ของ z"
   ],
   "answer": 0,
-  "explanation": "สไลด์: BN ป้องกัน pre/post activations ไม่ให้ too small (vanishing) หรือ large (exploding); มี <b>extra computation</b> ต่อชั้น แต่ <b>convergence may be faster</b>; ใช้ <b>higher learning rates</b> ได้ (no extreme values) และ <b>less careful about initialization</b>; แต่ละ layer เรียน <b>independently</b> มากขึ้น ⇒ gradient stable.",
+  "explanation": "BN ป้องกัน pre/post activations ไม่ให้ too small (vanishing) หรือ large (exploding); มี <b>extra computation</b> ต่อชั้น แต่ <b>convergence may be faster</b>; ใช้ <b>higher learning rates</b> ได้ (no extreme values) และ <b>less careful about initialization</b>; แต่ละ layer เรียน <b>independently</b> มากขึ้น ⇒ gradient stable.",
   "why_wrong": [
    "กับดักยอดฮิต: BN ทำให้แต่ละ epoch ช้าลง ไม่ใช่เร็วขึ้น",
    "กลับด้าน: ใช้ learning rate สูงขึ้นได้",
@@ -536,7 +536,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "ทำไมสไลด์หน้า 17 จึงบอกว่า BN ให้ผล <b>regularization</b> มาด้วย?",
+  "stem": "ทำไม Batch Normalization จึงให้ผล <b>regularization</b> มาด้วย?",
   "options": [
    "สถิติจาก mini-batch เล็กแกว่งแบบสุ่ม ทำหน้าที่เหมือน noise ตอนเทรน",
    "γ และ β บีบขนาดของ weight ให้เล็กลงทุก step เหมือนการใช้ L2",
@@ -548,7 +548,7 @@
   "why_wrong": [
    "γ, β ไม่ได้ลงโทษขนาด weight",
    "BN ไม่ได้ปิด node — นั่นคือ dropout",
-   "ไม่มีข้อความนี้บนสไลด์ และไม่จริงเสมอ"
+   "ข้อความนี้ไม่จริงเสมอ และไม่ใช่กลไกของ BN"
   ],
   "ref": "Lesson 5 §3.5 (สไลด์หน้า 17)"
  },
@@ -559,7 +559,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "สไลด์หน้า 17 แนะนำ <b>add dropout after BN</b> ด้วยเหตุผลใด?",
+  "stem": "ทำไมจึงแนะนำให้ <b>add dropout after BN</b> แทนที่จะวาง dropout ก่อน BN?",
   "options": [
    "dropout ก่อน BN ทำให้ mean/variance ของ activation เปลี่ยน ล้างผลดีของ BN",
    "dropout หลัง BN ทำให้ BN มีพารามิเตอร์ trainable ลดลงครึ่งหนึ่งโดยอัตโนมัติ",
@@ -567,7 +567,7 @@
    "dropout ก่อน BN ทำให้ batch size ใหญ่ขึ้น ผล regularization ของ BN จึงหาย"
   ],
   "answer": 0,
-  "explanation": "คำอาจารย์: <i>If you apply dropout before normalization, the mean and variance of the activations could change, negating the benefits of batch normalization</i>. ตัวเลข: activation [1,2,3,4] mean 2.5; dropout ปิดสองตัวแล้วคูณ 2 ได้ [2,4,0,0] mean 1.5 ⇒ BN normalize ด้วยสถิติที่เพี้ยน. บล็อกมาตรฐาน: Dense → BN → Activation → Dropout.",
+  "explanation": "<i>If you apply dropout before normalization, the mean and variance of the activations could change, negating the benefits of batch normalization</i>. ตัวเลข: activation [1,2,3,4] mean 2.5; dropout ปิดสองตัวแล้วคูณ 2 ได้ [2,4,0,0] mean 1.5 ⇒ BN normalize ด้วยสถิติที่เพี้ยน. บล็อกมาตรฐาน: Dense → BN → Activation → Dropout.",
   "why_wrong": [
    "dropout ไม่มีพารามิเตอร์และไม่เปลี่ยนจำนวนพารามิเตอร์ของ BN",
    "BN ทำงานทั้งตอนเทรน (batch stats) และ test (moving stats)",
@@ -582,7 +582,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "ข้อใดอธิบายความต่างระหว่าง BatchNorm กับ LayerNorm ได้ถูกต้องตามสไลด์หน้า 18?",
+  "stem": "ข้อใดอธิบายความต่างระหว่าง BatchNorm กับ LayerNorm ได้ถูกต้อง?",
   "options": [
    "BN normalize แต่ละ neuron ข้ามตัวอย่าง; LN normalize neuron ภายในแต่ละตัวอย่าง",
    "BN normalize neuron ภายในแต่ละตัวอย่าง; LN normalize แต่ละ neuron ข้ามตัวอย่าง",
@@ -590,7 +590,7 @@
    "LN เฉลี่ยทุกตัวเลขทั้ง mini-batch รวมกันเป็นค่าเดียว แล้วใช้กับทุก neuron"
   ],
   "answer": 0,
-  "explanation": "วลีตัวหนาบนสไลด์: <b>BatchNorm normalizes each neuron across examples</b> (ลงตามคอลัมน์) และ LayerNorm <b>normalize the neurons within each individual example</b> (ไปตามแถว). สูตรเดียวกัน ต่างแค่แกน และ <i>Similar to BN, LN also uses Scaling and shifting</i> (มี γ, β).",
+  "explanation": "<b>BatchNorm normalizes each neuron across examples</b> (ลงตามคอลัมน์) และ LayerNorm <b>normalizes the neurons within each individual example</b> (ไปตามแถว). สูตรเดียวกัน ต่างแค่แกน และ LN ก็ใช้ scaling and shifting (มี γ, β) เหมือน BN.",
   "why_wrong": [
    "สลับสองนิยามกัน",
    "LN ก็มี scaling and shifting",
@@ -605,19 +605,19 @@
   "source": "lesson",
   "type": "calc",
   "difficulty": "medium",
-  "stem": "จากเมทริกซ์ \\(z\\) บนสไลด์หน้า 18 (แถว = ตัวอย่าง, คอลัมน์ = 3 neuron) แถวที่ 4 คือ \\([3,\\ 900,\\ 0]\\) ค่า \\(\\mu^{(4)}\\) ของ LayerNorm เท่ากับเท่าใด?",
+  "stem": "เมทริกซ์ \\(z\\) (แถว = 4 ตัวอย่าง, คอลัมน์ = 3 neuron) คือ \\(\\begin{bmatrix}2&6&1\\\\4&10&1\\\\6&2&7\\\\8&6&3\\end{bmatrix}\\) ค่า \\(\\mu\\) ของ <b>LayerNorm</b> สำหรับตัวอย่างที่ 2 เท่ากับเท่าใด?",
   "options": [
-   "301",
-   "975",
-   "225.75",
-   "334.33"
+   "5",
+   "6",
+   "3.75",
+   "3"
   ],
   "answer": 0,
-  "explanation": "LN เฉลี่ยตามแถว (ข้าม neuron ในตัวอย่างเดียว) หารด้วยจำนวน neuron = 3: \\(\\mu^{(4)}=(3+900+0)/3=903/3=301\\). ค่าอื่นของสไลด์: \\(\\mu^{(1)}=334.33,\\ \\mu^{(2)}=267.67,\\ \\mu^{(3)}=401.67\\). ส่วน BN เฉลี่ยตามคอลัมน์หารด้วย batch size 4 เช่น \\(\\mu_{2B}=975\\).",
+  "explanation": "LN เฉลี่ยตามแถว (ข้าม neuron ในตัวอย่างเดียว) หารด้วยจำนวน neuron = 3: \\(\\mu^{(2)}=(4+10+1)/3=15/3=5\\). ส่วน BN เฉลี่ยตามคอลัมน์หารด้วย batch size 4 เช่น neuron ที่ 2: \\((6+10+2+6)/4=6\\).",
   "why_wrong": [
-   "นั่นคือ μ ของ BN สำหรับ neuron ที่ 2 (คอลัมน์)",
+   "นั่นคือ μ ของ BN สำหรับ neuron ที่ 2 (เฉลี่ยตามคอลัมน์)",
    "หารด้วย 4 (batch size) แทน 3 (จำนวน neuron)",
-   "นั่นคือ μ⁽¹⁾ ของแถวแรก"
+   "นั่นคือ μ ของตัวอย่างแรก (2+6+1)/3"
   ],
   "ref": "Lesson 5 §4 (สไลด์หน้า 18)"
  },
@@ -628,7 +628,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "ข้อใดเป็นข้อดีของ Layer Normalization ตามสไลด์หน้า 19?",
+  "stem": "ข้อใดเป็นข้อดีของ Layer Normalization?",
   "options": [
    "ทำงานเหมือนกันทั้งตอนเทรนและ inference ไม่ต้องใช้ moving average",
    "นิยมใช้ใน CNN มากกว่า Transformer เพราะแต่ละ channel สเกลใกล้กัน",
@@ -636,7 +636,7 @@
    "ต้องใช้ batch size ใหญ่ สถิติจึงเสถียรกว่า BatchNorm ในทุกกรณี"
   ],
   "answer": 0,
-  "explanation": "ข้อดี 3 ข้อ: <b>Independent of batch size</b> (batch = 1 ก็ทำงาน), <b>Stable for large-scale Transformer training</b>, <b>Same normalization behavior during training and inference</b>. ตาราง: BN — across examples, depends on batch statistics, common in CNNs; LN — across features within each example, independent of batch statistics, common in Transformers/LLMs.",
+  "explanation": "ข้อดี 3 ข้อ: <b>Independent of batch size</b> (batch = 1 ก็ทำงาน), <b>Stable for large-scale Transformer training</b>, <b>Same normalization behavior during training and inference</b>. เทียบ: BN — across examples, depends on batch statistics, common in CNNs; LN — across features within each example, independent of batch statistics, common in Transformers/LLMs.",
   "why_wrong": [
    "สลับ: BN ต่างหากที่ common in CNNs",
    "LN มี γ, β เหมือน BN",
@@ -651,7 +651,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "ใน Typical Keras Workflow 5 ขั้น (สไลด์หน้า 21) ขั้นที่ใช้ตั้ง loss function, optimizer และ metrics คือเมท็อดใด?",
+  "stem": "ใน Keras workflow มาตรฐาน 5 ขั้น ขั้นที่ใช้ตั้ง loss function, optimizer และ metrics คือเมท็อดใด?",
   "options": [
    "compile()",
    "fit()",
@@ -670,11 +670,11 @@
  {
   "id": "L5-30",
   "lesson": 5,
-  "topic": "Circle script: kernel_initializer default",
+  "topic": "kernel_initializer default ของ Dense",
   "source": "lesson",
   "type": "code",
   "difficulty": "medium",
-  "stem": "ในสคริปต์ Circle Dataset (สไลด์หน้า 22) ถ้าลบ <code>kernel_initializer='he_normal'</code> ออก Dense จะใช้ initializer ใด และคู่ที่สไลด์แนะนำสำหรับ ReLU คืออะไร?",
+  "stem": "ถ้าลบ <code>kernel_initializer='he_normal'</code> ออกจาก Dense ด้านล่าง Keras จะใช้ initializer ใด และ ReLU ควรคู่กับ initializer ใด?",
   "code": "model.add(Dense(10, activation='relu', kernel_initializer='he_normal', input_shape=(2,)))",
   "options": [
    "glorot_uniform (default); ReLU ควรคู่กับ He",
@@ -683,7 +683,7 @@
    "glorot_uniform (default); ReLU ควรคู่กับ LeCun"
   ],
   "answer": 0,
-  "explanation": "Dense ของ Keras ใช้ <code>glorot_uniform</code> เป็นค่า default. สไลด์หน้า 8 ให้ He คู่กับ ReLU/Leaky ReLU จึงระบุ <code>kernel_initializer='he_normal'</code> ในทุก hidden layer ของสคริปต์. (สคริปต์นี้จบด้วย <code>Dense(1, activation='sigmoid')</code> + <code>binary_crossentropy</code> และ <code>Adam(learning_rate=0.03)</code>).",
+  "explanation": "Dense ของ Keras ใช้ <code>glorot_uniform</code> เป็นค่า default. He คู่กับ ReLU/Leaky ReLU จึงควรระบุ <code>kernel_initializer='he_normal'</code> ใน hidden layer ที่ใช้ ReLU.",
   "why_wrong": [
    "he_normal ไม่ใช่ default และคู่ activation สลับ",
    "default ไม่ใช่ zeros (zero init ทำให้ node สมมาตร)",
@@ -694,20 +694,20 @@
  {
   "id": "L5-31",
   "lesson": 5,
-  "topic": "MNIST: reshape & scale",
+  "topic": "reshape & scale ข้อมูลภาพ",
   "source": "mnist_notebook",
   "type": "code",
   "difficulty": "easy",
-  "stem": "หลังรันเซลล์นี้ในโน้ตบุ๊ก MNIST ค่าของ <code>X</code> มี shape และช่วงค่าเท่าใด?",
-  "code": "(X, y), (Xtest, ytest) = mnist.load_data()\nX = X.reshape(60000, 28 * 28)\nX = X.astype('float32') / 255",
+  "stem": "ชุดภาพขาวดำ 50,000 ภาพ ขนาด 32×32 ค่า pixel 0–255 หลังรันโค้ดนี้ ค่าของ <code>X</code> มี shape และช่วงค่าเท่าใด?",
+  "code": "# X.shape == (50000, 32, 32), dtype uint8\nX = X.reshape(50000, 32 * 32)\nX = X.astype('float32') / 255",
   "options": [
-   "(60000, 784), ค่าอยู่ใน [0, 1]",
-   "(784, 60000), ค่าอยู่ใน [0, 1]",
-   "(60000, 784), ค่าอยู่ใน [0, 255]",
-   "(60000, 28, 28), ค่าอยู่ใน [0, 1]"
+   "(50000, 1024), ค่าอยู่ใน [0, 1]",
+   "(1024, 50000), ค่าอยู่ใน [0, 1]",
+   "(50000, 1024), ค่าอยู่ใน [0, 255]",
+   "(50000, 32, 32), ค่าอยู่ใน [0, 1]"
   ],
   "answer": 0,
-  "explanation": "<code>mnist.load_data()</code> ให้ X shape (60000, 28, 28) ค่า uint8 0–255. <code>reshape(60000, 28*28)</code> ยืดแต่ละภาพเป็นเวกเตอร์ 784 (row-major) โดยไม่ยุ่งมิติ batch ⇒ (60000, 784). <code>astype('float32')/255</code> เป็น min-max scaling ⇒ [0, 1] (255/255 = 1, 128/255 ≈ 0.502). ต้องทำกับ Xtest แบบเดียวกัน ⇒ (10000, 784).",
+  "explanation": "<code>reshape(50000, 32*32)</code> ยืดแต่ละภาพเป็นเวกเตอร์ 1,024 (row-major) โดยไม่ยุ่งมิติ batch ⇒ (50000, 1024). <code>astype('float32')/255</code> เป็น min-max scaling ⇒ [0, 1] (255/255 = 1, 128/255 ≈ 0.502). ต้องทำกับ test set แบบเดียวกันด้วย.",
   "why_wrong": [
    "สลับมิติ: มิติแรกต้องเป็นจำนวนตัวอย่าง",
    "ลืมว่ามีการหาร 255",
@@ -722,16 +722,16 @@
   "source": "mnist_notebook",
   "type": "code",
   "difficulty": "medium",
-  "stem": "โน้ตบุ๊ก MNIST ใช้ <code>sparse_categorical_crossentropy</code> กับป้าย <code>[5 0 4 1 9 ...]</code> ถ้า<b>เปิดใช้</b>สองบรรทัด <code>to_categorical</code> ที่คอมเมนต์ไว้ ต้องทำอะไรเพิ่ม?",
-  "code": "print(y[:10])  # [5 0 4 1 9 2 1 3 1 4]\n# y = keras.utils.to_categorical(y)\n# ytest = keras.utils.to_categorical(ytest)",
+  "stem": "โมเดล 10 คลาสเดิม compile ด้วย <code>sparse_categorical_crossentropy</code> และป้ายเป็นจำนวนเต็ม เช่น <code>[5 0 4 1 9 ...]</code> ถ้าแปลงป้ายด้วยสองบรรทัดนี้ ต้องทำอะไรเพิ่ม?",
+  "code": "y = keras.utils.to_categorical(y)\nytest = keras.utils.to_categorical(ytest)",
   "options": [
-   "เปลี่ยน loss เป็น categorical_crossentropy เพราะป้ายเป็น one-hot (60000, 10)",
+   "เปลี่ยน loss เป็น categorical_crossentropy เพราะป้ายเป็น one-hot ขนาด (n, 10)",
    "คง loss เป็น sparse_categorical_crossentropy เพราะให้ค่า loss เท่ากันเสมอ",
    "เปลี่ยน loss เป็น binary_crossentropy เพราะป้ายมีแต่ค่า 0 และ 1 เท่านั้น",
    "เปลี่ยน output เป็น Dense(1, activation='softmax') ให้ตรงกับป้าย one-hot"
   ],
   "answer": 0,
-  "explanation": "ป้ายต้องจับคู่กับ loss: integer (60000,) ↔ <code>sparse_categorical_crossentropy</code>; one-hot (60000, 10) ↔ <code>categorical_crossentropy</code>. ค่า loss เท่ากันเมื่อใช้คู่ถูก (เช่น y=3, ŷ₃=0.7 ⇒ ทั้งคู่ได้ −ln 0.7 ≈ 0.357) แต่ถ้าใช้ผิดคู่จะเกิด shape mismatch error ตอน fit. sparse ประหยัดหน่วยความจำกว่า (60,000 ตัวเลข เทียบ 600,000).",
+  "explanation": "ป้ายต้องจับคู่กับ loss: integer (n,) ↔ <code>sparse_categorical_crossentropy</code>; one-hot (n, 10) ↔ <code>categorical_crossentropy</code>. ค่า loss เท่ากันเมื่อใช้คู่ถูก (เช่น y=3, ŷ₃=0.7 ⇒ ทั้งคู่ได้ −ln 0.7 ≈ 0.357) แต่ถ้าใช้ผิดคู่จะเกิด shape mismatch error ตอน fit. แบบ sparse ประหยัดหน่วยความจำกว่า (เก็บ 1 ตัวเลขต่อตัวอย่างแทน 10).",
   "why_wrong": [
    "loss เท่ากันก็ต่อเมื่อป้ายตรงรูปแบบ; sparse กับ one-hot จะ error",
    "binary ใช้กับงาน 2 คลาส / multilabel ไม่ใช่ softmax 10 คลาส",
@@ -746,7 +746,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "ใน <code>model.summary()</code> ของโมเดล MNIST ทุกชั้นมี output shape ขึ้นต้นด้วย <code>None</code> เช่น (None, 16) หมายความว่าอย่างไร?",
+  "stem": "ใน <code>model.summary()</code> ทุกชั้นมี output shape ขึ้นต้นด้วย <code>None</code> เช่น (None, 16) หมายความว่าอย่างไร?",
   "options": [
    "มิติ batch ยังไม่กำหนด ป้อนกี่ตัวอย่างก็ได้ในแต่ละครั้ง",
    "layer นั้นยังไม่ได้สร้าง weight เพราะยังไม่ระบุ input_shape",
@@ -754,104 +754,104 @@
    "layer นั้นไม่มีพารามิเตอร์ที่เรียนรู้ได้ Param # จึงเป็น 0"
   ],
   "answer": 0,
-  "explanation": "input_shape บอก shape ของ <b>หนึ่งตัวอย่าง</b> เท่านั้น (เช่น <code>(28*28,)</code>) ไม่ต้องบอกจำนวนตัวอย่าง เพราะ <i>we can pass any number of images into Input layer</i> ⇒ มิติแรกเป็น None. Alternative 1 (<code>Sequential([...])</code>) กับ Alternative 2 (<code>Sequential()</code> + <code>.add()</code>) ให้โมเดลเดียวกัน.",
+  "explanation": "input_shape บอก shape ของ <b>หนึ่งตัวอย่าง</b> เท่านั้น (เช่น <code>(784,)</code>) ไม่ต้องบอกจำนวนตัวอย่าง เพราะ <i>we can pass any number of samples into the Input layer</i> ⇒ มิติแรกเป็น None. การสร้างแบบ <code>Sequential([...])</code> กับ <code>Sequential()</code> + <code>.add()</code> ให้โมเดลเดียวกัน.",
   "why_wrong": [
-   "ถ้าไม่ระบุ input_shape summary จะไม่แสดง weight เลย ไม่ใช่ None นำหน้า",
+   "ถ้าไม่ระบุ input_shape summary จะยังไม่แสดง weight เลย ไม่ใช่ None นำหน้า",
    "None ไม่เกี่ยวกับ activation",
-   "Dense 16 มี 12,560 พารามิเตอร์"
+   "Dense มีพารามิเตอร์ Param # ไม่เป็น 0"
   ],
   "ref": "Lesson 5 §5.7 (สไลด์หน้า 28)"
  },
  {
   "id": "L5-34",
   "lesson": 5,
-  "topic": "นับพารามิเตอร์ MNIST 784→16→16→10",
+  "topic": "นับพารามิเตอร์โมเดล 400→32→16→5",
   "source": "mnist_notebook",
   "type": "calc",
   "difficulty": "medium",
-  "stem": "โมเดลในโน้ตบุ๊ก MNIST นี้มี <b>Total params</b> เท่าใด?",
-  "code": "model = models.Sequential([\n    Dense(16, activation='relu', input_shape=(28 * 28,)),\n    Dense(16, activation='relu'),\n    Dense(10, activation='softmax')\n])\nmodel.summary()",
+  "stem": "โมเดลนี้มี <b>Total params</b> เท่าใด?",
+  "code": "model = models.Sequential([\n    Dense(32, activation='relu', input_shape=(400,)),\n    Dense(16, activation='relu'),\n    Dense(5, activation='softmax')\n])\nmodel.summary()",
   "options": [
-   "13,002",
-   "12,960",
-   "13,170",
-   "12,560"
+   "13,445",
+   "13,392",
+   "12,832",
+   "13,840"
   ],
   "answer": 0,
-  "explanation": "สูตร \\(s_l\\times(s_{l-1}+1)\\): \\(16\\times785=12{,}560\\); \\(16\\times17=272\\); \\(10\\times17=170\\) ⇒ รวม 13,002 (trainable 13,002, non-trainable 0 เพราะไม่มี BN). ชั้นแรกกิน 96.6% ของทั้งหมด.",
+  "explanation": "สูตร \\(s_l\\times(s_{l-1}+1)\\): \\(32\\times401=12{,}832\\); \\(16\\times33=528\\); \\(5\\times17=85\\) ⇒ รวม 13,445 (non-trainable 0 เพราะไม่มี BN). ชั้นแรกกินพารามิเตอร์เกือบทั้งหมด.",
   "why_wrong": [
-   "ลืม bias: 12,544+256+160",
-   "นั่นคือโมเดลที่ใส่ BN (สไลด์หน้า 13)",
-   "นับแค่ชั้นแรก"
+   "ลืม bias: 12,800+512+80",
+   "นับแค่ชั้นแรก",
+   "ใส่ bias ผิดด้านเป็น (s_l+1)×s_{l−1}: 13,200+544+96"
   ],
   "ref": "Lecture5 MNIST notebook cell 14; Lesson 5 §5.8 (สไลด์หน้า 29)"
  },
  {
   "id": "L5-35",
   "lesson": 5,
-  "topic": "นับพารามิเตอร์ IMDB 10000→16→16→1",
+  "topic": "นับพารามิเตอร์โมเดล 5000→20→10→1",
   "source": "ex3",
   "type": "calc",
   "difficulty": "hard",
-  "stem": "โมเดล IMDB ใน ex3 (<code>build_compile()</code>) มี <b>Total params</b> เท่าใด?",
-  "code": "model = models.Sequential()\nmodel.add(Input(shape=(10000,)))\nmodel.add(Dense(16, activation='relu'))\nmodel.add(Dense(16, activation='relu'))\nmodel.add(Dense(1, activation='sigmoid'))",
+  "stem": "โมเดลจำแนกข้อความนี้มี <b>Total params</b> เท่าใด?",
+  "code": "model = models.Sequential()\nmodel.add(Input(shape=(5000,)))\nmodel.add(Dense(20, activation='relu'))\nmodel.add(Dense(10, activation='relu'))\nmodel.add(Dense(1, activation='sigmoid'))",
   "options": [
-   "160,305",
-   "160,272",
-   "160,016",
-   "160,322"
+   "100,241",
+   "100,210",
+   "100,020",
+   "100,252"
   ],
   "answer": 0,
-  "explanation": "ชั้น 1: \\(16\\times(10{,}000+1)=160{,}016\\); ชั้น 2: \\(16\\times17=272\\); output: \\(1\\times17=17\\) ⇒ \\(160{,}016+272+17=160{,}305\\). Input layer ไม่มีพารามิเตอร์.",
+  "explanation": "ชั้น 1: \\(20\\times(5{,}000+1)=100{,}020\\); ชั้น 2: \\(10\\times21=210\\); output: \\(1\\times11=11\\) ⇒ \\(100{,}020+210+11=100{,}241\\). Input layer ไม่มีพารามิเตอร์.",
   "why_wrong": [
-   "ลืม bias: 160,000+256+16",
+   "ลืม bias: 100,000+200+10",
    "นับแค่ชั้นแรก",
-   "ใช้ output 2 node แบบ softmax (2×17=34)"
+   "ใช้ output 2 node แบบ softmax (2×11=22)"
   ],
   "ref": "ex3 cell (2) build_compile"
  },
  {
   "id": "L5-36",
   "lesson": 5,
-  "topic": "Mini-batch ต่อ epoch (IMDB)",
+  "topic": "จำนวน mini-batch ต่อ epoch เมื่อมี validation_split",
   "source": "ex3",
   "type": "calc",
   "difficulty": "hard",
-  "stem": "IMDB มี training 25,000 ตัวอย่าง เรียก <code>model.fit(X, y, epochs=20, batch_size=256, validation_split=0.4)</code> แถบความคืบหน้าจะแสดงกี่ mini-batch ต่อ epoch?",
+  "stem": "training set 18,000 ตัวอย่าง เรียก <code>model.fit(X, y, epochs=20, batch_size=128, validation_split=0.25)</code> แถบความคืบหน้าจะแสดงกี่ mini-batch ต่อ epoch?",
   "options": [
-   "59",
-   "98",
-   "58",
-   "40"
+   "106",
+   "141",
+   "105",
+   "36"
   ],
   "answer": 0,
-  "explanation": "ขั้น 1: หัก validation 40% ⇒ \\(25{,}000\\times0.6=15{,}000\\) ตัวอย่างที่ใช้เทรนจริง. ขั้น 2: \\(15{,}000/256=58.6\\) (\\(256\\times58=14{,}848\\) เหลือ 152) ⇒ ปัดขึ้นเป็น <b>59</b> เพราะก้อนสุดท้ายที่ไม่เต็มก็ถูกใช้ — ตรงกับ log 59/59. ตอน retrain ไม่มี validation_split: \\(\\lceil25{,}000/256\\rceil=98\\) (log 98/98). เทียบ MNIST: \\(48{,}000/64=750\\). ระวัง \\(\\lceil10{,}000/256\\rceil=40\\) คือจำนวนก้อนของชุด validation ไม่ใช่ชุดเทรน.",
+  "explanation": "ขั้น 1: หัก validation 25% ⇒ \\(18{,}000\\times0.75=13{,}500\\) ตัวอย่างที่ใช้เทรนจริง. ขั้น 2: \\(13{,}500/128\\approx105.5\\) (\\(128\\times105=13{,}440\\) เหลือ 60) ⇒ ปัดขึ้นเป็น <b>106</b> เพราะก้อนสุดท้ายที่ไม่เต็มก็ถูกใช้. ถ้าไม่มี validation_split: \\(\\lceil18{,}000/128\\rceil=141\\). ระวัง \\(\\lceil4{,}500/128\\rceil=36\\) คือจำนวนก้อนของชุด validation ไม่ใช่ชุดเทรน.",
   "why_wrong": [
-   "ลืมหัก validation (25,000/256)",
+   "ลืมหัก validation (18,000/128)",
    "ปัดลง ลืมก้อนสุดท้ายที่ไม่เต็ม",
-   "นับ batch ของชุด validation แทนชุดเทรน: ⌈(25,000×0.4)/256⌉ = ⌈10,000/256⌉ = 40"
+   "นับ batch ของชุด validation แทนชุดเทรน: ⌈4,500/128⌉ = 36"
   ],
   "ref": "ex3 cell (2) fit log; Lesson 5 §5.10"
  },
  {
   "id": "L5-37",
   "lesson": 5,
-  "topic": "evaluate: 782/782 และ batch default",
+  "topic": "evaluate: batch_size default",
   "source": "ex3",
   "type": "calc",
   "difficulty": "medium",
-  "stem": "<code>model.evaluate(Xtest, ytest)</code> ใน ex3 (test 25,000 ตัวอย่าง ไม่ระบุ batch_size) แสดง <code>782/782</code> เพราะอะไร?",
+  "stem": "เรียก <code>model.evaluate(Xtest, ytest)</code> กับ test 12,500 ตัวอย่าง (ไม่ระบุ batch_size) แถบความคืบหน้าแสดง <code>391/391</code> เพราะอะไร?",
   "options": [
-   "batch_size default = 32 และ ⌈25,000/32⌉ = 782 ก้อน",
-   "batch_size default = 32 และ 25,000/32 ปัดลงได้ 782",
+   "batch_size default = 32 และ ⌈12,500/32⌉ = 391 ก้อน",
+   "batch_size default = 32 และ 12,500/32 ปัดลงได้ 391",
    "evaluate ใช้ batch_size เท่าตอนเทรน (256) ไม่มีค่า default ของตัวเอง",
-   "evaluate กันข้อมูล 40% ไว้เป็น validation ก่อนเหมือนตอนเรียก fit"
+   "evaluate กันข้อมูล 20% ไว้เป็น validation ก่อนเหมือนตอนเรียก fit"
   ],
   "answer": 0,
-  "explanation": "ถ้าไม่ระบุ batch_size Keras ใช้ 32: \\(25{,}000/32=781.25\\) ⇒ ปัดขึ้น 782 (ก้อนสุดท้ายมี 8 ตัวอย่าง). เช่นเดียวกับ MNIST \\(\\lceil10{,}000/32\\rceil=313\\). evaluate ไม่อัปเดต weight และคืน [loss, metric] ตามลำดับที่ compile ⇒ <code>loss, acc = ...</code>.",
+  "explanation": "ถ้าไม่ระบุ batch_size Keras ใช้ 32: \\(12{,}500/32=390.6\\) ⇒ ปัดขึ้น 391 (ก้อนสุดท้ายมี 20 ตัวอย่าง). evaluate ไม่อัปเดต weight และคืน [loss, metric] ตามลำดับที่ compile ⇒ <code>loss, acc = ...</code>.",
   "why_wrong": [
-   "781.25 ปัดลงได้ 781 ไม่ใช่ 782",
-   "evaluate มี batch_size default ของตัวเองคือ 32 ไม่ได้สืบทอด 256 จากตอนเทรน (256 จะได้ 98 ก้อน)",
+   "390.6 ปัดลงได้ 390 ไม่ใช่ 391",
+   "evaluate มี batch_size default ของตัวเองคือ 32 (ถ้าใช้ 256 จะได้ 49 ก้อน)",
    "evaluate ไม่แบ่ง validation — มันรัน forward pass บนชุดที่ส่งเข้าไปทั้งก้อน"
   ],
   "ref": "ex3 cell (3) evaluate; Lesson 5 §5.12"
@@ -871,7 +871,7 @@
    "loss ต้องมีค่าระหว่าง 0 ถึง 1 เสมอ ขณะที่ accuracy อาจเกินช่วงนี้ได้"
   ],
   "answer": 0,
-  "explanation": "สไลด์หน้า 30: loss = <i>the quantity to be minimized during training</i>; optimizer = วิธีอัปเดตตาม loss; metrics = <i>measures of success to be monitored</i> ซึ่ง <i>doesn't need to be differentiable</i>. accuracy เป็นฟังก์ชันขั้นบันได อนุพันธ์ = 0 เกือบทุกจุด backprop จึงใช้ไม่ได้.",
+  "explanation": "loss = <i>the quantity to be minimized during training</i>; optimizer = วิธีอัปเดตตาม loss; metrics = <i>measures of success to be monitored</i> ซึ่ง <i>doesn't need to be differentiable</i>. accuracy เป็นฟังก์ชันขั้นบันได อนุพันธ์ = 0 เกือบทุกจุด backprop จึงใช้ไม่ได้.",
   "why_wrong": [
    "กลับด้าน: metric ไม่ต้อง differentiable",
    "accuracy ดูได้ทั้ง train และ val",
@@ -883,22 +883,22 @@
   "id": "L5-39",
   "lesson": 5,
   "topic": "Learning curves & overfitting",
-  "source": "ex3",
+  "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "จาก history ของ ex3 (ไม่มี regularization): train loss ลดจาก 0.50 เหลือ 0.0025 แต่ val_loss ต่ำสุด 0.29 ที่ epoch 2 แล้วขึ้นไปถึง 0.77 ที่ epoch 20 สรุปได้ว่าอย่างไร?",
+  "stem": "history ของโมเดลที่ไม่มี regularization: train loss ลดจาก 0.62 เหลือ 0.01 แต่ val_loss ต่ำสุด 0.35 ที่ epoch 3 แล้วขึ้นไปถึง 0.90 ที่ epoch 25 สรุปได้ว่าอย่างไร?",
   "options": [
-   "โมเดล overfit: จำข้อมูลเทรนแทนการเรียนรูปแบบทั่วไป หลัง epoch 2",
+   "โมเดล overfit: จำข้อมูลเทรนแทนการเรียนรูปแบบทั่วไป หลัง epoch 3",
    "โมเดล underfit: ยังเรียนข้อมูลเทรนไม่พอ ควรเพิ่มจำนวน epoch อีก",
    "learning rate สูงเกินไป gradient ระเบิด loss ของเทรนจึงลดลงเร็ว",
    "validation set มีข้อมูลน้อยเกินไป ค่า val_loss จึงเชื่อถือไม่ได้เลย"
   ],
   "answer": 0,
-  "explanation": "เส้น loss (train) ลงต่อเนื่องแต่ val_loss หยุดลดแล้วกระดกขึ้น = หน้าตาของ overfitting (เหมือนกราฟ 40 epochs ของ MNIST ที่ val_loss ต่ำสุดที่ epoch 13 = 0.1642). จุดที่ควรหยุดคือ val_loss ต่ำสุด — ex3 จึงให้ retrain ด้วย best epoch และลอง L2/Dropout.",
+  "explanation": "เส้น loss (train) ลงต่อเนื่องแต่ val_loss หยุดลดแล้วกระดกขึ้น = หน้าตาของ overfitting. จุดที่ควรหยุดคือ val_loss ต่ำสุด (epoch 3) — จากนั้นควร retrain ด้วย best epoch หรือใส่ L2 / Dropout.",
   "why_wrong": [
    "underfit คือ train loss ยังสูง แต่ที่นี่ต่ำมาก",
    "ถ้า exploding train loss จะไม่ลดลงอย่างนิ่ง",
-   "validation 10,000 ตัวอย่าง (40%) ไม่ได้น้อย"
+   "โจทย์ไม่ได้บอกว่า validation เล็ก และรูปแบบนี้คือ overfitting ชัดเจน"
   ],
   "ref": "ex3 cells (2)–(3) learning curves; Lesson 5 §5.11"
  },
@@ -909,16 +909,16 @@
   "source": "ex3",
   "type": "code",
   "difficulty": "medium",
-  "stem": "ถ้า <code>history.history['val_loss']</code> เริ่มต้นด้วย <code>[0.3333, 0.2895, 0.2927, 0.3559, ...]</code> และค่าหลังจากนั้นสูงกว่าทั้งหมด โค้ดนี้พิมพ์ค่าใด?",
+  "stem": "ถ้า <code>history.history['val_loss']</code> เริ่มต้นด้วย <code>[0.41, 0.36, 0.33, 0.35, ...]</code> และค่าหลังจากนั้นสูงกว่าทั้งหมด โค้ดนี้พิมพ์ค่าใด?",
   "code": "best_epoch = int(np.argmin(history.history['val_loss'])) + 1\nprint(\"Best epoch:\", best_epoch)",
   "options": [
-   "Best epoch: 2",
-   "Best epoch: 1",
    "Best epoch: 3",
+   "Best epoch: 2",
+   "Best epoch: 4",
    "Best epoch: 0"
   ],
   "answer": 0,
-  "explanation": "<code>np.argmin</code> คืน <b>ดัชนีแบบ zero-based</b> ของค่าที่น้อยที่สุด: 0.2895 อยู่ index 1 ⇒ +1 ได้ epoch 2 (epoch นับจาก 1). โน้ตบุ๊ก MNIST ทำแบบเดียวกันได้ Best epoch: 13 (val_loss 0.1642). จากนั้น build/compile ใหม่แล้ว fit ด้วย <code>epochs=best_epoch</code>.",
+  "explanation": "<code>np.argmin</code> คืน <b>ดัชนีแบบ zero-based</b> ของค่าที่น้อยที่สุด: 0.33 อยู่ index 2 ⇒ +1 ได้ epoch 3 (epoch นับจาก 1). จากนั้น build/compile ใหม่แล้ว fit ด้วย <code>epochs=best_epoch</code>.",
   "why_wrong": [
    "ลืม +1 (ตอบเป็น index)",
    "เลือกค่าถัดไป / นับผิดตำแหน่ง",
@@ -930,10 +930,10 @@
   "id": "L5-41",
   "lesson": 5,
   "topic": "Retrain: ต้อง build ใหม่",
-  "source": "mnist_notebook",
+  "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "ในโน้ตบุ๊ก MNIST ก่อน retrain ด้วย <code>epochs=13</code> อาจารย์เน้นว่าต้อง build และ compile โมเดลใหม่ก่อน เพราะอะไร?",
+  "stem": "เทรน 40 epoch แล้วพบว่า best epoch คือ 13 ถ้าจะ retrain ด้วย <code>epochs=13</code> ทำไมต้อง build และ compile โมเดลใหม่ก่อน?",
   "options": [
    "เรียก fit() ซ้ำจะเทรนต่อจาก weight เดิม ไม่เริ่มใหม่ โมเดลจึงยิ่ง overfit",
    "เรียก fit() ซ้ำจะรีเซ็ต weight ให้เอง แต่ต้อง compile ใหม่เพื่อเปลี่ยน epochs",
@@ -941,11 +941,11 @@
    "ต้องสร้างใหม่เพื่อเปลี่ยน validation_split ให้เป็น 0 ก่อนเริ่มเทรนรอบสอง"
   ],
   "answer": 0,
-  "explanation": "หมายเหตุในโน้ตบุ๊ก: <i>if you want to retrain from the beginning, you have to build the model again. Otherwise, if you call fit(), it will continue from the last epoch you left off</i> ⇒ weight ที่เทรนมาแล้ว 40 epoch ถูกเทรนต่ออีก ⇒ overfit มากขึ้น. ex3 จึงห่อไว้ใน <code>build_compile()</code> เพื่อเรียกซ้ำได้.",
+  "explanation": "<i>if you want to retrain from the beginning, you have to build the model again. Otherwise, if you call fit(), it will continue from the last epoch you left off</i> ⇒ weight ที่เทรนมาแล้ว 40 epoch ถูกเทรนต่ออีก 13 epoch ⇒ overfit มากขึ้น. จึงนิยมห่อการสร้างโมเดลไว้ในฟังก์ชัน เช่น <code>build_compile()</code> เพื่อเรียกซ้ำได้.",
   "why_wrong": [
    "fit() ไม่รีเซ็ต weight",
    "เรียก fit() ซ้ำได้ ไม่ error",
-   "โน้ตบุ๊ก MNIST retrain ยังใช้ validation_split=0.2 อยู่"
+   "การ retrain ไม่จำเป็นต้องเปลี่ยน validation_split"
   ],
   "ref": "Lecture5 MNIST notebook cells 23–24"
  },
@@ -956,16 +956,16 @@
   "source": "mnist_notebook",
   "type": "code",
   "difficulty": "medium",
-  "stem": "โมเดล MNIST (output <code>Dense(10, softmax)</code>) รันโค้ดนี้ <code>pred.shape</code> คืออะไร และคำสั่งใดได้ class ของทั้ง 10 ภาพ?",
-  "code": "pred = model.predict(Xtest[0:10,:])\nprint(np.argmax(pred, axis=1))",
+  "stem": "โมเดลจำแนก 10 คลาส (output <code>Dense(10, softmax)</code>) รันโค้ดนี้ <code>pred.shape</code> คืออะไร และคำสั่งใดได้ class ของทั้ง 5 ภาพ?",
+  "code": "pred = model.predict(Xtest[0:5,:])\nprint(np.argmax(pred, axis=1))",
   "options": [
-   "(10, 10) และ np.argmax(pred, axis=1)",
-   "(10, 10) และ np.argmax(pred)",
-   "(10,) และ np.argmax(pred, axis=1)",
+   "(5, 10) และ np.argmax(pred, axis=1)",
+   "(5, 10) และ np.argmax(pred)",
+   "(5,) และ np.argmax(pred, axis=1)",
    "(1, 10) และ np.argmax(pred, axis=0)"
   ],
   "answer": 0,
-  "explanation": "<code>Xtest[0:10,:]</code> shape (10, 784) ⇒ predict คืนความน่าจะเป็น 10 คลาสต่อภาพ ⇒ (10, 10). ต้องใช้ <code>axis=1</code> เพื่อหาดัชนีสูงสุดทีละแถว ได้ <code>[7 2 1 0 4 1 4 9 6 9]</code> (เทียบจริง <code>[7 2 1 0 4 1 4 9 5 9]</code> ผิด 1 ภาพ). ถ้าไม่ใส่ axis จะได้ดัชนีเดียวของทั้งเมทริกซ์. ภาพเดียวต้อง slice <code>Xtest[0:1]</code> (1, 784) ⇒ pred (1, 10); <code>Xtest[0]</code> มี shape (784,).",
+  "explanation": "<code>Xtest[0:5,:]</code> มี 5 แถว ⇒ predict คืนความน่าจะเป็น 10 คลาสต่อภาพ ⇒ (5, 10). ต้องใช้ <code>axis=1</code> เพื่อหาดัชนีสูงสุดทีละแถว ได้ class ของแต่ละภาพ 5 ค่า. ถ้าไม่ใส่ axis จะได้ดัชนีเดียวของทั้งเมทริกซ์. ภาพเดียวต้อง slice <code>Xtest[0:1]</code> ⇒ pred (1, 10); <code>Xtest[0]</code> มีมิติเดียวและใช้ป้อนตรง ๆ ไม่ได้.",
   "why_wrong": [
    "ไม่ใส่ axis ได้ดัชนีเดียวของทั้งเมทริกซ์",
    "predict คืนความน่าจะเป็น ไม่ใช่ป้าย",
@@ -976,11 +976,11 @@
  {
   "id": "L5-43",
   "lesson": 5,
-  "topic": "Output layer & loss ของ IMDB",
-  "source": "ex3",
+  "topic": "Output layer & loss ของงาน binary",
+  "source": "lesson",
   "type": "code",
   "difficulty": "easy",
-  "stem": "งาน IMDB (ป้าย 0 = negative, 1 = positive) ใน ex3 ต้องใช้ output layer และ loss คู่ใด?",
+  "stem": "งานจำแนกรีวิวเป็น negative (0) หรือ positive (1) ต้องใช้ output layer และ loss คู่ใด?",
   "options": [
    "Dense(1, activation='sigmoid') กับ binary_crossentropy",
    "Dense(2, activation='softmax') กับ binary_crossentropy",
@@ -988,7 +988,7 @@
    "Dense(1, activation='relu') กับ binary_crossentropy"
   ],
   "answer": 0,
-  "explanation": "ตารางสไลด์หน้า 34: Binary classification ⇒ last-layer <b>sigmoid</b> + <b>binary_crossentropy</b> (output 1 ค่า = P(positive)). ex3 กำหนด hidden 16, 16 ใช้ ReLU, output 1 node sigmoid, optimizer Adam, metric accuracy.",
+  "explanation": "Binary classification ⇒ last-layer <b>sigmoid</b> + <b>binary_crossentropy</b> (output 1 ค่า = P(positive)). hidden layer ใช้ ReLU ได้ตามปกติ.",
   "why_wrong": [
    "softmax 2 node ไม่เข้าคู่กับ binary_crossentropy",
    "categorical ใช้กับ one-hot หลายคลาส",
@@ -1003,7 +1003,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "งาน <b>multiclass, multilabel</b> (ภาพหนึ่งมีวัตถุได้หลายชนิดพร้อมกัน) ควรใช้ last-layer activation และ loss คู่ใดตามสไลด์หน้า 34?",
+  "stem": "งาน <b>multiclass, multilabel</b> (ภาพหนึ่งมีวัตถุได้หลายชนิดพร้อมกัน) ควรใช้ last-layer activation และ loss คู่ใด?",
   "options": [
    "sigmoid กับ binary_crossentropy",
    "softmax กับ categorical_crossentropy",
@@ -1011,7 +1011,7 @@
    "ไม่ใส่ activation กับ mse"
   ],
   "answer": 0,
-  "explanation": "multilabel ⇒ แต่ละคลาสตัดสินอิสระ ความน่าจะเป็นไม่ต้องรวมเป็น 1 ⇒ sigmoid ทุก node + binary_crossentropy. ส่วน single-label (เช่น MNIST) ⇒ softmax + categorical_crossentropy; regression ทั่วไป ⇒ ไม่ใส่ activation + mse; regression ในช่วง 0–1 ⇒ sigmoid + mse/binary_crossentropy.",
+  "explanation": "multilabel ⇒ แต่ละคลาสตัดสินอิสระ ความน่าจะเป็นไม่ต้องรวมเป็น 1 ⇒ sigmoid ทุก node + binary_crossentropy. ส่วน single-label (เช่นจำแนกตัวเลข 0–9) ⇒ softmax + categorical_crossentropy; regression ทั่วไป ⇒ ไม่ใส่ activation + mse; regression ในช่วง 0–1 ⇒ sigmoid + mse/binary_crossentropy.",
   "why_wrong": [
    "นั่นคือ multiclass single-label",
    "softmax บังคับผลรวม 1 ขัดกับหลาย label",
@@ -1026,15 +1026,15 @@
   "source": "lesson",
   "type": "code",
   "difficulty": "medium",
-  "stem": "ต้องการเขียนโมเดลที่รับ X shape (60000, 28, 28) โดยไม่ reshape เอง บรรทัดแรกที่ถูกต้องคือข้อใด?",
+  "stem": "ต้องการเขียนโมเดลที่รับ X shape (50000, 32, 32) โดยไม่ reshape เอง บรรทัดแรกที่ถูกต้องคือข้อใด?",
   "options": [
-   "Input(shape=(28,28))",
-   "Input(input_shape=(28,28))",
-   "Input(shape=(60000,28,28))",
-   "Dense(16, shape=(28,28))"
+   "Input(shape=(32,32))",
+   "Input(input_shape=(32,32))",
+   "Input(shape=(50000,32,32))",
+   "Dense(16, shape=(32,32))"
   ],
   "answer": 0,
-  "explanation": "สไลด์หน้า 35: Input layer = <i>network's starting point</i> รับ shape ของหนึ่งตัวอย่างผ่านอาร์กิวเมนต์ <code>shape=</code>. ตามด้วย <code>Flatten()</code> (แปลงเป็นเวกเตอร์ 784 — <i>you don't have to reshape data yourself</i>), Dense, <code>Dense(10)</code> และ <code>Softmax()</code> (คืน 10 ค่ารวมเป็น 1). Input/Flatten/Softmax มี Param # = 0 ⇒ รวมยัง 13,002.",
+  "explanation": "Input layer = <i>network's starting point</i> รับ shape ของหนึ่งตัวอย่างผ่านอาร์กิวเมนต์ <code>shape=</code>. ตามด้วย <code>Flatten()</code> (แปลงเป็นเวกเตอร์ 1,024 — ไม่ต้อง reshape เอง), Dense และ <code>Softmax()</code> ถ้าต้องการ. Input/Flatten/Softmax มี Param # = 0.",
   "why_wrong": [
    "input_shape เป็นอาร์กิวเมนต์ของ layer อื่น ไม่ใช่ Input",
    "ไม่ต้องใส่จำนวนตัวอย่าง (มิติ batch)",
@@ -1049,16 +1049,16 @@
   "source": "lesson",
   "type": "code",
   "difficulty": "medium",
-  "stem": "ข้อใดถูกต้องเกี่ยวกับโค้ดสไลด์หน้า 36 เทียบกับ <code>fit(..., validation_split=0.2)</code>?",
+  "stem": "X มี 50,000 ตัวอย่าง ข้อใดถูกต้องเกี่ยวกับโค้ดนี้เมื่อเทียบกับ <code>fit(..., validation_split=0.2)</code>?",
   "code": "from sklearn.model_selection import train_test_split\nXrain, Xval, y_train, yval = train_test_split(X, y, test_size = 0.2)\nmodel.fit(Xrain, y_train, validation_data=(Xval,yval))",
   "options": [
-   "ได้ 48,000/12,000 เหมือนกัน แต่ train_test_split สุ่มสลับก่อนแบ่ง",
-   "ได้ 48,000/12,000 เหมือนกัน แต่ validation_split สุ่มสลับก่อนแบ่ง",
-   "ได้ 12,000/48,000 เพราะ test_size=0.2 คือสัดส่วนของชุดที่ใช้เทรน",
+   "ได้ 40,000/10,000 เหมือนกัน แต่ train_test_split สุ่มสลับก่อนแบ่ง",
+   "ได้ 40,000/10,000 เหมือนกัน แต่ validation_split สุ่มสลับก่อนแบ่ง",
+   "ได้ 10,000/40,000 เพราะ test_size=0.2 คือสัดส่วนของชุดที่ใช้เทรน",
    "train_test_split มาจาก keras.utils จึงใช้ร่วมกับ validation_split ได้"
   ],
   "answer": 0,
-  "explanation": "<code>train_test_split</code> มาจาก <b>sklearn.model_selection</b> คืนค่า 4 ก้อนตามลำดับ X_train, X_val, y_train, y_val; <code>test_size=0.2</code> = กัน 20% เป็นชุดที่สอง ⇒ 48,000 / 12,000 และสุ่มสลับก่อน. ส่วน <code>validation_split</code> ของ Keras ตัด 20% <b>ท้าย</b>ชุดโดยไม่สุ่ม. ใช้ <code>validation_data=(Xval,yval)</code> กับ validation_split พร้อมกันไม่ได้.",
+  "explanation": "<code>train_test_split</code> มาจาก <b>sklearn.model_selection</b> คืนค่า 4 ก้อนตามลำดับ X_train, X_val, y_train, y_val; <code>test_size=0.2</code> = กัน 20% เป็นชุดที่สอง ⇒ 40,000 / 10,000 และสุ่มสลับก่อน. ส่วน <code>validation_split</code> ของ Keras ตัด 20% <b>ท้าย</b>ชุดโดยไม่สุ่ม. ใช้ <code>validation_data=(Xval,yval)</code> กับ validation_split พร้อมกันไม่ได้.",
   "why_wrong": [
    "สลับกัน: validation_split ตัดท้ายไม่สุ่ม",
    "test_size คือสัดส่วนชุดที่สอง",
@@ -1069,20 +1069,20 @@
  {
   "id": "L5-47",
   "lesson": 5,
-  "topic": "IMDB data preparation: vectorize",
+  "topic": "vectorize ข้อความเป็น multi-hot",
   "source": "ex3",
   "type": "code",
   "difficulty": "medium",
-  "stem": "หลัง <code>X = vectorize_sequences(X)</code> ใน ex3 (<code>num_words=10000</code>) X มี shape อะไร และ Input ของโมเดลต้องเขียนอย่างไร?",
+  "stem": "รีวิว 18,000 รายการ (แต่ละรายการเป็นลิสต์ของ index คำ < 5,000) หลัง <code>X = vectorize_sequences(X, dimension=5000)</code> X มี shape อะไร และ Input ของโมเดลต้องเขียนอย่างไร?",
   "code": "def vectorize_sequences(sequences, dimension=10000):\n    results = np.zeros((len(sequences), dimension))\n    for i, sequence in enumerate(sequences):\n        results[i, sequence] = 1.\n    return results",
   "options": [
-   "(25000, 10000) ใช้ Input(shape=(10000,))",
-   "(25000,) ใช้ Input(shape=(25000,))",
-   "(10000, 25000) ใช้ Input(shape=(25000,))",
-   "(25000, 10000) ใช้ Input(input_shape=(10000,))"
+   "(18000, 5000) ใช้ Input(shape=(5000,))",
+   "(18000,) ใช้ Input(shape=(18000,))",
+   "(5000, 18000) ใช้ Input(shape=(18000,))",
+   "(18000, 5000) ใช้ Input(input_shape=(5000,))"
   ],
   "answer": 0,
-  "explanation": "ก่อน vectorize X เป็นลิสต์ของรีวิวยาวไม่เท่ากัน shape (25000,). ฟังก์ชันสร้างเมทริกซ์ศูนย์ (len(sequences), 10000) แล้ว <code>results[i, sequence] = 1.</code> = multi-hot ความยาวคงที่ 10,000 ⇒ (25000, 10000). Input รับ shape ของหนึ่งตัวอย่างด้วย <code>shape=(10000,)</code>.",
+  "explanation": "ก่อน vectorize X เป็นลิสต์ของรีวิวยาวไม่เท่ากัน shape (18000,). ฟังก์ชันสร้างเมทริกซ์ศูนย์ (len(sequences), 5000) แล้ว <code>results[i, sequence] = 1.</code> = multi-hot ความยาวคงที่ 5,000 ⇒ (18000, 5000). Input รับ shape ของหนึ่งตัวอย่างด้วย <code>shape=(5000,)</code>.",
   "why_wrong": [
    "นั่นคือก่อน vectorize และ Input ผิดมิติ",
    "สลับมิติ",
@@ -1093,19 +1093,19 @@
  {
   "id": "L5-48",
   "lesson": 5,
-  "topic": "IMDB predict: threshold 0.5",
+  "topic": "Binary predict: threshold 0.5",
   "source": "ex3",
   "type": "code",
   "difficulty": "hard",
-  "stem": "<code>pred_reg = model_reg.predict(Xtest[0:1])</code> ได้ shape (1, 1) มีค่า 0.3036 วิธีใดแปลงเป็น class ได้ถูกต้องและได้คำตอบใด?",
+  "stem": "โมเดล binary (output sigmoid 1 node) ให้ <code>pred = model.predict(Xtest[0:1])</code> มี shape (1, 1) ค่า 0.7412 วิธีใดแปลงเป็น class ได้ถูกต้องและได้คำตอบใด?",
   "options": [
-   "int(pred_reg[0][0] > 0.5) ได้ class 0 (negative)",
-   "int(pred_reg[0][0] > 0.5) ได้ class 1 (positive)",
-   "np.argmax(pred_reg) ได้ class ที่ถูกเหมือน MNIST",
-   "round(pred_reg[0][0] * 10) ได้ class 3 ตามดัชนี"
+   "int(pred[0][0] > 0.5) ได้ class 1 (positive)",
+   "int(pred[0][0] > 0.5) ได้ class 0 (negative)",
+   "np.argmax(pred) ได้ class ที่ถูกเหมือนงานหลายคลาส",
+   "round(pred[0][0] * 10) ได้ class 7 ตามดัชนี"
   ],
   "answer": 0,
-  "explanation": "output sigmoid 1 node = P(positive) ⇒ ต้องเทียบ threshold: 0.3036 &gt; 0.5 เป็น False ⇒ 0 = negative (ตรงกับ Actual label 0). <code>np.argmax</code> บน (1, 1) คืน 0 <b>เสมอ</b>ไม่ว่าความน่าจะเป็นเท่าไร จึงใช้ไม่ได้กับ binary 1 node — argmax ใช้กับ softmax หลายคลาสแบบ MNIST.",
+  "explanation": "output sigmoid 1 node = P(positive) ⇒ ต้องเทียบ threshold: 0.7412 &gt; 0.5 เป็น True ⇒ 1 = positive. <code>np.argmax</code> บน (1, 1) คืน 0 <b>เสมอ</b>ไม่ว่าความน่าจะเป็นเท่าไร จึงใช้ไม่ได้กับ binary 1 node — argmax ใช้กับ softmax หลายคลาส.",
   "why_wrong": [
    "อ่าน threshold กลับด้าน",
    "argmax บนค่าเดียวได้ 0 เสมอ ไม่มีความหมาย",
@@ -1120,7 +1120,7 @@
   "source": "ex3",
   "type": "code",
   "difficulty": "medium",
-  "stem": "ใน ex3 ถ้าเปลี่ยน <code>build_model_l2(0.004)</code> เป็น <code>build_model_l2(0.04)</code> จะเกิดอะไรขึ้น?",
+  "stem": "ถ้าเปลี่ยนค่า <code>l2_value</code> ในบรรทัดนี้จาก 0.001 เป็น 0.01 จะเกิดอะไรขึ้น?",
   "code": "model.add(Dense(16, kernel_regularizer=regularizers.l2(l2_value), activation='relu'))",
   "options": [
    "เทอมปรับ λΣθ² ใหญ่ขึ้น 10 เท่า weight ถูกบีบแรงขึ้น เสี่ยง underfit",
@@ -1129,7 +1129,7 @@
    "node ใน Dense ถูกปิดแบบสุ่มมากขึ้น 10 เท่าในแต่ละ step ตอนเทรน"
   ],
   "answer": 0,
-  "explanation": "สไลด์หน้า 38: L2 = <i>add cost proportional to the square of the value of the weight coefficients</i> ใส่ผ่าน keyword argument <code>kernel_regularizer=regularizers.l2(λ)</code> (kernel = เมทริกซ์ weight ไม่รวม bias). λ ใหญ่ขึ้น ⇒ บีบ weight แรงขึ้น ⇒ overfit น้อยลงแต่ถ้ามากเกินจะ underfit. ใน ex3 λ = 0.004 ทำให้ val_loss ต่ำสุดเลื่อนไป epoch 3 และ val_loss ไม่พุ่งแรงเหมือนเดิม.",
+  "explanation": "L2 = <i>add cost proportional to the square of the value of the weight coefficients</i> ใส่ผ่าน <code>kernel_regularizer=regularizers.l2(λ)</code> (kernel = เมทริกซ์ weight ไม่รวม bias). λ ใหญ่ขึ้น 10 เท่า ⇒ บีบ weight แรงขึ้น ⇒ overfit น้อยลง แต่ถ้ามากเกินจะ underfit.",
   "why_wrong": [
    "กลับด้าน: λ มากขึ้น = บีบมากขึ้น",
    "L2 ไม่เปลี่ยนจำนวนพารามิเตอร์",
@@ -1144,15 +1144,15 @@
   "source": "ex3",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "โมเดล <code>build_model_dropout(0.6)</code> ใน ex3 ตอนเรียก <code>model_drop.evaluate(Xtest, ytest)</code> ชั้น Dropout ทำงานอย่างไร?",
+  "stem": "โมเดลที่มีชั้น <code>Dropout(0.3)</code> ตอนเรียก <code>model.evaluate(Xtest, ytest)</code> ชั้น Dropout ทำงานอย่างไร?",
   "options": [
    "ไม่ปิด node ใดเลย ใช้ทุก node ตามปกติ เพราะ dropout ทำงานเฉพาะตอนเทรน",
-   "ปิด node สุ่ม 60% เหมือนตอนเทรน ผลของ evaluate จึงแกว่งไปทุกครั้งที่รัน",
-   "ปิด node สุ่ม 40% เพราะตอน test Keras เปลี่ยนไปใช้ keep_prob แทน rate",
-   "ลบ node 60% ทิ้งอย่างถาวร โมเดลตอน evaluate จึงมีขนาดเล็กลงกว่าเดิม"
+   "ปิด node สุ่ม 30% เหมือนตอนเทรน ผลของ evaluate จึงแกว่งไปทุกครั้งที่รัน",
+   "ปิด node สุ่ม 70% เพราะตอน test Keras เปลี่ยนไปใช้ keep_prob แทน rate",
+   "ลบ node 30% ทิ้งอย่างถาวร โมเดลตอน evaluate จึงมีขนาดเล็กลงกว่าเดิม"
   ],
   "answer": 0,
-  "explanation": "Dropout = <i>deactivate neuron by the dropout rate</i> ทำงานกับ output ของ layer ก่อนหน้า <b>เฉพาะตอนเทรน</b>: rate 0.6 ⇒ ปิด 60%, keep_prob 0.4, ตัวคูณชดเชย \\(1/0.4=2.5\\) กับ node ที่เหลือ. ตอน evaluate/predict Keras ปิด dropout อัตโนมัติ ใช้ครบทุก node. Dropout มี Param # = 0 เสมอ.",
+  "explanation": "Dropout = <i>deactivate neurons by the dropout rate</i> ทำงานกับ output ของ layer ก่อนหน้า <b>เฉพาะตอนเทรน</b>: rate 0.3 ⇒ ปิด 30%, keep_prob 0.7, ตัวคูณชดเชย \\(1/0.7\\approx1.43\\) กับ node ที่เหลือ. ตอน evaluate/predict Keras ปิด dropout อัตโนมัติ ใช้ครบทุก node. Dropout มี Param # = 0 เสมอ.",
   "why_wrong": [
    "dropout ไม่ทำงานตอน evaluate",
    "ไม่มีการสุ่มปิดตอน test ทั้ง rate และ keep_prob",
@@ -1167,15 +1167,15 @@
   "source": "lesson",
   "type": "code",
   "difficulty": "easy",
-  "stem": "บรรทัด <code>keras.layers.Dropout(rate=0.2)</code> ที่วางหลัง <code>Dense(300)</code> ในสไลด์หน้า 38 หมายความว่าอย่างไร?",
+  "stem": "บรรทัด <code>keras.layers.Dropout(rate=0.3)</code> ที่วางหลัง <code>Dense(128)</code> หมายความว่าอย่างไร?",
   "options": [
-   "ตอนเทรนสุ่มปิด 20% ของ output จาก Dense(300) ในแต่ละ step (keep_prob 0.8)",
-   "ตอนเทรนสุ่มเก็บไว้เพียง 20% ของ output จาก Dense(300) ในแต่ละ step",
-   "ปิด 20% ของ output จาก Dense(300) ตลอดทั้งตอนเทรน evaluate และ predict",
-   "ลดจำนวนพารามิเตอร์ของ Dense(300) ลง 20% ถาวรตั้งแต่สร้างโมเดลเสร็จ"
+   "ตอนเทรนสุ่มปิด 30% ของ output จาก Dense(128) ในแต่ละ step (keep_prob 0.7)",
+   "ตอนเทรนสุ่มเก็บไว้เพียง 30% ของ output จาก Dense(128) ในแต่ละ step",
+   "ปิด 30% ของ output จาก Dense(128) ตลอดทั้งตอนเทรน evaluate และ predict",
+   "ลดจำนวนพารามิเตอร์ของ Dense(128) ลง 30% ถาวรตั้งแต่สร้างโมเดลเสร็จ"
   ],
   "answer": 0,
-  "explanation": "Keras ใช้ <b>rate</b> = สัดส่วนที่<b>ปิด</b> ⇒ keep_prob = 1 − 0.2 = 0.8 และ node ที่เหลือถูกคูณ \\(1/0.8=1.25\\). ต่างจาก Lecture 4 ที่พูดถึง keep_prob. โมเดลในสไลด์มีพารามิเตอร์ 235,500 + 30,100 + 1,010 = 266,610 — Dropout ไม่เพิ่มหรือลดพารามิเตอร์.",
+  "explanation": "Keras ใช้ <b>rate</b> = สัดส่วนที่<b>ปิด</b> ⇒ keep_prob = 1 − 0.3 = 0.7 และ node ที่เหลือถูกคูณ \\(1/0.7\\approx1.43\\). Dropout ไม่เพิ่มหรือลดพารามิเตอร์ของโมเดล.",
   "why_wrong": [
    "ตีความ rate เป็น keep_prob (กับดักคลาสสิก)",
    "dropout ไม่ทำงานตอน evaluate/predict",
@@ -1198,7 +1198,7 @@
    "<code>X, (y, Xtest, ytest) = mnist.load_data()</code>"
   ],
   "answer": 0,
-  "explanation": "<p>ฟังก์ชันคืนค่าเป็น <b>tuple สองชั้น</b>: ก้อนแรกคือชุดเทรน (ภาพ, ป้าย) ก้อนที่สองคือชุดทดสอบ (ภาพ, ป้าย) ⇒ ต้องแกะด้วยรูปแบบ <code>(X, y), (Xtest, ytest)</code>.</p><p>ตรวจด้วย shape ที่ได้: <code>X.shape</code> = (60000, 28, 28), <code>y.shape</code> = (60000,), <code>Xtest.shape</code> = (10000, 28, 28), <code>ytest.shape</code> = (10000,). Keras แบ่ง train/test มาให้แล้ว จึงไม่ต้องเรียก <code>train_test_split</code> เอง (ต่างจากกรณีสไลด์หน้า 36).</p>",
+  "explanation": "<p>ฟังก์ชันคืนค่าเป็น <b>tuple สองชั้น</b>: ก้อนแรกคือชุดเทรน (ภาพ, ป้าย) ก้อนที่สองคือชุดทดสอบ (ภาพ, ป้าย) ⇒ ต้องแกะด้วยรูปแบบ <code>(X, y), (Xtest, ytest)</code>.</p><p>ตรวจด้วย shape ที่ได้: <code>X.shape</code> = (60000, 28, 28), <code>y.shape</code> = (60000,), <code>Xtest.shape</code> = (10000, 28, 28), <code>ytest.shape</code> = (10000,). ชุดข้อมูลนี้แบ่ง train/test มาให้แล้ว จึงไม่ต้องเรียก <code>train_test_split</code> เองเพื่อแยก test.</p>",
   "why_wrong": [
    "แกะเป็น 4 ตัวแปรเรียงกัน — รันไม่ผ่าน เพราะสิ่งที่คืนมาคือ tuple ซ้อน tuple 2 ชั้น ไม่ใช่ 4 ก้อนเรียงกัน",
    "จับคู่ผิดแกน: ก้อนแรกคือ (ภาพเทรน, ป้ายเทรน) ไม่ใช่ (ภาพเทรน, ภาพเทสต์)",
@@ -1221,9 +1221,9 @@
    "accuracy ก่อน แล้วตามด้วยจำนวน batch"
   ],
   "answer": 0,
-  "explanation": "<p><code>evaluate()</code> รัน forward pass บนชุดที่ส่งเข้าไป (ไม่อัปเดต weight) แล้วคืน <b>[loss, metric]</b> ตามลำดับที่ตั้งไว้ตอน compile — loss มาก่อนเสมอ แล้วจึงตามด้วย metric ที่ระบุใน <code>metrics=[...]</code>.</p><p>ผลจริงของโน้ตบุ๊ก MNIST: <code>313/313 - loss: 0.1581 - accuracy: 0.9547</code> ⇒ <code>test_loss 0.1581</code>, <code>test_acc 0.9547</code>. ถ้าสลับตัวแปรจะรายงานตัวเลขผิดที่.</p>",
+  "explanation": "<p><code>evaluate()</code> รัน forward pass บนชุดที่ส่งเข้าไป (ไม่อัปเดต weight) แล้วคืน <b>[loss, metric]</b> ตามลำดับที่ตั้งไว้ตอน compile — loss มาก่อนเสมอ แล้วจึงตามด้วย metric ที่ระบุใน <code>metrics=[...]</code>.</p><p>ตัวอย่าง: log แสดง <code>loss: 0.21 - accuracy: 0.94</code> ⇒ <code>a = 0.21</code>, <code>b = 0.94</code>. ถ้าสลับตัวแปรจะรายงานตัวเลขผิดที่.</p>",
   "why_wrong": [
-   "สลับลำดับ — เป็นกับดักที่สไลด์หน้า 22 เตือนไว้ตรงๆ ว่า loss มาก่อน acc",
+   "สลับลำดับ — loss มาก่อน accuracy เสมอ",
    "evaluate คืนค่าของชุดที่ส่งเข้าไป ไม่ใช่ค่า val_ ซึ่งมาจาก history ของ fit",
    "จำนวน batch เป็นแค่สิ่งที่แสดงในแถบความคืบหน้า ไม่ใช่ค่าที่คืนกลับ"
   ],
@@ -1236,7 +1236,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "easy",
-  "stem": "ข้อใดอธิบาย Keras ได้ตรงกับสไลด์หน้า 20?",
+  "stem": "ข้อใดอธิบาย Keras ได้ถูกต้อง?",
   "options": [
    "เป็น high-level API สำหรับสร้างและเทรนโมเดล รันได้ทั้งบน TensorFlow, PyTorch และ JAX",
    "เป็น backend สำหรับคำนวณเมทริกซ์ ที่ TensorFlow และ PyTorch เรียกใช้อยู่ภายในอีกที",
@@ -1244,10 +1244,10 @@
    "เป็นภาษาโปรแกรมเฉพาะทางด้าน deep learning ที่ต้องคอมไพล์ก่อนจึงจะนำไปรันได้"
   ],
   "answer": 0,
-  "explanation": "<p>สไลด์หน้า 20 นิยาม Keras ว่าเป็น <b>high-level API</b> สำหรับสร้างและเทรน deep learning models ที่ user-friendly &amp; consistent พัฒนาโดย François Chollet และตั้งแต่ Keras 3 รันบน backend ได้ 3 ตัวคือ <b>TensorFlow, PyTorch และ JAX</b> โดยใช้โค้ดชุดเดียวกัน.</p><p>คำว่า high-level หมายถึงเราสั่งด้วยภาษาระดับแนวคิด (<code>Dense(16, activation='relu')</code>) แล้ว backend จัดการคูณเมทริกซ์และหาอนุพันธ์ให้เอง — ต่างจาก Lesson 3 ที่เราไล่ \\(\\delta\\) เองทุกชั้น.</p>",
+  "explanation": "<p>Keras เป็น <b>high-level API</b> สำหรับสร้างและเทรน deep learning models ที่ user-friendly &amp; consistent พัฒนาโดย François Chollet และตั้งแต่ Keras 3 รันบน backend ได้ 3 ตัวคือ <b>TensorFlow, PyTorch และ JAX</b> โดยใช้โค้ดชุดเดียวกัน.</p><p>high-level หมายถึงเราสั่งด้วยภาษาระดับแนวคิด (<code>Dense(16, activation='relu')</code>) แล้ว backend จัดการคูณเมทริกซ์และหาอนุพันธ์ให้เอง — ไม่ต้องไล่ \\(\\delta\\) เองทุกชั้น.</p>",
   "why_wrong": [
-   "กลับบทบาท: Keras อยู่ชั้นบน ส่วน TensorFlow/PyTorch/JAX คือ backend ที่อยู่ข้างล่าง",
-   "ตั้งแต่ Keras 3 เปลี่ยน backend ได้ (โน้ตบุ๊กตั้งผ่าน <code>os.environ['KERAS_BACKEND']</code>)",
+   "กลับบทบาท: Keras อยู่ชั้นบน ส่วน TensorFlow/PyTorch/JAX คือ backend ข้างล่าง",
+   "ตั้งแต่ Keras 3 เปลี่ยน backend ได้ (เช่นตั้งผ่าน os.environ['KERAS_BACKEND'])",
    "Keras เป็นไลบรารีของ Python ไม่ใช่ภาษาใหม่ และไม่ต้องคอมไพล์แบบนั้น"
   ],
   "ref": "Lesson 5 §5.0 (สไลด์หน้า 20)"
@@ -1259,19 +1259,19 @@
   "source": "lesson",
   "type": "calc",
   "difficulty": "hard",
-  "stem": "เทรน MNIST 60,000 ตัวอย่างด้วยบรรทัดนี้ \\(\\theta\\) ถูกอัปเดตรวมทั้งหมดกี่ครั้ง?",
-  "code": "history = model.fit(X, y, epochs=40, validation_split=0.2, batch_size=64)",
+  "stem": "เทรนด้วยข้อมูล 50,000 ตัวอย่างด้วยบรรทัดนี้ \\(\\theta\\) ถูกอัปเดตรวมทั้งหมดกี่ครั้ง?",
+  "code": "history = model.fit(X, y, epochs=30, validation_split=0.2, batch_size=100)",
   "options": [
-   "30,000",
-   "37,520",
-   "750",
-   "48,000"
+   "12,000",
+   "15,000",
+   "400",
+   "40,000"
   ],
   "answer": 0,
-  "explanation": "<p>ขั้น 1: หัก validation ก่อน — \\(60{,}000\\times0.2=12{,}000\\) ไปเป็น validation เหลือใช้เทรนจริง \\(48{,}000\\) (validation ไม่ถูกใช้คำนวณ gradient).</p><p>ขั้น 2: จำนวน mini-batch ต่อ epoch \\(=48{,}000/64=750\\) — ตรงกับแถบ <code>750/750</code> ใน log.</p><p>ขั้น 3: หนึ่ง batch = หนึ่งก้าว gradient descent ⇒ \\(750\\times40=30{,}000\\) ครั้ง. เทียบกับ batch gradient descent เต็มชุดที่อัปเดตแค่ 40 ครั้ง ⇒ มากกว่า 750 เท่า นี่คือเหตุผลที่ mini-batch เรียนเร็วกว่าต่อ epoch.</p>",
+  "explanation": "<p>ขั้น 1: หัก validation ก่อน — \\(50{,}000\\times0.2=10{,}000\\) ไปเป็น validation เหลือใช้เทรนจริง \\(40{,}000\\) (validation ไม่ถูกใช้คำนวณ gradient).</p><p>ขั้น 2: จำนวน mini-batch ต่อ epoch \\(=40{,}000/100=400\\) — ตรงกับแถบ <code>400/400</code> ใน log.</p><p>ขั้น 3: หนึ่ง batch = หนึ่งก้าว gradient descent ⇒ \\(400\\times30=12{,}000\\) ครั้ง. เทียบกับ batch gradient descent เต็มชุดที่อัปเดตแค่ 30 ครั้ง.</p>",
   "why_wrong": [
-   "ลืมหัก validation_split 20%: \\(\\lceil60{,}000/64\\rceil=938\\) แล้วคูณ 40",
-   "นั่นคือจำนวน batch ต่อ <b>หนึ่ง</b> epoch ยังไม่ได้คูณด้วย 40 epoch",
+   "ลืมหัก validation_split 20%: 50,000/100 = 500 แล้วคูณ 30",
+   "นั่นคือจำนวน batch ต่อ <b>หนึ่ง</b> epoch ยังไม่ได้คูณด้วย 30 epoch",
    "นั่นคือจำนวนตัวอย่างที่ใช้เทรน ไม่ใช่จำนวนก้าวอัปเดต"
   ],
   "ref": "Lesson 5 §5.10 (สไลด์หน้า 31)"
@@ -1283,7 +1283,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "สไลด์หน้า 10 แบ่งกราฟ sigmoid เป็นโซน Linear (ราว \\(z\\in[-2,2]\\)) กับ Saturating เป้าหมายของ BN ที่ทำให้ \\(z\\) มี mean 0 variance 1 คืออะไร?",
+  "stem": "กราฟ sigmoid แบ่งได้เป็นโซน Linear (ราว \\(z\\in[-2,2]\\)) กับโซน Saturating เป้าหมายของ BN ที่ทำให้ \\(z\\) มี mean 0 variance 1 คืออะไร?",
   "options": [
    "ดึง \\(z\\) ส่วนใหญ่กลับเข้าโซน Linear ที่ \\(g'\\) ยังสูง gradient จึงไหลผ่านได้",
    "ดัน \\(z\\) ออกไปโซน Saturating ที่กราฟแบน ค่า activation จึงนิ่งไม่แกว่ง",
@@ -1291,7 +1291,7 @@
    "ทำให้ output ของ sigmoid ทุก node รวมกันได้ 1 เหมือน softmax ชั้นสุดท้าย"
   ],
   "answer": 0,
-  "explanation": "<p>mean 0 variance 1 แปลว่าราว 95% ของตัวอย่างตกในช่วง \\([-2,+2]\\) ซึ่งเป็นโซน Linear พอดี. ในโซนนี้ \\(g'\\) ใกล้ 0.25 (ค่าสูงสุดที่เป็นไปได้) แทนที่จะเป็นเกือบศูนย์.</p><p>เทียบกับปัญหาหน้า 5: ถ้าไม่คุมอะไรเลย \\(\\operatorname{Var}(z)=100\\Rightarrow\\sigma_z=10\\) ⇒ \\(g'(10)=4.5\\times10^{-5}\\) ⇒ gradient ตายตั้งแต่ชั้นแรก. BN จึงเป็นเวอร์ชัน \"ทำให้ทุกรอบ\" ของสิ่งที่ initialization ทำได้แค่รอบแรก.</p>",
+  "explanation": "<p>mean 0 variance 1 แปลว่าราว 95% ของตัวอย่างตกในช่วง \\([-2,+2]\\) ซึ่งเป็นโซน Linear พอดี. ในโซนนี้ \\(g'\\) ใกล้ 0.25 (ค่าสูงสุดที่เป็นไปได้) แทนที่จะเป็นเกือบศูนย์.</p><p>ถ้าไม่คุมอะไรเลย เช่น \\(\\operatorname{Var}(z)=100\\Rightarrow\\sigma_z=10\\) ⇒ \\(g'(10)=4.5\\times10^{-5}\\) ⇒ gradient ตายตั้งแต่ชั้นแรก. BN จึงเป็นเวอร์ชัน \"ทำให้ทุกรอบ\" ของสิ่งที่ initialization ทำได้แค่รอบแรก.</p>",
   "why_wrong": [
    "กลับด้าน: โซน Saturating คือโซนที่อนุพันธ์เกือบ 0 ซึ่งเป็นต้นเหตุของ vanishing",
    "BN ทำให้ mean เป็น 0 ของทั้ง batch ไม่ได้บีบทุกค่าให้เป็น 0 (แล้วยัง scale/shift ด้วย γ, β ต่อ)",
@@ -1306,7 +1306,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "สไลด์หน้า 3 เตือนว่า \"some nodes might die\" — node ตายเมื่อใด และสไลด์แนะทางแก้ใด?",
+  "stem": "ReLU มีปัญหา dying ReLU (some nodes might die) node ตายเมื่อใด และแก้อย่างไร?",
   "options": [
    "เมื่อ weighted sum เป็นลบตลอด อนุพันธ์เป็น 0 — แก้ด้วยตระกูลของ ReLU เช่น Leaky ReLU",
    "เมื่อ weighted sum เป็นบวกมาก อนุพันธ์โตเกิน — แก้ด้วยตระกูลของ ReLU เช่น Leaky ReLU",
@@ -1314,7 +1314,7 @@
    "เมื่อ weighted sum ใกล้ 0 อนุพันธ์แกว่งแรง — แก้ด้วยการเปลี่ยนไปใช้ sigmoid ทุกชั้น"
   ],
   "answer": 0,
-  "explanation": "<p>ReLU มีอนุพันธ์เป็น 0 ทั้งฝั่งลบ. ถ้า node ตัวหนึ่งได้ \\(z&lt;0\\) กับทุกตัวอย่าง gradient ที่ไหลผ่านมันจะเป็น 0 ตลอด ⇒ weight ไม่เคยถูกอัปเดตอีกเลย ⇒ <b>ตายถาวร</b> (สไลด์: \"some nodes might die when its weighted sum of its inputs are negative\").</p><p>ทางแก้ที่สไลด์ให้คือใช้ตระกูลของ ReLU เช่น <b>Leaky ReLU</b> ที่ฝั่งลบมีความชันเล็กๆ (เช่น 0.01) แทนที่จะเป็น 0 — gradient จึงยังรั่วผ่านไปได้ node จึงฟื้นได้. (ELU ในโค้ดหน้า 38 ก็อยู่ตระกูลเดียวกัน)</p>",
+  "explanation": "<p>ReLU มีอนุพันธ์เป็น 0 ทั้งฝั่งลบ. ถ้า node ตัวหนึ่งได้ \\(z&lt;0\\) กับทุกตัวอย่าง gradient ที่ไหลผ่านมันจะเป็น 0 ตลอด ⇒ weight ไม่เคยถูกอัปเดตอีกเลย ⇒ <b>ตายถาวร</b> (\"some nodes might die when its weighted sum of its inputs are negative\").</p><p>ทางแก้คือใช้ตระกูลของ ReLU เช่น <b>Leaky ReLU</b> ที่ฝั่งลบมีความชันเล็ก ๆ (เช่น 0.01) แทนที่จะเป็น 0 — gradient จึงยังรั่วผ่านไปได้ node จึงฟื้นได้ (ELU ก็อยู่ตระกูลเดียวกัน)</p>",
   "why_wrong": [
    "ทางแก้ถูกแต่เงื่อนไขผิด: ฝั่งบวกอนุพันธ์เป็น 1 พอดี ปัญหาฝั่งบวกคือ activation blow up ไม่ใช่ node ตาย",
    "เงื่อนไขถูกแต่ทางแก้ผิด: learning rate สูงขึ้นก็คูณกับ gradient ที่เป็น 0 อยู่ดี ได้ 0 เท่าเดิม",
@@ -1329,7 +1329,7 @@
   "source": "lesson",
   "type": "concept",
   "difficulty": "medium",
-  "stem": "สไลด์หน้า 14 ใส่ <code>BatchNormalization()</code> เป็นชั้นแรกต่อจาก Flatten เพื่อประโยชน์ใด?",
+  "stem": "ถ้าใส่ <code>BatchNormalization()</code> เป็นชั้นแรกต่อจาก Flatten จะได้ประโยชน์ใด?",
   "options": [
    "ไม่ต้อง standardize ชุดเทรนเอง เพราะ BN ชั้นแรก normalize ข้อมูลดิบให้แล้ว",
    "ไม่ต้องใส่ activation ใน hidden layer เพราะ BN ทำหน้าที่แทนได้ทั้งหมดแล้ว",
@@ -1337,7 +1337,7 @@
    "ไม่ต้องแยกโหมด train กับ test เพราะ BN ใช้สถิติชุดเดียวกันทั้งสองโหมด"
   ],
   "answer": 0,
-  "explanation": "<p>ข้อความที่อาจารย์ทำสีไว้: ถ้า add a BN layer เป็น <b>first layer</b> ของเครือข่าย เราจะ <b>not need to standardize your training set</b> — เพราะ BN ชั้นแรกทำ z-score ให้ข้อมูลดิบเอง และทำให้อัตโนมัติกับข้อมูล test ด้วย.</p><p>ราคาที่จ่ายคือพารามิเตอร์: BN บน 784 ค่าหลัง Flatten มี \\(4\\times784=3{,}136\\) ตัว (trainable 1,568 / non-trainable 1,568) ⇒ total ของโมเดลขยับจาก 13,002 เป็น 16,266.</p>",
+  "explanation": "<p>ถ้า add a BN layer เป็น <b>first layer</b> ของเครือข่าย เราจะ <b>not need to standardize your training set</b> — เพราะ BN ชั้นแรกทำ z-score ให้ข้อมูลดิบเอง และทำให้อัตโนมัติกับข้อมูล test ด้วย.</p><p>ราคาที่จ่ายคือพารามิเตอร์: BN บน \\(n\\) ค่าหลัง Flatten มี \\(4n\\) ตัว (trainable \\(2n\\) / non-trainable \\(2n\\)) เช่น 400 ค่า ⇒ 1,600 ตัว.</p>",
   "why_wrong": [
    "BN ไม่ใช่ activation — ถ้าไม่มี activation ที่ไม่เป็นเชิงเส้น เครือข่ายทั้งก้อนยุบเหลือชั้นเดียว",
    "BN ไม่ตั้ง weight ให้ แต่มันทำให้เรา less careful about initialization (คนละเรื่องกับ \"ไม่ต้องทำเลย\")",
@@ -1360,7 +1360,7 @@
    "\\([\\gamma,\\ 5\\gamma]\\) เพราะคูณ \\(\\gamma\\) แต่ไม่ต้องลบ mean เมื่อมีตัวอย่างเดียว"
   ],
   "answer": 0,
-  "explanation": "<p>BN เฉลี่ย <b>ข้ามตัวอย่าง</b> (ลงตามคอลัมน์) แยกทีละ neuron. เมื่อ batch มีตัวอย่างเดียว neuron ที่ 1 มีค่าชุดเดียวคือ \\(\\{1\\}\\) ⇒ \\(\\mu_B=1,\\ \\sigma_B^2=0\\) ⇒ \\(z_{norm}=(1-1)/\\sqrt{0}=0\\); neuron ที่ 2 ก็ได้ 0 เช่นกัน ⇒ \\(\\tilde z=\\gamma(0)+\\beta=\\beta\\) ทั้งคู่.</p><p>เทียบ LayerNorm ที่เฉลี่ย <b>ข้าม neuron ภายในตัวอย่าง</b>: \\(\\mu=(1+5)/2=3,\\ \\sigma^2=4,\\ \\sigma=2\\) ⇒ \\([-1,+1]\\) ทำงานได้ตามปกติ. นี่คือเหตุผลตัวเลขของข้อดีข้อแรกในสไลด์หน้า 19: LN is <b>independent of batch size</b>.</p>",
+  "explanation": "<p>BN เฉลี่ย <b>ข้ามตัวอย่าง</b> (ลงตามคอลัมน์) แยกทีละ neuron. เมื่อ batch มีตัวอย่างเดียว neuron ที่ 1 มีค่าชุดเดียวคือ \\(\\{1\\}\\) ⇒ \\(\\mu_B=1,\\ \\sigma_B^2=0\\) ⇒ \\(z_{norm}=0\\) (ตัวเศษเป็น 0); neuron ที่ 2 ก็ได้ 0 เช่นกัน ⇒ \\(\\tilde z=\\gamma(0)+\\beta=\\beta\\) ทั้งคู่.</p><p>เทียบ LayerNorm ที่เฉลี่ย <b>ข้าม neuron ภายในตัวอย่าง</b>: \\(\\mu=(1+5)/2=3,\\ \\sigma^2=4,\\ \\sigma=2\\) ⇒ \\([-1,+1]\\) ทำงานได้ตามปกติ. นี่คือเหตุผลเชิงตัวเลขที่ LN is <b>independent of batch size</b>.</p>",
   "why_wrong": [
    "นั่นคือผลของ LayerNorm (เฉลี่ยข้าม 2 neuron ได้ μ=3, σ=2) ไม่ใช่ BatchNorm",
    "BN ไม่มีเงื่อนไขข้ามการทำงานตาม batch size — มันใช้สูตรเดิมเสมอ",
