@@ -195,7 +195,7 @@ function cardHTML(q, idx) {
   }
   const code = q.code ? `<pre><code>${esc(q.code)}</code></pre>` : "";
   return `<div class="q ${cls}" id="card-${q.id}">
-    <div class="meta"><span class="tag">${LESSON_NAMES[q.lesson]}</span><span class="tag t-${q.type}">${TYPE_NAMES[q.type]}</span><span class="tag d-${q.difficulty}">${DIFF_NAMES[q.difficulty]}</span>${q.source !== "lesson" ? `<span class="tag">${esc(SOURCE_NAMES[q.source] || q.source)}</span>` : ""}<span class="tag" style="background:#f1f1ee;color:var(--ink-soft)">${esc(q.topic)}</span></div>
+    <div class="meta"><span class="tag">${LESSON_NAMES[q.lesson]}</span><span class="tag t-${q.type}">${TYPE_NAMES[q.type]}</span><span class="tag d-${q.difficulty}">${DIFF_NAMES[q.difficulty]}</span>${done ? `<span class="tag" style="background:#f1f1ee;color:var(--ink-soft)">${esc(q.topic)}</span>` : ""}</div>
     <div class="stem"><span class="num">${idx + 1}.</span>${q.stem}</div>${code}
     <div class="opts">${opts}</div>${verdict}</div>`;
 }
