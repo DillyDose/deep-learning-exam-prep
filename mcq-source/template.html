@@ -90,7 +90,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 </head>
 <body>
 <h1>Deep Learning MCQ Review</h1>
-<p class="sub">ข้อสอบทบทวน Lesson 1-6 + ex1-3 + notebook ในห้อง · ลำดับข้อคงที่ ปิดแล้วกลับมาทำต่อได้ · ตอบแล้วเห็นผลทันที กด “ดูเฉลย” เมื่อไม่เข้าใจ</p>
+<p class="sub">ข้อสอบทบทวน Lesson 1-6 + ex1-3 + notebook ในห้อง · ลำดับข้อคงที่ ปิดแล้วกลับมาทำต่อได้ · ตอบแล้วเห็นผลทันที กด “ดูเฉลย” เมื่อไม่เข้าใจ · export ผลเป็น JSON ไปให้ AI วิเคราะห์ได้</p>
 
 <div class="panel">
   <h2>เลือกชุดที่จะทำ</h2>
@@ -103,7 +103,10 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
   </div>
   <div class="row" style="margin-top:10px">
     <button class="primary" id="nextBtn">ไปข้อถัดไปที่ยังไม่ได้ทำ</button>
+    <button id="exportBtn">Export ผลเป็น JSON</button>
+    <button id="importBtn">นำเข้าผลที่ export ไว้</button>
     <button id="resetBtn">ล้างคำตอบทั้งหมด</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
   </div>
 </div>
 
@@ -269,6 +272,71 @@ document.getElementById("nextBtn").addEventListener("click", () => {
   if (!next) { alert("ทำครบทุกข้อในชุดนี้แล้ว"); return; }
   document.getElementById("card-" + next).scrollIntoView({ behavior: "smooth", block: "start" });
 });
+function buildExport() {
+  const items = QUESTIONS.filter(q => answers[q.id]).map(q => {
+    const a = answers[q.id];
+    return { id: q.id, lesson: q.lesson, lessonName: LESSON_NAMES[q.lesson], topic: q.topic, source: q.source,
+      type: q.type, difficulty: q.difficulty, ref: q.ref,
+      question: q.stem.replace(/<[^>]+>/g, "").trim(),
+      chosen: LETTERS[a.choice], chosenText: q.options[a.choice].replace(/<[^>]+>/g, "").trim(),
+      correctLetter: LETTERS[q.answer], correctText: q.options[q.answer].replace(/<[^>]+>/g, "").trim(),
+      isCorrect: a.correct, attempts: a.tries, everWrong: !!a.everWrong };
+  });
+  const byLesson = {};
+  for (const n of [1,2,3,4,5,6]) {
+    const qs = items.filter(i => i.lesson === n);
+    byLesson[LESSON_NAMES[n]] = { answered: qs.length, correct: qs.filter(i => i.isCorrect).length, total: QUESTIONS.filter(q => q.lesson === n).length };
+  }
+  const byType = {};
+  for (const t of ["concept","calc","code"]) {
+    const qs = items.filter(i => i.type === t);
+    byType[t] = { answered: qs.length, correct: qs.filter(i => i.isCorrect).length };
+  }
+  return {
+    exportedAt: new Date().toISOString(),
+    source: "Deep Learning MCQ Review (Lessons 1-6 + ex1-3 + in-class notebooks)",
+    totals: { questionsInBank: QUESTIONS.length, answered: items.length, correct: items.filter(i => i.isCorrect).length },
+    byLesson, byType,
+    weakTopics: items.filter(i => !i.isCorrect).map(i => ({ id: i.id, lesson: i.lessonName, topic: i.topic, ref: i.ref })),
+    answersRaw: answers,
+    items
+  };
+}
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const data = buildExport();
+  if (!data.totals.answered) { alert("ยังไม่มีข้อที่ทำ — ตอบอย่างน้อย 1 ข้อก่อน"); return; }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `dl-mcq-result-${new Date().toISOString().slice(0,16).replace(/[:T]/g,"-")}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+document.getElementById("importBtn").addEventListener("click", () => document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change", e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const d = JSON.parse(r.result);
+      const incoming = d.answersRaw || d;
+      let n = 0;
+      for (const [id, a] of Object.entries(incoming)) {
+        if (!byId[id] || !a || typeof a.choice !== "number") continue;
+        answers[id] = { choice: a.choice, correct: a.choice === byId[id].answer, tries: a.tries || 1, everWrong: !!a.everWrong || a.choice !== byId[id].answer };
+        n++;
+      }
+      save(); sessionAnswered = {}; newOrder();
+      alert(`นำเข้าแล้ว ${n} ข้อ`);
+    } catch (err) { alert("ไฟล์ไม่ถูกต้อง — ต้องเป็น JSON ที่ export จากหน้านี้"); }
+    e.target.value = "";
+  };
+  r.readAsText(f);
+});
+
 document.getElementById("resetBtn").addEventListener("click", () => {
   if (!confirm("ล้างคำตอบทั้งหมดแล้วเริ่มใหม่?")) return;
   answers = {}; sessionAnswered = {}; save(); newOrder();
