@@ -90,7 +90,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 </head>
 <body>
 <h1>Deep Learning MCQ Review</h1>
-<p class="sub">ข้อสอบทบทวน Lesson 1-6 + ex1-3 + notebook ในห้อง · สุ่มลำดับทุกครั้ง · ตอบแล้วเห็นผลทันที กด “ดูเฉลย” เมื่อไม่เข้าใจ</p>
+<p class="sub">ข้อสอบทบทวน Lesson 1-6 + ex1-3 + notebook ในห้อง · ลำดับข้อคงที่ ปิดแล้วกลับมาทำต่อได้ · ตอบแล้วเห็นผลทันที กด “ดูเฉลย” เมื่อไม่เข้าใจ</p>
 
 <div class="panel">
   <h2>เลือกชุดที่จะทำ</h2>
@@ -102,7 +102,7 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
     <label class="chip"><input type="radio" name="mode" value="wrong"> เฉพาะข้อที่ผิด (ทำซ้ำ)</label>
   </div>
   <div class="row" style="margin-top:10px">
-    <button class="primary" id="shuffleBtn">สุ่มลำดับใหม่</button>
+    <button class="primary" id="nextBtn">ไปข้อถัดไปที่ยังไม่ได้ทำ</button>
     <button id="resetBtn">ล้างคำตอบทั้งหมด</button>
   </div>
 </div>
@@ -134,7 +134,6 @@ let order = [];
 let sessionAnswered = {}; // for "wrong" mode: questions re-answered in this view
 const openExplain = new Set();
 
-function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 function buildFilters() {
@@ -163,7 +162,7 @@ function currentPool() {
   });
 }
 
-function newOrder() { order = shuffle(currentPool().map(q => q.id)); openExplain.clear(); render(); }
+function newOrder() { order = currentPool().map(q => q.id); openExplain.clear(); render(); }
 
 function renderMath(el) {
   if (typeof renderMathInElement !== "function") return;
@@ -265,7 +264,11 @@ document.getElementById("weakWrap").addEventListener("click", e => {
   if (!document.getElementById("card-" + a.dataset.jump)) { e.preventDefault(); alert("ข้อนี้ไม่อยู่ในชุดที่กรองไว้ตอนนี้ — เปิดตัวกรองบท/ประเภทให้ครอบคลุมก่อน"); }
 });
 
-document.getElementById("shuffleBtn").addEventListener("click", () => { sessionAnswered = {}; newOrder(); window.scrollTo({ top: 0 }); });
+document.getElementById("nextBtn").addEventListener("click", () => {
+  const next = order.find(id => !answers[id]);
+  if (!next) { alert("ทำครบทุกข้อในชุดนี้แล้ว"); return; }
+  document.getElementById("card-" + next).scrollIntoView({ behavior: "smooth", block: "start" });
+});
 document.getElementById("resetBtn").addEventListener("click", () => {
   if (!confirm("ล้างคำตอบทั้งหมดแล้วเริ่มใหม่?")) return;
   answers = {}; sessionAnswered = {}; save(); newOrder();

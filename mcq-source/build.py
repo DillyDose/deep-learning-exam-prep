@@ -131,6 +131,10 @@ if warns:
     for w in warns:
         print("  -", w)
 
+# ---- fixed presentation order: lessons interleaved, but identical on every build ----
+random.Random(4242).shuffle(qs)
+print("Presentation order fixed (seeded); first 8:", [q["id"] for q in qs[:8]])
+
 tpl = open(os.path.join(SP, "template.html"), encoding="utf-8").read()
 payload = json.dumps(qs, ensure_ascii=False).replace("</script>", "<\\/script>")
 open(OUT, "w", encoding="utf-8").write(tpl.replace("__DATA__", payload))
