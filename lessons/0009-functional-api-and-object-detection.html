@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 9: Functional API, ConvNet Visualization &amp; Object Detection</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0008-cnn-architectures-and-transfer-learning.html">← Lesson 8: CNN Architectures &amp; Transfer Learning</a></span>
+  <span>Lesson 9 / 10 · Functional API &amp; Object Detection</span>
+  <span><a href="0010-sequence-models-and-rnn.html">Lesson 10: Sequence Models &amp; RNN →</a></span>
+</nav>
+
+<p class="kicker">Lecture9 (deep_learning_part3_3.pdf, 53 หน้า) · 2603520 Deep Learning</p>
+<h1>Functional API, การมองเข้าไปใน ConvNet และ Object Detection</h1>
+
+<p>Lecture นี้มีสามส่วนที่ต่อกัน:</p>
+<ol>
+<li><strong>Functional API</strong> (หน้า 1–11): วิธีเขียนโมเดล Keras ที่มีหลาย input, หลาย output, แตกกิ่ง หรือใช้ layer ร่วมกัน ซึ่ง Sequential API ทำไม่ได้. เป็นส่วนที่มีโค้ดเติมคำ</li>
+<li><strong>Visualizing the ConvNets</strong> (หน้า 12–22): ดูว่า CNN เรียนอะไร ด้วย feature map, filter และ Grad-CAM</li>
+<li><strong>Object Detection</strong> (หน้า 23–53): bounding box, IoU, NMS, mAP, R-CNN family, YOLO และรุ่นใหม่</li>
+</ol>
+<p>ส่วนที่ 3 ใช้ส่วนที่ 1 โดยตรง: object detector คือโมเดลที่มีสอง output (class และตำแหน่ง) จึงต้องเขียนด้วย Functional API.</p>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+<a href="https://keras.io/guides/functional_api/" target="_blank" rel="noopener">Keras — The Functional API</a> · <a href="https://keras.io/examples/vision/grad_cam/" target="_blank" rel="noopener">Keras — Grad-CAM class activation visualization</a> (โค้ดที่สไลด์หน้า 22 อ้างถึง) · Géron, <em>Hands-On Machine Learning</em> บทที่ 10 (Wide &amp; Deep) และบทที่ 14 (object detection) · <a href="https://arxiv.org/abs/1804.02767" target="_blank" rel="noopener">Redmon &amp; Farhadi — YOLOv3</a>.
+</div>
+
+<div class="box beginner">
+<div class="label">คำที่ใช้ทั้งบท</div>
+<ul>
+<li><strong>Tensor</strong> = array หลายมิติที่ไหลระหว่าง layer</li>
+<li><strong>Bounding box</strong> = กรอบสี่เหลี่ยมรอบวัตถุ ระบุด้วยจุดกึ่งกลาง \((b_x, b_y)\) ความสูง \(b_h\) และความกว้าง \(b_w\)</li>
+<li>\(p_c\) = objectness score: ความมั่นใจว่ามีวัตถุอยู่ในกรอบ</li>
+<li><strong>Ground truth</strong> = กรอบและ class ที่ถูกต้องซึ่งคนกำกับไว้</li>
+<li><strong>ROI</strong> = region of interest บริเวณของภาพที่อาจมีวัตถุ</li>
+<li>\(\cap\) = ส่วนที่ซ้อนกัน (intersection), \(\cup\) = ส่วนรวมทั้งหมด (union)</li>
+</ul>
+</div>
+
+<h2 id="s1">1. Functional API: layer เป็นฟังก์ชันของ tensor</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p01-functional-api.png" alt="Slide: Functional API. Creating models that offer more flexibility than the sequential API (a stack of layers with exactly 1 input and 1 output), including multi-input, multi-output, branching and shared layers. Create instances of layers and connect them in pairs; the input layer takes a shape argument; use layers as functions that take tensors and return tensors; define a Model specifying input and output. Code: seq_model = Sequential() with Dense(32, relu, input_shape=(64,)), Dense(32, relu), Dense(10, softmax); functional equivalent: input_tensor = Input(shape=(64,)), x = layers.Dense(32, activation=&#x27;relu&#x27;)(input_tensor), x = layers.Dense(32, activation=&#x27;relu&#x27;)(x), output_tensor = layers.Dense(10, activation=&#x27;softmax&#x27;)(x), model = Model(input_tensor, output_tensor)">
+<figcaption>Slide: Functional API — Sequential เทียบกับ functional (Lecture9, p.1)</figcaption>
+</figure>
+
+<p>Sequential API คือ stack ของ layer ที่มี 1 input และ 1 output เท่านั้น. Functional API ให้ <mark class="src" data-p="1">more flexibility</mark>: รองรับ multi-input, multi-output, branching และ shared layers. มีสองขั้น:</p>
+<ol>
+<li><mark class="src" data-p="1">Creating instances of layers</mark> แล้วเชื่อมกันโดยตรงเป็นคู่ๆ. Input layer รับอาร์กิวเมนต์ <code>shape</code> (tuple ที่บอกมิติของ input). ใช้ layer เป็น<strong>ฟังก์ชัน</strong>ที่รับ tensor และคืน tensor จึงเรียกว่า functional API</li>
+<li><mark class="src" data-p="1">Defining a Model</mark> ที่ระบุ layer ซึ่งทำหน้าที่เป็น <mark class="src" data-p="1">input</mark> และ <mark class="src" data-p="1">output</mark> ของโมเดล</li>
+</ol>
+
+<pre data-p="1"><code>from keras.models import Sequential, Model
+from keras import layers
+from keras import Input
+
+seq_model = Sequential()
+seq_model.add(layers.Dense(32, activation='relu', input_shape=(64,)))
+seq_model.add(layers.Dense(32, activation='relu'))
+seq_model.add(layers.Dense(10, activation='softmax'))
+
+input_tensor = Input(shape=(64,))
+x = layers.Dense(32, activation='relu')(input_tensor)
+x = layers.Dense(32, activation='relu')(x)
+output_tensor = layers.Dense(10, activation='softmax')(x)
+
+model = Model(input_tensor, output_tensor)
+model.summary()</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>seq_model = Sequential() … seq_model.add(...)</td><td>แบบ Sequential ที่ใช้มาตั้งแต่ Lesson 5: เพิ่ม layer ทีละชั้นด้วย <code>add</code></td></tr>
+<tr><td>input_tensor = Input(shape=(64,))</td><td>สร้าง tensor ตั้งต้น. <code>shape=(64,)</code> คือ vector 64 ค่าต่อตัวอย่าง (ไม่รวม batch)</td></tr>
+<tr><td>x = layers.Dense(32, activation='relu')(input_tensor)</td><td>วงเล็บแรกสร้าง layer; วงเล็บที่สอง<strong>เรียก</strong> layer บน tensor แล้วได้ tensor ใหม่ <code>x</code></td></tr>
+<tr><td>x = layers.Dense(32, activation='relu')(x)</td><td>ส่ง <code>x</code> เข้า layer ถัดไป แล้วเก็บผลทับชื่อเดิม</td></tr>
+<tr><td>output_tensor = layers.Dense(10, activation='softmax')(x)</td><td>tensor สุดท้าย 10 ค่า</td></tr>
+<tr><td>model = Model(input_tensor, output_tensor)</td><td>คลาส <code>Model</code> แปลงคู่ input tensor และ output tensor เป็นโมเดล. Keras ไล่ย้อนจาก output หา layer ทุกตัวที่อยู่ระหว่างทาง</td></tr>
+<tr><td>model.summary()</td><td>ผลเหมือน Sequential: 2,080 + 1,056 + 330 = 3,466 parameter</td></tr>
+</table>
+<p>สองโมเดลนี้เท่ากันทุกประการ: \(64 \cdot 32 + 32 = 2{,}080\), \(32 \cdot 32 + 32 = 1{,}056\), \(32 \cdot 10 + 10 = 330\). ความต่างอยู่ที่ Functional API ทำให้ tensor มีชื่อ จึงส่ง tensor เดียวไปหลาย layer หรือรวมหลาย tensor เข้าด้วยกันได้.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p04-acyclic-graph-models.png" alt="Slide: (Acyclic) Graph-like Models. Many recently developed neural architectures require nonlinear network topology: networks structured as directed acyclic graphs. Examples: an Inception module with four parallel branches merged by Concatenate, and a residual block where a skip connection is added back to the output of stacked layers">
+<figcaption>Slide: (Acyclic) Graph-like Models — Inception module และ residual block (Lecture9, p.4)</figcaption>
+</figure>
+
+<p>สถาปัตยกรรมรุ่นใหม่จำนวนมากมี topology ที่ไม่เป็นเส้นตรง คือเป็น <mark class="src" data-p="4">directed acyclic graphs.</mark> (กราฟมีทิศทางที่ไม่มีวงวน). สองตัวอย่างในสไลด์มาจาก <a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8</a>: Inception module แตก input เป็น 4 กิ่งแล้วรวมด้วย <code>Concatenate</code>; residual block ส่ง input ข้าม layer ไป<strong>บวก</strong>กับ output. ทั้งสองแบบเขียนด้วย Sequential ไม่ได้เพราะ tensor หนึ่งตัวถูกใช้มากกว่าหนึ่งครั้ง.</p>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Functional API ให้ <mark class="src" data-p="1">more flexibility</mark> กว่า Sequential (ซึ่งมี 1 input, 1 output เท่านั้น)</li>
+<li>สองขั้น: <mark class="src" data-p="1">Creating instances of layers</mark> แล้วเชื่อมกัน และ <mark class="src" data-p="1">Defining a Model</mark> ด้วย <mark class="src" data-p="1">input</mark> และ <mark class="src" data-p="1">output</mark></li>
+<li>รูปแบบโค้ดที่ต้องจำ: <code>x = Layer(...)(tensor)</code> และ <code>model = Model(inputs, outputs)</code></li>
+<li>โมเดลแบบกราฟ = <mark class="src" data-p="4">directed acyclic graphs.</mark> เช่น Inception module (concatenate) และ residual block (add)</li>
+</ul>
+</div>
+
+<h2 id="s2">2. Multi-input Models และ Wide &amp; Deep</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p02-multi-input-models.png" alt="Slide: Multi-input Models. Some tasks require multi-inputs: they merge data from different input sources, processing each type of data using different kinds of neural layers. Compared to building each model per input source, this approach can learn a more accurate model since it sees all available input simultaneously. Diagram: metadata to dense module, text description to RNN module, picture to convnet module, merging module, price prediction">
+<figcaption>Slide: Multi-input Models — สามกิ่ง input (Lecture9, p.2)</figcaption>
+</figure>
+
+<p>งานบางอย่างต้องการ <mark class="src" data-p="2">multi-inputs</mark>: รวมข้อมูลจากแหล่งต่างกัน และประมวลผลข้อมูลแต่ละชนิดด้วย layer คนละแบบ. ตัวอย่างในสไลด์คือการทำนายราคาจากสามแหล่ง: metadata → Dense module, text description → RNN module, picture → Convnet module แล้วรวมที่ merging module. เทียบกับการสร้างโมเดลแยกต่อแหล่งข้อมูล วิธีนี้เรียนโมเดลที่แม่นกว่าได้เพราะเห็น input ทั้งหมดพร้อมกัน.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p05-wide-and-deep-example.png" alt="Slide: Example. Build a neural network to tackle the California housing problem. Code: input = Input(shape=(8,)); hidden1 = Dense(30, activation=&quot;relu&quot;)(input); hidden2 = Dense(30, activation=&quot;relu&quot;)(hidden1); concat = concatenate([input, hidden2]); output = Dense(1)(concat); model = Model(inputs=[input], outputs=[output]). Diagram: Wide and Deep Neural Network with input going both through Hidden 1, Hidden 2 (deep) and directly to Concat (wide)">
+<figcaption>Slide: Example — Wide and Deep Neural Network (California housing) (Lecture9, p.5)</figcaption>
+</figure>
+
+<p>Wide &amp; Deep network ส่ง input ไปสองทาง: ทาง <strong>deep</strong> ผ่าน hidden layer สองชั้น และทาง <strong>wide</strong> ข้ามตรงไปยัง concat. ทาง deep เรียน pattern ซับซ้อน; ทาง wide รักษา feature ดิบไว้ให้ output ใช้โดยตรง.</p>
+
+<pre data-p="5"><code>from keras.layers import Input, Dense, concatenate
+from keras import Model
+
+input = Input(shape=(8,))
+hidden1 = Dense(30, activation="relu")(input)
+hidden2 = Dense(30, activation="relu")(hidden1)
+concat = concatenate([input, hidden2])
+output = Dense(1)(concat)
+model = Model(inputs=[input], outputs=[output])</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>input = Input(shape=(8,))</td><td>California housing มี 8 feature</td></tr>
+<tr><td>hidden1 = Dense(30, activation="relu")(input)</td><td>ทาง deep ชั้นที่ 1: 8·30 + 30 = 270 parameter</td></tr>
+<tr><td>hidden2 = Dense(30, activation="relu")(hidden1)</td><td>ทาง deep ชั้นที่ 2: 30·30 + 30 = 930 parameter</td></tr>
+<tr><td>concat = concatenate([input, hidden2])</td><td>ต่อ tensor สองตัวตามแกนสุดท้าย: 8 + 30 = 38 ค่า. รับ <strong>list</strong> ของ tensor. ไม่มี parameter</td></tr>
+<tr><td>output = Dense(1)(concat)</td><td>regression จึงไม่มี activation: 38·1 + 1 = 39 parameter</td></tr>
+<tr><td>model = Model(inputs=[input], outputs=[output])</td><td>รวม 270 + 930 + 39 = 1,239 parameter</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl9-p03-wide-deep-two-inputs.png" alt="Slide: Example. Send a subset of the features through the wide path and a different subset (possibly overlapping) through the deep path: 5 features through the skip path (features 0 to 4) and 6 features through the normal path. Code: input_A = Input(shape=[5]); input_B = Input(shape=[6]); hidden1 = Dense(30, activation=&quot;relu&quot;)(input_B); hidden2 = Dense(30, activation=&quot;relu&quot;)(hidden1); concat = concatenate([input_A, hidden2]); output = Dense(1)(concat); model = Model(inputs=[input_A, input_B], outputs=[output])">
+<figcaption>Slide: Example — สอง input: wide path 5 feature, deep path 6 feature (Lecture9, p.3)</figcaption>
+</figure>
+
+<p>ขยายเป็นสอง input: ส่ง feature ชุดหนึ่งผ่าน wide path และอีกชุด (ซ้อนกันได้) ผ่าน deep path. ตัวอย่างส่ง 5 feature (feature 0 ถึง 4) ทาง skip path และ 6 feature ทาง normal path.</p>
+
+<pre data-p="3"><code>input_A = Input(shape=[5])
+input_B = Input(shape=[6])
+hidden1 = Dense(30, activation="relu")(input_B)
+hidden2 = Dense(30, activation="relu")(hidden1)
+concat = concatenate([input_A, hidden2])
+output = Dense(1)(concat)
+model = Model(inputs=[input_A, input_B], outputs=[output])</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>input_A = Input(shape=[5])</td><td>input ของ wide path: 5 feature</td></tr>
+<tr><td>input_B = Input(shape=[6])</td><td>input ของ deep path: 6 feature</td></tr>
+<tr><td>hidden1 = Dense(30, activation="relu")(input_B)</td><td>เฉพาะ <code>input_B</code> เข้า hidden layer: 6·30 + 30 = 210</td></tr>
+<tr><td>concat = concatenate([input_A, hidden2])</td><td>ต่อ <code>input_A</code> ดิบกับ <code>hidden2</code>: 5 + 30 = 35 ค่า</td></tr>
+<tr><td>output = Dense(1)(concat)</td><td>35 + 1 = 36 parameter</td></tr>
+<tr><td>model = Model(inputs=[input_A, input_B], outputs=[output])</td><td><code>inputs</code> เป็น list สองตัว. ตอน <code>fit</code> ต้องส่งข้อมูลเป็น list ลำดับเดียวกัน: <code>model.fit([X_train_A, X_train_B], y_train)</code></td></tr>
+</table>
+<p>Total params = \(210 + 930 + 36 = 1{,}176\). เทียบกับโมเดล input เดียว (1,239) ลดลง 63 ตัว เพราะ deep path รับ 6 feature แทน 8 และ concat ยาว 35 แทน 38.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Functional API</span></div>
+  <div class="qtext">โมเดล Wide &amp; Deep มี <code>input_A = Input(shape=[4])</code> และ <code>input_B = Input(shape=[10])</code> โดย <code>input_B</code> ผ่าน Dense(20, relu) สองชั้นต่อกัน แล้ว concatenate กับ <code>input_A</code> ก่อนเข้า Dense(1) โมเดลนี้มี parameter ทั้งหมดกี่ตัว?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. hidden1: 10·20 + 20 = 220. hidden2: 20·20 + 20 = 420. concat ยาว 4 + 20 = 24. output: 24 + 1 = 25. รวม 665. ค่า 661 คือลืมต่อ input_A (output = 21), ค่า 640 คือนับเฉพาะ hidden layer.">661</button>
+    <button class="opt" data-correct="false" data-note="ผิด. hidden1: 10·20 + 20 = 220. hidden2: 20·20 + 20 = 420. concat ยาว 4 + 20 = 24. output: 24 + 1 = 25. รวม 665. ค่า 661 คือลืมต่อ input_A (output = 21), ค่า 640 คือนับเฉพาะ hidden layer.">640</button>
+    <button class="opt" data-correct="true" data-note="ถูก. hidden1: 10·20 + 20 = 220. hidden2: 20·20 + 20 = 420. concat ยาว 4 + 20 = 24. output: 24 + 1 = 25. รวม 665. ค่า 661 คือลืมต่อ input_A (output = 21), ค่า 640 คือนับเฉพาะ hidden layer.">665</button>
+    <button class="opt" data-correct="false" data-note="ผิด. hidden1: 10·20 + 20 = 220. hidden2: 20·20 + 20 = 420. concat ยาว 4 + 20 = 24. output: 24 + 1 = 25. รวม 665. ค่า 661 คือลืมต่อ input_A (output = 21), ค่า 640 คือนับเฉพาะ hidden layer.">675</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li><mark class="src" data-p="2">multi-inputs</mark>: รวมข้อมูลจากหลายแหล่ง แต่ละชนิดใช้ layer ต่างกัน และแม่นกว่าเพราะเห็น input ทั้งหมดพร้อมกัน</li>
+<li>จุดเติมโค้ด: <code>concatenate([a, b])</code> รับ list; <code>Model(inputs=[input_A, input_B], outputs=[output])</code>; tensor ที่เข้า <code>hidden1</code> คือ <code>input_B</code> ไม่ใช่ <code>input_A</code></li>
+<li>ขนาดหลัง concat = ผลบวกของขนาดสอง tensor; <code>concatenate</code> ไม่มี parameter</li>
+</ul>
+</div>
+
+<h2 id="s3">3. Models that Re-use Layers: แบบฝึกหัดเติมโค้ด</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p06-models-reuse-layers.png" alt="Slide: Models that Re-use Layers. Multiple layers can share the output from one layer; for example multiple different feature extraction layers from an input, or multiple layers interpreting the output of a feature extraction layer. Graph: input_1 (64 x 64 pixels) feeds conv2d_1 (f=4x4, #f=32) and conv2d_2 (f=8x8, #f=16), each followed by max pooling and flatten, then concatenate, dense_1, dense_2">
+<figcaption>Slide: Models that Re-use Layers — input เดียว สอง feature extractor (Lecture9, p.6)</figcaption>
+</figure>
+
+<p>หลาย layer สามารถ <mark class="src" data-p="6">share</mark> output จาก layer เดียวกัน. เช่น มี feature extraction layer หลายแบบจาก input เดียว หรือมีหลาย layer ตีความ output ของ feature extraction layer เดียว. กราฟในสไลด์: input ภาพ <mark class="src" data-p="6">64 x 64 pixels</mark> ส่งเข้าสอง convolution พร้อมกัน คือ <mark class="src" data-p="6">f=4x4, #f=32</mark> และ <mark class="src" data-p="6">f=8x8, #f=16</mark> (kernel เล็กจับรายละเอียด, kernel ใหญ่จับโครงสร้างกว้าง) แต่ละกิ่ง pooling และ flatten แล้ว concatenate เข้า dense สองชั้น.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p07-reuse-layers-exercise.png" alt="Slide: Example. Build a deep learning model as in the picture. Code with blanks: input = Input(shape=(64,64,1)); conv1 = Conv2D(____, kernel_size=4, activation=&#x27;relu&#x27;)(____); pool1 = MaxPooling2D(pool_size=(2, 2))(____); flat1 = Flatten()(pool1); conv2 = Conv2D(____, kernel_size=__, activation=&#x27;relu&#x27;)(____); pool2 = MaxPooling2D(pool_size=(2, 2))(____); flat2 = Flatten()(pool2); merge = concatenate([flat1, flat2]); hidden1 = ____(10, activation=&#x27;relu&#x27;)(____); output = Dense(1, ____=&#x27;sigmoid&#x27;)(hidden1); model = Model(inputs=____, outputs=____). Annotations f=4x4, #f=32 and f=8x8, #f=16">
+<figcaption>Slide: Example — โค้ดเว้นช่องให้เติม (Lecture9, p.7)</figcaption>
+</figure>
+
+<p>หน้า 7 เป็นโค้ดเว้นช่อง ซึ่งเป็นรูปแบบของข้อสอบเติมโค้ด. ป้ายกำกับในรูปคือ <mark class="src" data-p="7">f=4x4, #f=32</mark> สำหรับกิ่งแรก และ <mark class="src" data-p="7">f=8x8, #f=16</mark> สำหรับกิ่งที่สอง. โค้ดที่เติมครบ:</p>
+
+<pre data-p="7"><code>from keras.utils import plot_model
+from keras import Model
+from keras.layers import Input, Dense, Flatten, concatenate, Conv2D, MaxPooling2D
+
+input = Input(shape=(64,64,1)) # input layer
+# first feature extractor
+conv1 = Conv2D(32, kernel_size=4, activation='relu')(input)
+pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
+flat1 = Flatten()(pool1)
+# second feature extractor
+conv2 = Conv2D(16, kernel_size=8, activation='relu')(input)
+pool2 = MaxPooling2D(pool_size=(2, 2))(conv2)
+flat2 = Flatten()(pool2)
+# merge feature extractors
+merge = concatenate([flat1, flat2])
+hidden1 = Dense(10, activation='relu')(merge)
+output = Dense(1, activation='sigmoid')(hidden1)
+model = Model(inputs=input, outputs=output)</code></pre>
+<table class="codeexp compact">
+<tr><th>ช่องว่างในสไลด์</th><th>คำตอบและเหตุผล</th></tr>
+<tr><td>conv1 = Conv2D(______, kernel_size=4, ...)(______)</td><td><code>32</code> และ <code>input</code>. #f = 32 คือจำนวน filter; f = 4×4 ถูกเติมไว้แล้วเป็น <code>kernel_size=4</code></td></tr>
+<tr><td>pool1 = MaxPooling2D(pool_size=(2, 2))(____)</td><td><code>conv1</code>. pooling รับ output ของ convolution ในกิ่งเดียวกัน</td></tr>
+<tr><td>conv2 = Conv2D(______, kernel_size=__, ...)(______)</td><td><code>16</code>, <code>8</code> และ <code>input</code>. กิ่งที่สองเริ่มจาก <strong><code>input</code> ตัวเดิม</strong> ไม่ใช่จาก <code>flat1</code> หรือ <code>pool1</code>: นี่คือการ share input</td></tr>
+<tr><td>pool2 = MaxPooling2D(pool_size=(2, 2))(____)</td><td><code>conv2</code></td></tr>
+<tr><td>hidden1 = ______(10, activation='relu')(_____)</td><td><code>Dense</code> และ <code>merge</code></td></tr>
+<tr><td>output = Dense(1, _________='sigmoid')(hidden1)</td><td><code>activation</code></td></tr>
+<tr><td>model = Model(inputs=_______, outputs=_______)</td><td><code>input</code> และ <code>output</code></td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: shape และ parameter ของโมเดลในแบบฝึกหัด</div>
+<div class="given">ให้ input 64×64×1. Conv2D ไม่ระบุ padding ⇒ valid, stride 1. MaxPooling 2×2 stride 2</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — กิ่งที่ 1: Conv 32 filter 4×4 → Pool → Flatten</div>
+$$\begin{gathered}64 - 4 + 1 = 61 \;\Rightarrow\; 61 \times 61 \times 32 \\[0.35em] \lfloor 61/2 \rfloor = 30 \;\Rightarrow\; 30 \times 30 \times 32 = 28{,}800\end{gathered}$$
+<p>parameter: \((4 \cdot 4 \cdot 1 + 1) \cdot 32 = 544\)</p></li>
+<li><div class="st-title">ขั้นที่ 2 — กิ่งที่ 2: Conv 16 filter 8×8 → Pool → Flatten</div>
+$$\begin{gathered}64 - 8 + 1 = 57 \;\Rightarrow\; 57 \times 57 \times 16 \\[0.35em] \lfloor 57/2 \rfloor = 28 \;\Rightarrow\; 28 \times 28 \times 16 = 12{,}544\end{gathered}$$
+<p>parameter: \((8 \cdot 8 \cdot 1 + 1) \cdot 16 = 1{,}040\)</p></li>
+<li><div class="st-title">ขั้นที่ 3 — Concatenate</div>
+$$28{,}800 + 12{,}544 = 41{,}344$$</li>
+<li><div class="st-title">ขั้นที่ 4 — Dense(10) และ Dense(1)</div>
+$$41{,}344 \times 10 + 10 = 413{,}450 \qquad 10 \times 1 + 1 = 11$$</li>
+<li><div class="st-title">ขั้นที่ 5 — รวม</div>
+$$544 + 1{,}040 + 413{,}450 + 11 = 415{,}045$$</li>
+</ol>
+<div class="answer"><p>Total params = 415,045. สอง feature map มีขนาดต่างกัน (30×30×32 และ 28×28×16) จึงต่อกันตรงๆ ไม่ได้ ต้อง flatten เป็น vector ก่อน concatenate.</p></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>Functional API code</span></div>
+  <div class="qtext">ในโมเดลที่ input เดียวถูกส่งเข้าสอง feature extractor ขนานกัน บรรทัด <code>conv2 = Conv2D(16, kernel_size=8, activation='relu')(______)</code> ของกิ่งที่สองต้องเติม tensor ใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ทั้งสองกิ่งเริ่มจาก input tensor ตัวเดียวกัน (share input). ถ้าเติม conv1, pool1 หรือ flat1 จะกลายเป็นการต่ออนุกรมจากกิ่งแรก ไม่ใช่สองกิ่งขนาน.">flat1</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ทั้งสองกิ่งเริ่มจาก input tensor ตัวเดียวกัน (share input). ถ้าเติม conv1, pool1 หรือ flat1 จะกลายเป็นการต่ออนุกรมจากกิ่งแรก ไม่ใช่สองกิ่งขนาน.">pool1</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ทั้งสองกิ่งเริ่มจาก input tensor ตัวเดียวกัน (share input). ถ้าเติม conv1, pool1 หรือ flat1 จะกลายเป็นการต่ออนุกรมจากกิ่งแรก ไม่ใช่สองกิ่งขนาน.">conv1</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ทั้งสองกิ่งเริ่มจาก input tensor ตัวเดียวกัน (share input). ถ้าเติม conv1, pool1 หรือ flat1 จะกลายเป็นการต่ออนุกรมจากกิ่งแรก ไม่ใช่สองกิ่งขนาน.">input</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>Functional API code</span></div>
+  <div class="qtext">ภาพ 32×32×1 ผ่าน <code>Conv2D(8, kernel_size=5, activation='relu')</code> แล้ว <code>MaxPooling2D(pool_size=(2, 2))</code> แล้ว <code>Flatten()</code> จำนวนค่าใน vector ที่ได้คือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Conv valid: 32 − 5 + 1 = 28 ได้ 28×28×8. Pool: 14×14×8. Flatten: 14·14·8 = 1,568. ค่า 2,048 คือคิดว่า conv คงขนาด 32, ค่า 6,272 คือลืม pooling.">1,568</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Conv valid: 32 − 5 + 1 = 28 ได้ 28×28×8. Pool: 14×14×8. Flatten: 14·14·8 = 1,568. ค่า 2,048 คือคิดว่า conv คงขนาด 32, ค่า 6,272 คือลืม pooling.">2,048</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Conv valid: 32 − 5 + 1 = 28 ได้ 28×28×8. Pool: 14×14×8. Flatten: 14·14·8 = 1,568. ค่า 2,048 คือคิดว่า conv คงขนาด 32, ค่า 6,272 คือลืม pooling.">6,272</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Conv valid: 32 − 5 + 1 = 28 ได้ 28×28×8. Pool: 14×14×8. Flatten: 14·14·8 = 1,568. ค่า 2,048 คือคิดว่า conv คงขนาด 32, ค่า 6,272 คือลืม pooling.">1,352</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s4">4. Multi-output Models และ Auxiliary Output</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p08-multi-output-models.png" alt="Slide: Multi-output Models. Some tasks need to predict multiple target attributes of input data. Could train two separate models (genre and date), but these attributes aren&#x27;t statistically independent; knowing something useful for one target may help predict the other. A better model learns shared representations to jointly predict both. Diagram: novel text to text-processing module, then genre classifier and date regressor">
+<figcaption>Slide: Multi-output Models — genre และ date (Lecture9, p.8)</figcaption>
+</figure>
+
+<p>บางงานต้องทำนาย <mark class="src" data-p="8">multiple target</mark> attributes ของ input เดียว. ตัวอย่าง: จากข้อความนิยาย ทำนายประเภท (genre, classification) และปีที่เขียน (date, regression). เทรนสองโมเดลแยกกันก็ได้ แต่ attribute เหล่านี้ <strong>aren't statistically independent</strong>: ความรู้ที่ช่วยทำนาย target หนึ่งมักช่วยทำนายอีก target ด้วย. โมเดลที่เรียน <strong>shared representations</strong> เพื่อทำนายทั้งสองพร้อมกันจึงดีกว่า.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p09-auxiliary-output.png" alt="Slide: Example. Another use case is as a regularization technique: add auxiliary outputs to ensure the underlying part of the network learns something useful on its own rather than just memorizing training data for the main output. Code: input_A = Input(shape=[5]); input_B = Input(shape=[6]); hidden1; hidden2; concat = concatenate([input_A, hidden2]); output = Dense(1)(concat); aux_output = Dense(1)(hidden2); model = Model(inputs=[input_A, input_B], outputs=[output, aux_output]). Diagram: Auxiliary Output for Regularization">
+<figcaption>Slide: Example — Auxiliary Output for Regularization (Lecture9, p.9)</figcaption>
+</figure>
+
+<p>อีกการใช้งานคือเป็น <mark class="src" data-p="9">regularization technique</mark>: เพิ่ม auxiliary output เพื่อให้แน่ใจว่าส่วนล่างของ network เรียนสิ่งที่มีประโยชน์ด้วยตัวเอง ไม่ใช่แค่จำ training data เพื่อ main output.</p>
+
+<pre data-p="9"><code>input_A = Input(shape=[5])
+input_B = Input(shape=[6])
+hidden1 = Dense(30, activation="relu")(input_B)
+hidden2 = Dense(30, activation="relu")(hidden1)
+concat = concatenate([input_A, hidden2])
+output = Dense(1)(concat)
+aux_output = Dense(1)(hidden2)
+model = Model(inputs=[input_A, input_B],
+              outputs=[output, aux_output])</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>output = Dense(1)(concat)</td><td>main output: ใช้ทั้ง wide และ deep path (35 ค่า) ⇒ 36 parameter</td></tr>
+<tr><td>aux_output = Dense(1)(hidden2)</td><td>auxiliary output: ต่อจาก <code>hidden2</code> โดยตรง จึงเห็นเฉพาะ deep path (30 ค่า) ⇒ 31 parameter. <code>hidden2</code> ถูกใช้สองครั้ง (เข้า concat และเข้า aux)</td></tr>
+<tr><td>outputs=[output, aux_output]</td><td>โมเดลมีสอง output. ลำดับใน list นี้กำหนดลำดับของ loss, label และผล predict</td></tr>
+</table>
+<p>Total params = \(210 + 930 + 36 + 31 = 1{,}207\) (เพิ่มจากโมเดลหน้า 3 จำนวน 31 ตัวของ aux output).</p>
+
+<figure>
+<img src="../assets/slides/dl9-p10-multi-output-compile-fit.png" alt="Slide: Example (continue). Each output needs its own loss function, so pass a list of losses when compiling (a single loss is used for all outputs). model.compile(loss=[&quot;mse&quot;, &quot;mse&quot;], loss_weights=[0.9, 0.1], optimizer=&quot;sgd&quot;). When training, provide labels for each output; main and auxiliary outputs predict the same thing so use the same labels. history = model.fit([X_train_A, X_train_B], [y_train, y_train], epochs=20, validation_data=([X_valid_A, X_valid_B], [y_valid, y_valid])); total_loss, main_loss, aux_loss = model.evaluate([X_test_A, X_test_B], [y_test, y_test]); y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])">
+<figcaption>Slide: Example (continue) — compile, fit, evaluate, predict ของโมเดลสอง output (Lecture9, p.10)</figcaption>
+</figure>
+
+<p>แต่ละ output ต้องมี loss function ของตัวเอง จึงส่ง <strong>list ของ loss</strong> ตอน compile (ถ้าส่ง loss เดียว Keras จะใช้ loss นั้นกับทุก output). ตอนเทรนต้องให้ label กับทุก output. ในตัวอย่างนี้ main output และ auxiliary output ควร <u>predict the same thing</u> จึง <u>use the same labels</u>.</p>
+
+<pre data-p="10"><code>model.compile(loss=["mse", "mse"], loss_weights=[0.9, 0.1], optimizer="sgd")
+
+history = model.fit(
+    [X_train_A, X_train_B], [y_train, y_train], epochs=20,
+    validation_data=([X_valid_A, X_valid_B], [y_valid, y_valid]))
+total_loss, main_loss, aux_loss = model.evaluate(
+    [X_test_A, X_test_B], [y_test, y_test])
+y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>loss=["mse", "mse"]</td><td>loss ต่อ output ตามลำดับ <code>[output, aux_output]</code></td></tr>
+<tr><td>loss_weights=[0.9, 0.1]</td><td>น้ำหนักของแต่ละ loss ใน loss รวม. main output สำคัญกว่าจึงได้ 0.9</td></tr>
+<tr><td>model.fit([X_train_A, X_train_B], [y_train, y_train], ...)</td><td>input เป็น list สองตัว (ตาม <code>inputs</code>); label เป็น list สองตัว (ตาม <code>outputs</code>) ซึ่งเป็น <code>y_train</code> ตัวเดียวกัน</td></tr>
+<tr><td>validation_data=([X_valid_A, X_valid_B], [y_valid, y_valid])</td><td>tuple ของ (list ของ input, list ของ label)</td></tr>
+<tr><td>total_loss, main_loss, aux_loss = model.evaluate(...)</td><td>คืน 3 ค่า: loss รวมถ่วงน้ำหนัก และ loss ของแต่ละ output</td></tr>
+<tr><td>y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])</td><td>คืนผลทำนาย 2 ชุด ตามจำนวน output</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: loss รวมของโมเดลสอง output</div>
+<div class="given">ให้ <code>loss_weights=[0.9, 0.1]</code>, main loss (MSE) = 0.40, auxiliary loss (MSE) = 0.50</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — สูตร</div>
+$$\text{total loss} = w_{\text{main}} \cdot L_{\text{main}} + w_{\text{aux}} \cdot L_{\text{aux}}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — แทนค่า</div>
+$$0.9 \times 0.40 + 0.1 \times 0.50 = 0.36 + 0.05 = 0.41$$</li>
+</ol>
+<div class="answer"><p>total_loss = 0.41 คือค่าที่ optimizer ลด. Gradient จาก aux loss ไหลเข้าเฉพาะ deep path (<code>hidden1</code>, <code>hidden2</code>) จึงบังคับให้ deep path ทำนายได้ดีด้วยตัวเอง.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl9-p11-housing-price-example.png" alt="Slide: Example: Housing Price Prediction. Input features (535 examples): numeric (bedrooms, bathrooms, area), categorical (zip code), images (bedroom, bathroom, kitchen, frontal image of the house). Output: price. Metric: mean percentage error. Data table and a model graph with a convolutional branch and a dense branch merged by concatenate">
+<figcaption>Slide: Example: Housing Price Prediction — ตัวเลข + ภาพ (Lecture9, p.11)</figcaption>
+</figure>
+
+<p>ตัวอย่างรวม: ทำนายราคาบ้านจาก 535 ตัวอย่าง. Input มีสามชนิด: numeric (จำนวนห้องนอน, ห้องน้ำ, พื้นที่), categorical (zip code) และ images (ห้องนอน, ห้องน้ำ, ครัว, ด้านหน้าบ้าน; สี่ภาพถูกต่อเป็นภาพเดียว 64×64). Output คือ price และ metric คือ mean percentage error. กราฟของโมเดลในสไลด์มีสองกิ่ง: กิ่ง CNN (Conv2D + MaxPooling สี่ชุด → Flatten → Dense) สำหรับภาพ และกิ่ง Dense สำหรับข้อมูลตาราง แล้ว <code>Concatenate</code> เข้า Dense ชั้นสุดท้าย. โครงสร้างนี้คือ multi-input model ของหน้า 2 ในกรณีจริง.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>Multi-output</span></div>
+  <div class="qtext">โมเดลมีสอง output และ compile ด้วย <code>loss=["mse", "mse"], loss_weights=[0.8, 0.2]</code> ถ้า loss ของ output แรกเท่ากับ 0.50 และของ output ที่สองเท่ากับ 1.00 loss รวมที่ใช้เทรนคือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. 0.8 × 0.50 + 0.2 × 1.00 = 0.40 + 0.20 = 0.60. ค่า 1.50 คือบวกตรงๆ, ค่า 0.75 คือเฉลี่ยไม่ถ่วงน้ำหนัก, ค่า 0.90 คือสลับน้ำหนัก.">1.50</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 0.8 × 0.50 + 0.2 × 1.00 = 0.40 + 0.20 = 0.60. ค่า 1.50 คือบวกตรงๆ, ค่า 0.75 คือเฉลี่ยไม่ถ่วงน้ำหนัก, ค่า 0.90 คือสลับน้ำหนัก.">0.75</button>
+    <button class="opt" data-correct="true" data-note="ถูก. 0.8 × 0.50 + 0.2 × 1.00 = 0.40 + 0.20 = 0.60. ค่า 1.50 คือบวกตรงๆ, ค่า 0.75 คือเฉลี่ยไม่ถ่วงน้ำหนัก, ค่า 0.90 คือสลับน้ำหนัก.">0.60</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 0.8 × 0.50 + 0.2 × 1.00 = 0.40 + 0.20 = 0.60. ค่า 1.50 คือบวกตรงๆ, ค่า 0.75 คือเฉลี่ยไม่ถ่วงน้ำหนัก, ค่า 0.90 คือสลับน้ำหนัก.">0.90</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>Multi-output code</span></div>
+  <div class="qtext">โมเดลสร้างด้วย <code>Model(inputs=[in_A, in_B], outputs=[main, aux])</code> และทั้งสอง output ทำนายค่าเดียวกัน ข้อใดเรียก <code>fit</code> ได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. อาร์กิวเมนต์แรกคือ list ของ input ตามลำดับ inputs และอาร์กิวเมนต์ที่สองคือ list ของ label ตามลำดับ outputs. สอง output ที่ทำนายสิ่งเดียวกันใช้ label ชุดเดียวกันซ้ำสองครั้ง.">model.fit([X_A, X_B], y, epochs=10)</button>
+    <button class="opt" data-correct="true" data-note="ถูก. อาร์กิวเมนต์แรกคือ list ของ input ตามลำดับ inputs และอาร์กิวเมนต์ที่สองคือ list ของ label ตามลำดับ outputs. สอง output ที่ทำนายสิ่งเดียวกันใช้ label ชุดเดียวกันซ้ำสองครั้ง.">model.fit([X_A, X_B], [y, y], epochs=10)</button>
+    <button class="opt" data-correct="false" data-note="ผิด. อาร์กิวเมนต์แรกคือ list ของ input ตามลำดับ inputs และอาร์กิวเมนต์ที่สองคือ list ของ label ตามลำดับ outputs. สอง output ที่ทำนายสิ่งเดียวกันใช้ label ชุดเดียวกันซ้ำสองครั้ง.">model.fit(X_A, X_B, [y, y], epochs=10)</button>
+    <button class="opt" data-correct="false" data-note="ผิด. อาร์กิวเมนต์แรกคือ list ของ input ตามลำดับ inputs และอาร์กิวเมนต์ที่สองคือ list ของ label ตามลำดับ outputs. สอง output ที่ทำนายสิ่งเดียวกันใช้ label ชุดเดียวกันซ้ำสองครั้ง.">model.fit([X_A, y], [X_B, y], epochs=10)</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Multi-output: ทำนาย <mark class="src" data-p="8">multiple target</mark>; target ไม่อิสระต่อกัน ⇒ เรียน shared representations</li>
+<li>Auxiliary output เป็น <mark class="src" data-p="9">regularization technique</mark>: <code>aux_output = Dense(1)(hidden2)</code></li>
+<li>จุดเติมโค้ด: <code>outputs=[output, aux_output]</code>; <code>loss=["mse", "mse"]</code>; <code>loss_weights=[0.9, 0.1]</code>; label เป็น <code>[y_train, y_train]</code>; <code>evaluate</code> คืน 3 ค่า; <code>predict</code> คืน 2 ค่า</li>
+<li>ส่ง loss เดียว ⇒ Keras ใช้ loss นั้นกับทุก output</li>
+</ul>
+</div>
+
+<h2 id="s5">5. Visualizing the ConvNets: Intermediate Activations</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p12-visualizing-convnets.png" alt="Slide: Visualizing the Convnets. Deep learning models are often considered black boxes, making their learned features less interpretable. This is definitely not true for ConvNets: they learn representations of visual concepts that are highly visualizable. Techniques: visualizing intermediate ConvNet outputs (intermediate activations), visualizing ConvNet filters, visualizing heatmaps of class activation">
+<figcaption>Slide: Visualizing the Convnets — สามเทคนิค (Lecture9, p.12)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="12">Deep learning</mark> models มักถูกมองเป็น <mark class="src" data-p="12">black boxes</mark> คือ feature ที่เรียนได้ตีความยาก. ข้อนี้จริงกับบางโมเดล แต่ไม่จริงกับ <mark class="src" data-p="12">ConvNets</mark>. ConvNet เรียน representation ของ <mark class="src" data-p="12">visual concepts</mark> ซึ่งแสดงเป็นภาพได้ดี. สามเทคนิคที่สไลด์ระบุ:</p>
+<table class="compact">
+<tr><th>เทคนิค</th><th>ตอบคำถาม</th><th>หัวข้อ</th></tr>
+<tr><td>Visualizing intermediate ConvNet outputs (intermediate activations)</td><td>ภาพนี้ถูกแปลงเป็นอะไรในแต่ละ layer</td><td>§5</td></tr>
+<tr><td>Visualizing ConvNet filters</td><td>filter แต่ละตัวตอบสนองต่อ pattern แบบใด</td><td><a href="#s6">§6</a></td></tr>
+<tr><td>Visualizing Heatmaps of Class Activation</td><td>บริเวณใดของภาพทำให้โมเดลตัดสินเป็น class นั้น</td><td><a href="#s7">§7</a></td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl9-p13-visualizing-intermediate-activations.png" alt="Slide: Visualizing Intermediate Activations. To understand how a model processes an input, display its intermediate representations (feature maps). Steps: define a visualization model that outputs intermediate feature maps from each layer; load the input image; convert to NumPy array; normalize the data (e.g. to [0,1]); generate feature maps. Code: model = load_model(&quot;cats_and_dogs_small_2.h5&quot;); model.summary() showing conv2d_4 (None,148,148,32) 896; max_pooling (74,74,32); conv2d_5 (72,72,64) 18496; (36,36,64); conv2d_6 (34,34,128) 73856; (17,17,128); conv2d_7 (15,15,128) 147584; (7,7,128); flatten 6272; dropout; dense_2 512 3211776; dense_3 1 513; total 3,453,121">
+<figcaption>Slide: Visualizing Intermediate Activations — ขั้นตอนและ model.summary() (Lecture9, p.13)</figcaption>
+</figure>
+
+<p>เพื่อเข้าใจว่าโมเดลประมวลผล input อย่างไร ให้แสดง <mark class="src" data-p="13">intermediate representations</mark> (คือ <mark class="src" data-p="13">feature maps</mark>) ของมัน. ขั้นตอนตามสไลด์:</p>
+<ol>
+<li><strong>Define a visualization model:</strong> สร้างโมเดลใหม่ที่รับภาพเป็น input และให้ output เป็น feature map ของทุก layer (โมเดลหลาย output จาก Functional API ใน §4)</li>
+<li><strong>Load the input image:</strong> เลือกภาพที่ต้องการตรวจ</li>
+<li><strong>Convert to NumPy array</strong></li>
+<li><strong>Normalize the data:</strong> rescale ค่าใน array (เช่น เป็น [0, 1]) ให้ตรงกับที่โมเดลถูกเทรน</li>
+<li><strong>Generate feature maps:</strong> ส่งภาพผ่าน visualization model</li>
+</ol>
+
+<pre data-p="13"><code>!pip install gdown
+!gdown --id 18ixz_2j_BJe6vhgbmcgxoN6m9EV-P7D-
+
+from tensorflow.keras.models import load_model
+model = load_model("cats_and_dogs_small_2.h5")
+model.summary()</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>!gdown --id ...</td><td>ดาวน์โหลดไฟล์โมเดลที่เทรนไว้แล้วจาก Google Drive</td></tr>
+<tr><td>load_model("cats_and_dogs_small_2.h5")</td><td>โหลดโมเดลทั้งตัว (สถาปัตยกรรม + weight) จากไฟล์ (<a href="0006-callbacks-and-hyperparameter-tuning.html">Lesson 6</a>)</td></tr>
+<tr><td>model.summary()</td><td>แสดง layer ที่จะนำ output มาแสดงเป็นภาพ</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณตาม summary ในสไลด์: shape และ parameter ของโมเดล cats_and_dogs_small_2</div>
+<div class="given">ให้ input 150×150×3. Conv2D ทุกชั้น kernel 3×3 padding valid. MaxPooling 2×2</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — ขนาดเชิงพื้นที่ (conv ลด 2, pool หารสองปัดลง)</div>
+$$150 \to 148 \to 74 \to 72 \to 36 \to 34 \to 17 \to 15 \to 7$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Parameter ของ convolution สี่ชั้น (filter 32, 64, 128, 128)</div>
+$$\begin{aligned}
+(3 \cdot 3 \cdot 3 + 1) \cdot 32 &= 896\\
+(3 \cdot 3 \cdot 32 + 1) \cdot 64 &= 18{,}496\\
+(3 \cdot 3 \cdot 64 + 1) \cdot 128 &= 73{,}856\\
+(3 \cdot 3 \cdot 128 + 1) \cdot 128 &= 147{,}584
+\end{aligned}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Flatten และ dense</div>
+$$\begin{gathered}7 \times 7 \times 128 = 6{,}272 \\[0.35em] 6{,}272 \times 512 + 512 = 3{,}211{,}776 \\[0.35em] 512 + 1 = 513\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 4 — รวม</div>
+$$\begin{gathered}896 + 18{,}496 + 73{,}856 + 147{,}584 + 3{,}211{,}776 + 513 \\[0.35em] = 3{,}453{,}121\end{gathered}$$</li>
+</ol>
+<div class="answer"><p>ตรงกับ Total params: 3,453,121 ในสไลด์. จำนวน feature map ที่จะแสดงของ convolution แต่ละชั้นเท่ากับจำนวน filter: 32, 64, 128, 128 แผ่น และขนาดของแต่ละแผ่นคือ 148, 72, 34, 15 pixel ต่อด้าน.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl9-p14-visualizing-feature-maps.png" alt="Slide: Visualizing Feature Maps. The first layer acts as a collection of various edge detectors; activations retain almost all information of the initial picture. As you go higher, activations become increasingly abstract and less visually interpretable, encoding higher-level concepts such as cat ear and cat eye. Higher presentations carry increasingly less information about the visual contents of the image and more about the class. The sparsity of the activations increases with depth: more filters are blank. Grids of feature maps for four conv layers of a cat image">
+<figcaption>Slide: Visualizing Feature Maps — สี่ข้อสังเกต (Lecture9, p.14)</figcaption>
+</figure>
+
+<p>รูปขวาของสไลด์แสดง feature map ของ convolution สี่ชั้นเมื่อป้อนภาพแมว. ข้อสังเกตสี่ข้อ:</p>
+<ol>
+<li><mark class="src" data-p="14">first layer</mark> ทำหน้าที่เป็นชุดของ <mark class="src" data-p="14">edge detectors</mark> หลายแบบ. ที่ระดับนี้ activation ยังเก็บข้อมูลของภาพต้นฉบับไว้เกือบทั้งหมด (ยังเห็นเป็นรูปแมว)</li>
+<li>เมื่อขึ้น <mark class="src" data-p="14">higher</mark> activation จะ <mark class="src" data-p="14">abstract and less visually interpretable</mark> มากขึ้น เริ่มเข้ารหัสแนวคิดระดับสูง เช่น "cat ear" และ "cat eye"</li>
+<li><mark class="src" data-p="14">Higher presentations</mark> มี <mark class="src" data-p="14">less information about the visual contents of the image</mark> และมีข้อมูลที่เกี่ยวกับ class ของภาพมากขึ้น</li>
+<li><mark class="src" data-p="14">sparsity of the activations</mark> เพิ่มตามความลึก: ใน layer แรก filter ทุกตัวถูกกระตุ้นโดยภาพ input แต่ใน layer ถัดไปมี filter ที่ว่าง (blank) มากขึ้น. ช่องว่างหมายความว่า pattern ที่ filter นั้นเข้ารหัสไม่พบในภาพ input</li>
+</ol>
+<p>ในรูป แถวบนสุด (layer แรก, 148×148) ยังเห็นโครงร่างแมวทุกช่อง; แถวล่างสุด (layer ที่สี่, 15×15) เป็นช่องสีม่วงทึบเกือบทั้งหมด มีจุดสว่างเพียงไม่กี่ช่อง.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>Feature maps</span></div>
+  <div class="qtext">ข้อใดอธิบาย feature map ของ convolution layer ชั้นลึกเมื่อเทียบกับชั้นแรกได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ชั้นลึกให้ activation ที่ abstract และตีความด้วยตายากขึ้น มีข้อมูลภาพน้อยลงแต่ข้อมูลเกี่ยวกับ class มากขึ้น และ sparsity เพิ่มขึ้น (filter ว่างมากขึ้น). ชั้นแรกเป็น edge detectors.">เก็บรายละเอียดภาพต้นฉบับมากขึ้น และมี filter ที่ว่างน้อยลง</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ชั้นลึกให้ activation ที่ abstract และตีความด้วยตายากขึ้น มีข้อมูลภาพน้อยลงแต่ข้อมูลเกี่ยวกับ class มากขึ้น และ sparsity เพิ่มขึ้น (filter ว่างมากขึ้น). ชั้นแรกเป็น edge detectors.">เป็นตัวตรวจจับขอบแบบต่างๆ และยังเห็นเป็นรูปของภาพต้นฉบับ</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ชั้นลึกให้ activation ที่ abstract และตีความด้วยตายากขึ้น มีข้อมูลภาพน้อยลงแต่ข้อมูลเกี่ยวกับ class มากขึ้น และ sparsity เพิ่มขึ้น (filter ว่างมากขึ้น). ชั้นแรกเป็น edge detectors.">เป็นนามธรรมมากขึ้น เกี่ยวกับ class มากขึ้น และมี filter ที่ว่างมากขึ้น</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ชั้นลึกให้ activation ที่ abstract และตีความด้วยตายากขึ้น มีข้อมูลภาพน้อยลงแต่ข้อมูลเกี่ยวกับ class มากขึ้น และ sparsity เพิ่มขึ้น (filter ว่างมากขึ้น). ชั้นแรกเป็น edge detectors.">มีขนาดกว้างและสูงมากขึ้น แต่มีจำนวน feature map น้อยลง</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li><mark class="src" data-p="12">Deep learning</mark> = <mark class="src" data-p="12">black boxes</mark> แต่ไม่จริงกับ <mark class="src" data-p="12">ConvNets</mark> เพราะเรียน <mark class="src" data-p="12">visual concepts</mark> ที่แสดงเป็นภาพได้</li>
+<li>Intermediate activations = <mark class="src" data-p="13">intermediate representations</mark> = <mark class="src" data-p="13">feature maps</mark></li>
+<li><mark class="src" data-p="14">first layer</mark> = <mark class="src" data-p="14">edge detectors</mark>; ชั้น <mark class="src" data-p="14">higher</mark> = <mark class="src" data-p="14">abstract and less visually interpretable</mark>; <mark class="src" data-p="14">Higher presentations</mark> = <mark class="src" data-p="14">less information about the visual contents of the image</mark>; <mark class="src" data-p="14">sparsity of the activations</mark> เพิ่มตามความลึก</li>
+</ul>
+</div>
+
+<h2 id="s6">6. Visualizing Filters</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p15-visualizing-filters.png" alt="Slide: Visualizing Filters in a CNN. CNN uses learned filters to convolve the feature maps from the previous layer; filters are two-dimensional weights with a spatial relationship. Steps: iterate through all layers using model.layers; if the layer is convolutional, extract weights and bias using get_weights(); normalize the weights between 0 and 1; plot the filters for each convolutional layer and all channels (three channels for RGB, one for grayscale)">
+<figcaption>Slide: Visualizing Filters in a CNN — ขั้นตอน (Lecture9, p.15)</figcaption>
+</figure>
+
+<p>CNN ใช้ <mark class="src" data-p="15">learned filters</mark> ทำ convolution กับ feature map ของ layer ก่อนหน้า. Filter คือ weight สองมิติที่มีความสัมพันธ์เชิงตำแหน่งต่อกัน จึงวาดเป็นภาพได้. ขั้นตอน:</p>
+<ol>
+<li>วนทุก layer ของโมเดลด้วย <code>model.layers</code></li>
+<li>ถ้าเป็น convolutional layer ให้ดึง weight และ bias ด้วย <code>get_weights()</code></li>
+<li>Normalize weight ของ filter ให้อยู่ระหว่าง 0 ถึง 1 (เพื่อแสดงเป็นสีได้)</li>
+<li>Plot filter ของแต่ละ convolutional layer ทุก channel: ภาพสีมี 3 channel (RGB), ภาพ grayscale มี 1 channel</li>
+</ol>
+<p><code>get_weights()</code> ของ Conv2D คืน list สองตัว: weight shape \((f, f, n_C, n_C')\) และ bias shape \((n_C',)\). สำหรับ conv ชั้นแรกของโมเดลใน §5 คือ (3, 3, 3, 32) และ (32,) ซึ่งรวมได้ \(864 + 32 = 896\) ตรงกับ summary.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p16-filter-patterns-block1-block2.png" alt="Slide: Filter patterns for layer block1_conv1 (simple colours and directional edges) and block2_conv1 (simple textures made of combinations of edges and colours). Source: Deep Learning with Python">
+<figcaption>Slide: Filter patterns — block1_conv1 และ block2_conv1 (Lecture9, p.16)</figcaption>
+</figure>
+
+<p>ภาพหน้า 16–17 แสดง pattern ที่ทำให้ filter แต่ละตัวของ VGG16 ตอบสนองแรงที่สุด. <code>block1_conv1</code> (64 ช่องแรก): filter เข้ารหัสสีพื้นและขอบที่มีทิศทาง (เส้นเฉียง, เส้นตั้ง). <code>block2_conv1</code>: เริ่มเป็น texture ง่ายๆ ที่เกิดจากการผสมขอบกับสี. สอดคล้องกับ §5 ว่า layer แรกคือ edge detectors.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p17-filter-patterns-block3-block4.png" alt="Slide: Filter patterns for layer block3_conv1 and block4_conv1 showing increasingly complex textures resembling natural patterns. Source: Deep Learning with Python">
+<figcaption>Slide: Filter patterns — block3_conv1 และ block4_conv1 (Lecture9, p.17)</figcaption>
+</figure>
+
+<p><code>block3_conv1</code> และ <code>block4_conv1</code>: pattern ซับซ้อนขึ้นตามความลึก เป็น texture ที่คล้ายสิ่งในภาพธรรมชาติ (ลายจุด, ลายคลื่น, ลายตาข่าย, รูปคล้ายขนหรือใบไม้). ลำดับ block1 → block4 คือหลักฐานเชิงภาพของข้อความใน <a href="0007-convolutional-neural-networks.html#s2">Lesson 7 §2</a> ว่า layer ลึกรวม feature ง่ายเป็น feature ซับซ้อน และเป็นเหตุผลที่ transfer learning (<a href="0008-cnn-architectures-and-transfer-learning.html#s8">Lesson 8 §8</a>) นำ layer ต้นไปใช้กับงานอื่นได้.</p>
+
+<h2 id="s7">7. Grad-CAM: Heatmap ของ Class Activation</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p18-heatmaps-class-activation.png" alt="Slide: Visualizing Heatmaps of Class Activation. Exploring which specific regions of a given image influenced a ConvNet final classification decision. A dog image predicted as Saint Bernard, a heatmap of class activation over the input image, and the image with overlay heatmap concentrated on the dog&#x27;s face. Visualizing heatmaps of class activation using Grad-CAM methods">
+<figcaption>Slide: Visualizing Heatmaps of Class Activation — Saint Bernard (Lecture9, p.18)</figcaption>
+</figure>
+
+<p>เทคนิคที่สามตรวจว่า <mark class="src" data-p="18">specific regions</mark> ใดของ <mark class="src" data-p="18">a given image</mark> มีอิทธิพลต่อ <mark class="src" data-p="18">final classification decision</mark> ของ ConvNet. ตัวอย่างในสไลด์: โมเดลทำนายภาพเป็น 'Saint Bernard'. Heatmap (ตารางราว 10×10) สว่างที่สุดตรงกลาง และเมื่อซ้อนทับภาพต้นฉบับ บริเวณสว่างตกที่ใบหน้าของสุนัข. โมเดลจึงตัดสินจากใบหน้าสุนัข ไม่ใช่จากพื้นหรือชามสีชมพูด้านหลัง.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p19-grad-cam.png" alt="Slide: Grad-CAM is a popular technique for visualizing. It falls under class activation map (CAM) visualization: generating heatmaps that display how important each location in an input image is for a specific class by producing a 2D grid of scores; it also allows locating specific objects. Grad-CAM is a post-training attention technique applied after a network is trained and its parameters are fixed. Example: original image of a dog and a cat, Grad-CAM for Cat highlights the cat, Grad-CAM for Dog highlights the dog">
+<figcaption>Slide: Grad-CAM — class activation map (Lecture9, p.19)</figcaption>
+</figure>
+
+<p>Grad-CAM อยู่ในกลุ่ม <u>class activation map (CAM) visualization</u>. CAM สร้าง heatmap ที่แสดงว่าแต่ละตำแหน่งของภาพสำคัญต่อ <strong>specific class</strong> หนึ่งเพียงใด โดยให้ผลเป็นตารางคะแนน 2 มิติ และใช้ระบุตำแหน่งวัตถุในภาพได้ด้วย. Grad-CAM เป็นเทคนิคแบบ <strong>post-training</strong>: ใช้หลังเทรนเสร็จและ parameter ถูกตรึงแล้ว ไม่มีการเทรนเพิ่ม.</p>
+<p>ตัวอย่างในสไลด์: ภาพเดียวมีทั้งสุนัขและแมว. Grad-CAM 'Cat' สว่างที่ตัวแมวด้านล่าง; Grad-CAM 'Dog' สว่างที่หน้าสุนัขด้านบน. Heatmap จึงขึ้นกับ class ที่ถาม: ภาพเดียวกันให้ heatmap ต่างกันเมื่อถามคนละ class.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p20-grad-cam-steps.png" alt="Slide: Grad-CAM Steps. Given an input image, take the output feature map of the last convolution layer of a CNN. Build a model that takes the activations of the last convolutional layer as input to generate the class predictions. Compute the gradient of the top predicted class for our input image with respect to the activations of the last convolution layer. Footnote: the last convolutional layers have the best compromise between high-level semantics and detailed spatial information">
+<figcaption>Slide: Grad-CAM Steps — สามขั้นแรก (Lecture9, p.20)</figcaption>
+</figure>
+
+<ol>
+<li>จากภาพ input นำ <mark class="src" data-p="20">output feature map</mark> ของ <mark class="src" data-p="20">last convolution layer</mark> ของ CNN. เหตุผลในเชิงอรรถ: convolutional layer ชั้นสุดท้ายเป็นจุดสมดุลที่ดีที่สุดระหว่าง high-level semantics กับ detailed spatial information (ชั้นถัดไปคือ Flatten/Dense ซึ่งไม่มีตำแหน่งแล้ว)</li>
+<li>สร้าง <mark class="src" data-p="20">a model</mark> ที่รับ <mark class="src" data-p="20">activations of the last convolutional layer</mark> เป็น <mark class="src" data-p="20">input</mark> เพื่อ <u>generate the class predictions</u></li>
+<li>คำนวณ <mark class="src" data-p="20">gradient</mark> ของ top predicted class เทียบกับ activation ของ convolution layer ชั้นสุดท้าย: \(\partial y^{c} / \partial A^{k}\) สำหรับ feature map \(A^k\) แต่ละ channel \(k\)</li>
+</ol>
+
+<figure>
+<img src="../assets/slides/dl9-p21-grad-cam-steps-2.png" alt="Slide: Grad-CAM Steps (2). Weight the feature map of each channel using alpha values calculated based on gradients; calculate the final Grad-CAM heatmap. Handwritten notes: calculate alpha values by averaging the gradients dy/dA1, dy/dA2, dy/dA3 for class cat; calculate the final heatmap as a weighted combination Grad-CAM = alpha1 A1 + alpha2 A2 + alpha3 A3; note similarity to CAM = w1 A1 + w2 A2 + w3 A3; in Grad-CAM also apply a ReLU: Grad-CAM = ReLU(alpha1 A1 + alpha2 A2 + alpha3 A3)">
+<figcaption>Slide: Grad-CAM Steps (2) — alpha values และ heatmap (Lecture9, p.21)</figcaption>
+</figure>
+
+<ol start="4">
+<li><mark class="src" data-p="21">Weight the feature map</mark> ของแต่ละ channel ด้วย "<mark class="src" data-p="21">alpha values</mark>" ที่คำนวณจาก gradient: \(\alpha_k^c\) = <strong>ค่าเฉลี่ย</strong>ของ gradient ทั้งแผ่นของ channel \(k\)</li>
+<li>คำนวณ Grad-CAM <mark class="src" data-p="21">Heatmap</mark> สุดท้ายเป็นผลรวมถ่วงน้ำหนักของ feature map แล้วผ่าน ReLU</li>
+</ol>
+$$\begin{gathered}\alpha_k^c = \text{average}\!\left(\frac{\partial y^c}{\partial A^k}\right) \\[0.35em]  \\[0.35em] \text{Grad-CAM}^c = \text{ReLU}\!\left(\sum_k \alpha_k^c A^k\right)\end{gathered}$$
+<p class="plain-thai">channel ที่ทำให้คะแนนของ class เพิ่มได้น้ำหนักบวกมาก; ReLU ตัดบริเวณที่ผลรวมติดลบทิ้ง เพราะสนใจเฉพาะส่วนที่สนับสนุน class นั้น</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: Grad-CAM ของ feature map 2×2 สอง channel</div>
+<div class="given">ให้ \(A^1 = \begin{bmatrix} 1 & 2\\ 0 & 1 \end{bmatrix}\), \(A^2 = \begin{bmatrix} 2 & 0\\ 1 & 3 \end{bmatrix}\) และ gradient ของคะแนน class: \(\dfrac{\partial y}{\partial A^1} = \begin{bmatrix} 0.4 & 0.2\\ 0.2 & 0.0 \end{bmatrix}\), \(\dfrac{\partial y}{\partial A^2} = \begin{bmatrix} -0.2 & -0.6\\ 0.0 & -0.4 \end{bmatrix}\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — alpha = ค่าเฉลี่ยของ gradient แต่ละ channel</div>
+$$\begin{gathered}\alpha_1 = \frac{0.4 + 0.2 + 0.2 + 0.0}{4} = 0.2 \\[0.35em] \alpha_2 = \frac{-0.2 - 0.6 + 0.0 - 0.4}{4} = -0.3\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — ผลรวมถ่วงน้ำหนัก \(\alpha_1 A^1 + \alpha_2 A^2\)</div>
+$$0.2 \begin{bmatrix} 1 & 2\\ 0 & 1 \end{bmatrix} - 0.3 \begin{bmatrix} 2 & 0\\ 1 & 3 \end{bmatrix} = \begin{bmatrix} -0.4 & 0.4\\ -0.3 & -0.7 \end{bmatrix}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — ReLU</div>
+$$\text{ReLU}\begin{bmatrix} -0.4 & 0.4\\ -0.3 & -0.7 \end{bmatrix} = \begin{bmatrix} 0 & 0.4\\ 0 & 0 \end{bmatrix}$$</li>
+</ol>
+<div class="answer"><p>Heatmap สว่างที่มุมขวาบนเพียงช่องเดียว. Channel 2 มี alpha ติดลบ คือ feature นั้นลดคะแนนของ class นี้ บริเวณที่ channel 2 แรงจึงถูก ReLU ตัดเป็นศูนย์. สไลด์ตั้งข้อสังเกตว่าสูตรนี้คล้าย CAM เดิม (\(\text{CAM} = \sum_k w_k A^k\)) ต่างกันที่ Grad-CAM ได้น้ำหนักจาก gradient และมี ReLU.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl9-p22-grad-cam-visualize.png" alt="Slide: Grad-CAM Steps (2) How to visualize. In most CNNs the feature maps have smaller width and height than the original input image; up-sample the heatmap to match the size of the original image before the final visualization. Source code example: keras.io/examples/vision/grad_cam; heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name). Small coarse heatmap upsampled to a 400 by 400 smooth heatmap">
+<figcaption>Slide: Grad-CAM Steps (2) — up-sample heatmap (Lecture9, p.22)</figcaption>
+</figure>
+
+<p><strong>How to visualize:</strong> ใน CNN ส่วนใหญ่ feature map มีความกว้างและสูงเล็กกว่าภาพ input. จึงต้อง <strong>up-sample</strong> heatmap ให้เท่าขนาดภาพต้นฉบับก่อนซ้อนทับ. ในสไลด์ heatmap หยาบขนาดราว 10×10 ช่องถูกขยายเป็นภาพเรียบขนาด 400×400.</p>
+
+<pre data-p="22"><code># Generate class activation heatmap
+heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>img_array</td><td>ภาพที่เตรียมแล้ว shape (1, สูง, กว้าง, 3)</td></tr>
+<tr><td>model</td><td>โมเดลที่เทรนเสร็จแล้ว (post-training)</td></tr>
+<tr><td>last_conv_layer_name</td><td>ชื่อของ convolution layer ชั้นสุดท้าย (เช่น <code>"block5_conv3"</code> ของ VGG16) ซึ่งเป็น layer ที่ขั้น 1 ใช้</td></tr>
+<tr><td>heatmap</td><td>ตาราง 2 มิติขนาดเท่า feature map ของ layer นั้น (VGG16: 14×14) ต้อง up-sample ก่อนแสดง</td></tr>
+</table>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>Grad-CAM</span></div>
+  <div class="qtext">Feature map channel หนึ่งมี gradient ของคะแนน class เทียบกับ activation เป็น [[0.6, 0.2], [0.0, −0.4]] ค่า alpha ของ channel นี้ใน Grad-CAM คือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Alpha คือค่าเฉลี่ยของ gradient ทั้งแผ่น: (0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1. ค่า 0.4 คือผลรวมที่ยังไม่หาร, ค่า 0.6 คือค่าสูงสุด, ค่า 0.3 คือเฉลี่ยค่าสัมบูรณ์.">0.4</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Alpha คือค่าเฉลี่ยของ gradient ทั้งแผ่น: (0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1. ค่า 0.4 คือผลรวมที่ยังไม่หาร, ค่า 0.6 คือค่าสูงสุด, ค่า 0.3 คือเฉลี่ยค่าสัมบูรณ์.">0.1</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Alpha คือค่าเฉลี่ยของ gradient ทั้งแผ่น: (0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1. ค่า 0.4 คือผลรวมที่ยังไม่หาร, ค่า 0.6 คือค่าสูงสุด, ค่า 0.3 คือเฉลี่ยค่าสัมบูรณ์.">0.3</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Alpha คือค่าเฉลี่ยของ gradient ทั้งแผ่น: (0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1. ค่า 0.4 คือผลรวมที่ยังไม่หาร, ค่า 0.6 คือค่าสูงสุด, ค่า 0.3 คือเฉลี่ยค่าสัมบูรณ์.">0.6</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>Grad-CAM</span></div>
+  <div class="qtext">ข้อใดอธิบาย Grad-CAM ได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Grad-CAM เป็น post-training technique: parameter ถูกตรึง. ใช้ output feature map ของ convolution layer ชั้นสุดท้ายและ gradient ของ class ที่ทำนายเทียบกับ activation นั้น มาสร้าง heatmap.">เป็นเทคนิคที่ต้องเทรนโมเดลใหม่พร้อมกับ heatmap และใช้ gradient ของ layer แรก</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Grad-CAM เป็น post-training technique: parameter ถูกตรึง. ใช้ output feature map ของ convolution layer ชั้นสุดท้ายและ gradient ของ class ที่ทำนายเทียบกับ activation นั้น มาสร้าง heatmap.">เป็นเทคนิคหลังการเทรน ใช้ feature map ของ dense layer สุดท้ายและไม่ใช้ gradient</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Grad-CAM เป็น post-training technique: parameter ถูกตรึง. ใช้ output feature map ของ convolution layer ชั้นสุดท้ายและ gradient ของ class ที่ทำนายเทียบกับ activation นั้น มาสร้าง heatmap.">เป็นเทคนิคระหว่างการเทรน ใช้ปรับ weight ของ convolution layer สุดท้ายตาม heatmap</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Grad-CAM เป็น post-training technique: parameter ถูกตรึง. ใช้ output feature map ของ convolution layer ชั้นสุดท้ายและ gradient ของ class ที่ทำนายเทียบกับ activation นั้น มาสร้าง heatmap.">เป็นเทคนิคหลังการเทรน ใช้ feature map และ gradient ของ convolution layer สุดท้าย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li><mark class="src" data-p="15">learned filters</mark>: ดึงด้วย <code>model.layers</code> และ <code>get_weights()</code> แล้ว normalize เป็น 0–1</li>
+<li>Heatmap ตอบว่า <mark class="src" data-p="18">specific regions</mark> ใดของ <mark class="src" data-p="18">a given image</mark> มีผลต่อ <mark class="src" data-p="18">final classification decision</mark></li>
+<li>ขั้น 1–3: <mark class="src" data-p="20">output feature map</mark> ของ <mark class="src" data-p="20">last convolution layer</mark>; <mark class="src" data-p="20">a model</mark> ที่รับ <mark class="src" data-p="20">activations of the last convolutional layer</mark> เป็น <mark class="src" data-p="20">input</mark>; คำนวณ <mark class="src" data-p="20">gradient</mark></li>
+<li>ขั้น 4–5: <mark class="src" data-p="21">Weight the feature map</mark> ด้วย <mark class="src" data-p="21">alpha values</mark> (ค่าเฉลี่ยของ gradient) แล้วได้ <mark class="src" data-p="21">Heatmap</mark> = ReLU(Σ α·A)</li>
+<li>Grad-CAM เป็น post-training; heatmap เล็กกว่าภาพ ⇒ ต้อง up-sample</li>
+</ul>
+</div>
+
+<h2 id="s8">8. Object Detection: โจทย์และความท้าทาย</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p23-applications-of-computer-vision.png" alt="Slide: Applications of Computer Vision. Four panels with two balloons: classification (label BALLOONS), object detection (a dashed box around each balloon), semantic segmentation (both balloons coloured the same), instance segmentation (each balloon a different colour). Source: Deep Learning Illustrated Book">
+<figcaption>Slide: Applications of Computer Vision — สี่งาน (Lecture9, p.23)</figcaption>
+</figure>
+
+<p>ภาพลูกโป่งสองลูกเดียวกันให้คำตอบต่างกันตามงาน:</p>
+<table class="compact">
+<tr><th>งาน</th><th>Output</th><th>ในรูป</th></tr>
+<tr><td>Classification</td><td>label เดียวของทั้งภาพ</td><td>"BALLOONS"</td></tr>
+<tr><td>Object detection</td><td>กรอบ + class ต่อวัตถุ</td><td>กรอบประ 2 กรอบ กรอบละลูก</td></tr>
+<tr><td>Semantic segmentation</td><td>class ต่อ pixel; วัตถุ class เดียวกันไม่ถูกแยก</td><td>ลูกโป่งสองลูกสีส้มเหมือนกัน</td></tr>
+<tr><td>Instance segmentation</td><td>class ต่อ pixel และแยกแต่ละวัตถุ</td><td>ลูกหนึ่งสีแดง อีกลูกสีฟ้า</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl9-p24-motivation-self-driving.png" alt="Slide: Motivation: Self-driving Cars. In self-driving technology, route planning involves identifying vehicles, pedestrians, roads, and obstacles from video frames captured by a forward-facing camera. Street scene with bounding boxes labelled person, car, traffic light with confidence percentages. Autonomous driving application (suppose 80 classes)">
+<figcaption>Slide: Motivation: Self-driving Cars (Lecture9, p.24)</figcaption>
+</figure>
+
+<p>ใน <mark class="src" data-p="24">self-driving technology</mark> การวางเส้นทางต้องอาศัยการ <mark class="src" data-p="24">identifying</mark> <mark class="src" data-p="24">vehicles</mark>, <mark class="src" data-p="24">pedestrians</mark>, <mark class="src" data-p="24">roads</mark> และ <mark class="src" data-p="24">obstacles</mark> จาก video frame ของกล้องหน้ารถ. ภาพในสไลด์มีกรอบหลายสิบกรอบ แต่ละกรอบมี label และความมั่นใจ (เช่น person 99%, traffic light 91%). สไลด์ตั้งโจทย์ว่า <mark class="src" data-p="24">Autonomous driving application (suppose 80 classes)</mark> ซึ่งเป็นจำนวน class ที่ใช้คำนวณขนาด output ของ YOLO ใน §13–14.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p25-object-detection.png" alt="Slide: Object Detection. The task of localizing one or more objects and classifying each object in an image. Localization predicts the position and size of each object&#x27;s bounding box (bx, by, bw, bh). Classification predicts the correct class of the localized object. Target vector: pc = confidence of an object present in the bounding box; bx, by, bw, bh = coordinates of the bounding box, width, height; C = class of the object; y = [pc, bx, by, bh, bw, c1, c2, c3]">
+<figcaption>Slide: Object Detection — นิยามและ target vector (Lecture9, p.25)</figcaption>
+</figure>
+
+<p>Object detection คืองาน <mark class="src" data-p="25">localizing</mark> <mark class="src" data-p="25">one or more objects</mark> และ <mark class="src" data-p="25">classifying</mark> แต่ละวัตถุในภาพ:</p>
+<ul>
+<li><strong>Localization</strong> ทำนายตำแหน่งและขนาดของ bounding box ของแต่ละวัตถุ เช่น \((b_x, b_y, b_w, b_h)\)</li>
+<li><strong>Classification</strong> ทำนาย class ที่ถูกต้องของวัตถุที่ถูก localize</li>
+</ul>
+<p>Target ของ object detection สำหรับ 3 class เป็น vector 8 ค่า:</p>
+$$y = \begin{bmatrix} p_c & b_x & b_y & b_h & b_w & c_1 & c_2 & c_3 \end{bmatrix}^{T}$$
+<ul>
+<li>\(p_c\) = confidence ว่ามีวัตถุอยู่ใน bounding box</li>
+<li>\(b_x, b_y\) = พิกัดจุดกึ่งกลางของกรอบ; \(b_h, b_w\) = ความสูงและความกว้าง</li>
+<li>\(c_1, c_2, c_3\) = class ของวัตถุ (one-hot)</li>
+</ul>
+<p>ตัวอย่าง: ภาพที่มีวัตถุ class 2 อยู่กลางภาพ ขนาดครึ่งหนึ่งของภาพทั้งสองด้าน: \(y = [1,\ 0.5,\ 0.5,\ 0.5,\ 0.5,\ 0,\ 1,\ 0]\). ภาพที่ไม่มีวัตถุ: \(p_c = 0\) และอีก 7 ค่าไม่ถูกนำมาคิด loss. จำนวนค่าโดยทั่วไปคือ \(5 + K\) เมื่อ \(K\) คือจำนวน class.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p26-object-detection-challenges.png" alt="Slide: Object Detection Challenges. Object detection requires effective object localization coupled with object classification. Objects are not perfectly cropped or aligned as in image classification; a single image can contain multiple objects, which may overlap. Another challenge is the need for speed, especially in applications like self-driving cars that require real-time processing">
+<figcaption>Slide: Object Detection Challenges (Lecture9, p.26)</figcaption>
+</figure>
+
+<ul>
+<li>ต้องทำ <mark class="src" data-p="26">object localization</mark> ที่ได้ผล ควบคู่กับ <mark class="src" data-p="26">object classification</mark></li>
+<li>วัตถุ <mark class="src" data-p="26">not perfectly cropped</mark> หรือจัดวางตรงเหมือนในงาน image classification; ภาพเดียวมี <mark class="src" data-p="26">multiple objects</mark> ได้ และบางครั้ง <mark class="src" data-p="26">overlap</mark> กัน</li>
+<li>ต้องการ <mark class="src" data-p="26">speed</mark> โดยเฉพาะงานอย่าง <mark class="src" data-p="26">self-driving cars</mark> ที่ต้องการ <mark class="src" data-p="26">real-time processing</mark></li>
+</ul>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>แยกสี่งาน: classification / object detection / semantic segmentation / instance segmentation. กับดัก: semantic segmentation ไม่แยกวัตถุ class เดียวกัน</li>
+<li>Object detection = <mark class="src" data-p="25">localizing</mark> <mark class="src" data-p="25">one or more objects</mark> + <mark class="src" data-p="25">classifying</mark></li>
+<li>Target = \([p_c, b_x, b_y, b_h, b_w, c_1, \ldots, c_K]\) ยาว \(5 + K\)</li>
+<li>ความท้าทาย: <mark class="src" data-p="26">not perfectly cropped</mark>, <mark class="src" data-p="26">multiple objects</mark>, <mark class="src" data-p="26">overlap</mark>, <mark class="src" data-p="26">speed</mark> / <mark class="src" data-p="26">real-time processing</mark></li>
+</ul>
+</div>
+
+<h2 id="s9">9. General Object Detection Pipeline: Region Proposal, Prediction, NMS</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p27-pipeline-region-proposal.png" alt="Slide: General Object Detection Pipeline. Region proposal: the system looks at the image and proposes regions of interest (potential object-containing areas), each assigned an objectness score. Regions with high objectness scores (based on some threshold) proceed for further processing. Image of two dogs with many boxes, some with low objectness score, some with high objectness score">
+<figcaption>Slide: General Object Detection Pipeline — Region proposal (Lecture9, p.27)</figcaption>
+</figure>
+
+<p><strong>ขั้นที่ 1: <mark class="src" data-p="27">Region proposal</mark>.</strong> ระบบดูภาพแล้วเสนอ <mark class="src" data-p="27">regions of interest</mark> (บริเวณที่อาจมีวัตถุ) โดยแต่ละบริเวณได้ <mark class="src" data-p="27">objectness score</mark>. บริเวณที่ objectness score สูง (เกิน threshold ที่กำหนด) ถูกส่งต่อเข้า network. ในรูป กรอบบนพื้นหญ้ามี low objectness score ส่วนกรอบที่ครอบสุนัขมี high objectness score.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p28-pipeline-feature-extraction-prediction.png" alt="Slide: General Object Detection Pipeline (2). Feature extraction and network prediction: (1) extracting visual features, typically using the pretrained model, and (2) making predictions (whether objects are present, the location and class) for each region. Notice the number of multiple bounding boxes surrounding the object with the correct classification: 5 bounding boxes predicted for the dog. How about building a system that counts dogs in an image?">
+<figcaption>Slide: General Object Detection Pipeline (2) — Feature extraction and network prediction (Lecture9, p.28)</figcaption>
+</figure>
+
+<p><strong>ขั้นที่ 2: <mark class="src" data-p="28">Feature extraction and network prediction</mark>.</strong> ประกอบด้วย (1) <mark class="src" data-p="28">extracting visual features</mark> (มักใช้ pretrained model จาก <a href="0008-cnn-architectures-and-transfer-learning.html#s8">Lesson 8</a>) และ (2) <mark class="src" data-p="28">making predictions</mark> (มีวัตถุหรือไม่, ตำแหน่ง และ class) <mark class="src" data-p="28">for each region</mark>. ผลคือมี <mark class="src" data-p="28">multiple bounding boxes</mark> ล้อมวัตถุเดียวกันโดยทุกกรอบจำแนกถูก: ในรูปสุนัขตัวเดียวมี 5 กรอบ. คำถามของสไลด์: ถ้าสร้างระบบนับจำนวนสุนัขจะเกิดอะไร? ระบบจะนับได้ 5 ทั้งที่มี 1 ตัว. จึงต้องมีขั้นที่ 3.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p29-pipeline-nms.png" alt="Slide: General Object Detection Pipeline (3). Non-maximum suppression (NMS): for each object many regions are proposed; NMS figures out which bounding box to use (typically 1 bounding box per object). Predictions before NMS show five boxes on the dog; after applying NMS only one box (maximum prediction probability) remains and the overlapping boxes are ignored">
+<figcaption>Slide: General Object Detection Pipeline (3) — Non-maximum suppression (Lecture9, p.29)</figcaption>
+</figure>
+
+<p><strong>ขั้นที่ 3: <mark class="src" data-p="29">Non-maximum suppression (NMS)</mark>.</strong> ในทางปฏิบัติแต่ละวัตถุถูกเสนอหลายบริเวณ. NMS ใช้ตัดสินว่าจะใช้ bounding box ใด (ปกติต้องการ 1 กรอบต่อ 1 วัตถุ). ในรูป: ก่อน NMS มี 5 กรอบ, หลัง NMS เหลือกรอบเดียวที่มี prediction probability สูงสุด และกรอบที่ซ้อนทับถูกทิ้ง.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p30-pipeline-nms-algorithm.png" alt="Slide: General Object Detection Pipeline (4). Non-maximum suppression (NMS) (continue). Discard all bounding boxes with predictions less than a certain threshold (confidence threshold) of the objectness score. Looping for each class label: select the remaining box with the highest prediction; compute the overlap of this box with the remaining boxes and remove (suppress) boxes that overlap significantly (NMS threshold, e.g. IoU 0.5); go back to select other boxes that are not overlapped and iterate until no more class with predicted boxes">
+<figcaption>Slide: General Object Detection Pipeline (4) — อัลกอริทึม NMS (Lecture9, p.30)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="30">Non-maximum suppression (NMS) (continue)</mark>: วิธีลดกรอบผู้สมัครให้เหลือกรอบเดียวต่อวัตถุ.</p>
+<ol>
+<li><strong>Discard all bounding boxes</strong> ที่ prediction ต่ำกว่า threshold (เรียกว่า <mark class="src" data-p="30">confidence threshold</mark>) ของ <u>objectness score</u></li>
+<li><strong>Looping for each class label:</strong>
+<ol>
+<li>เลือกกรอบที่เหลือซึ่งมี prediction สูงสุด</li>
+<li>คำนวณการซ้อนทับของกรอบนี้กับกรอบที่เหลือ แล้วลบ (suppress) กรอบที่ซ้อนทับมาก. ระดับการซ้อนทับเรียกว่า <strong>NMS threshold</strong> เช่น IoU ≥ 0.5</li>
+<li>กลับไปเลือกกรอบอื่นที่ไม่ซ้อนทับ และทำซ้ำจนไม่มี class ใดเหลือกรอบที่ทำนาย</li>
+</ol></li>
+</ol>
+<p>NMS มี threshold สองตัวที่ทำงานคนละจังหวะ: confidence threshold กรองกรอบที่ไม่มั่นใจ<em>ก่อน</em> loop; NMS threshold (IoU) ตัดสินว่ากรอบใดซ้ำกับกรอบที่เลือกแล้ว<em>ใน</em> loop. ตัวอย่างคำนวณเต็มอยู่ใน <a href="#s13">§13</a> หลังจากนิยาม IoU.</p>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>สามขั้นของ pipeline: <mark class="src" data-p="27">Region proposal</mark> → <mark class="src" data-p="28">Feature extraction and network prediction</mark> → <mark class="src" data-p="29">Non-maximum suppression (NMS)</mark> (ตามด้วย evaluation metrics ใน §10)</li>
+<li><mark class="src" data-p="27">regions of interest</mark> แต่ละบริเวณมี <mark class="src" data-p="27">objectness score</mark></li>
+<li>ขั้น 2: <mark class="src" data-p="28">extracting visual features</mark> + <mark class="src" data-p="28">making predictions</mark> <mark class="src" data-p="28">for each region</mark> ⇒ ได้ <mark class="src" data-p="28">multiple bounding boxes</mark> ต่อวัตถุ</li>
+<li>NMS: ทิ้งกรอบต่ำกว่า <mark class="src" data-p="30">confidence threshold</mark> แล้ว loop ต่อ class: เลือกสูงสุด → suppress กรอบที่ IoU เกิน NMS threshold → ทำซ้ำ</li>
+</ul>
+</div>
+
+<h2 id="s10">10. Evaluation Metrics: IoU และ mAP</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p31-iou.png" alt="Slide: General Object Detection Pipeline (5). Evaluation metrics: Intersection over Union (IoU), a measure that evaluates the overlap between the predicted bounding box and the target (ground-truth) bounding box. IoU ranges from 0 (no overlap) to 1 (100% overlap); the higher the overlap, the better. IoU = (B1 intersect B2) / (B1 union B2). Flower image with label box and prediction box, intersection and union regions">
+<figcaption>Slide: General Object Detection Pipeline (5) — Intersection over Union (Lecture9, p.31)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="31">Evaluation metrics</mark> ตัวแรกคือ Intersection over Union (IoU): วัดการซ้อนทับระหว่าง predicted bounding box กับ target (ground-truth) bounding box. IoU มีค่าตั้งแต่ 0 (ไม่ซ้อนทับ) ถึง 1 (ซ้อนทับ 100%). ยิ่งซ้อนทับมาก โมเดลยิ่งตรวจจับวัตถุได้ถูกต้อง.</p>
+$$\begin{gathered}\text{IoU} = \frac{B_1 \cap B_2}{B_1 \cup B_2}\\[0.4em] = \frac{\text{พื้นที่ซ้อนทับ}}{\text{พื้นที่ } B_1 + \text{พื้นที่ } B_2 - \text{พื้นที่ซ้อนทับ}}\end{gathered}$$
+<p class="plain-thai">ตัวส่วนคือพื้นที่รวมที่สองกรอบครอบ โดยไม่นับส่วนซ้อนทับสองครั้ง</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: IoU ของสองกรอบ</div>
+<div class="given">ให้ ground truth \(B_1\) มีมุมซ้ายบน (0, 0) มุมขวาล่าง (4, 4). Prediction \(B_2\) มีมุมซ้ายบน (2, 2) มุมขวาล่าง (6, 6)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — พื้นที่ของแต่ละกรอบ</div>
+$$B_1 = 4 \times 4 = 16 \qquad B_2 = 4 \times 4 = 16$$</li>
+<li><div class="st-title">ขั้นที่ 2 — ส่วนซ้อนทับ: ช่วง x คือ 2 ถึง 4, ช่วง y คือ 2 ถึง 4</div>
+$$B_1 \cap B_2 = (4 - 2) \times (4 - 2) = 4$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Union</div>
+$$B_1 \cup B_2 = 16 + 16 - 4 = 28$$</li>
+<li><div class="st-title">ขั้นที่ 4 — IoU</div>
+$$\text{IoU} = \frac{4}{28} \approx 0.143$$</li>
+</ol>
+<div class="answer"><p>IoU ≈ 0.14. กรอบซ้อนกัน 25% ของพื้นที่แต่ละกรอบ แต่ IoU ต่ำกว่านั้นมากเพราะตัวส่วนคือ union. ที่เกณฑ์ IoU 0.5 กรอบนี้ถือว่าตรวจจับไม่ถูก และใน NMS ถือว่าเป็นคนละวัตถุ (ไม่ถูก suppress).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl9-p32-map.png" alt="Slide: General Object Detection Pipeline (6). Evaluation metrics (continue). mAP (Mean Average Precision): a measure of overall detection performance (0 to 100%). Formula mAP = (1/C) sum over c of AP_c. Precision-Recall (PR) curve: computed for each class, obtained by varying the confidence threshold. AP (Average Precision): summarizes the area under the Precision-Recall curve, calculated separately for each class. Other metrics: FPS (frames per second) to measure detection speed">
+<figcaption>Slide: General Object Detection Pipeline (6) — mAP (Lecture9, p.32)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="32">Evaluation metrics (continue)</mark>: mAP (Mean Average Precision) วัดประสิทธิภาพการตรวจจับโดยรวม (0 ถึง 100%).</p>
+$$\text{mAP} = \frac{1}{C} \sum_{c=1}^{C} AP_c$$
+<table class="compact">
+<tr><th>คำ</th><th>ความหมายตามสไลด์</th></tr>
+<tr><td>Precision–Recall (PR) curve</td><td>คำนวณต่อ class; ได้จากการ<strong>เปลี่ยน confidence threshold</strong> (threshold สูง ⇒ precision สูง recall ต่ำ)</td></tr>
+<tr><td>AP (Average Precision)</td><td>สรุป<strong>พื้นที่ใต้ PR curve</strong>; คำนวณแยกต่อ class</td></tr>
+<tr><td>mAP</td><td>ค่าเฉลี่ยของ AP ทุก class (\(C\) = จำนวน class)</td></tr>
+<tr><td>FPS (frame-per-second)</td><td>วัดความเร็วในการตรวจจับของ network</td></tr>
+</table>
+<p>ตัวอย่าง: 3 class มี AP = 0.80, 0.60, 0.70 ⇒ \(\text{mAP} = (0.80 + 0.60 + 0.70)/3 = 0.70\). Precision และ recall คือค่าเดิมจาก <a href="0001-machine-learning-foundations.html">Lesson 1</a>; ใน object detection การทำนายนับเป็น true positive เมื่อ class ถูกและ IoU กับ ground truth ถึงเกณฑ์.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>IoU</span></div>
+  <div class="qtext">กรอบ A มีมุมซ้ายบน (0, 0) และมุมขวาล่าง (6, 4) กรอบ B มีมุมซ้ายบน (3, 0) และมุมขวาล่าง (9, 4) IoU ของสองกรอบนี้คือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. พื้นที่ A = 24, B = 24. ส่วนซ้อนทับ: x จาก 3 ถึง 6, y จาก 0 ถึง 4 = 12. Union = 24 + 24 − 12 = 36. IoU = 12/36 = 1/3. ค่า 1/2 คือหารด้วยพื้นที่กรอบเดียว, ค่า 1/4 คือหารด้วย 48 โดยไม่ลบส่วนซ้อน.">1/3</button>
+    <button class="opt" data-correct="false" data-note="ผิด. พื้นที่ A = 24, B = 24. ส่วนซ้อนทับ: x จาก 3 ถึง 6, y จาก 0 ถึง 4 = 12. Union = 24 + 24 − 12 = 36. IoU = 12/36 = 1/3. ค่า 1/2 คือหารด้วยพื้นที่กรอบเดียว, ค่า 1/4 คือหารด้วย 48 โดยไม่ลบส่วนซ้อน.">1/2</button>
+    <button class="opt" data-correct="false" data-note="ผิด. พื้นที่ A = 24, B = 24. ส่วนซ้อนทับ: x จาก 3 ถึง 6, y จาก 0 ถึง 4 = 12. Union = 24 + 24 − 12 = 36. IoU = 12/36 = 1/3. ค่า 1/2 คือหารด้วยพื้นที่กรอบเดียว, ค่า 1/4 คือหารด้วย 48 โดยไม่ลบส่วนซ้อน.">1/4</button>
+    <button class="opt" data-correct="false" data-note="ผิด. พื้นที่ A = 24, B = 24. ส่วนซ้อนทับ: x จาก 3 ถึง 6, y จาก 0 ถึง 4 = 12. Union = 24 + 24 − 12 = 36. IoU = 12/36 = 1/3. ค่า 1/2 คือหารด้วยพื้นที่กรอบเดียว, ค่า 1/4 คือหารด้วย 48 โดยไม่ลบส่วนซ้อน.">2/3</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>mAP</span></div>
+  <div class="qtext">Object detector จำแนก 4 class และมี Average Precision ของแต่ละ class เท่ากับ 0.90, 0.70, 0.50 และ 0.70 ค่า mAP คือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. mAP คือค่าเฉลี่ยของ AP ทุก class: (0.90 + 0.70 + 0.50 + 0.70)/4 = 2.80/4 = 0.70. ค่า 2.80 คือผลรวมที่ยังไม่หาร, ค่า 0.90 คือ AP สูงสุด.">0.70</button>
+    <button class="opt" data-correct="false" data-note="ผิด. mAP คือค่าเฉลี่ยของ AP ทุก class: (0.90 + 0.70 + 0.50 + 0.70)/4 = 2.80/4 = 0.70. ค่า 2.80 คือผลรวมที่ยังไม่หาร, ค่า 0.90 คือ AP สูงสุด.">0.90</button>
+    <button class="opt" data-correct="false" data-note="ผิด. mAP คือค่าเฉลี่ยของ AP ทุก class: (0.90 + 0.70 + 0.50 + 0.70)/4 = 2.80/4 = 0.70. ค่า 2.80 คือผลรวมที่ยังไม่หาร, ค่า 0.90 คือ AP สูงสุด.">2.80</button>
+    <button class="opt" data-correct="false" data-note="ผิด. mAP คือค่าเฉลี่ยของ AP ทุก class: (0.90 + 0.70 + 0.50 + 0.70)/4 = 2.80/4 = 0.70. ค่า 2.80 คือผลรวมที่ยังไม่หาร, ค่า 0.90 คือ AP สูงสุด.">0.50</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s11">11. Sliding Windows และ R-CNN Family</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p33-traditional-sliding-windows.png" alt="Slide: Traditional Object Detection for ConvNets. Use a convnet to perform object detection using sliding windows detection: take windows (square boxes), slide them across the entire image and classify every square region with some stride as containing the object or not. Sliding windows with a convnet are much more computationally expensive and infeasibly slow. Training examples: car / not a car; a road image with a red window">
+<figcaption>Slide: Traditional Object Detection for ConvNets — sliding windows (Lecture9, p.33)</figcaption>
+</figure>
+
+<p>วิธีดั้งเดิม: ใช้ <mark class="src" data-p="33">convnet</mark> ทำ object detection ด้วย <mark class="src" data-p="33">sliding windows detection</mark>. เทรน classifier จากภาพที่ครอบพอดี (car / not a car) แล้วนำหน้าต่างสี่เหลี่ยมมา <mark class="src" data-p="33">slide</mark> ทั่วทั้งภาพด้วย stride ที่กำหนด และจำแนกทุกบริเวณว่ามีวัตถุหรือไม่. ข้อเสีย: <strong>computational expensive</strong> และ <strong>slow</strong> จนใช้ไม่ได้.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: จำนวนครั้งที่ต้องรัน convnet ใน sliding windows</div>
+<div class="given">ให้ ภาพ 416×416, หน้าต่าง 64×64, stride 8</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — จำนวนตำแหน่งต่อด้าน (สูตรเดียวกับ output size ของ convolution)</div>
+$$\left\lfloor \frac{416 - 64}{8} \right\rfloor + 1 = 44 + 1 = 45$$</li>
+<li><div class="st-title">ขั้นที่ 2 — จำนวนหน้าต่างทั้งหมด</div>
+$$45 \times 45 = 2{,}025$$</li>
+</ol>
+<div class="answer"><p>ต้อง forward convnet 2,025 ครั้งต่อภาพ สำหรับหน้าต่างขนาดเดียว. วัตถุมีหลายขนาดจึงต้องทำซ้ำกับหน้าต่างหลายขนาด. จำนวนนี้ใกล้กับ ~2,000 regions ที่ R-CNN ใช้ ซึ่งใช้เวลา 50 วินาทีต่อภาพ (ตารางหน้า 35).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl9-p34-r-cnn.png" alt="Slide: Region-Based Convolutional Neural Networks (R-CNN). The R-CNN family has 3 main variations: R-CNN, Fast R-CNN, and Faster R-CNN. R-CNN and Fast R-CNN used the Selective Search algorithm to propose regions of interest (ROI). Faster R-CNN is an end-to-end deep learning system that uses a Region Proposal Network (RPN) to propose ROI. Diagram of the three architectures">
+<figcaption>Slide: Region-Based Convolutional Neural Networks (R-CNN) (Lecture9, p.34)</figcaption>
+</figure>
+
+<p>R-CNN family มี 3 รุ่นหลัก: R-CNN, Fast R-CNN และ Faster R-CNN. R-CNN และ Fast R-CNN ใช้ Selective Search algorithm (อัลกอริทึมภายนอก ไม่ใช่ neural network) เสนอ ROI. Faster R-CNN เป็นระบบ <strong>end-to-end</strong> ที่ใช้ <strong>Region Proposal Network (RPN)</strong> เสนอ ROI.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p35-r-cnn-family.png" alt="Slide: R-CNN Family. R-CNN was an early successful use of CNNs for object detection (PASCAL VOC-2012, ILSVRC-2013), combining standalone algorithms. Fast R-CNN is faster since a convolution operation is done only once per image and all components are in one CNN network. Faster R-CNN combines the region proposal algorithm (RPN) into the end-to-end deep learning network. Table: mAP on PASCAL VOC2007 66.0%, 66.9%, 66.9%; test time per image 50 seconds, 2 seconds, 0.2 seconds; speed-up from R-CNN 1x, 25x, 250x">
+<figcaption>Slide: R-CNN Family — ตารางเปรียบเทียบสามรุ่น (Lecture9, p.35)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th></th><th>R-CNN</th><th>Fast R-CNN</th><th>Faster R-CNN</th></tr>
+<tr><td>mAP on PASCAL VOC2007</td><td>66.0%</td><td>66.9%</td><td>66.9%</td></tr>
+<tr><td>Features</td><td>(1) selective search สกัด ~2,000 ROI ต่อภาพ (2) ConvNet สกัด feature ของแต่ละ region (3) classification และ bounding box prediction</td><td>ภาพผ่าน CNN <strong>ครั้งเดียว</strong>ได้ feature map; selective search ทำบน feature map นั้น. รัน ConvNet 1 ครั้งแทน 2,000 ครั้ง</td><td>แทน selective search ด้วย region proposal network (RPN). เป็น end-to-end deep learning network</td></tr>
+<tr><td>Limitations</td><td>คำนวณนานเพราะแต่ละ region ผ่าน CNN แยกกัน และใช้สามโมเดล</td><td>selective search ยังช้า</td><td>object proposal ยังใช้เวลา และระบบทำงานต่อกันเป็นทอด</td></tr>
+<tr><td>Test time per image</td><td>50 seconds</td><td>2 seconds</td><td>0.2 seconds</td></tr>
+<tr><td>Speed-up from R-CNN</td><td>1x</td><td>25x</td><td>250x</td></tr>
+</table>
+<ul>
+<li>R-CNN: การใช้ CNN กับ object detection ที่สำเร็จในยุคแรก; รวมอัลกอริทึมแยกกันหลายตัว (standalone algorithms)</li>
+<li>Fast R-CNN เร็วกว่า R-CNN เพราะ <mark class="src" data-p="35">convolution operation</mark> ทำ <mark class="src" data-p="35">only once per image</mark> และทุกส่วนอยู่ใน CNN network เดียว</li>
+<li>Faster R-CNN รวมอัลกอริทึมเสนอ region ที่เรียกว่า <mark class="src" data-p="35">Region Proposal Network (RPN)</mark> เข้าใน <mark class="src" data-p="35">end-to-end deep learning network</mark> จึงเร็วขึ้นทั้งตอนเทรนและ inference</li>
+</ul>
+<p>ตรวจตัวเลข speed-up: \(50 / 2 = 25\) และ \(50 / 0.2 = 250\). mAP แทบไม่เปลี่ยน (66.0% → 66.9%) แต่เร็วขึ้น 250 เท่า. 0.2 วินาทีต่อภาพคือ 5 FPS ซึ่งยังไม่ถึง real-time.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p36-disadvantage-multi-stage.png" alt="Slide: Disadvantage. The traditional region-based approach (R-CNN family) is computationally expensive because it performs as a multi-stage detector: the model proposes a set of regions of interest and then a classifier processes the region candidates. With a small stride, all little regions passing through convnets incur very high computational cost. One-stage detector takes a different approach: it runs both predictions directly in one shot, predicting object locations and classes directly, enabling efficient real-time detection (SSD, YOLO)">
+<figcaption>Slide: Disadvantage — multi-stage เทียบกับ one-stage detector (Lecture9, p.36)</figcaption>
+</figure>
+
+<p>แนวทาง region-based ทั้งหมด (เช่น R-CNN family) <mark class="src" data-p="36">computational expensive</mark> เพราะทำงานเป็น <mark class="src" data-p="36">multi-stage detector</mark>: โมเดลเสนอ ROI ชุดหนึ่งก่อน แล้ว classifier จึงประมวลผล region เหล่านั้นเพื่อทำนาย class. เมื่อใช้ stride เล็ก region จำนวนมากที่ผ่าน convnet ทำให้ต้นทุนสูงมาก (เทรนนาน และช้าตอน inference).</p>
+<p><mark class="src" data-p="36">One-stage detector</mark> ใช้แนวทางต่าง: ทำนายทั้งสองอย่างโดยตรง<strong>ในครั้งเดียว</strong> (one shot). ทำนายตำแหน่งและ class ของวัตถุโดยตรง จึงตรวจจับแบบ real-time ได้ เช่น SSD, YOLO.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 11</span><span>R-CNN family</span></div>
+  <div class="qtext">ข้อใดคือเหตุผลหลักที่ Fast R-CNN เร็วกว่า R-CNN?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Fast R-CNN ส่งภาพผ่าน CNN ครั้งเดียวแล้วใช้ feature map ร่วมกันทุก region (25x). การแทน selective search ด้วย RPN คือ Faster R-CNN (250x) และการทำนายทุก grid cell ในครั้งเดียวคือ one-stage detector เช่น YOLO.">แทน selective search ด้วย region proposal network ภายใน network เดียว</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Fast R-CNN ส่งภาพผ่าน CNN ครั้งเดียวแล้วใช้ feature map ร่วมกันทุก region (25x). การแทน selective search ด้วย RPN คือ Faster R-CNN (250x) และการทำนายทุก grid cell ในครั้งเดียวคือ one-stage detector เช่น YOLO.">ทำนายกรอบและ class ของทุก grid cell โดยตรงในการ forward ครั้งเดียว</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Fast R-CNN ส่งภาพผ่าน CNN ครั้งเดียวแล้วใช้ feature map ร่วมกันทุก region (25x). การแทน selective search ด้วย RPN คือ Faster R-CNN (250x) และการทำนายทุก grid cell ในครั้งเดียวคือ one-stage detector เช่น YOLO.">ใช้ sliding windows ที่มี stride ใหญ่ขึ้นเพื่อลดจำนวนบริเวณที่ต้องจำแนก</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Fast R-CNN ส่งภาพผ่าน CNN ครั้งเดียวแล้วใช้ feature map ร่วมกันทุก region (25x). การแทน selective search ด้วย RPN คือ Faster R-CNN (250x) และการทำนายทุก grid cell ในครั้งเดียวคือ one-stage detector เช่น YOLO.">ทำ convolution ทั้งภาพเพียงครั้งเดียวแทนการรัน ConvNet แยกต่อแต่ละ region</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>วิธีดั้งเดิม: <mark class="src" data-p="33">convnet</mark> + <mark class="src" data-p="33">sliding windows detection</mark> (<mark class="src" data-p="33">slide</mark> หน้าต่างทั่วภาพ) ⇒ แพงและช้า</li>
+<li>Fast R-CNN: <mark class="src" data-p="35">convolution operation</mark> <mark class="src" data-p="35">only once per image</mark>. Faster R-CNN: <mark class="src" data-p="35">Region Proposal Network (RPN)</mark> ใน <mark class="src" data-p="35">end-to-end deep learning network</mark></li>
+<li>ตัวเลข: 50 s / 2 s / 0.2 s และ 1x / 25x / 250x; R-CNN กับ Fast R-CNN ใช้ Selective Search</li>
+<li>R-CNN family = <mark class="src" data-p="36">multi-stage detector</mark> ⇒ <mark class="src" data-p="36">computational expensive</mark>. <mark class="src" data-p="36">One-stage detector</mark> (SSD, YOLO) ทำนายในครั้งเดียว</li>
+</ul>
+</div>
+
+<h2 id="s12">12. One-stage Detector: โมเดลตั้งต้นและ Convolutional Implementation</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p37-initial-convnet-one-stage.png" alt="Slide: Initial Convnet Model for One-stage Detector. A convnet whose final layer outputs pc (background), bx (X coordinate), by (Y coordinate), bh (height), bw (width), c1 CAT, c2 DOG, c3 DUCK, compared with ground truth vectors for one object and no object. Code: base_model = keras.applications.xception.Xception(weights=&quot;imagenet&quot;, include_top=False); avg = GlobalAveragePooling2D()(base_model.output); class_output = Dense(n_classes, activation=&quot;softmax&quot;)(avg); loc_output = Dense(4)(avg); model = Model(inputs=base_model.input, outputs=[class_output, loc_output]); model.compile(loss=[&quot;sparse_categorical_crossentropy&quot;, &quot;mse&quot;], loss_weights=[0.8, 0.2], optimizer=optimizer, metrics=[&quot;accuracy&quot;])">
+<figcaption>Slide: Initial Convnet Model for One-stage Detector — class + location (Lecture9, p.37)</figcaption>
+</figure>
+
+<p>โมเดลตั้งต้นสำหรับภาพที่มีวัตถุเดียว: CNN ที่ layer สุดท้าย (Layer L) ให้ output 8 ค่าตาม target ของ §8. \(p_c\) บอกว่าเป็นวัตถุหรือ <mark class="src" data-p="37">Background</mark>; \(b_x\) = <mark class="src" data-p="37">X coordinate</mark>; \(b_y\) = <mark class="src" data-p="37">Y coordinate</mark>; \(b_h\) = <mark class="src" data-p="37">Height</mark>; \(b_w\) = <mark class="src" data-p="37">Width</mark>; \(c_1, c_2, c_3\) = CAT, DOG, DUCK. สไลด์เทียบ ground truth สองกรณี: ภาพที่มี one object และภาพที่ no object (\(p_c = 0\)).</p>
+<p>โค้ดจาก Hands-on ML ใช้ทุกอย่างที่เรียนมา: transfer learning (<a href="0008-cnn-architectures-and-transfer-learning.html#s9">Lesson 8 §9</a>), Global Average Pooling (<a href="0007-convolutional-neural-networks.html#s9">Lesson 7 §9</a>) และ multi-output model (<a href="#s4">§4</a>).</p>
+
+<pre data-p="37"><code>base_model = keras.applications.xception.Xception(weights="imagenet",
+                                                  include_top=False)
+avg = keras.layers.GlobalAveragePooling2D()(base_model.output)
+class_output = keras.layers.Dense(n_classes, activation="softmax")(avg)
+
+loc_output = keras.layers.Dense(4)(avg)
+model = keras.models.Model(inputs=base_model.input,
+                           outputs=[class_output, loc_output])
+model.compile(loss=["sparse_categorical_crossentropy", "mse"],
+              loss_weights=[0.8, 0.2], # depends on what you care most about
+              optimizer=optimizer, metrics=["accuracy"])</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>Xception(weights="imagenet", include_top=False)</td><td>pretrained backbone ไม่รวม classifier</td></tr>
+<tr><td>avg = GlobalAveragePooling2D()(base_model.output)</td><td>เฉลี่ย feature map แต่ละ channel เป็น 1 ค่า ได้ vector (Xception: 2,048 ค่า)</td></tr>
+<tr><td>class_output = Dense(n_classes, activation="softmax")(avg)</td><td>หัว classification: ความน่าจะเป็นของแต่ละ class</td></tr>
+<tr><td>loc_output = Dense(4)(avg)</td><td>หัว localization: 4 ค่าของกรอบ. เป็น regression จึงไม่มี activation</td></tr>
+<tr><td>Model(inputs=base_model.input, outputs=[class_output, loc_output])</td><td>โมเดลสอง output จาก tensor <code>avg</code> ตัวเดียวกัน</td></tr>
+<tr><td>loss=["sparse_categorical_crossentropy", "mse"]</td><td>loss ต่อหัว: cross-entropy สำหรับ class, MSE สำหรับพิกัด</td></tr>
+<tr><td>loss_weights=[0.8, 0.2]</td><td>ให้น้ำหนัก classification 0.8 และ localization 0.2 ("depends on what you care most about")</td></tr>
+</table>
+<p>ข้อจำกัด: โมเดลนี้ให้กรอบเดียวต่อภาพ. ภาพที่มีหลายวัตถุต้องใช้โมเดลนี้กับหลายบริเวณ ซึ่งนำกลับไปสู่ปัญหา sliding windows. หน้า 38–39 แก้ด้วยการทำให้ทั้ง network เป็น convolution.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p38-convolutional-implementation-fc-to-conv.png" alt="Slide: Convolutional Implementation. Object detection networks should be fully convolutional: the network does not contain any fully-connected (FC) layers. Faster because it contains only convolution operations and no FC layers. Top: 32x32x3, conv 3x3 10 filters gives 30x30x10, pool gives 15x15x10, conv 5x5 20 filters stride 2 gives 6x6x20, pool gives 3x3x20, FC 200, FC 200, softmax (4). Bottom: same up to 3x3x20, then filter 3x3 #filter=200 gives 1x1x200, filter 1x1 #filter=200 gives 1x1x200, filter 1x1 #filter=4 gives 1x1x4">
+<figcaption>Slide: Convolutional Implementation — แทน FC ด้วย convolution (Lecture9, p.38)</figcaption>
+</figure>
+
+<p>Object detection network ควรเป็น <mark class="src" data-p="38">fully convolutional</mark> คือไม่มี fully-connected (FC) layer ที่ปกติอยู่ท้าย network. ผลคือ <mark class="src" data-p="38">Faster</mark> เพราะมี <mark class="src" data-p="38">only convolution operations</mark> และไม่มี FC layer.</p>
+<p>สไลด์เทียบสอง network บนภาพ 32×32×3 เดียวกัน. แถวบนคือ CNN ของ <a href="0007-convolutional-neural-networks.html#s7">Lesson 7 §7</a> ที่ลงท้ายด้วย FC 200, FC 200 และ softmax 4 class. แถวล่างแทน FC ทั้งสามด้วย convolution: <mark class="src" data-p="38">filter 3x3 #filter=200 p = 0, s = 1</mark> แล้ว <mark class="src" data-p="38">filter 1x1 #filter=200 p = 0, s = 1</mark> แล้ว <mark class="src" data-p="38">filter 1x1 #filter=4 p = 0, s = 1</mark>.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: FC layer เทียบกับ convolution ที่แทน</div>
+<div class="given">ให้ feature map ก่อนส่วน classifier ขนาด 3×3×20 (= 180 ค่า)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — FC 200 node เทียบกับ conv 3×3 จำนวน 200 filter</div>
+$$\begin{gathered}\text{FC: } 180 \times 200 + 200 = 36{,}200 \\[0.35em] \text{Conv: } (3 \cdot 3 \cdot 20 + 1) \cdot 200 = 36{,}200\end{gathered}$$
+<p>output ของ conv: \(3 - 3 + 1 = 1\) ⇒ 1×1×200</p></li>
+<li><div class="st-title">ขั้นที่ 2 — FC 200 node ชั้นที่สอง เทียบกับ conv 1×1 จำนวน 200 filter</div>
+$$\begin{gathered}\text{FC: } 200 \times 200 + 200 = 40{,}200 \\[0.35em] \text{Conv: } (1 \cdot 1 \cdot 200 + 1) \cdot 200 = 40{,}200\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — softmax 4 node เทียบกับ conv 1×1 จำนวน 4 filter</div>
+$$\begin{gathered}\text{FC: } 200 \times 4 + 4 = 804 \\[0.35em] \text{Conv: } (1 \cdot 1 \cdot 200 + 1) \cdot 4 = 804\end{gathered}$$</li>
+</ol>
+<div class="answer"><p>จำนวน parameter เท่ากันทุกชั้น และบนภาพ 32×32 สอง network คำนวณค่าเดียวกัน: output 1×1×4 คือ 4 คะแนนของ class. ความต่างปรากฏเมื่อภาพใหญ่ขึ้น: FC รับได้เฉพาะ 180 ค่า แต่ convolution เลื่อนไปบน feature map ขนาดใดก็ได้. หมายเหตุ: แถวบนของสไลด์พิมพ์ขนาดหลัง pooling ชั้นแรกว่า "15x30x10" ค่าที่ถูกคือ 15×15×10 ตามแถวล่าง.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl9-p39-convolutional-implementation-sliding.png" alt="Slide: Convolutional Implementation. How convolutional layers are mapped to sliding windows detection (image made bigger by cutting the middle layer): 32x32x3, conv 3x3 gives 30x30x10, pool gives 15x15x10, filter 3x3 #filter=200 gives 13x13x200, filter 1x1 #filter=200 gives 13x13x200, filter 1x1 #filter=4 gives 13x13x4. Instead of traditional sliding windows or proposing ROIs, this convolutional implementation can implement an entire image convolutionally, making all predictions at the same time by one forward pass through the convnet (computationally efficient)">
+<figcaption>Slide: Convolutional Implementation — sliding windows ใน forward pass เดียว (Lecture9, p.39)</figcaption>
+</figure>
+
+<p>หน้า 39 ตัด layer กลางออก (conv 5×5 และ pooling ชั้นที่สอง) ซึ่งเทียบเท่ากับการป้อนภาพที่ใหญ่กว่าขนาดที่ classifier ถูกออกแบบ. ลำดับคือ 32×32×3 → 30×30×10 → 15×15×10 แล้วเข้าสาม convolution เดิม: <mark class="src" data-p="39">filter 3x3 #filter=200 p = 0, s = 1</mark> ให้ \(15 - 3 + 1 = 13\) คือ 13×13×200; <mark class="src" data-p="39">filter 1x1 #filter=200 p = 0, s = 1</mark> ให้ 13×13×200; <mark class="src" data-p="39">filter 1x1 #filter=4 p = 0, s = 1</mark> ให้ <strong>13×13×4</strong>.</p>
+<p>Output ไม่ใช่ 1×1×4 อีกต่อไป แต่เป็นตาราง 13×13 ที่แต่ละช่องมี 4 คะแนน. แต่ละช่องคือผลของ classifier บนหน้าต่างหนึ่งตำแหน่งของภาพ (กรอบแดงในรูป). จึงได้ \(13 \times 13 = 169\) หน้าต่างจากการ forward <strong>ครั้งเดียว</strong> และการคำนวณของหน้าต่างที่ซ้อนกันถูกใช้ร่วมกัน.</p>
+<p>ข้อสรุปของสไลด์: แทน sliding windows แบบดั้งเดิมหรือการเสนอ ROI, convolutional implementation สามารถ <mark class="src" data-p="39">implement an entire image convolutionally</mark> ทำนายทั้งหมดพร้อมกันด้วย <mark class="src" data-p="39">one forward pass through the convnet</mark> จึง <mark class="src" data-p="39">computational efficient</mark>.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 12</span><span>Fully convolutional</span></div>
+  <div class="qtext">Feature map ขนาด 5×5×16 เดิมต่อกับ FC 100 node ถ้าต้องการแทนด้วย convolution ที่ให้ output 1×1×100 และมีจำนวน parameter เท่ากัน ต้องใช้ convolution แบบใด และมี parameter กี่ตัว?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. FC: 5·5·16·100 + 100 = 40,100. Convolution ที่ kernel เท่าขนาด feature map (5×5) จำนวน 100 filter: (5·5·16 + 1)·100 = 40,100 และให้ output (5 − 5 + 1) = 1 คือ 1×1×100.">100 filter ขนาด 1×1 มี 1,700 parameter</button>
+    <button class="opt" data-correct="false" data-note="ผิด. FC: 5·5·16·100 + 100 = 40,100. Convolution ที่ kernel เท่าขนาด feature map (5×5) จำนวน 100 filter: (5·5·16 + 1)·100 = 40,100 และให้ output (5 − 5 + 1) = 1 คือ 1×1×100.">16 filter ขนาด 5×5 มี 6,416 parameter</button>
+    <button class="opt" data-correct="true" data-note="ถูก. FC: 5·5·16·100 + 100 = 40,100. Convolution ที่ kernel เท่าขนาด feature map (5×5) จำนวน 100 filter: (5·5·16 + 1)·100 = 40,100 และให้ output (5 − 5 + 1) = 1 คือ 1×1×100.">100 filter ขนาด 5×5 มี 40,100 parameter</button>
+    <button class="opt" data-correct="false" data-note="ผิด. FC: 5·5·16·100 + 100 = 40,100. Convolution ที่ kernel เท่าขนาด feature map (5×5) จำนวน 100 filter: (5·5·16 + 1)·100 = 40,100 และให้ output (5 − 5 + 1) = 1 คือ 1×1×100.">100 filter ขนาด 3×3 มี 14,500 parameter</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Target 8 ค่า: \(p_c\) (<mark class="src" data-p="37">Background</mark> หรือวัตถุ), <mark class="src" data-p="37">X coordinate</mark>, <mark class="src" data-p="37">Y coordinate</mark>, <mark class="src" data-p="37">Height</mark>, <mark class="src" data-p="37">Width</mark>, \(c_1\)–\(c_3\)</li>
+<li>โค้ดสองหัว: <code>class_output = Dense(n_classes, activation="softmax")(avg)</code>, <code>loc_output = Dense(4)(avg)</code>, <code>loss=["sparse_categorical_crossentropy", "mse"]</code>, <code>loss_weights=[0.8, 0.2]</code></li>
+<li>Detection network ควร <mark class="src" data-p="38">fully convolutional</mark> ⇒ <mark class="src" data-p="38">Faster</mark> เพราะมี <mark class="src" data-p="38">only convolution operations</mark></li>
+<li>แทน FC ด้วย conv: FC แรก = conv ที่ kernel เท่าขนาด feature map; FC ถัดไป = conv 1×1. Parameter เท่าเดิม</li>
+<li><mark class="src" data-p="39">implement an entire image convolutionally</mark> ด้วย <mark class="src" data-p="39">one forward pass through the convnet</mark> ⇒ <mark class="src" data-p="39">computational efficient</mark></li>
+</ul>
+</div>
+
+<h2 id="s13">13. YOLO: Grid, Anchor Boxes, Objectness Score และ NMS</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p40-yolo-algorithm.png" alt="Slide: You Only Look Once (YOLO) Algorithm. YOLO is a popular one-stage detector that is fast and accurate (able to run in real time). The basic idea is to split up an image into a grid and run the algorithm convolutionally on each grid of the entire image; each cell directly predicts a bounding box and object classification. At test time YOLO only looks once at the image (one forward propagation pass). A 224x224 image with a grid goes through a deep CNN to an output of 5x5x8 with vector pc, bx, by, bh, bw, c1, c2, c3 where C1 = car, C2 = traffic sign, C3 = pedestrian. Problem of sliding windows: not accurate bounding boxes">
+<figcaption>Slide: You Only Look Once (YOLO) Algorithm (Lecture9, p.40)</figcaption>
+</figure>
+
+<p>YOLO เป็น <strong>one-stage detector</strong> ที่ <mark class="src" data-p="40">fast</mark> และ <mark class="src" data-p="40">accurate</mark> (รันแบบ real time ได้). แนวคิดพื้นฐาน: แบ่งภาพเป็น grid แล้วรัน <mark class="src" data-p="40">algorithm convolutionally</mark> บน <mark class="src" data-p="40">each grid</mark> ของทั้งภาพ. แต่ละ cell ทำนาย bounding box และ class โดยตรง. ตอน test YOLO "only looks once": forward propagation ครั้งเดียวได้คำทำนายทั้งหมด.</p>
+<p>YOLO แก้ปัญหาของ sliding windows ที่สไลด์ระบุว่า "not accurate bounding boxes": หน้าต่างมีขนาดและตำแหน่งตายตัว แต่ YOLO ให้แต่ละ cell <em>ทำนาย</em> \(b_x, b_y, b_h, b_w\) เป็นตัวเลข กรอบจึงมีขนาดและตำแหน่งใดก็ได้.</p>
+<p>ตัวอย่างในสไลด์: ภาพ 224×224 ผ่าน Deep CNN ได้ output <strong>5×5×8</strong>. 5×5 คือ grid; 8 คือ \([p_c, b_x, b_y, b_h, b_w, c_1, c_2, c_3]\) ต่อ cell โดย \(C_1\) = car, \(C_2\) = traffic sign, \(C_3\) = pedestrian. รวม \(5 \times 5 \times 8 = 200\) ค่า. ตอนเทรน ground truth มี shape เดียวกับ prediction.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p41-how-yolo-work.png" alt="Slide: How YOLO Work. The YOLO network splits the input image into a grid of SxS cells. If the center of the ground truth box falls into a cell, that cell is responsible for detecting the existence of that object. Each grid cell predicts B bounding boxes and their objectness score along with class predictions. If the bounding box contains an object, the network predicts the probability of K classes. Total number of predicted values S*S*(5+K)*B. Diagram: 13x13 grid, cell at the center of the ground truth, Box 1, Box 2, Box 3 with attributes tx, ty, tw, th, Po, P1...Pc">
+<figcaption>Slide: How YOLO Work — S×S×(5+K)×B (Lecture9, p.41)</figcaption>
+</figure>
+
+<ul>
+<li>YOLO แบ่งภาพ input เป็น grid ขนาด S×S cell. ถ้า <mark class="src" data-p="41">center of the ground truth box</mark> ตกใน cell ใด <mark class="src" data-p="41">that cell</mark> รับผิดชอบ <mark class="src" data-p="41">detecting the existence of that object</mark></li>
+<li>แต่ละ grid cell ทำนาย <mark class="src" data-p="41">B</mark> <strong>bounding boxes</strong> และ <strong>objectness score</strong> ของแต่ละกรอบ พร้อม <strong>class predictions</strong></li>
+<li>ถ้ากรอบมีวัตถุ network ทำนายความน่าจะเป็นของ <mark class="src" data-p="41">K</mark> class (K = จำนวน class ทั้งหมดของโจทย์)</li>
+</ul>
+$$\text{Total number of predicted values} = S \times S \times (5 + K) \times B$$
+<p class="plain-thai">ต่อกรอบ: 4 พิกัด + 1 objectness + K class; ต่อ cell มี B กรอบ; ทั้งภาพมี S×S cell</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: ขนาด output ของ YOLO</div>
+<div class="given">ให้ grid 13×13 (\(S = 13\)), \(B = 3\) กรอบต่อ cell, \(K = 80\) class</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — ค่าต่อกรอบ</div>
+$$5 + K = 5 + 80 = 85$$</li>
+<li><div class="st-title">ขั้นที่ 2 — ค่าต่อ cell (= จำนวน channel ของ output)</div>
+$$85 \times 3 = 255$$</li>
+<li><div class="st-title">ขั้นที่ 3 — ทั้งภาพ</div>
+$$13 \times 13 \times 255 = 43{,}095$$</li>
+<li><div class="st-title">ขั้นที่ 4 — จำนวนกรอบที่ทำนาย</div>
+$$13 \times 13 \times 3 = 507 \text{ กรอบ}$$</li>
+</ol>
+<div class="answer"><p>Output มี shape (13, 13, 255) ตรงกับ ENCODING (m, 13, 13, 255) ของ YOLOv3 ในหน้า 48. กรณีหน้า 40 คือ \(S = 5, B = 1, K = 3\): \(5 \times 5 \times (5 + 3) \times 1 = 200\).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl9-p42-anchor-boxes.png" alt="Slide: Anchor Boxes are pre-defined box shapes that help the algorithm capture the aspect ratio and the size of objects in a grid cell. Associate n predictions with the n anchor boxes. A 19x19 grid on a street image; Anchor 1 is a wide box and Anchor 2 a tall box, both centred on the same cell (a car and a pedestrian). Output dimension: 19, 19, 2, 8 or 19, 19, 16. With two anchor boxes each object in training images is assigned to the grid cell that contains the object&#x27;s midpoint; choose the anchor box with highest IoU with the ground truth">
+<figcaption>Slide: Anchor Boxes (Lecture9, p.42)</figcaption>
+</figure>
+
+<p>ปัญหา: ถ้า cell หนึ่งทำนายได้กรอบเดียว วัตถุสองชิ้นที่จุดกึ่งกลางตก cell เดียวกัน (ในรูปคือรถกับคนเดินถนนที่ยืนหน้ารถ) จะตรวจจับได้ชิ้นเดียว. Anchor boxes คือรูปทรงกรอบ <mark class="src" data-p="42">pre-defined box</mark> ที่ช่วยให้อัลกอริทึม <mark class="src" data-p="42">capture the aspect ratio &amp; the size of objects</mark> ใน grid cell. หลักคือจับคู่ n predictions กับ n anchor boxes.</p>
+<p>ในรูป: Anchor 1 เป็นกรอบแนวนอน (เหมาะกับรถ), Anchor 2 เป็นกรอบแนวตั้ง (เหมาะกับคน). คำถามของสไลด์ "What is the output dimension?" สำหรับ grid 19×19, 2 anchor, 3 class:</p>
+$$\begin{gathered}19 \times 19 \times 2 \times 8\\ \text{หรือ}\quad 19 \times 19 \times 16 \text{ (easy implement)}\end{gathered}$$
+<p>ทั้งสองมีจำนวนค่าเท่ากัน (\(2 \times 8 = 16\) ต่อ cell; รวม \(19 \times 19 \times 16 = 5{,}776\) ค่า). แบบที่สองต่อ vector ของสอง anchor เป็น 16 channel.</p>
+<p><strong>การกำหนด ground truth:</strong> วัตถุแต่ละชิ้นในภาพ training ถูกกำหนดให้ grid cell ที่มี midpoint ของวัตถุ. ใน cell นั้นเลือก anchor box ที่มี <strong>highest IoU with the ground truth</strong>.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p43-objectness-score.png" alt="Slide: Objectness Score. An objectness score is assigned to each box which tells how confident the model is that the bounding box contains an object. P(containing an object) = objectness score (Pc). During post-processing, objectness and the class score are combined to obtain a class-specific confidence score, used for filtering and ranking detections during NMS. Confident score = P(containing an object) x class score. Image of a dog and bicycle with an SxS grid and many predicted boxes">
+<figcaption>Slide: Objectness Score — confidence score (Lecture9, p.43)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="43">objectness score</mark> ถูกกำหนดให้ <strong>each box which tells how confident the model is that the bounding box contains an object</strong>: \(P(\text{containing an object}) = p_c\). <strong>During post-processing</strong> objectness และ class score ถูกรวมเป็น class-specific <mark class="src" data-p="43">confidence score</mark> ซึ่งใช้กรองและจัดอันดับการตรวจจับใน NMS.</p>
+<p style="text-align:center"><strong><mark class="src" data-p="43">Confident score = P(containing an object) x class score</mark></strong></p>
+<p>ตัวอย่าง: กรอบหนึ่งมี \(p_c = 0.9\) และ class score ของ "car" = 0.8, "pedestrian" = 0.1 ⇒ confidence score ของ car = \(0.9 \times 0.8 = 0.72\); ของ pedestrian = \(0.9 \times 0.1 = 0.09\). กรอบที่ \(p_c\) ต่ำจะได้ confidence ต่ำทุก class แม้ class score สูง.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p44-nms-example.png" alt="Slide: Non-max Suppression (NMS). Example of suppressing candidate boxes. Discard boxes with predictions below a confidence threshold of the objectness score, for example 0.7. Loop for each class: select the box with the highest prediction (green box 0.9); compute overlap, suppress those with significant overlap (IoU 0.5): suppress the blue box (0.8) and the red box (0.7). Select other boxes until no class remains: the right orange box (0.9), then the left orange box (0.8), and none for pedestrian. Image: three car boxes 0.7, 0.9, 0.8; two traffic sign boxes 0.8, 0.9; one pedestrian box 0.2. C1 = car, C2 = traffic sign, C3 = pedestrian">
+<figcaption>Slide: Non-max Suppression (NMS) — ตัวอย่างบนภาพถนน (Lecture9, p.44)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: NMS บนกรอบผู้สมัคร 6 กรอบ</div>
+<div class="given">ให้ กรอบ car สามกรอบซ้อนกัน: แดง <mark class="src" data-p="44">0.7</mark>, เขียว <mark class="src" data-p="44">0.9</mark>, น้ำเงิน <mark class="src" data-p="44">0.8</mark>. กรอบ traffic sign สองกรอบ (สีส้ม) ไม่ซ้อนกัน และกรอบ pedestrian หนึ่งกรอบ (สีเหลือง): <mark class="src" data-p="44">0.8 0.9 0.2</mark>. Confidence threshold = 0.7, NMS threshold IoU = 0.5</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Discard boxes ที่ต่ำกว่า confidence threshold 0.7</div>
+<p>กรอบ pedestrian (0.2) ถูกทิ้ง. เหลือ 5 กรอบ (0.7 ไม่ต่ำกว่า threshold จึงยังอยู่)</p></li>
+<li><div class="st-title">ขั้นที่ 2 — Class car: เลือกกรอบที่คะแนนสูงสุด</div>
+<p>เลือกกรอบเขียว (0.9)</p></li>
+<li><div class="st-title">ขั้นที่ 3 — Class car: suppress กรอบที่ซ้อนทับมาก (IoU ≥ 0.5 กับกรอบเขียว)</div>
+<p>กรอบน้ำเงิน (0.8) และกรอบแดง (0.7) ถูก suppress. ไม่มีกรอบ car เหลือ</p></li>
+<li><div class="st-title">ขั้นที่ 4 — Class traffic sign: เลือกกรอบส้มขวา (0.9)</div>
+<p>กรอบส้มซ้าย (0.8) อยู่คนละตำแหน่ง IoU = 0 จึง<strong>ไม่</strong>ถูก suppress</p></li>
+<li><div class="st-title">ขั้นที่ 5 — Class traffic sign: ทำซ้ำ เลือกกรอบส้มซ้าย (0.8)</div>
+<p>ไม่มีกรอบเหลือให้ suppress</p></li>
+<li><div class="st-title">ขั้นที่ 6 — Class pedestrian</div>
+<p>ไม่มีกรอบเหลือตั้งแต่ขั้นที่ 1 ⇒ ไม่เลือก</p></li>
+</ol>
+<div class="answer"><p>ผลสุดท้าย 3 กรอบ: car 0.9, traffic sign 0.9, traffic sign 0.8. จุดสำคัญสองข้อ: (1) กรอบ 0.8 ของ car ถูกทิ้งแต่กรอบ 0.8 ของ traffic sign ถูกเก็บ การตัดสินขึ้นกับการซ้อนทับ ไม่ใช่คะแนน; (2) NMS ทำแยกต่อ class กรอบต่าง class ที่ซ้อนกันจึงไม่ suppress กัน.</p></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 13</span><span>YOLO output</span></div>
+  <div class="qtext">YOLO แบ่งภาพเป็น grid 7×7 แต่ละ cell ทำนาย 2 กรอบ และโจทย์มี 20 class จำนวนค่าที่ network ทำนายทั้งหมดคือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. S·S·(5+K)·B = 7·7·(5+20)·2 = 49·25·2 = 2,450. ค่า 1,225 คือลืมคูณ B, ค่า 980 คือลืมบวก 5 (ใช้เฉพาะ K = 20 ต่อกรอบ).">1,225</button>
+    <button class="opt" data-correct="true" data-note="ถูก. S·S·(5+K)·B = 7·7·(5+20)·2 = 49·25·2 = 2,450. ค่า 1,225 คือลืมคูณ B, ค่า 980 คือลืมบวก 5 (ใช้เฉพาะ K = 20 ต่อกรอบ).">2,450</button>
+    <button class="opt" data-correct="false" data-note="ผิด. S·S·(5+K)·B = 7·7·(5+20)·2 = 49·25·2 = 2,450. ค่า 1,225 คือลืมคูณ B, ค่า 980 คือลืมบวก 5 (ใช้เฉพาะ K = 20 ต่อกรอบ).">1,470</button>
+    <button class="opt" data-correct="false" data-note="ผิด. S·S·(5+K)·B = 7·7·(5+20)·2 = 49·25·2 = 2,450. ค่า 1,225 คือลืมคูณ B, ค่า 980 คือลืมบวก 5 (ใช้เฉพาะ K = 20 ต่อกรอบ).">980</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 14</span><span>NMS</span></div>
+  <div class="qtext">หลังกรองด้วย confidence threshold เหลือกรอบ class "dog" สี่กรอบที่มีคะแนน A = 0.95, B = 0.90, C = 0.85, D = 0.60 โดย IoU(A, B) = 0.7, IoU(A, C) = 0.1, IoU(A, D) = 0.6, IoU(C, B) = 0.05, IoU(C, D) = 0.0 ถ้า NMS threshold คือ IoU 0.5 กรอบใดเหลือหลัง NMS?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. เลือก A (สูงสุด) แล้ว suppress B (0.7) และ D (0.6) ที่ IoU กับ A ถึง 0.5. C มี IoU กับ A เพียง 0.1 จึงเหลือ และถูกเลือกในรอบถัดไป. ผลคือ A และ C ซึ่งเป็นสุนัขสองตัวคนละตำแหน่ง.">A เท่านั้น</button>
+    <button class="opt" data-correct="false" data-note="ผิด. เลือก A (สูงสุด) แล้ว suppress B (0.7) และ D (0.6) ที่ IoU กับ A ถึง 0.5. C มี IoU กับ A เพียง 0.1 จึงเหลือ และถูกเลือกในรอบถัดไป. ผลคือ A และ C ซึ่งเป็นสุนัขสองตัวคนละตำแหน่ง.">A, B และ C</button>
+    <button class="opt" data-correct="true" data-note="ถูก. เลือก A (สูงสุด) แล้ว suppress B (0.7) และ D (0.6) ที่ IoU กับ A ถึง 0.5. C มี IoU กับ A เพียง 0.1 จึงเหลือ และถูกเลือกในรอบถัดไป. ผลคือ A และ C ซึ่งเป็นสุนัขสองตัวคนละตำแหน่ง.">A และ C</button>
+    <button class="opt" data-correct="false" data-note="ผิด. เลือก A (สูงสุด) แล้ว suppress B (0.7) และ D (0.6) ที่ IoU กับ A ถึง 0.5. C มี IoU กับ A เพียง 0.1 จึงเหลือ และถูกเลือกในรอบถัดไป. ผลคือ A และ C ซึ่งเป็นสุนัขสองตัวคนละตำแหน่ง.">A, C และ D</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 15</span><span>Confidence score</span></div>
+  <div class="qtext">กรอบหนึ่งมี objectness score 0.8 และ class score ของ car, bus, person เท่ากับ 0.5, 0.4, 0.1 class-specific confidence score สูงสุดของกรอบนี้คือเท่าใด และเป็นของ class ใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Confidence score = P(มีวัตถุ) × class score. car: 0.8 × 0.5 = 0.40; bus: 0.8 × 0.4 = 0.32; person: 0.08. สูงสุดคือ 0.40 ของ car. ค่า 0.50 คือ class score ที่ยังไม่คูณ objectness.">0.40 ของ class car</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Confidence score = P(มีวัตถุ) × class score. car: 0.8 × 0.5 = 0.40; bus: 0.8 × 0.4 = 0.32; person: 0.08. สูงสุดคือ 0.40 ของ car. ค่า 0.50 คือ class score ที่ยังไม่คูณ objectness.">0.50 ของ class car</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Confidence score = P(มีวัตถุ) × class score. car: 0.8 × 0.5 = 0.40; bus: 0.8 × 0.4 = 0.32; person: 0.08. สูงสุดคือ 0.40 ของ car. ค่า 0.50 คือ class score ที่ยังไม่คูณ objectness.">0.80 ของ class car</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Confidence score = P(มีวัตถุ) × class score. car: 0.8 × 0.5 = 0.40; bus: 0.8 × 0.4 = 0.32; person: 0.08. สูงสุดคือ 0.40 ของ car. ค่า 0.50 คือ class score ที่ยังไม่คูณ objectness.">0.32 ของ class bus</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>YOLO: <mark class="src" data-p="40">fast</mark>, <mark class="src" data-p="40">accurate</mark>; รัน <mark class="src" data-p="40">algorithm convolutionally</mark> บน <mark class="src" data-p="40">each grid</mark>; forward ครั้งเดียว</li>
+<li><mark class="src" data-p="41">center of the ground truth box</mark> ตกใน cell ใด <mark class="src" data-p="41">that cell</mark> รับผิดชอบ <mark class="src" data-p="41">detecting the existence of that object</mark>; <mark class="src" data-p="41">B</mark> = กรอบต่อ cell, <mark class="src" data-p="41">K</mark> = จำนวน class; รวม S·S·(5+K)·B</li>
+<li>Anchor = <mark class="src" data-p="42">pre-defined box</mark> เพื่อ <mark class="src" data-p="42">capture the aspect ratio &amp; the size of objects</mark>; เลือก anchor ที่ IoU กับ ground truth สูงสุด</li>
+<li><mark class="src" data-p="43">objectness score</mark> = \(p_c\); <mark class="src" data-p="43">confidence score</mark> = \(p_c\) × class score</li>
+<li>NMS ตัวอย่าง: เก็บ <mark class="src" data-p="44">0.9</mark> ของ car, ทิ้ง <mark class="src" data-p="44">0.8</mark> และ <mark class="src" data-p="44">0.7</mark> ที่ซ้อนทับ; เก็บ traffic sign ทั้งสอง; ทิ้ง pedestrian 0.2</li>
+</ul>
+</div>
+
+<h2 id="s14">14. วัตถุหลายขนาด และ YOLOv3</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p45-different-scales.png" alt="Slide: Handling Objects of Different Scales. To handle objects of varying scales, some approaches preprocess the image at different sizes and merge the results. Alternatively YOLO achieves a similar outcome by using convolution layers of different sizes (e.g. different strides) within a single network, leveraging feature maps from multiple layers while sharing parameters. Image: a large horse in front and two small horses behind, with small red boxes on the large horse&#x27;s body. Can you see a horse in the red box?">
+<figcaption>Slide: Handling Objects of Different Scales (Lecture9, p.45)</figcaption>
+</figure>
+
+<p>ภาพในสไลด์มีม้าตัวใหญ่ใกล้กล้องและม้าตัวเล็กสองตัวด้านหลัง. กรอบแดงขนาดเล็กบนลำตัวม้าตัวใหญ่เห็นเพียงขนสีน้ำตาลกับขาว ("Can you see a horse in the red box?"): cell เล็กเกินกว่าจะเห็นวัตถุใหญ่ทั้งตัว แต่พอดีกับม้าตัวเล็กด้านหลัง.</p>
+<p>เพื่อรับมือวัตถุ <mark class="src" data-p="45">varying scales</mark> บางแนวทางประมวลผลภาพหลายขนาดแล้วรวมผล. <mark class="src" data-p="45">YOLO</mark> ได้ผลแบบเดียวกันด้วยการ <mark class="src" data-p="45">using convolution layers of different sizes</mark> (เช่น <mark class="src" data-p="45">strides</mark> ต่างกัน) ภายใน network เดียว จึงใช้ feature map จากหลาย layer โดยแชร์ parameter กับทุกวัตถุ.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p46-different-scales-yolov3.png" alt="Slide: Handling Objects of Different Scales (2). As CNN reduces the spatial dimension gradually, the resolution of the feature maps also decreases; lower resolution feature maps can detect larger scale objects. YOLOv3 has 9 anchors for prediction at 3 different scales per cell. The detection layer makes detection at feature maps of 3 sizes with strides 32, 16, 8; with a 416 x 416 input, objects are detected at 13 x 13, 26 x 26 and 52 x 52 scales for large, medium and small objects">
+<figcaption>Slide: Handling Objects of Different Scales (2) — strides 32, 16, 8 (Lecture9, p.46)</figcaption>
+</figure>
+
+<p>เมื่อ CNN <mark class="src" data-p="46">reduces</mark> <mark class="src" data-p="46">spatial dimension gradually</mark> ความละเอียดของ feature map ก็ลดลง. ข้อสังเกตของสไลด์: <u>lower resolution feature maps can detect larger scale objects</u> เพราะ cell หนึ่งของ feature map หยาบครอบพื้นที่ภาพกว้าง.</p>
+<p>YOLOv3 มี 9 anchor เพื่อทำนายที่ 3 scale (3 กรอบต่อ cell ต่อ scale). Detection layer ทำงานที่ feature map 3 ขนาด ซึ่งมี <mark class="src" data-p="46">strides 32, 16, 8</mark>. ด้วยภาพ input 416×416 จะตรวจจับที่ <mark class="src" data-p="46">13 x 13</mark>, <mark class="src" data-p="46">26 x 26</mark> และ <mark class="src" data-p="46">52 x 52</mark> เพื่อตรวจวัตถุ <mark class="src" data-p="46">large</mark>, medium และ small ตามลำดับ.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: grid สามขนาดของ YOLOv3 และจำนวนกรอบทั้งหมด</div>
+<div class="given">ให้ input 416×416, strides 32, 16, 8, 3 anchor ต่อ cell ต่อ scale, 80 class</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — ขนาด grid = ขนาดภาพ ÷ stride</div>
+$$\frac{416}{32} = 13 \qquad \frac{416}{16} = 26 \qquad \frac{416}{8} = 52$$</li>
+<li><div class="st-title">ขั้นที่ 2 — จำนวน cell ของแต่ละ scale</div>
+$$13^2 = 169 \qquad 26^2 = 676 \qquad 52^2 = 2{,}704$$</li>
+<li><div class="st-title">ขั้นที่ 3 — จำนวนกรอบทั้งหมด (3 กรอบต่อ cell)</div>
+$$(169 + 676 + 2{,}704) \times 3 = 3{,}549 \times 3 = 10{,}647$$</li>
+<li><div class="st-title">ขั้นที่ 4 — Channel ของ output แต่ละ scale</div>
+$$3 \times (5 + 80) = 255$$</li>
+</ol>
+<div class="answer"><p>YOLOv3 ทำนาย 10,647 กรอบต่อภาพ กรอบละ 85 ค่า. Stride 32 ให้ cell ที่ครอบ 32×32 pixel (grid 13×13 สำหรับวัตถุใหญ่); stride 8 ให้ cell 8×8 pixel (grid 52×52 สำหรับวัตถุเล็ก). NMS ลดกรอบเหล่านี้เหลือไม่กี่กรอบ. หมายเหตุท้ายสไลด์: ในทางปฏิบัติ convolutional layer ไม่ได้ "ย่อภาพ" ตรงๆ; feature map เสียหน้าตาเดิมของภาพแต่เก็บ feature เด่นไว้.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl9-p47-yolov3-architecture.png" alt="Slide: YOLOv3 Architecture: A Classic YOLO Example. YOLO architecture was inspired by GoogLeNet (Inception) for feature extraction, combining 1x1 and 3x3 convolutions in sequential convolutions; inspired by ResNet it incorporates skip connections. The authors called this Darknet. YOLOv3 uses Darknet-53 (53 layers, trained on ImageNet); 53 more layers are stacked for detection, giving a 106 layer fully convolutional architecture, which makes YOLOv3 slower than YOLOv2 but with a great boost in detection accuracy. Diagram with detection layers at scale 1 (stride 32, layer 84), scale 2 (stride 16, layer 94), scale 3 (stride 8, layer 106), upsampling layers and concatenation">
+<figcaption>Slide: YOLOv3 Architecture: A Classic YOLO Example — Darknet-53 (Lecture9, p.47)</figcaption>
+</figure>
+
+<ul>
+<li>สถาปัตยกรรม YOLO ได้แรงบันดาลใจจาก GoogLeNet (Inception) ในส่วน feature extraction: ผสม convolution 1×1 และ 3×3 แต่เน้น convolution แบบต่อเนื่อง (sequential). จาก ResNet นำ skip connection มาใช้ให้ gradient ไหลง่ายขึ้นตอนเทรน. ผู้สร้างเรียก backbone นี้ว่า <mark class="src" data-p="47">Darknet</mark></li>
+<li>YOLOv3 ใช้ <strong>Darknet-53</strong> ซึ่งมี <u>53 layers</u> (สไลด์ระบุว่ามี <u>36 residual blocks</u>) และเทรนบน ImageNet. สำหรับงาน detection มีอีก 53 layers ซ้อนต่อ จึงได้ <mark class="src" data-p="47">106 layer fully convolutional</mark>: \(53 + 53 = 106\)</li>
+<li>ความลึกนี้เป็นเหตุของ <u>slowness</u> ของ YOLOv3 เทียบกับ YOLOv2 แต่ได้ <strong>great boost in the detection accuracy</strong></li>
+</ul>
+<p>แผนภาพแสดง detection layer สามจุด: scale 1 (stride 32) ที่ layer 84, scale 2 (stride 16) ที่ layer 94 และ scale 3 (stride 8) ที่ layer 106. ระหว่าง scale มี upsampling layer ขยาย feature map แล้ว <strong>concatenation</strong> กับ feature map ที่ละเอียดกว่าจาก layer ก่อนหน้า (layer 61 และ 36) เพื่อให้ scale ละเอียดได้ทั้งความหมายระดับสูงและรายละเอียดตำแหน่ง.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p48-summary-yolo3.png" alt="Slide: Summary for YOLO3. YOLOv3 (2018) is a classic YOLO architecture for understanding grid-based, anchor-based, and multi-scale object detection; the last version by Joseph Redmon. Input: batch of images (m, 416, 416, 3). Architecture: IMAGE -&gt; DEEP CNN -&gt; ENCODING (m, 13, 13, 255), (m, 26, 26, 255), (m, 52, 52, 255). Output: list of bounding boxes with classes, each represented by 6 numbers (pc, bx, by, bh, bw, c); expanding c into an 80-dimensional vector gives 85 numbers. YOLO predicts boxes as displacements from anchors. Select boxes using non-max suppression with score-thresholding. Advantage: accurate bounding boxes compared to YOLO2 but more computational resources">
+<figcaption>Slide: Summary for YOLO3 (Lecture9, p.48)</figcaption>
+</figure>
+
+<p>YOLOv3 (2018) เป็นตัวอย่างสำหรับเข้าใจ object detection แบบ <u>grid-based</u>, <u>anchor-based</u> และ <u>multi-scale</u>. เป็นรุ่นสุดท้ายที่ <strong>Joseph Redmon</strong> ผู้สร้าง YOLO มีส่วนร่วม.</p>
+<table class="compact">
+<tr><th>ส่วน</th><th>รายละเอียดตามสไลด์</th></tr>
+<tr><td>Input</td><td>batch ของภาพ shape (m, 416, 416, 3)</td></tr>
+<tr><td>Architecture</td><td>IMAGE (m, 416, 416, 3) → DEEP CNN → (1) ENCODING (m, 13, 13, 255) (2) ENCODING (m, 26, 26, 255) (3) ENCODING (m, 52, 52, 255)</td></tr>
+<tr><td>Output</td><td>รายการ bounding box พร้อม class. แต่ละกรอบแทนด้วย 6 ตัวเลข \((p_c, b_x, b_y, b_h, b_w, c)\). ถ้าขยาย \(c\) เป็น vector 80 มิติ จะเป็น 85 ตัวเลข: \(5 + 80 = 85\)</td></tr>
+<tr><td>หมายเหตุ</td><td>YOLO ไม่ทำนายกรอบโดยตรง แต่ทำนายเป็น displacement จาก anchor</td></tr>
+<tr><td>คัดกรอบ</td><td><strong>Non-max suppression</strong>: score-thresholding ทิ้งกรอบที่คะแนนของ class ต่ำกว่า confidence threshold แล้วใช้ <strong>IoU</strong> ตัดกรอบซ้ำ</td></tr>
+<tr><td>Advantages</td><td>กรอบแม่นกว่า YOLO2 แต่มักใช้ทรัพยากรคำนวณมากกว่า</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl9-p49-yolo-results.png" alt="Slide: Results. A beach photo before and after detection: four small red boxes labelled person (91%), person (97%), person (90%), person (92%). Printed output: (180, 1867), (224, 1955), person, 0.9100176095962524; (686, 1951), (746, 2075), person, 0.9728301167488098; (1643, 1972), (1703, 2111), person, 0.9037817716598511; (2438, 2178), (2536, 2343), person, 0.9201311469078064">
+<figcaption>Slide: Results — ผลการตรวจจับบนภาพชายหาด (Lecture9, p.49)</figcaption>
+</figure>
+
+<p>ผลลัพธ์ที่พิมพ์มีหนึ่งบรรทัดต่อกรอบที่ผ่าน NMS: พิกัดมุมสองมุม, class และ confidence.</p>
+<table class="compact">
+<tr><th>มุมที่ 1 (x, y)</th><th>มุมที่ 2 (x, y)</th><th>class</th><th>confidence</th><th>กว้าง × สูง (pixel)</th></tr>
+<tr><td>(180, 1867)</td><td>(224, 1955)</td><td>person</td><td>0.910</td><td>44 × 88</td></tr>
+<tr><td>(686, 1951)</td><td>(746, 2075)</td><td>person</td><td>0.973</td><td>60 × 124</td></tr>
+<tr><td>(1643, 1972)</td><td>(1703, 2111)</td><td>person</td><td>0.904</td><td>60 × 139</td></tr>
+<tr><td>(2438, 2178)</td><td>(2536, 2343)</td><td>person</td><td>0.920</td><td>98 × 165</td></tr>
+</table>
+<p>ทุกกรอบสูงกว่ากว้าง (อัตราส่วนราว 1:2) ตามรูปร่างของคนยืน และมีขนาดไม่ถึง 100 × 170 pixel ในภาพที่กว้างกว่า 2,500 pixel. คนขนาดเล็กเช่นนี้ถูกตรวจจับได้จาก grid ละเอียด (stride 8). ค่า 91%, 97%, 90%, 92% บนภาพคือ confidence ที่ปัดเศษ.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 16</span><span>YOLOv3</span></div>
+  <div class="qtext">YOLOv3 รับภาพ 608×608 และตรวจจับที่ stride 32, 16 และ 8 โดยใช้ 3 anchor ต่อ cell ในแต่ละ scale ขนาด grid ทั้งสามคือข้อใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ขนาด grid = ขนาดภาพ ÷ stride: 608/32 = 19, 608/16 = 38, 608/8 = 76. ชุด 13, 26, 52 เป็นของภาพ 416×416.">13×13, 26×26 และ 52×52</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ขนาด grid = ขนาดภาพ ÷ stride: 608/32 = 19, 608/16 = 38, 608/8 = 76. ชุด 13, 26, 52 เป็นของภาพ 416×416.">19×19, 38×38 และ 76×76</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ขนาด grid = ขนาดภาพ ÷ stride: 608/32 = 19, 608/16 = 38, 608/8 = 76. ชุด 13, 26, 52 เป็นของภาพ 416×416.">19×19, 57×57 และ 171×171</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ขนาด grid = ขนาดภาพ ÷ stride: 608/32 = 19, 608/16 = 38, 608/8 = 76. ชุด 13, 26, 52 เป็นของภาพ 416×416.">32×32, 16×16 และ 8×8</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 17</span><span>YOLOv3</span></div>
+  <div class="qtext">ใน YOLOv3 ที่ตรวจจับ 80 class ด้วย 3 anchor ต่อ cell จำนวน channel ของ output แต่ละ scale คือเท่าใด และ grid ใดใช้ตรวจจับวัตถุขนาดใหญ่?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. ต่อกรอบ: 5 + 80 = 85 ค่า. ต่อ cell: 3 × 85 = 255 channel. Grid 13×13 (stride 32) มี cell ที่ครอบพื้นที่กว้างจึงใช้กับวัตถุใหญ่ ส่วน 52×52 ใช้กับวัตถุเล็ก. ค่า 240 คือลืมบวก 5.">255 channel และ grid 13×13</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ต่อกรอบ: 5 + 80 = 85 ค่า. ต่อ cell: 3 × 85 = 255 channel. Grid 13×13 (stride 32) มี cell ที่ครอบพื้นที่กว้างจึงใช้กับวัตถุใหญ่ ส่วน 52×52 ใช้กับวัตถุเล็ก. ค่า 240 คือลืมบวก 5.">85 channel และ grid 52×52</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ต่อกรอบ: 5 + 80 = 85 ค่า. ต่อ cell: 3 × 85 = 255 channel. Grid 13×13 (stride 32) มี cell ที่ครอบพื้นที่กว้างจึงใช้กับวัตถุใหญ่ ส่วน 52×52 ใช้กับวัตถุเล็ก. ค่า 240 คือลืมบวก 5.">255 channel และ grid 52×52</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ต่อกรอบ: 5 + 80 = 85 ค่า. ต่อ cell: 3 × 85 = 255 channel. Grid 13×13 (stride 32) มี cell ที่ครอบพื้นที่กว้างจึงใช้กับวัตถุใหญ่ ส่วน 52×52 ใช้กับวัตถุเล็ก. ค่า 240 คือลืมบวก 5.">240 channel และ grid 13×13</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>วัตถุ <mark class="src" data-p="45">varying scales</mark>: <mark class="src" data-p="45">YOLO</mark> แก้ด้วย <mark class="src" data-p="45">using convolution layers of different sizes</mark> (<mark class="src" data-p="45">strides</mark> ต่างกัน) ใน network เดียว</li>
+<li>CNN <mark class="src" data-p="46">reduces</mark> <mark class="src" data-p="46">spatial dimension gradually</mark>; feature map ความละเอียดต่ำตรวจวัตถุใหญ่</li>
+<li><mark class="src" data-p="46">strides 32, 16, 8</mark> ⇒ <mark class="src" data-p="46">13 x 13</mark>, <mark class="src" data-p="46">26 x 26</mark>, <mark class="src" data-p="46">52 x 52</mark> ⇒ <mark class="src" data-p="46">large</mark>, medium, small (input 416×416); 9 anchor = 3 scale × 3</li>
+<li>Backbone = <mark class="src" data-p="47">Darknet</mark> (Darknet-53); รวม <mark class="src" data-p="47">106 layer fully convolutional</mark></li>
+<li>Output ต่อกรอบ: 6 ตัวเลข หรือ 85 เมื่อขยาย class 80 ตัว; encoding (m, 13, 13, 255)</li>
+</ul>
+</div>
+
+<h2 id="s15">15. YOLO รุ่นหลัง, โครงสร้าง Backbone–Neck–Head และ DETR</h2>
+
+<figure>
+<img src="../assets/slides/dl9-p50-yolo-continued-to-evolve.png" alt="Slide: YOLO Has Continued to Evolve. YOLOv1, YOLOv2, YOLOv3, later YOLO families, modern YOLO models. What has remained: one-stage detection; predict bounding boxes + object classes; multi-scale features; designed for efficient / real-time object detection. What has evolved: better backbone and feature extraction; better multi-scale feature fusion; improved bounding-box prediction and training losses; some modern detectors are anchor-free; improved accuracy-speed-model size trade-offs. The fundamental problem remains: Where is the object? What is it? How confident are we?">
+<figcaption>Slide: YOLO Has Continued to Evolve (Lecture9, p.50)</figcaption>
+</figure>
+
+<p>YOLOv1 → YOLOv2 → <strong>YOLOv3</strong> → YOLO รุ่นหลัง → <strong>modern YOLO models</strong>.</p>
+<table class="compact">
+<tr><th>What has remained?</th><th>What has evolved?</th></tr>
+<tr><td>One-stage detection: ทำนายวัตถุโดยตรงจาก image features</td><td>Better backbone and feature extraction</td></tr>
+<tr><td>Predict bounding boxes + object classes</td><td>Better multi-scale feature fusion</td></tr>
+<tr><td>Use multi-scale features เพื่อตรวจวัตถุหลายขนาด</td><td>Improved bounding-box prediction and training losses</td></tr>
+<tr><td>Designed for efficient / real-time object detection</td><td>Some modern detectors are anchor-free</td></tr>
+<tr><td></td><td>Improved accuracy–speed–model size trade-offs</td></tr>
+</table>
+<p>ข้อสรุปของสไลด์: รายละเอียดการ implement เปลี่ยนไป แต่โจทย์พื้นฐานของ object detection ยังเดิม: <strong>Where is the object? What is it? How confident are we?</strong> สามคำถามนี้ตรงกับสามส่วนของ target: กรอบ \((b_x, b_y, b_h, b_w)\), class \((c_1 \ldots c_K)\) และ \(p_c\). กล่องด้านขวาสรุปสิ่งที่เรียน (Bounding boxes, IoU, Confidence, NMS, Multi-scale features, One-stage detection) และขั้นตอนใช้ framework สมัยใหม่: Load pretrained model → Run inference → Fine-tune on custom data → Evaluate → Deploy.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p51-modern-object-detector.png" alt="Slide: Modern Object Detector. Backbone: extracts visual features. Neck: combines features from different resolutions. Detection Head: predicts bounding boxes and classes. Diagram: BACKBONE (extract visual features at different resolutions, modern efficient blocks + SPPF / attention), NECK (fuse multi-scale features; FPN deep to fine resolution; PAN fine to deep resolution; goal combine WHAT + WHERE), HEAD (anchor-free detection, no predefined box shapes, predict box + class), detections">
+<figcaption>Slide: Modern Object Detector — Backbone, Neck, Head (Lecture9, p.51)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>ส่วน</th><th>หน้าที่ตามสไลด์</th><th>รายละเอียดในแผนภาพ</th><th>เทียบกับ YOLOv3</th></tr>
+<tr><td><strong>Backbone</strong></td><td>Extracts visual features</td><td>สกัด feature ที่หลายความละเอียด; modern efficient blocks + SPPF / attention</td><td>Darknet-53</td></tr>
+<tr><td><strong>Neck</strong></td><td>Combines features from different resolutions</td><td>Fuse multi-scale features. FPN: deep → fine resolution; PAN: fine → deep resolution. Goal: combine WHAT? + WHERE?</td><td>upsampling + concatenation</td></tr>
+<tr><td><strong>Detection Head</strong></td><td>Predicts <strong>bounding boxes and classes</strong></td><td>Anchor-free detection: no predefined box shapes; predict box + class</td><td>detection layers ที่ 3 scale (anchor-based)</td></tr>
+</table>
+<p>"WHAT + WHERE" ของ neck: feature map ชั้นลึกรู้ว่าเป็นวัตถุอะไร (semantic) แต่ตำแหน่งหยาบ; feature map ชั้นต้นตำแหน่งละเอียดแต่ความหมายน้อย. การรวมสองทิศ (FPN และ PAN) ให้ทุก scale มีทั้งสองอย่าง.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p52-yolov3-to-modern-yolo.png" alt="Slide: From YOLOv3 to Modern YOLO table. One-stage detection: yes, yes. CNN feature extraction: yes, yes. Multi-scale features: yes, yes. Bounding-box prediction: yes, yes. Anchor boxes: yes, not always. NMS: yes, common but not universal. Backbone to Neck to Head: can be interpreted this way, common architectural view">
+<figcaption>Slide: From YOLOv3 to Modern YOLO — ตารางเปรียบเทียบ (Lecture9, p.52)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>Concept</th><th>YOLOv3</th><th>Modern Detectors</th></tr>
+<tr><td>One-stage detection</td><td>✓</td><td>✓</td></tr>
+<tr><td>CNN feature extraction</td><td>✓</td><td>✓</td></tr>
+<tr><td>Multi-scale features</td><td>✓</td><td>✓</td></tr>
+<tr><td>Bounding-box prediction</td><td>✓</td><td>✓</td></tr>
+<tr><td>Anchor boxes</td><td>✓</td><td><strong>Not always</strong></td></tr>
+<tr><td>NMS</td><td>✓</td><td><strong>Common, but not universal</strong></td></tr>
+<tr><td>Backbone → Neck → Head</td><td>Can be interpreted this way</td><td>Common architectural view</td></tr>
+</table>
+<p>สี่แถวแรกเหมือนกัน. ความต่างอยู่ที่สามแถวล่าง: anchor boxes และ NMS ซึ่งเป็นแกนของ YOLOv3 (§13) ไม่จำเป็นเสมอไปในรุ่นใหม่.</p>
+
+<figure>
+<img src="../assets/slides/dl9-p53-beyond-cnn-detr.png" alt="Slide: Beyond CNN-based Object Detection: Transformers. Transformers can also be used for object detection. DETR (2020), DEtection TRansformer: formulates detection as set prediction; uses object queries to predict objects; predicts class + bounding box; models global relationships using attention; original DETR does not require anchors or NMS; inspired many subsequent Transformer-based detectors. CNN-based detectors remain highly relevant, especially when speed and efficient deployment matter. Later: RT-DETR, Transformer-based detection designed for real-time performance. Flow: image, feature extraction, transformer, object queries, object 1/2/3 class + box">
+<figcaption>Slide: Beyond CNN-based Object Detection: Transformers — DETR (Lecture9, p.53)</figcaption>
+</figure>
+
+<p><strong>Transformers can also be used for object detection.</strong> ตัวอย่างคือ <strong>DETR (2020) — DEtection TRansformer</strong>:</p>
+<ul>
+<li>Formulates detection as <strong>set prediction</strong>: ทำนายเซตของวัตถุทั้งชุดในครั้งเดียว</li>
+<li>Uses <strong>object queries</strong> to predict objects: แต่ละ query ให้วัตถุหนึ่งชิ้น (Object Query 1 → person, Query 2 → car, Query 3 → dog)</li>
+<li>Predicts <strong>class + bounding box</strong></li>
+<li>Models <strong>global relationships</strong> using attention</li>
+<li>Original DETR does <strong>not require anchors or NMS</strong>: แต่ละ query ถูกเทรนให้จับคู่กับวัตถุไม่ซ้ำกัน จึงไม่มีกรอบซ้ำให้ตัด</li>
+<li>เป็นต้นแบบของ Transformer-based detector รุ่นถัดมา</li>
+</ul>
+<p>ลำดับในแผนภาพ: Image → Feature Extraction → Transformer → Object Queries → Object 1/2/3 → Class + Box. หมายเหตุ: CNN-based detector ยังสำคัญมาก โดยเฉพาะเมื่อ speed และ efficient deployment มีความสำคัญ. Transformer เป็น<em>อีกแนวทาง</em> ไม่ได้มาแทน CNN-based detection. รุ่นหลังคือ RT-DETR ซึ่งเป็น Transformer-based detection ที่ออกแบบสำหรับ real-time (เชื่อมกับ ViT และ Swin ใน <a href="0008-cnn-architectures-and-transfer-learning.html#s10">Lesson 8 §10</a>).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 18</span><span>Modern detector</span></div>
+  <div class="qtext">ใน object detector สมัยใหม่ที่แบ่งเป็น Backbone, Neck และ Head ส่วน Neck ทำหน้าที่ใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Backbone สกัด visual feature, Neck รวม (fuse) feature จากหลายความละเอียด เช่น ด้วย FPN และ PAN, และ Detection Head ทำนาย bounding box กับ class. NMS เป็นขั้น post-processing ไม่ใช่ส่วนของ Neck.">สกัด visual feature จากภาพ input ที่หลายระดับความละเอียด</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Backbone สกัด visual feature, Neck รวม (fuse) feature จากหลายความละเอียด เช่น ด้วย FPN และ PAN, และ Detection Head ทำนาย bounding box กับ class. NMS เป็นขั้น post-processing ไม่ใช่ส่วนของ Neck.">ทำนาย bounding box และ class ของวัตถุแต่ละชิ้นเป็นผลลัพธ์</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Backbone สกัด visual feature, Neck รวม (fuse) feature จากหลายความละเอียด เช่น ด้วย FPN และ PAN, และ Detection Head ทำนาย bounding box กับ class. NMS เป็นขั้น post-processing ไม่ใช่ส่วนของ Neck.">ตัดกรอบที่ซ้อนทับกันออกด้วย non-maximum suppression</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Backbone สกัด visual feature, Neck รวม (fuse) feature จากหลายความละเอียด เช่น ด้วย FPN และ PAN, และ Detection Head ทำนาย bounding box กับ class. NMS เป็นขั้น post-processing ไม่ใช่ส่วนของ Neck.">รวม feature จากหลายระดับความละเอียดเข้าด้วยกันก่อนส่งให้ Head</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 19</span><span>DETR</span></div>
+  <div class="qtext">ข้อใดเป็นคุณสมบัติของ DETR ดั้งเดิมที่ต่างจาก YOLOv3?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. DETR มองการตรวจจับเป็น set prediction ใช้ object queries และ attention ทำนาย class กับกรอบ และรุ่นดั้งเดิมไม่ต้องใช้ anchor หรือ NMS. Grid กับ anchor เป็นของ YOLOv3 และ selective search เป็นของ R-CNN.">แบ่งภาพเป็น grid และให้แต่ละ cell ทำนายกรอบจาก anchor ที่กำหนดไว้</button>
+    <button class="opt" data-correct="false" data-note="ผิด. DETR มองการตรวจจับเป็น set prediction ใช้ object queries และ attention ทำนาย class กับกรอบ และรุ่นดั้งเดิมไม่ต้องใช้ anchor หรือ NMS. Grid กับ anchor เป็นของ YOLOv3 และ selective search เป็นของ R-CNN.">เสนอ region ด้วย selective search แล้วจำแนกทีละ region</button>
+    <button class="opt" data-correct="true" data-note="ถูก. DETR มองการตรวจจับเป็น set prediction ใช้ object queries และ attention ทำนาย class กับกรอบ และรุ่นดั้งเดิมไม่ต้องใช้ anchor หรือ NMS. Grid กับ anchor เป็นของ YOLOv3 และ selective search เป็นของ R-CNN.">ใช้ object queries ทำนายเซตของวัตถุ โดยไม่ต้องใช้ anchor หรือ NMS</button>
+    <button class="opt" data-correct="false" data-note="ผิด. DETR มองการตรวจจับเป็น set prediction ใช้ object queries และ attention ทำนาย class กับกรอบ และรุ่นดั้งเดิมไม่ต้องใช้ anchor หรือ NMS. Grid กับ anchor เป็นของ YOLOv3 และ selective search เป็นของ R-CNN.">ใช้ sliding windows ผ่าน convnet แล้วตัดกรอบซ้ำด้วย NMS</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำตัวหนา (หน้า 50–53 ไม่มีข้อความทำสี)</div>
+<ul>
+<li>สิ่งที่คงอยู่ของ YOLO: one-stage, กรอบ + class, multi-scale, real-time. สิ่งที่เปลี่ยน: backbone, feature fusion, loss, <strong>anchor-free</strong>, trade-off</li>
+<li>สามคำถาม: <strong>Where is the object? What is it? How confident are we?</strong></li>
+<li><strong>Backbone</strong> (สกัด feature) → <strong>Neck</strong> (รวม feature หลายความละเอียด; FPN, PAN) → <strong>Detection Head</strong> (ทำนาย <strong>bounding boxes and classes</strong>)</li>
+<li>ตารางหน้า 52: Anchor boxes "<strong>Not always</strong>"; NMS "<strong>Common, but not universal</strong>"</li>
+<li>DETR: <strong>set prediction</strong>, <strong>object queries</strong>, <strong>global relationships</strong>, <strong>not require anchors or NMS</strong>. กับดัก: ตัวเลือกที่บอกว่า Transformer มาแทน CNN-based detector ทั้งหมด</li>
+</ul>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควร (1) เขียนโมเดลด้วย Functional API ได้ทั้ง multi-input (<code>concatenate</code>), shared input และ multi-output พร้อม <code>compile</code>/<code>fit</code>/<code>evaluate</code>/<code>predict</code> แบบ list และเติมช่องว่างของแบบฝึกหัดหน้า 7 ได้ครบ (415,045 parameter); (2) อธิบายสี่ข้อสังเกตของ feature map ตามความลึก และคำนวณ Grad-CAM (alpha = ค่าเฉลี่ย gradient, heatmap = ReLU ของผลรวมถ่วงน้ำหนัก); (3) เขียน target \([p_c, b_x, b_y, b_h, b_w, c_1 \ldots c_K]\) และคำนวณ IoU กับ mAP; (4) ไล่ NMS ทีละขั้นด้วย confidence threshold และ IoU threshold; (5) เทียบ R-CNN / Fast / Faster (50 s, 2 s, 0.2 s) และอธิบายว่าทำไม one-stage เร็วกว่า; (6) แสดงว่า FC แทนด้วย convolution ได้โดย parameter เท่าเดิม (36,200 / 40,200 / 804) และได้ 13×13 หน้าต่างใน forward เดียว; (7) คำนวณ output ของ YOLO ด้วย S·S·(5+K)·B และ grid ของ YOLOv3 (13, 26, 52; 255 channel; 10,647 กรอบ); (8) บอกหน้าที่ของ Backbone / Neck / Head และจุดต่างของ DETR.
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน deep_learning_part3_3.pdf (53 หน้า) — เช็คว่าอ่านครบ</h2>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>Functional API</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + โค้ด + 3,466 parameter)</td></tr>
+<tr><td>2</td><td>Multi-input Models</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + สามกิ่ง)</td></tr>
+<tr><td>3</td><td>Example — input_A / input_B</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + โค้ด + 1,176 parameter)</td></tr>
+<tr><td>4</td><td>(Acyclic) Graph-like Models</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + Inception/residual)</td></tr>
+<tr><td>5</td><td>Example — Wide and Deep (California housing)</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + โค้ด + 1,239 parameter)</td></tr>
+<tr><td>6</td><td>Models that Re-use Layers</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + กราฟสองกิ่ง)</td></tr>
+<tr><td>7</td><td>Example — โค้ดเว้นช่อง</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + โค้ดเติมครบ + 415,045 parameter)</td></tr>
+<tr><td>8</td><td>Multi-output Models</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + shared representations)</td></tr>
+<tr><td>9</td><td>Example — Auxiliary Output</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โค้ด + 1,207 parameter)</td></tr>
+<tr><td>10</td><td>Example (continue) — compile/fit/evaluate/predict</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โค้ด + คำนวณ loss รวม)</td></tr>
+<tr><td>11</td><td>Example: Housing Price Prediction</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โครงสร้างสองกิ่ง)</td></tr>
+<tr><td>12</td><td>Visualizing the Convnets</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + ตารางสามเทคนิค)</td></tr>
+<tr><td>13</td><td>Visualizing Intermediate Activations</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + โค้ด + คำนวณ 3,453,121)</td></tr>
+<tr><td>14</td><td>Visualizing Feature Maps</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + สี่ข้อสังเกต)</td></tr>
+<tr><td>15</td><td>Visualizing Filters in a CNN</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + ขั้นตอน + get_weights)</td></tr>
+<tr><td>16</td><td>Filter patterns block1_conv1 / block2_conv1</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + คำอธิบาย)</td></tr>
+<tr><td>17</td><td>Filter patterns block3_conv1 / block4_conv1</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + คำอธิบาย)</td></tr>
+<tr><td>18</td><td>Visualizing Heatmaps of Class Activation</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + Saint Bernard)</td></tr>
+<tr><td>19</td><td>Grad-CAM</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + CAM, post-training)</td></tr>
+<tr><td>20</td><td>Grad-CAM Steps</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + ขั้น 1–3)</td></tr>
+<tr><td>21</td><td>Grad-CAM Steps (2) — alpha, heatmap</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + สูตร + คำนวณ)</td></tr>
+<tr><td>22</td><td>Grad-CAM Steps (2) — How to visualize</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + โค้ด + up-sample)</td></tr>
+<tr><td>23</td><td>Applications of Computer Vision</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + ตารางสี่งาน)</td></tr>
+<tr><td>24</td><td>Motivation: Self-driving Cars</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป)</td></tr>
+<tr><td>25</td><td>Object Detection</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + target vector)</td></tr>
+<tr><td>26</td><td>Object Detection Challenges</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + สามความท้าทาย)</td></tr>
+<tr><td>27</td><td>Pipeline — Region proposal</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป)</td></tr>
+<tr><td>28</td><td>Pipeline (2) — Feature extraction and prediction</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + 5 กรอบ)</td></tr>
+<tr><td>29</td><td>Pipeline (3) — NMS</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป)</td></tr>
+<tr><td>30</td><td>Pipeline (4) — อัลกอริทึม NMS</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + ขั้นตอน)</td></tr>
+<tr><td>31</td><td>Pipeline (5) — IoU</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + คำนวณ IoU)</td></tr>
+<tr><td>32</td><td>Pipeline (6) — mAP</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + สูตร + ตัวอย่าง)</td></tr>
+<tr><td>33</td><td>Traditional Object Detection for ConvNets</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + คำนวณ 2,025 หน้าต่าง)</td></tr>
+<tr><td>34</td><td>R-CNN</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + สามรุ่น)</td></tr>
+<tr><td>35</td><td>R-CNN Family</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + ตาราง)</td></tr>
+<tr><td>36</td><td>Disadvantage</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + multi-stage/one-stage)</td></tr>
+<tr><td>37</td><td>Initial Convnet Model for One-stage Detector</td><td>✓ <a href="#s12">หัวข้อ 12</a> (รูป + โค้ด)</td></tr>
+<tr><td>38</td><td>Convolutional Implementation — FC เป็น conv</td><td>✓ <a href="#s12">หัวข้อ 12</a> (รูป + คำนวณ 36,200/40,200/804)</td></tr>
+<tr><td>39</td><td>Convolutional Implementation — sliding windows</td><td>✓ <a href="#s12">หัวข้อ 12</a> (รูป + 13×13×4)</td></tr>
+<tr><td>40</td><td>You Only Look Once (YOLO) Algorithm</td><td>✓ <a href="#s13">หัวข้อ 13</a> (รูป + 5×5×8)</td></tr>
+<tr><td>41</td><td>How YOLO Work</td><td>✓ <a href="#s13">หัวข้อ 13</a> (รูป + คำนวณ S·S·(5+K)·B)</td></tr>
+<tr><td>42</td><td>Anchor Boxes</td><td>✓ <a href="#s13">หัวข้อ 13</a> (รูป + 19×19×16)</td></tr>
+<tr><td>43</td><td>Objectness Score</td><td>✓ <a href="#s13">หัวข้อ 13</a> (รูป + confidence score)</td></tr>
+<tr><td>44</td><td>Non-max Suppression (NMS)</td><td>✓ <a href="#s13">หัวข้อ 13</a> (รูป + ไล่ทีละขั้น)</td></tr>
+<tr><td>45</td><td>Handling Objects of Different Scales</td><td>✓ <a href="#s14">หัวข้อ 14</a> (รูป)</td></tr>
+<tr><td>46</td><td>Handling Objects of Different Scales (2)</td><td>✓ <a href="#s14">หัวข้อ 14</a> (รูป + คำนวณ 13/26/52)</td></tr>
+<tr><td>47</td><td>YOLOv3 Architecture</td><td>✓ <a href="#s14">หัวข้อ 14</a> (รูป + Darknet-53)</td></tr>
+<tr><td>48</td><td>Summary for YOLO3</td><td>✓ <a href="#s14">หัวข้อ 14</a> (รูป + ตาราง)</td></tr>
+<tr><td>49</td><td>Results</td><td>✓ <a href="#s14">หัวข้อ 14</a> (รูป + ตารางพิกัด)</td></tr>
+<tr><td>50</td><td>YOLO Has Continued to Evolve</td><td>✓ <a href="#s15">หัวข้อ 15</a> (รูป + ตาราง)</td></tr>
+<tr><td>51</td><td>Modern Object Detector</td><td>✓ <a href="#s15">หัวข้อ 15</a> (รูป + Backbone/Neck/Head)</td></tr>
+<tr><td>52</td><td>From YOLOv3 to Modern YOLO</td><td>✓ <a href="#s15">หัวข้อ 15</a> (รูป + ตาราง)</td></tr>
+<tr><td>53</td><td>Beyond CNN-based Object Detection: Transformers</td><td>✓ <a href="#s15">หัวข้อ 15</a> (รูป + DETR)</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0008-cnn-architectures-and-transfer-learning.html">← Lesson 8: CNN Architectures &amp; Transfer Learning</a></span>
+  <span><a href="0010-sequence-models-and-rnn.html">Lesson 10: Sequence Models &amp; RNN →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

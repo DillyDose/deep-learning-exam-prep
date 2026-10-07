@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 8: CNN Architectures &amp; Transfer Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0007-convolutional-neural-networks.html">← Lesson 7: CNN</a></span>
+  <span>Lesson 8 / 10 · CNN Architectures &amp; Transfer Learning</span>
+  <span><a href="0009-functional-api-and-object-detection.html">Lesson 9: Functional API &amp; Object Detection →</a></span>
+</nav>
+
+<p class="kicker">Lecture8 (deep_learning_part3_2.pdf, 37 หน้า) · 2603520 Deep Learning</p>
+<h1>CNN Architectures, Transfer Learning และ Vision Transformers</h1>
+
+<p><a href="0007-convolutional-neural-networks.html">Lesson 7</a> ให้ชิ้นส่วนของ CNN (convolution, pooling, การนับ parameter). บทนี้ใช้ชิ้นส่วนเหล่านั้นตอบสามคำถาม:</p>
+<ol>
+<li><strong>สถาปัตยกรรมที่มีชื่อแต่ละตัวแก้ปัญหาอะไร</strong> (LeNet → AlexNet → VGG → Inception → ResNet → รุ่นใหม่; หน้า 2–20)</li>
+<li><strong>จะนำโมเดลที่เทรนแล้วมาใช้กับงานของเราอย่างไร</strong> (transfer learning สามแบบ และโค้ด Keras; หน้า 21–29)</li>
+<li><strong>ถ้าไม่ใช้ convolution เลยจะได้อะไร</strong> (ViT และ Swin Transformer; หน้า 30–37)</li>
+</ol>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+<a href="https://keras.io/api/applications/" target="_blank" rel="noopener">Keras Applications</a> (รายชื่อ pretrained model พร้อม accuracy และจำนวน parameter; สไลด์หน้า 16 อ้างถึง) · <a href="https://keras.io/guides/transfer_learning/" target="_blank" rel="noopener">Keras — Transfer learning &amp; fine-tuning</a> · ต้นฉบับ: <a href="https://arxiv.org/pdf/1409.1556v6.pdf" target="_blank" rel="noopener">VGG</a>, <a href="https://arxiv.org/pdf/1512.03385.pdf" target="_blank" rel="noopener">ResNet</a>, <a href="https://arxiv.org/abs/2010.11929" target="_blank" rel="noopener">ViT</a>, <a href="https://arxiv.org/pdf/2103.14030" target="_blank" rel="noopener">Swin</a>.
+</div>
+
+<div class="box beginner">
+<div class="label">คำที่ใช้ทั้งบท</div>
+<ul>
+<li><strong>ILSVRC</strong> = ImageNet Large Scale Visual Recognition Challenge การแข่งขันจำแนกภาพ 1,000 class</li>
+<li><strong>Top-5 error rate</strong> = สัดส่วนภาพที่ class จริง<u>ไม่อยู่</u>ใน 5 อันดับแรกที่โมเดลทำนาย. Top-5 accuracy = 100% − top-5 error</li>
+<li><strong>Weight layer</strong> = layer ที่มี parameter ให้เรียน (CONV และ FC). Pooling ไม่นับ</li>
+<li><strong>Pretrained model</strong> = โมเดลที่เทรนเสร็จแล้วบน dataset ขนาดใหญ่ มี weight พร้อมใช้</li>
+<li><strong>Freeze</strong> = ล็อก weight ของ layer ไม่ให้ถูกอัปเดตระหว่างเทรน (<code>trainable = False</code>)</li>
+</ul>
+</div>
+
+<div class="box prereq">
+<div class="label">ต้องรู้ก่อน — สองสูตรจาก Lesson 7</div>
+<p>ทุกการคำนวณในบทนี้ใช้สองสูตรเดิม:</p>
+$$\begin{gathered}\text{output size} = \left\lfloor \frac{n + 2p - f}{s} \right\rfloor + 1 \\[0.35em]  \\[0.35em] \#\text{param}_{\text{conv}} = (f \cdot f \cdot n_C + 1) \cdot n_C'\end{gathered}$$
+<p>และสูตรของ dense layer: \(n_{in} \cdot n_{out} + n_{out}\). สัญลักษณ์ "3 × 3 + 1(S)" ในรูปของสไลด์หมายถึง kernel 3×3, stride 1, padding "same".</p>
+</div>
+
+<h2 id="s1">1. ILSVRC และแผนที่วิวัฒนาการของ CNN</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p02-evolution-of-cnn.png" alt="Slide: Evolution of CNN Architectures: What problem did each architecture solve? LeNet: convolution works. AlexNet: deep CNN + ReLU + GPU + augmentation. VGG: simple repeated 3x3 blocks. Inception: multi-scale + 1x1 bottleneck. ResNet: skip connections make very deep networks trainable. MobileNet: efficiency, depthwise separable convolution. EfficientNet: systematic scaling. ConvNeXt: modernized CNN inspired by Transformers">
+<figcaption>Slide: Evolution of CNN Architectures — แต่ละรุ่นแก้ปัญหาอะไร (Lecture8, p.2)</figcaption>
+</figure>
+
+<p>หน้า 2 คือสารบัญของครึ่งแรกของบท. แต่ละสถาปัตยกรรมมีหนึ่งคำตอบต่อคำถาม "What Problem Did Each Architecture Solve?":</p>
+<table class="compact">
+<tr><th>สถาปัตยกรรม</th><th>สิ่งที่แก้/พิสูจน์ (ตามสไลด์)</th><th>หัวข้อ</th></tr>
+<tr><td>LeNet</td><td>convolution works</td><td><a href="#s2">§2</a></td></tr>
+<tr><td>AlexNet</td><td>deep CNN + ReLU + GPU + augmentation</td><td><a href="#s3">§3</a></td></tr>
+<tr><td>VGG</td><td>simple repeated 3×3 blocks</td><td><a href="#s4">§4</a></td></tr>
+<tr><td>Inception</td><td>multi-scale + 1×1 bottleneck</td><td><a href="#s5">§5</a></td></tr>
+<tr><td>ResNet</td><td>skip connections make very deep networks trainable</td><td><a href="#s6">§6</a></td></tr>
+<tr><td>MobileNet</td><td>efficiency / depthwise separable convolution</td><td><a href="#s7">§7</a></td></tr>
+<tr><td>EfficientNet</td><td>systematic scaling</td><td><a href="#s7">§7</a></td></tr>
+<tr><td>ConvNeXt</td><td>modernized CNN inspired by Transformers</td><td><a href="#s7">§7</a></td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl8-p03-classical-cnn-ilsvrc.png" alt="Slide: Classical CNN Architectures. LeNet-5 (1998), AlexNet (winner ILSVRC 2012), ZF Net (2013), VGGNet (runner up 2014), GoogLeNet (winner 2014), ResNet (winner 2015), 2016 winner, SENet (winner 2017). ImageNet is the benchmark for classification algorithms (competition 2010-2017). In 2012 ILSVRC provided 1.2 million high-resolution images (224x224x3) in 1,000 classes. Top-5 error rate fell from over 26% to less than 2.3% in six years">
+<figcaption>Slide: Classical CNN Architectures — ผู้ชนะ ILSVRC (Lecture8, p.3)</figcaption>
+</figure>
+
+<p>ImageNet เป็น benchmark สำหรับประเมินอัลกอริทึมจำแนกภาพ (การแข่งขันจัดช่วงปี 2010–2017). ในปี 2012 ILSVRC ให้ภาพความละเอียดสูง 1.2 ล้านภาพ (224×224×3) แบ่งเป็น 1,000 class ซึ่งบาง class ต่างกันน้อยมาก (เช่น สุนัข 120 สายพันธุ์). ตัวเลขสำคัญของสไลด์: top-5 error rate ลดจาก<strong>มากกว่า 26% เหลือน้อยกว่า 2.3% ภายในหกปี</strong>.</p>
+<table class="compact">
+<tr><th>ปี</th><th>สถาปัตยกรรม</th><th>ผล ILSVRC</th></tr>
+<tr><td>1998</td><td>LeNet-5</td><td>(ก่อนมีการแข่งขัน)</td></tr>
+<tr><td>2012</td><td>AlexNet</td><td>winner</td></tr>
+<tr><td>2013</td><td>ZF Net (variance ของ AlexNet)</td><td>winner</td></tr>
+<tr><td>2014</td><td>VGGNet</td><td>runner up</td></tr>
+<tr><td>2014</td><td>GoogLeNet</td><td>winner</td></tr>
+<tr><td>2015</td><td>ResNet</td><td>winner</td></tr>
+<tr><td>2017</td><td>SENet</td><td>winner</td></tr>
+</table>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Top-5 error</span></div>
+  <div class="qtext">โมเดลหนึ่งทดสอบกับภาพ 2,000 ภาพ โดยมี 1,500 ภาพที่ class จริงเป็นอันดับ 1 ของคำทำนาย และอีก 380 ภาพที่ class จริงอยู่อันดับ 2 ถึง 5 top-5 error rate ของโมเดลนี้คือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ภาพที่ class จริงอยู่ใน 5 อันดับแรก = 1,500 + 380 = 1,880 ภาพ. ภาพที่พลาด = 120 ภาพ. Top-5 error = 120/2,000 = 6%. ค่า 25% คือ top-1 error, ค่า 94% คือ top-5 accuracy.">25%</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ภาพที่ class จริงอยู่ใน 5 อันดับแรก = 1,500 + 380 = 1,880 ภาพ. ภาพที่พลาด = 120 ภาพ. Top-5 error = 120/2,000 = 6%. ค่า 25% คือ top-1 error, ค่า 94% คือ top-5 accuracy.">19%</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ภาพที่ class จริงอยู่ใน 5 อันดับแรก = 1,500 + 380 = 1,880 ภาพ. ภาพที่พลาด = 120 ภาพ. Top-5 error = 120/2,000 = 6%. ค่า 25% คือ top-1 error, ค่า 94% คือ top-5 accuracy.">6%</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ภาพที่ class จริงอยู่ใน 5 อันดับแรก = 1,500 + 380 = 1,880 ภาพ. ภาพที่พลาด = 120 ภาพ. Top-5 error = 120/2,000 = 6%. ค่า 25% คือ top-1 error, ค่า 94% คือ top-5 accuracy.">94%</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s2">2. LeNet-5 (1998): convolution ใช้ได้จริง</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p04-lenet-5.png" alt="Slide: LeNet-5. Most widely known CNN architecture, widely used for MNIST (LeCun, 1998). 5 weight layers: 3 CONV and 2 FC, with a pooling layer after the first and second convolutional layers. Main insight: convolutions with learnable parameters can extract spatial features distributed across the entire image. Achieves above 99% accuracy, but MNIST is very simple (grayscale, 10 classes). Diagram 28x28x1, 28x28x6, 14x14x6, 10x10x16, 5x5x16, 120, 84, 10 and a layer table with tanh activations and average pooling">
+<figcaption>Slide: LeNet-5 — 3 CONV + 2 FC (Lecture8, p.4)</figcaption>
+</figure>
+
+<p>LeNet-5 เป็น <mark class="src" data-p="4">CNN architecture</mark> ที่ <mark class="src" data-p="4">widely known</mark> ที่สุด และใช้กับ MNIST (LeCun, 1998). ประกอบด้วย 5 weight layers: 3 CONV และ 2 FC โดยมี pooling หลัง CONV ชั้นที่หนึ่งและสอง. ตารางในสไลด์ระบุว่าใช้ <strong>average pooling</strong> และ activation <strong>tanh</strong> (ไม่ใช่ max pooling และ ReLU แบบปัจจุบัน).</p>
+<p><strong>Main insight discovered:</strong> แทนที่จะใช้แต่ละ pixel เป็น input แยกกันของ network ขนาดใหญ่ <mark class="src" data-p="4">convolutions</mark> ที่มี learnable parameters สามารถ <mark class="src" data-p="4">extract spatial features</mark> ที่กระจายอยู่ทั่วทั้งภาพ. LeNet-5 ได้ accuracy สูงกว่า 99% แต่ MNIST เป็น dataset ที่ <mark class="src" data-p="4">very simple</mark> เพราะเป็นภาพ grayscale และมีเพียง 10 class.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามรูปในสไลด์: shape และ parameter ของ LeNet-5</div>
+<div class="given">ให้ input 28×28×1. CONV ทุกชั้นใช้ kernel 5×5 stride 1. Pooling ใช้ f = 2, s = 2. CONV ชั้นแรก padding same; ชั้นที่เหลือ padding valid</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — CONV1 (6 filter, same) และ POOL</div>
+$$\begin{gathered}28 \times 28 \times 6,\quad (5 \cdot 5 \cdot 1 + 1) \cdot 6 = 156 \\[0.35em] \Rightarrow\; 14 \times 14 \times 6\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — CONV2 (16 filter, valid) และ POOL</div>
+$$\begin{gathered}14 - 5 + 1 = 10 \;\Rightarrow\; 10 \times 10 \times 16 \\[0.35em] (5 \cdot 5 \cdot 6 + 1) \cdot 16 = 2{,}416 \\[0.35em] \rightarrow\; 5 \times 5 \times 16\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — CONV3 (120 filter, valid)</div>
+$$\begin{gathered}5 - 5 + 1 = 1 \;\Rightarrow\; 1 \times 1 \times 120\\ (5 \cdot 5 \cdot 16 + 1) \cdot 120 = 48{,}120\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 4 — FC 84 node และ output 10 node</div>
+$$120 \times 84 + 84 = 10{,}164 \qquad 84 \times 10 + 10 = 850$$</li>
+<li><div class="st-title">ขั้นที่ 5 — รวม</div>
+$$156 + 2{,}416 + 48{,}120 + 10{,}164 + 850 = 61{,}706$$</li>
+</ol>
+<div class="answer"><p>LeNet-5 มีราว 62,000 parameter. ตารางจาก Hands-on ML ในสไลด์ใช้ input 32×32 และ padding valid ทุกชั้น จึงได้ 32 → 28 → 14 → 10 → 5 → 1 ซึ่งลงท้ายที่ขนาดเดียวกัน.</p></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>LeNet-5 = <mark class="src" data-p="4">widely known</mark> <mark class="src" data-p="4">CNN architecture</mark> สำหรับ MNIST; 5 weight layers (3 CONV + 2 FC)</li>
+<li>Insight: <mark class="src" data-p="4">convolutions</mark> ⇒ <mark class="src" data-p="4">extract spatial features</mark></li>
+<li>MNIST <mark class="src" data-p="4">very simple</mark> (grayscale, 10 class) ⇒ accuracy 99% บน MNIST ไม่ได้แปลว่าโมเดลใช้ได้กับภาพจริง</li>
+</ul>
+</div>
+
+<h2 id="s3">3. AlexNet (2012): ลึกขึ้น ใหญ่ขึ้น</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p05-alexnet.png" alt="Slide: AlexNet (Krizhevsky et al.), a deeper (more hidden layers) and larger (more filters per layer) version of LeNet-5. Won ILSVRC 2012 with top-5 test error 15.3% (2nd place 26.2%). First real deep network that opened the door for the CV community. Trained on 1.2 million images in 1,000 classes; 60 million parameters and 650,000 neurons. Layer table: input 227x227x3, C1 96 maps 55x55 kernel 11x11 stride 4 valid, S2 max pool 27x27, C3 256 maps kernel 5x5 same, S4 13x13, C5 384, C6 384, C7 256 kernel 3x3 same, F8 4096, F9 4096, Out 1000 softmax">
+<figcaption>Slide: AlexNet — สถาปัตยกรรมและตาราง layer (Lecture8, p.5)</figcaption>
+</figure>
+
+<p>AlexNet (Krizhevsky et al.) คือ LeNet-5 รุ่นที่ <mark class="src" data-p="5">deeper</mark> (hidden layer มากขึ้น) และ <mark class="src" data-p="5">larger</mark> (filter ต่อ layer มากขึ้น). ชนะ ILSVRC 2012 ด้วย <strong>top-5 test error rate 15.3%</strong> ขณะที่อันดับสองได้ 26.2%. เป็น <mark class="src" data-p="5">real “deep” network</mark> ตัวแรกที่เปิดทาง <mark class="src" data-p="5">for CV community</mark> ให้พิจารณา CNN อย่างจริงจัง. เทรนบนภาพ 1.2 ล้านภาพ 1,000 class ใช้ <strong>60 million parameters</strong> และ 650,000 neurons.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามตารางในสไลด์: ขนาด feature map ของ AlexNet และที่อยู่ของ parameter</div>
+<div class="given">ให้ input 227×227×3 (ค่าในตารางของสไลด์)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — C1: 96 filter, 11×11, stride 4, valid</div>
+$$\begin{gathered}\left\lfloor \frac{227 - 11}{4} \right\rfloor + 1 = 54 + 1 = 55 \\[0.35em] \#\text{param} = (11 \cdot 11 \cdot 3 + 1) \cdot 96 = 34{,}944\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — S2: max pool 3×3, stride 2</div>
+$$\left\lfloor \frac{55 - 3}{2} \right\rfloor + 1 = 27$$</li>
+<li><div class="st-title">ขั้นที่ 3 — C3 (256 filter, 5×5, same) คงขนาด 27; S4: max pool 3×3, stride 2</div>
+$$\left\lfloor \frac{27 - 3}{2} \right\rfloor + 1 = 13$$</li>
+<li><div class="st-title">ขั้นที่ 4 — C5, C6, C7 (384, 384, 256 filter, 3×3, same) คงขนาด 13; max pool สุดท้าย</div>
+$$\begin{gathered}\left\lfloor \frac{13 - 3}{2} \right\rfloor + 1 = 6 \\[0.35em] \Rightarrow\; 6 \times 6 \times 256 = 9{,}216\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 5 — F8: dense 4,096 node</div>
+$$9{,}216 \times 4{,}096 + 4{,}096 = 37{,}752{,}832$$</li>
+</ol>
+<div class="answer"><p>ลำดับขนาด 227 → 55 → 27 → 13 → 6 ตรงกับคอลัมน์ Size ของตาราง. Dense layer ชั้นเดียว (F8) มี 37.8 ล้าน parameter จากทั้งหมดราว 62 ล้าน คือมากกว่าครึ่ง ส่วน C1 มีเพียง 34,944. โค้ดในหน้า 6 ใช้ <code>input_shape=(224,224,3)</code> ซึ่งให้ \(\lfloor 213/4 \rfloor + 1 = 54\) สไลด์จึงกำกับว่า "not totally similar to original".</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p06-alexnet-key-takeaways.png" alt="Slide: AlexNet Key Takeaways. Novel features to make it deeper (8 weight layers) than LeNet: ReLU which alleviates vanishing gradient compared with sigmoid/tanh; three techniques to overcome overfitting: dropout, data augmentation, L2 regularization; local response normalization and training on two GTX 580 GPUs with 3GB memory. First to stack convolutional layers directly on top of each other. However, AlexNet has many hyperparameters to tune. Keras implementation code shown">
+<figcaption>Slide: AlexNet Key Takeaways — พร้อมโค้ด Keras (Lecture8, p.6)</figcaption>
+</figure>
+
+<p>AlexNet ใช้เทคนิคใหม่หลายอย่างเพื่อให้ <mark class="src" data-p="6">deeper</mark> (8 weight layers: 5 CONV + 3 FC) กว่า LeNet:</p>
+<ul>
+<li><mark class="src" data-p="6">ReLU</mark> ซึ่งช่วยบรรเทา vanishing-gradient เมื่อเทียบกับ sigmoid/tanh (<a href="0005-vanishing-gradients-and-initialization.html">Lesson 5</a>)</li>
+<li>สามเทคนิคเพื่อ <mark class="src" data-p="6">overcome overfitting</mark>: (1) <mark class="src" data-p="6">drop-out</mark> (2) <mark class="src" data-p="6">data augmentation</mark> (3) <mark class="src" data-p="6">l2 regularizations</mark></li>
+<li>local response normalization เพื่อเร่ง convergence และเทรนบน GPU สองตัว (NVIDIA GTX 580 ที่มี memory เพียง 3GB) เพื่อลดเวลาเทรน</li>
+<li>เป็นตัวแรกที่<strong>ซ้อน convolutional layer ต่อกันโดยตรง</strong> (C5, C6, C7) แทนการวาง pooling หลังทุก convolutional layer</li>
+</ul>
+<p>ข้อเสีย: AlexNet มี <mark class="src" data-p="6">many hyperparameters to tune</mark> (kernel 11, 5, 3; stride 4, 1; padding valid/same ต่างกันทุกชั้น) ทำให้เข้าใจและจัดการยาก. ข้อเสียนี้คือโจทย์ที่ VGG แก้ใน §4.</p>
+
+<pre data-p="6"><code>model = Sequential()
+# C1 Convolutional Layer
+model.add(Conv2D(filters=96,kernel_size=11,strides=4,activation='relu',input_shape=(224,224,3),padding='valid'))
+# S2 Pooling Layer
+model.add(MaxPooling2D(pool_size=3,strides=2))
+model.add(Lambda(tf.nn.local_response_normalization))
+# C3 Convolutional Layer
+model.add(Conv2D(filters=256,kernel_size=5,strides=1,activation='relu',padding='same',kernel_regularizer=l2(0.0005)))
+# S4 Pooling Layer
+model.add(MaxPooling2D(pool_size=3,strides=2))
+model.add(Lambda(tf.nn.local_response_normalization))
+# C5 Convolutional Layer
+model.add(Conv2D(filters=384,kernel_size=3,strides=1,activation='relu',padding='same',kernel_regularizer=l2(0.0005)))
+model.add(Lambda(tf.nn.local_response_normalization))
+# C6 Convolutional Layer
+model.add(Conv2D(filters=384,kernel_size=3,strides=1,activation='relu',padding='same',kernel_regularizer=l2(0.0005)))
+model.add(Lambda(tf.nn.local_response_normalization))
+# C7 Convolutional Layer
+model.add(Conv2D(filters=256,kernel_size=3,strides=1,activation='relu',padding='same',kernel_regularizer=l2(0.0005)))
+model.add(Lambda(tf.nn.local_response_normalization))
+model.add(MaxPooling2D(pool_size=3,strides=2))
+
+model.add(Flatten())
+# FC8 Fully Connected Layer
+model.add(Dense(units=4096,activation='relu'))
+model.add(Dropout(0.5))
+# FC9 Fully Connected Layer
+model.add(Dense(units=4096,activation='relu'))
+model.add(Dropout(0.5))
+# FC10 Output layer with softmax activation
+model.add(Dense(units=1000,activation='softmax'))</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>Conv2D(filters=96, kernel_size=11, strides=4, activation='relu', input_shape=(224,224,3), padding='valid')</td><td>C1: kernel ใหญ่ 11×11 ก้าวทีละ 4 ย่อภาพอย่างรวดเร็วในชั้นแรก. activation เป็น ReLU</td></tr>
+<tr><td>MaxPooling2D(pool_size=3, strides=2)</td><td>หน้าต่าง 3×3 ก้าว 2 ⇒ หน้าต่างซ้อนกัน 1 pixel (overlapping pooling)</td></tr>
+<tr><td>Lambda(tf.nn.local_response_normalization)</td><td>ห่อฟังก์ชันของ TensorFlow เป็น layer ด้วย <code>Lambda</code>. ทำ local response normalization</td></tr>
+<tr><td>Conv2D(filters=256, kernel_size=5, ..., padding='same', kernel_regularizer=l2(0.0005))</td><td>C3: <code>kernel_regularizer=l2(0.0005)</code> คือ L2 regularization บน weight ของ filter (เทคนิคที่ 3)</td></tr>
+<tr><td>Conv2D(384, 3) → Conv2D(384, 3) → Conv2D(256, 3)</td><td>C5–C7: convolution สามชั้นต่อกันโดยไม่มี pooling คั่น</td></tr>
+<tr><td>Flatten()</td><td>แปลง feature map เป็น vector ก่อนเข้า FC</td></tr>
+<tr><td>Dense(units=4096, activation='relu') + Dropout(0.5)</td><td>FC8, FC9: dropout rate 0.5 หลัง dense แต่ละชั้น (เทคนิคที่ 1) อยู่ในส่วน classification</td></tr>
+<tr><td>Dense(units=1000, activation='softmax')</td><td>FC10: 1,000 class ของ ImageNet</td></tr>
+</table>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>AlexNet</span></div>
+  <div class="qtext">ข้อใดคือชุดเทคนิคสามอย่างที่ AlexNet ใช้เพื่อลด overfitting?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. สามเทคนิคลด overfitting ของ AlexNet คือ dropout, data augmentation และ L2 regularization. ReLU ใช้บรรเทา vanishing gradient ส่วน local response normalization และ GPU ใช้เร่งการเทรน. Batch normalization และ skip connections มาใน ResNet.">ReLU, local response normalization และ GPU สองตัว</button>
+    <button class="opt" data-correct="false" data-note="ผิด. สามเทคนิคลด overfitting ของ AlexNet คือ dropout, data augmentation และ L2 regularization. ReLU ใช้บรรเทา vanishing gradient ส่วน local response normalization และ GPU ใช้เร่งการเทรน. Batch normalization และ skip connections มาใน ResNet.">Dropout, batch normalization และ skip connections</button>
+    <button class="opt" data-correct="true" data-note="ถูก. สามเทคนิคลด overfitting ของ AlexNet คือ dropout, data augmentation และ L2 regularization. ReLU ใช้บรรเทา vanishing gradient ส่วน local response normalization และ GPU ใช้เร่งการเทรน. Batch normalization และ skip connections มาใน ResNet.">Dropout, data augmentation และ L2 regularization</button>
+    <button class="opt" data-correct="false" data-note="ผิด. สามเทคนิคลด overfitting ของ AlexNet คือ dropout, data augmentation และ L2 regularization. ReLU ใช้บรรเทา vanishing gradient ส่วน local response normalization และ GPU ใช้เร่งการเทรน. Batch normalization และ skip connections มาใน ResNet.">Max pooling, ReLU และ convolution ขนาด 11×11</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>Output size</span></div>
+  <div class="qtext">Convolution layer แรกของ network หนึ่งรับภาพ 99×99×3 ใช้ 32 filter ขนาด 7×7 stride 4 padding valid shape ของ output คือข้อใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. (99 − 7)/4 + 1 = 23 + 1 = 24 และ channel ของ output เท่ากับจำนวน filter คือ 32. ค่า 23 คือลืมบวก 1, ค่า 25 คือปัดขึ้นจาก 99/4.">23×23×32</button>
+    <button class="opt" data-correct="false" data-note="ผิด. (99 − 7)/4 + 1 = 23 + 1 = 24 และ channel ของ output เท่ากับจำนวน filter คือ 32. ค่า 23 คือลืมบวก 1, ค่า 25 คือปัดขึ้นจาก 99/4.">25×25×32</button>
+    <button class="opt" data-correct="false" data-note="ผิด. (99 − 7)/4 + 1 = 23 + 1 = 24 และ channel ของ output เท่ากับจำนวน filter คือ 32. ค่า 23 คือลืมบวก 1, ค่า 25 คือปัดขึ้นจาก 99/4.">24×24×3</button>
+    <button class="opt" data-correct="true" data-note="ถูก. (99 − 7)/4 + 1 = 23 + 1 = 24 และ channel ของ output เท่ากับจำนวน filter คือ 32. ค่า 23 คือลืมบวก 1, ค่า 25 คือปัดขึ้นจาก 99/4.">24×24×32</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>AlexNet = LeNet-5 ที่ <mark class="src" data-p="5">deeper</mark> และ <mark class="src" data-p="5">larger</mark>; <mark class="src" data-p="5">real “deep” network</mark> ตัวแรก <mark class="src" data-p="5">for CV community</mark></li>
+<li>ตัวเลข: top-5 error 15.3% (อันดับสอง 26.2%), 60 million parameters, 650,000 neurons, 8 weight layers</li>
+<li><mark class="src" data-p="6">ReLU</mark> ⇒ บรรเทา vanishing gradient. <mark class="src" data-p="6">overcome overfitting</mark> ด้วย <mark class="src" data-p="6">drop-out</mark>, <mark class="src" data-p="6">data augmentation</mark>, <mark class="src" data-p="6">l2 regularizations</mark></li>
+<li>ข้อเสีย: <mark class="src" data-p="6">many hyperparameters to tune</mark></li>
+</ul>
+</div>
+
+<h2 id="s4">4. VGGNet (2014): บล็อก 3×3 ซ้ำกันทั้ง network</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p07-vggnet.png" alt="Slide: VGGNet (Visual Geometry Group, Oxford) achieved a top-5 error rate of 7.3% on ImageNet as runner up in 2014. Its uniform architecture makes it appealing. A reduced filter size (compared to AlexNet) aims at faster learning and more robust to overfitting. VGG16 diagram: 224x224x3, 224x224x64, 112x112x128, 56x56x256, 28x28x512, 14x14x512, 7x7x512, 4096, 4096, 1000; structural details table with parameters per layer">
+<figcaption>Slide: VGGNet — VGG16 (Lecture8, p.7)</figcaption>
+</figure>
+
+<p>VGG (Visual Geometry Group, Oxford University) ได้ <strong>top-5 error rate 7.3%</strong> เป็น runner up ปี 2014. จุดเด่นคือ <mark class="src" data-p="7">uniform architecture</mark> และ <mark class="src" data-p="7">reduced filter size</mark> (เทียบกับ AlexNet) เพื่อให้เรียนเร็วขึ้นและทนต่อ overfitting มากขึ้น. รูป VGG16 แสดงรูปแบบที่สม่ำเสมอ: ทุกครั้งที่ pooling ลดด้านลงครึ่ง จำนวน channel เพิ่มสองเท่า: 224×224×64 → 112×112×128 → 56×56×256 → 28×28×512 → 14×14×512 → 7×7×512 แล้วต่อด้วย FC 4096, 4096, 1000.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p08-vggnet-key-takeaways.png" alt="Slide: VGGNet Key Takeaways. VGG solved the problem of setting up hyperparameters of conv and pooling layers by creating one uniform configuration across the entire network: all conv layers 3x3 filter, stride 1, padding same; all pooling layers pool size 2x2, stride 2. This makes it easy to understand and implement. It improves on AlexNet by replacing large kernel-sized filters (11 and 5) with multiple 3x3 filters one after another; multiple stacked smaller kernels is better than a larger kernel: more nonlinear layers, learn more complex features at a lower cost because of fewer parameters">
+<figcaption>Slide: VGGNet Key Takeaways (Lecture8, p.8)</figcaption>
+</figure>
+
+<p>VGG แก้ปัญหาการตั้ง hyperparameter ของ convolutional และ pooling layer ด้วย <mark class="src" data-p="8">one uniform configuration</mark> ที่ใช้ทั้ง network:</p>
+<ul>
+<li>convolutional layer <strong>ทุกชั้น</strong>: filter 3×3, stride = 1, padding = 'same'</li>
+<li>pooling layer <strong>ทุกชั้น</strong>: pool size 2×2, stride = 2</li>
+</ul>
+<p>การกำหนดค่าแบบเดียวนี้ทำให้สถาปัตยกรรม <mark class="src" data-p="8">easy to understand and implement</mark>. VGG ปรับปรุง AlexNet โดยแทน filter ขนาดใหญ่ (11 และ 5 ในสองชั้นแรก) ด้วย <mark class="src" data-p="8">multiple 3 × 3 filters</mark> ต่อกัน. เหตุผลในสไลด์: ที่ receptive field เท่ากัน <u>multiple stacked smaller kernels</u> ดีกว่า kernel ใหญ่ตัวเดียว เพราะมี nonlinear layer หลายชั้นจึงเพิ่มความลึก ทำให้ <mark class="src" data-p="8">learn more complex features at a lower cost</mark> จากการที่มี parameter น้อยกว่า.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: 3×3 สองชั้นเทียบกับ 5×5 หนึ่งชั้น</div>
+<div class="given">ให้ input และ output มี 64 channel ทุกชั้น, stride 1</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Receptive field ของ 3×3 ซ้อนสองชั้น</div>
+<p>output หนึ่งค่าของชั้นที่สองมองเห็น 3×3 ค่าของชั้นแรก และแต่ละค่านั้นมองเห็น 3×3 pixel ที่เหลื่อมกันทีละ 1</p>
+$$3 + (3 - 1) = 5 \quad\Rightarrow\quad 5 \times 5$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Parameter ของ 5×5 หนึ่งชั้น</div>
+$$(5 \cdot 5 \cdot 64 + 1) \cdot 64 = 102{,}464$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Parameter ของ 3×3 สองชั้น</div>
+$$2 \times (3 \cdot 3 \cdot 64 + 1) \cdot 64 = 2 \times 36{,}928 = 73{,}856$$</li>
+<li><div class="st-title">ขั้นที่ 4 — กรณี 7×7: 3×3 สามชั้นให้ receptive field \(3 + 2 + 2 = 7\)</div>
+$$(7 \cdot 7 \cdot 64 + 1) \cdot 64 = 200{,}768 \qquad 3 \times 36{,}928 = 110{,}784$$</li>
+</ol>
+<div class="answer"><p>Receptive field เท่ากัน แต่ 3×3 สองชั้นใช้ parameter น้อยกว่า 28% (73,856 เทียบกับ 102,464) และมี ReLU สองครั้งแทนหนึ่งครั้ง. กรณี 7×7 ประหยัดได้ 45%. ค่า 36,928 คือค่าที่ปรากฏในตาราง VGG16 ของสไลด์สำหรับ conv ชั้นที่สอง.</p></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>VGG</span></div>
+  <div class="qtext">ข้อใดคือ configuration ที่ VGG ใช้เหมือนกันทั้ง network?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. VGG กำหนด convolutional layer ทุกชั้นเป็น 3×3, stride 1, padding same และ pooling layer ทุกชั้นเป็น 2×2, stride 2 ซึ่งทำให้ขนาดลดครึ่งเฉพาะที่ pooling.">Conv 3×3 stride 1 padding same และ max pooling 2×2 stride 2</button>
+    <button class="opt" data-correct="false" data-note="ผิด. VGG กำหนด convolutional layer ทุกชั้นเป็น 3×3, stride 1, padding same และ pooling layer ทุกชั้นเป็น 2×2, stride 2 ซึ่งทำให้ขนาดลดครึ่งเฉพาะที่ pooling.">Conv 5×5 stride 1 padding same และ max pooling 3×3 stride 2</button>
+    <button class="opt" data-correct="false" data-note="ผิด. VGG กำหนด convolutional layer ทุกชั้นเป็น 3×3, stride 1, padding same และ pooling layer ทุกชั้นเป็น 2×2, stride 2 ซึ่งทำให้ขนาดลดครึ่งเฉพาะที่ pooling.">Conv 3×3 stride 2 padding valid และ max pooling 2×2 stride 2</button>
+    <button class="opt" data-correct="false" data-note="ผิด. VGG กำหนด convolutional layer ทุกชั้นเป็น 3×3, stride 1, padding same และ pooling layer ทุกชั้นเป็น 2×2, stride 2 ซึ่งทำให้ขนาดลดครึ่งเฉพาะที่ pooling.">Conv 3×3 stride 1 padding valid และ max pooling 2×2 stride 1</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>VGG</span></div>
+  <div class="qtext">Convolution 3×3 ซ้อนกันสามชั้น (stride 1) มี receptive field เทียบเท่า convolution ชั้นเดียวขนาดใด และถ้าทุกชั้นมี 32 channel (ไม่นับ bias) แบบใดใช้ weight น้อยกว่า?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Receptive field = 3 + 2 + 2 = 7. Weight ของ 3×3 สามชั้น = 3·9·32·32 = 27,648; ของ 7×7 ชั้นเดียว = 49·32·32 = 50,176.">เทียบเท่า 9×9 และ 3×3 สามชั้นใช้ weight น้อยกว่า</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Receptive field = 3 + 2 + 2 = 7. Weight ของ 3×3 สามชั้น = 3·9·32·32 = 27,648; ของ 7×7 ชั้นเดียว = 49·32·32 = 50,176.">เทียบเท่า 7×7 และ 3×3 สามชั้นใช้ weight น้อยกว่า</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Receptive field = 3 + 2 + 2 = 7. Weight ของ 3×3 สามชั้น = 3·9·32·32 = 27,648; ของ 7×7 ชั้นเดียว = 49·32·32 = 50,176.">เทียบเท่า 7×7 และ 7×7 ชั้นเดียวใช้ weight น้อยกว่า</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Receptive field = 3 + 2 + 2 = 7. Weight ของ 3×3 สามชั้น = 3·9·32·32 = 27,648; ของ 7×7 ชั้นเดียว = 49·32·32 = 50,176.">เทียบเท่า 5×5 และ 3×3 สามชั้นใช้ weight น้อยกว่า</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>VGG: <mark class="src" data-p="7">uniform architecture</mark>, <mark class="src" data-p="7">reduced filter size</mark>; top-5 error 7.3%; runner up 2014 (ไม่ใช่ผู้ชนะ)</li>
+<li><mark class="src" data-p="8">one uniform configuration</mark> ⇒ <mark class="src" data-p="8">easy to understand and implement</mark></li>
+<li>แทน kernel ใหญ่ด้วย <mark class="src" data-p="8">multiple 3 × 3 filters</mark> ⇒ <mark class="src" data-p="8">learn more complex features at a lower cost</mark>. กับดัก: ตัวเลือกที่บอกว่า kernel เล็กซ้อนกันมี parameter มากกว่า kernel ใหญ่</li>
+<li>ข้อเสียที่เห็นในตารางหน้า 16: VGG มี 138M parameter และ 19.6B FLOP มากที่สุดในสี่ตัว</li>
+</ul>
+</div>
+
+<h2 id="s5">5. Inception และ GoogLeNet (2014): หลายขนาด filter พร้อมกัน + 1×1 bottleneck</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p09-inception-googlenet.png" alt="Slide: Inception and GoogLeNet. Inception tried to solve the same problem as VGGNet (paper Going Deeper with Convolutions, Google, 2014). GoogLeNet won ILSVRC 2014 with top-5 error 6.67%. Hallmark: a deeper neural network with the ability to extract features at varying scales through varying convolutional filter sizes, while improving utilization of computing resources (about 13 million parameters, 12 times less than VGG16). Inception module diagram: input copied to four branches: 1x1 conv; 1x1 then 3x3; 1x1 then 5x5; 3x3 max pool then 1x1; depth concat">
+<figcaption>Slide: Inception and GoogLeNet — inception module (Lecture8, p.9)</figcaption>
+</figure>
+
+<p>Inception แก้โจทย์เดียวกับ VGGNet. เผยแพร่ในบทความ "Going Deeper with Convolutions" ของนักวิจัย Google (2014). รุ่นหนึ่งคือ <mark class="src" data-p="9">GoogLeNet</mark> ซึ่งชนะ ILSVRC 2014 ด้วย <strong>top-5 error rate 6.67%</strong> (ใกล้ระดับมนุษย์). เอกลักษณ์คือการสร้าง <mark class="src" data-p="9">deeper neural network</mark> ที่</p>
+<ul>
+<li><mark class="src" data-p="9">extract features</mark> จาก input <mark class="src" data-p="9">at varying scales</mark> ด้วย convolutional filter หลายขนาด</li>
+<li>ปรับปรุง <mark class="src" data-p="9">utilization of the computing resources</mark> ภายใน network (ลด parameter เหลือราว 13 ล้าน น้อยกว่า VGG16 ราว 12 เท่า)</li>
+</ul>
+<p>การทำงานของ inception module ตามรูป:</p>
+<ol>
+<li>input ถูก copy ส่งเข้า 4 เส้นทางขนาน: (ก) conv 1×1 (ข) conv 1×1 → conv 3×3 (ค) conv 1×1 → conv 5×5 (ง) max pool 3×3 → conv 1×1</li>
+<li>ทุก layer ใช้ stride 1 และ padding "same" จึงได้ output กว้าง×สูงเท่ากันทุกเส้นทาง</li>
+<li>conv 1×1 (เรียกว่า <strong>bottleneck layer</strong>) เรียน pattern ข้าม depth ของ input และลด depth ลง จึงลดการคำนวณ</li>
+<li>convolutional layer ทุกตัวใช้ ReLU</li>
+<li>ผลของ 4 เส้นทางถูก <strong>concatenate ตาม depth</strong> เป็นบล็อก Filter Concatenation</li>
+</ol>
+
+<figure>
+<img src="../assets/slides/dl8-p10-naive-inception-cost.png" alt="Slide: Computational Cost of Naive Inception Module. Number of multiplier operations = (output dimensions) * (filter dimensions) * (depth of input channel). Naive: input 28x28x192 through 5x5 conv with 32 filters gives (28x28x32) x (5x5) x 192. With a 1x1 conv of 16 filters first: ((28x28x16)*(1x1x192)) + ((28x28x32)*(5x5x16)) = 2,408,448 + 10,035,200 = 12,443,648">
+<figcaption>Slide: Computational Cost of Naive Inception Module (Lecture8, p.10)</figcaption>
+</figure>
+
+$$\begin{gathered}\#\text{multiplications} = (\text{output dimensions})\\ \times\, (\text{filter dimensions}) \times (\text{depth of input channel})\end{gathered}$$
+<p class="plain-thai">ทุกค่าของ output ต้องคูณ f×f ครั้งต่อ channel ของ input</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: ต้นทุนของ conv 5×5 แบบตรง เทียบกับมี 1×1 bottleneck</div>
+<div class="given">ให้ input 28×28×192. ต้องการ output 28×28×32 จาก conv 5×5 (padding same)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Naive: conv 5×5 จำนวน 32 filter บน 192 channel โดยตรง</div>
+$$\begin{gathered}(28 \times 28 \times 32) \times (5 \times 5) \times 192\\ = 25{,}088 \times 25 \times 192 = 120{,}422{,}400\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Bottleneck ส่วนแรก: conv 1×1 จำนวน 16 filter ลด depth จาก 192 เป็น 16</div>
+$$\begin{gathered}(28 \times 28 \times 16) \times (1 \times 1) \times 192 \\[0.35em] = 12{,}544 \times 192 = 2{,}408{,}448\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Bottleneck ส่วนที่สอง: conv 5×5 จำนวน 32 filter บน 16 channel</div>
+$$\begin{gathered}(28 \times 28 \times 32) \times (5 \times 5) \times 16 \\[0.35em] = 25{,}088 \times 400 = 10{,}035{,}200\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 4 — รวมและเทียบ</div>
+$$\begin{gathered}2{,}408{,}448 + 10{,}035{,}200 = 12{,}443{,}648 \\[0.35em] \frac{120{,}422{,}400}{12{,}443{,}648} \approx 9.7\end{gathered}$$</li>
+</ol>
+<div class="answer"><p>Output เท่ากัน (28×28×32) แต่การคูณลดลงราว 9.7 เท่า. <strong>หมายเหตุ:</strong> สไลด์พิมพ์ผลของขั้นที่ 1 ว่า "120, 244, 400" ซึ่งสลับหลัก ค่าที่ถูกจากการคูณ 25,088 × 25 × 192 คือ 120,422,400. ค่า 2,408,448, 10,035,200 และ 12,443,648 ในสไลด์ถูกต้อง.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p11-googlenet-architecture.png" alt="Slide: GoogLeNet Architecture contains 22 layers: a series of CONV and POOL layers before inception modules (identical to AlexNet and LeNet); 9 inception modules (2 layers each) with max pooling after every several blocks; the classifier part with fully connected and softmax layers. GoogLeNet was much deeper (wider) than previous CNNs and incurs 10 times fewer parameters than AlexNet (6 from 60 million). Table of layers: inception (3a) output 28x28x256 with 1x1=64, 3x3 reduce=96, 3x3=128, 5x5 reduce=16, 5x5=32, pool proj=32">
+<figcaption>Slide: GoogLeNet Architecture — 22 layers (Lecture8, p.11)</figcaption>
+</figure>
+
+<p>GoogLeNet มี 22 layers: (1) ชุด CONV และ POOL ก่อน inception module เหมือน AlexNet และ LeNet (2) inception module 9 ตัว (ตัวละ 2 layers) มี max pooling คั่นทุกสองสามบล็อกเพื่อลดมิติ (3) ส่วน classifier คือ fully connected และ softmax. GoogLeNet <mark class="src" data-p="11">deeper (wider)</mark> กว่า CNN ก่อนหน้ามาก แต่ใช้ parameter น้อยกว่า AlexNet 10 เท่า (6 ล้าน จาก 60 ล้าน). Inception มีรุ่นอื่นอีก เช่น Inception-v3 และ Inception-v4.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามตารางในสไลด์: depth ของ output ของ inception (3a) และ (3b)</div>
+<div class="given">ให้ แถว inception (3a): #1×1 = 64, #3×3 reduce = 96, #3×3 = 128, #5×5 reduce = 16, #5×5 = 32, pool proj = 32. Input 28×28×192</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — เลือก filter ที่เป็น<u>ปลายทาง</u>ของแต่ละเส้นทาง (ค่า reduce เป็นขั้นกลาง ไม่ถูกนำมาต่อ)</div>
+$$\text{1×1}: 64 \qquad \text{3×3}: 128 \qquad \text{5×5}: 32 \qquad \text{pool proj}: 32$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Concatenate ตาม depth = บวกจำนวน channel</div>
+$$64 + 128 + 32 + 32 = 256 \quad\Rightarrow\quad 28 \times 28 \times 256$$</li>
+<li><div class="st-title">ขั้นที่ 3 — inception (3b): 128, 192, 96, 64</div>
+$$128 + 192 + 96 + 64 = 480 \quad\Rightarrow\quad 28 \times 28 \times 480$$</li>
+</ol>
+<div class="answer"><p>256 และ 480 ตรงกับคอลัมน์ output size ของตาราง. กว้างและสูงคงเดิม (28×28) เพราะทุกเส้นทางใช้ padding same; การ concatenate เปลี่ยนเฉพาะ depth.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p12-inception-key-takeaways.png" alt="Slide: Inception Key Takeaways. Instead of choosing a desired filter size in a CONV layer and where to place the pooling layers, apply all of them together in one block called the Inception Module. The architecture is developed by stacking the inception modules on top of each other. The 1x1 CONV layer preserves spatial dimensions (H and W) but changes the number of channels (depth); adding a 1x1 conv before bigger 3x3 and 5x5 kernels reduces their depth, which reduces the number of operations">
+<figcaption>Slide: Inception Key Takeaways (Lecture8, p.12)</figcaption>
+</figure>
+
+<ul>
+<li>แทนการเลือกขนาด filter ของ CONV layer และตำแหน่งของ pooling ให้ <mark class="src" data-p="12">apply all of them</mark> พร้อมกันในบล็อกเดียว เรียกว่า "<mark class="src" data-p="12">Inception Module</mark>"</li>
+<li>แทนการซ้อน layer ทีละชั้นแบบ classical ให้สร้าง inception module ที่มี convolutional layer หลายขนาด kernel แล้วสร้างสถาปัตยกรรมด้วยการ <mark class="src" data-p="12">stacking the inception modules on top of each other</mark></li>
+<li><mark class="src" data-p="12">1x1 CONV layer</mark> รักษา spatial dimensions (H &amp; W) ของ input แต่เปลี่ยนจำนวน channel (depth). วาง 1×1 ไว้ก่อน kernel ใหญ่ (3×3, 5×5) เพื่อ <mark class="src" data-p="12">reduce their depth</mark> ซึ่งจะ <mark class="src" data-p="12">reduce the number of operations</mark></li>
+</ul>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>Inception</span></div>
+  <div class="qtext">Inception module หนึ่งรับ input 14×14×480 เส้นทางทั้งสี่ให้ output 192, 208, 48 และ 64 channel ตามลำดับ (ทุกเส้นทาง stride 1 padding same) shape หลัง depth concatenation คือข้อใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Concatenate ตาม depth คือบวกจำนวน channel: 192 + 208 + 48 + 64 = 512. กว้างและสูงคงเดิมที่ 14×14. ค่า 992 คือบวก channel ของ input เข้าไปด้วย.">14×14×512</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Concatenate ตาม depth คือบวกจำนวน channel: 192 + 208 + 48 + 64 = 512. กว้างและสูงคงเดิมที่ 14×14. ค่า 992 คือบวก channel ของ input เข้าไปด้วย.">14×14×992</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Concatenate ตาม depth คือบวกจำนวน channel: 192 + 208 + 48 + 64 = 512. กว้างและสูงคงเดิมที่ 14×14. ค่า 992 คือบวก channel ของ input เข้าไปด้วย.">56×56×128</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Concatenate ตาม depth คือบวกจำนวน channel: 192 + 208 + 48 + 64 = 512. กว้างและสูงคงเดิมที่ 14×14. ค่า 992 คือบวก channel ของ input เข้าไปด้วย.">14×14×208</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>Inception</span></div>
+  <div class="qtext">Input 14×14×256 ต้องการ output 14×14×64 จาก conv 5×5 (padding same) ถ้าใส่ conv 1×1 จำนวน 32 filter ไว้ก่อน จำนวนการคูณทั้งหมดคือเท่าใด เมื่อใช้สูตร (ขนาด output) × (ขนาด filter) × (depth ของ input)?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. 1×1: (14·14·32)·1·256 = 1,605,632. 5×5: (14·14·64)·25·32 = 10,035,200. รวม 11,640,832. ค่า 80,281,600 คือกรณีไม่มี bottleneck ซึ่งมากกว่าราว 6.9 เท่า.">80,281,600</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 1×1: (14·14·32)·1·256 = 1,605,632. 5×5: (14·14·64)·25·32 = 10,035,200. รวม 11,640,832. ค่า 80,281,600 คือกรณีไม่มี bottleneck ซึ่งมากกว่าราว 6.9 เท่า.">10,035,200</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 1×1: (14·14·32)·1·256 = 1,605,632. 5×5: (14·14·64)·25·32 = 10,035,200. รวม 11,640,832. ค่า 80,281,600 คือกรณีไม่มี bottleneck ซึ่งมากกว่าราว 6.9 เท่า.">1,605,632</button>
+    <button class="opt" data-correct="true" data-note="ถูก. 1×1: (14·14·32)·1·256 = 1,605,632. 5×5: (14·14·64)·25·32 = 10,035,200. รวม 11,640,832. ค่า 80,281,600 คือกรณีไม่มี bottleneck ซึ่งมากกว่าราว 6.9 เท่า.">11,640,832</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li><mark class="src" data-p="9">GoogLeNet</mark> = ผู้ชนะ ILSVRC 2014, top-5 error 6.67%; <mark class="src" data-p="9">deeper neural network</mark> ที่ <mark class="src" data-p="9">extract features</mark> <mark class="src" data-p="9">at varying scales</mark> และใช้ <mark class="src" data-p="9">utilization of the computing resources</mark> ดีขึ้น</li>
+<li>GoogLeNet: 22 layers, 9 inception modules, <mark class="src" data-p="11">deeper (wider)</mark>, parameter น้อยกว่า AlexNet 10 เท่า</li>
+<li><mark class="src" data-p="12">Inception Module</mark> = <mark class="src" data-p="12">apply all of them</mark> ในบล็อกเดียว แล้ว <mark class="src" data-p="12">stacking the inception modules on top of each other</mark></li>
+<li><mark class="src" data-p="12">1x1 CONV layer</mark>: คง H, W; เปลี่ยน depth ⇒ <mark class="src" data-p="12">reduce their depth</mark> ⇒ <mark class="src" data-p="12">reduce the number of operations</mark>. กับดัก: ตัวเลือกที่บอกว่า 1×1 conv ลดขนาดกว้าง×สูง</li>
+</ul>
+</div>
+
+<h2 id="s6">6. ResNet (2015): skip connection ทำให้ network ลึกมากเทรนได้</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p13-resnet-residual-block.png" alt="Slide: ResNet (He et al., Microsoft Research) created residual blocks stacked to form the network; won ILSVRC 2015 with top-5 error 4.49%. Uses skip (shortcut) connections between every two CONV layers, creating residual blocks that address the vanishing gradient problem and allow training networks with 50, 101 and 152 weight layers. Skip connections make it easier to learn an identity mapping. Diagram: plain block outputs h(x); residual block has f(x) = h(x) - x with a skip connection added back; when a layer blocks backpropagation the signal still flows through the skip">
+<figcaption>Slide: ResNet (Residual Network) — residual block (Lecture8, p.13)</figcaption>
+</figure>
+
+<p>ResNet (He et al., Microsoft Research) ใช้แนวทางเดียวกับ Inception คือสร้างบล็อกแล้วนำมาซ้อน. ชนะ ILSVRC 2015 ด้วย <strong>top-5 error rate 4.49%</strong>. ใช้ <mark class="src" data-p="13">skip (or shortcut) connections</mark> ระหว่างทุกสอง CONV layer. การเชื่อมนี้สร้าง <mark class="src" data-p="13">residual blocks</mark> ซึ่งทำให้สร้าง network ลึกได้โดยแก้ <mark class="src" data-p="13">vanishing gradient problem</mark>. จึงเทรน network ที่มี 50, 101 และ 152 weight layers ได้โดยยังมี complexity ต่ำกว่า. Skip connection ยังทำให้ residual block เรียน <strong>identity mapping</strong> ได้ง่ายเมื่อการแปลงเพิ่มเติมไม่มีประโยชน์.</p>
+
+<div class="box prereq">
+<div class="label">ต้องรู้ก่อน — ทำไม network ลึกจึงเทรนยาก</div>
+<p>Backpropagation คูณ gradient ย้อนกลับทีละ layer (<a href="0003-cost-function-and-backpropagation.html">Lesson 3</a>). ถ้าตัวคูณแต่ละชั้นเล็กกว่า 1 ผลคูณหลายสิบชั้นจะเข้าใกล้ศูนย์ layer ต้นๆ จึงแทบไม่ถูกอัปเดต (<a href="0005-vanishing-gradients-and-initialization.html">Lesson 5</a>). เช่น \(0.8^{50} \approx 0.000014\).</p>
+</div>
+
+<p>รูปซ้ายของสไลด์เทียบสองบล็อก. ให้ \(h(x)\) คือฟังก์ชันที่ต้องการให้บล็อกเรียน.</p>
+<ul>
+<li><strong>บล็อกธรรมดา:</strong> Layer 1 → Layer 2 ต้องเรียน \(h(x)\) โดยตรง</li>
+<li><strong>Residual block:</strong> input \(x\) ถูกส่งข้ามสอง layer ไปบวกกับ output. สอง layer จึงเรียนเพียงส่วนต่าง</li>
+</ul>
+$$h(x) = f(x) + x \qquad\Longleftrightarrow\qquad f(x) = h(x) - x$$
+<p class="plain-thai">บล็อกเรียนเฉพาะ "ส่วนที่ต้องเพิ่มจาก input" (residual) ไม่ต้องสร้าง output ทั้งหมดใหม่</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: identity mapping และ gradient ผ่าน skip connection</div>
+<div class="given">ให้ residual block มี output \(h(x) = f(x) + x\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — ถ้า weight ของสอง layer เป็นศูนย์ทั้งหมด</div>
+$$f(x) = 0 \quad\Rightarrow\quad h(x) = 0 + x = x$$
+<p>บล็อกกลายเป็น identity โดยไม่ต้องเรียนอะไร. บล็อกธรรมดาที่ weight เป็นศูนย์ให้ output 0 และตัดสัญญาณทิ้ง</p></li>
+<li><div class="st-title">ขั้นที่ 2 — Gradient ของ output เทียบกับ input</div>
+$$\frac{\partial h}{\partial x} = \frac{\partial f}{\partial x} + 1$$</li>
+<li><div class="st-title">ขั้นที่ 3 — ถ้า \(\partial f / \partial x = 0.01\) (layer เกือบปิดกั้น gradient)</div>
+$$\text{บล็อกธรรมดา: } 0.01 \qquad \text{residual block: } 0.01 + 1 = 1.01$$</li>
+</ol>
+<div class="answer"><p>พจน์ "+1" คือเส้นทางลัดที่ gradient ไหลย้อนกลับได้โดยไม่ถูกคูณด้วยค่าเล็ก. รูปขวาของสไลด์แสดงกรณีนี้: layer ที่มีกากบาท (blocking backpropagation) ไม่ทำให้ layer ก่อนหน้าหยุดเรียน เพราะสัญญาณอ้อมผ่าน skip connection.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p14-resnet-architecture.png" alt="Slide: ResNet Architecture. The winning variant used 152 layers (variants 18, 34, 50, 101, 152). ResNet-34 starts and ends like GoogLeNet (without dropout) with a deep stack of residual units in between. Each residual unit has two convolutional layers (no pooling layer), with Batch Normalization and ReLU, 3x3 kernels, stride 1, same padding. No pooling layers in the residual block; ResNet-50/101/152 use bottleneck 1x1 convolutional layers. Table of ResNet-18/34/50/101/152 block counts and FLOPs">
+<figcaption>Slide: ResNet Architecture — ResNet-34 และตารางรุ่นต่างๆ (Lecture8, p.14)</figcaption>
+</figure>
+
+<p>รุ่นที่ชนะใช้ CNN ลึก <mark class="src" data-p="14">152 layers</mark> (รุ่นอื่นมี 18, 34, 50, 101). ตัวอย่างในสไลด์คือ <mark class="src" data-p="14">Resnet-34</mark>:</p>
+<ul>
+<li>ต้นและท้ายเหมือน GoogLeNet (แต่ไม่มี dropout layer) ตรงกลางคือ residual unit ซ้อนกันลึกมาก</li>
+<li>residual unit แต่ละตัวมี convolutional layer สองชั้น (ไม่มี pooling) พร้อม Batch Normalization (BN) และ ReLU ใช้ kernel 3×3 และรักษา spatial dimensions (stride 1, "same" padding)</li>
+<li>มี <mark class="src" data-p="14">no pooling layers</mark> ใน <mark class="src" data-p="14">residual block</mark>. ใน ResNet-50, ResNet-101 และ ResNet-152 ผู้ออกแบบลดมิติด้วย bottleneck <mark class="src" data-p="14">1x1 convolutional layers</mark> แบบเดียวกับ Inception</li>
+</ul>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามตารางในสไลด์: นับ layer ของ ResNet-34 และ ResNet-50</div>
+<div class="given">ให้ ทั้งสองรุ่นมีจำนวนบล็อกต่อ stage (conv2_x ถึง conv5_x) = 3, 4, 6, 3. ResNet-34 ใช้บล็อก 2 conv; ResNet-50 ใช้ bottleneck 3 conv (1×1, 3×3, 1×1)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — ResNet-34</div>
+$$\underbrace{1}_{\text{conv1}} + \underbrace{(3 + 4 + 6 + 3) \times 2}_{32} + \underbrace{1}_{\text{FC}} = 34$$</li>
+<li><div class="st-title">ขั้นที่ 2 — ResNet-50</div>
+$$1 + (3 + 4 + 6 + 3) \times 3 + 1 = 1 + 48 + 1 = 50$$</li>
+<li><div class="st-title">ขั้นที่ 3 — ResNet-152: บล็อกต่อ stage = 3, 8, 36, 3 (bottleneck)</div>
+$$1 + (3 + 8 + 36 + 3) \times 3 + 1 = 1 + 150 + 1 = 152$$</li>
+</ol>
+<div class="answer"><p>ตัวเลขในชื่อรุ่นคือจำนวน weight layers. Pooling และ BN ไม่นับ.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p15-resnet-key-takeaways.png" alt="Slide: ResNet Key Takeaways. ResNet builds even deeper networks; skip connections called residual module allow information to flow from earlier to later layers, creating an alternate shortcut path for the gradient; heavy batch normalization for the hidden layers. The breakthrough: training extremely deep networks with hundreds of layers. Table: 1998 LeNet 5 layers; 2012 AlexNet 8 layers 15.3%; 2014 VGGNet 16 layers 7.3%; 2014 Inception (GoogLeNet) 22 layers 6.67%; 2015 ResNet-152 152 layers 4.49%. Note: Inception-v4 merged GoogLeNet and ResNet, top-five error close to 3%">
+<figcaption>Slide: ResNet Key Takeaways — ตารางสรุป 5 รุ่น (Lecture8, p.15)</figcaption>
+</figure>
+
+<ul>
+<li>ResNet สร้าง <mark class="src" data-p="15">deeper networks</mark> กว่าสถาปัตยกรรมอื่น</li>
+<li>นำเสนอ "<mark class="src" data-p="15">skip connections</mark>" ที่เรียกว่า <mark class="src" data-p="15">residual module</mark>. ข้อมูลไหลจาก layer ต้นไป layer หลังได้ และเกิด <strong>shortcut path</strong> ให้ <strong>gradient to flow</strong></li>
+<li>ใช้ <mark class="src" data-p="15">batch normalization</mark> อย่างหนักกับ hidden layers</li>
+<li>Breakthrough: เทรน network ลึกหลายร้อยชั้นได้ ซึ่งเดิมทำยากเพราะ vanishing gradients</li>
+</ul>
+<table class="compact">
+<tr><th>Year</th><th>CNN</th><th>Number of layers</th><th>Top-5 error rate</th></tr>
+<tr><td>1998</td><td>LeNet</td><td>5 layers</td><td>NA</td></tr>
+<tr><td>2012</td><td>AlexNet</td><td>8 layers</td><td>15.3%</td></tr>
+<tr><td>2014</td><td>VGGNet</td><td>16 layers</td><td>7.3%</td></tr>
+<tr><td>2014</td><td>Inception (GoogLeNet)</td><td>22</td><td>6.67%</td></tr>
+<tr><td>2015</td><td>ResNet-152</td><td>152</td><td>4.49%</td></tr>
+</table>
+<p>จำนวน layer เพิ่มทุกรุ่น (5 → 8 → 16 → 22 → 152) และ error ลดทุกรุ่น (15.3 → 7.3 → 6.67 → 4.49). หมายเหตุในสไลด์: Inception-v4 ของ Google รวมแนวคิดของ GoogLeNet และ ResNet ได้ top-five error ใกล้ 3%.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p16-comparison.png" alt="Slide: Comparison. Four CNNs compared on top-5 accuracy, trainable parameters and FLOPs. AlexNet 2012 Deeper 84.70% 62M 1.5B. VGGNet 2014 Fixed-size kernels 92.30% 138M 19.6B. Inception 2014 Wider, Parallel kernels 93.30% 6.4M 2B. ResNet-152 2015 Shortcut connections 95.51% 60.3M 11B. Bubble chart of top-1 accuracy versus operations">
+<figcaption>Slide: Comparison — accuracy, parameters, FLOP (Lecture8, p.16)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>Network</th><th>Year</th><th>Salient Feature</th><th>top5 accuracy</th><th>Parameters</th><th>FLOP</th></tr>
+<tr><td>AlexNet</td><td>2012</td><td>Deeper</td><td>84.70%</td><td>62M</td><td>1.5B</td></tr>
+<tr><td>VGGNet</td><td>2014</td><td>Fixed-size kernels</td><td>92.30%</td><td>138M</td><td>19.6B</td></tr>
+<tr><td>Inception</td><td>2014</td><td>Wider - Parallel kernels</td><td>93.30%</td><td>6.4M</td><td>2B</td></tr>
+<tr><td>ResNet-152</td><td>2015</td><td>Shortcut connections</td><td>95.51%</td><td>60.3M</td><td>11B</td></tr>
+</table>
+<p>FLOP (Floating Point Operations) คือจำนวนการคำนวณของ forward pass หนึ่งครั้ง. อ่านตารางเป็นการแลกเปลี่ยน: Inception ได้ accuracy สูงกว่า VGGNet 1 จุด (93.30 เทียบกับ 92.30) ด้วย parameter น้อยกว่า \(138 / 6.4 \approx 21.6\) เท่า และ FLOP น้อยกว่า \(19.6 / 2 \approx 9.8\) เท่า. ResNet-152 ลึกกว่า VGG16 เกือบ 10 เท่า (152 เทียบกับ 16 layers) แต่มี parameter น้อยกว่าครึ่ง (60.3M เทียบกับ 138M). ความสัมพันธ์ accuracy กับ error: \(100 - 95.51 = 4.49\%\) ตรงกับ top-5 error ของ ResNet-152.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>ResNet</span></div>
+  <div class="qtext">ใน residual block ถ้า h(x) คือ output ของทั้งบล็อกและ x คือ input สอง convolutional layer ภายในบล็อกเรียนฟังก์ชัน f(x) ที่สัมพันธ์กับ h(x) อย่างไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Skip connection บวก input เข้ากับ output ของสอง layer: h(x) = f(x) + x จึงได้ f(x) = h(x) − x คือส่วนต่าง (residual) ที่ต้องเพิ่มจาก input.">f(x) = h(x) − x</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Skip connection บวก input เข้ากับ output ของสอง layer: h(x) = f(x) + x จึงได้ f(x) = h(x) − x คือส่วนต่าง (residual) ที่ต้องเพิ่มจาก input.">f(x) = h(x) + x</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Skip connection บวก input เข้ากับ output ของสอง layer: h(x) = f(x) + x จึงได้ f(x) = h(x) − x คือส่วนต่าง (residual) ที่ต้องเพิ่มจาก input.">f(x) = h(x) · x</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Skip connection บวก input เข้ากับ output ของสอง layer: h(x) = f(x) + x จึงได้ f(x) = h(x) − x คือส่วนต่าง (residual) ที่ต้องเพิ่มจาก input.">f(x) = x − h(x)</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>ResNet</span></div>
+  <div class="qtext">ResNet รุ่นหนึ่งมี convolution แรก 1 ชั้น ตามด้วย residual unit แบบ 2 convolution จำนวน 2, 2, 2, 2 ตัวในสี่ stage และ fully connected 1 ชั้น network นี้มีกี่ weight layers?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. 1 + (2 + 2 + 2 + 2) × 2 + 1 = 1 + 16 + 1 = 18 (ResNet-18). ค่า 16 คือลืมนับ convolution แรกและ FC, ค่า 10 คือนับ residual unit เป็น 1 layer.">10</button>
+    <button class="opt" data-correct="true" data-note="ถูก. 1 + (2 + 2 + 2 + 2) × 2 + 1 = 1 + 16 + 1 = 18 (ResNet-18). ค่า 16 คือลืมนับ convolution แรกและ FC, ค่า 10 คือนับ residual unit เป็น 1 layer.">18</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 1 + (2 + 2 + 2 + 2) × 2 + 1 = 1 + 16 + 1 = 18 (ResNet-18). ค่า 16 คือลืมนับ convolution แรกและ FC, ค่า 10 คือนับ residual unit เป็น 1 layer.">16</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 1 + (2 + 2 + 2 + 2) × 2 + 1 = 1 + 16 + 1 = 18 (ResNet-18). ค่า 16 คือลืมนับ convolution แรกและ FC, ค่า 10 คือนับ residual unit เป็น 1 layer.">34</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Comparison</span></div>
+  <div class="qtext">ข้อใดจับคู่สถาปัตยกรรมกับจุดเด่น (salient feature) ได้ถูกต้องทั้งหมด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. VGGNet ใช้ kernel 3×3 ขนาดเดียวทั้ง network, Inception ใช้ kernel หลายขนาดขนานกันในโมดูลเดียว, ResNet ใช้ shortcut (skip) connections.">VGGNet: parallel kernels, Inception: shortcut connections, ResNet: fixed-size kernels</button>
+    <button class="opt" data-correct="false" data-note="ผิด. VGGNet ใช้ kernel 3×3 ขนาดเดียวทั้ง network, Inception ใช้ kernel หลายขนาดขนานกันในโมดูลเดียว, ResNet ใช้ shortcut (skip) connections.">VGGNet: shortcut connections, Inception: fixed-size kernels, ResNet: parallel kernels</button>
+    <button class="opt" data-correct="true" data-note="ถูก. VGGNet ใช้ kernel 3×3 ขนาดเดียวทั้ง network, Inception ใช้ kernel หลายขนาดขนานกันในโมดูลเดียว, ResNet ใช้ shortcut (skip) connections.">VGGNet: fixed-size kernels, Inception: parallel kernels, ResNet: shortcut connections</button>
+    <button class="opt" data-correct="false" data-note="ผิด. VGGNet ใช้ kernel 3×3 ขนาดเดียวทั้ง network, Inception ใช้ kernel หลายขนาดขนานกันในโมดูลเดียว, ResNet ใช้ shortcut (skip) connections.">VGGNet: fixed-size kernels, Inception: shortcut connections, ResNet: parallel kernels</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>ResNet: <mark class="src" data-p="13">skip (or shortcut) connections</mark> ⇒ <mark class="src" data-p="13">residual blocks</mark> ⇒ แก้ <mark class="src" data-p="13">vanishing gradient problem</mark></li>
+<li>รุ่นที่ชนะ: <mark class="src" data-p="14">152 layers</mark>; ตัวอย่าง <mark class="src" data-p="14">Resnet-34</mark>; <mark class="src" data-p="14">no pooling layers</mark> ใน <mark class="src" data-p="14">residual block</mark>; รุ่นลึกใช้ <mark class="src" data-p="14">1x1 convolutional layers</mark> เป็น bottleneck</li>
+<li>Key takeaways: <mark class="src" data-p="15">deeper networks</mark>, <mark class="src" data-p="15">skip connections</mark> = <mark class="src" data-p="15">residual module</mark>, heavy <mark class="src" data-p="15">batch normalization</mark></li>
+<li>ตัวเลขที่ต้องจำเป็นคู่: AlexNet 8 / 15.3%; VGG 16 / 7.3%; GoogLeNet 22 / 6.67%; ResNet-152 152 / 4.49%</li>
+</ul>
+</div>
+
+<h2 id="s7">7. Modern CNNs และหลักออกแบบสถาปัตยกรรม</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p17-modern-cnns.png" alt="Slide: Modern CNNs. Modern CNN design is no longer simply make the network deeper. Architectures increasingly balance accuracy, parameters, computation, memory, and inference speed. Xception: depthwise separable convolution. MobileNet: depthwise separable convolution for lightweight/efficient models. DenseNet: dense connections / feature reuse. EfficientNet: compound scaling (depth + width + resolution). ConvNeXt: modernized CNN design inspired by Transformers">
+<figcaption>Slide: Modern CNNs — ไม่ใช่แค่ลึกขึ้น (Lecture8, p.17)</figcaption>
+</figure>
+
+<p><strong>Modern CNN design is no longer simply "make the network deeper."</strong> สถาปัตยกรรมรุ่นใหม่ต้องสมดุล <strong>accuracy, parameters, computation, memory, and inference speed</strong>. ห้ารุ่นและแนวคิดหลัก:</p>
+<table class="compact">
+<tr><th>รุ่น</th><th>แนวคิดหลัก</th></tr>
+<tr><td>Xception</td><td>Depthwise separable convolution</td></tr>
+<tr><td>MobileNet</td><td>Depthwise separable convolution for lightweight/efficient models</td></tr>
+<tr><td>DenseNet</td><td>Dense connections / feature reuse</td></tr>
+<tr><td>EfficientNet</td><td>Compound scaling (depth + width + resolution)</td></tr>
+<tr><td>ConvNeXt</td><td>Modernized CNN design inspired by Transformers</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl8-p18-xception.png" alt="Slide: Xception (eXtreme Inception), Chollet 2016. Outperformed Inception-v3 on a huge vision task (350 million images, 17,000 classes). Merges ideas of GoogLeNet and ResNet but replaces inception modules with depthwise separable convolutional layers, assuming spatial patterns and cross-channel patterns can be modeled separately. Uses fewer parameters, less memory, fewer computations. Diagram: spatial-only filters (1 per input channel) followed by a regular convolutional layer with 1x1 filters">
+<figcaption>Slide: Xception — depthwise separable convolution (Lecture8, p.18)</figcaption>
+</figure>
+
+<p>Xception (eXtreme Inception; Chollet, 2016) ทำได้ดีกว่า Inception-v3 อย่างชัดเจนในงานขนาดใหญ่ (350 ล้านภาพ, 17,000 class). เหมือน Inception-v4 ตรงที่รวมแนวคิดของ GoogLeNet และ ResNet แต่แทน inception module ด้วย <mark class="src" data-p="18">depthwise separable convolutional layer</mark>.</p>
+<p>Convolution ปกติจับ spatial pattern (เช่น รูปวงรี) และ cross-channel pattern (เช่น ปาก + จมูก + ตา = หน้า) พร้อมกัน. Separable convolution ตั้งสมมติฐานว่า <mark class="src" data-p="18">spatial patterns and cross- channel patterns can be modeled separately</mark> จึงแบ่งเป็นสองส่วน:</p>
+<ol>
+<li><strong>Depthwise (spatial-only filters):</strong> ใช้ spatial filter 1 ตัวต่อ 1 input feature map (1 per input channel)</li>
+<li><strong>Pointwise:</strong> convolutional layer ปกติที่ใช้ filter 1×1 ซึ่งมองหาเฉพาะ cross-channel pattern</li>
+</ol>
+<p>Separable convolutional layer ใช้ <mark class="src" data-p="18">fewer parameters</mark> (<strong>reduce overfitting</strong>) ใช้ memory น้อยกว่า และคำนวณน้อยกว่า convolution ปกติ และโดยทั่วไปทำงานได้ดีกว่าด้วย.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: parameter ของ convolution ปกติเทียบกับ depthwise separable</div>
+<div class="given">ให้ kernel 3×3, input 64 channel, output 128 channel</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Convolution ปกติ</div>
+$$(3 \cdot 3 \cdot 64 + 1) \cdot 128 = 73{,}856$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Depthwise: filter 3×3 หนึ่งตัวต่อ input channel</div>
+$$3 \cdot 3 \cdot 64 = 576$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Pointwise: conv 1×1 จาก 64 เป็น 128 channel พร้อม bias</div>
+$$1 \cdot 1 \cdot 64 \cdot 128 + 128 = 8{,}320$$</li>
+<li><div class="st-title">ขั้นที่ 4 — รวมและเทียบ</div>
+$$576 + 8{,}320 = 8{,}896 \qquad \frac{73{,}856}{8{,}896} \approx 8.3$$</li>
+</ol>
+<div class="answer"><p>Separable convolution ใช้ parameter น้อยกว่าราว 8.3 เท่าสำหรับ output shape เดียวกัน. ค่า 8,896 คือค่าที่ <code>SeparableConv2D(128, 3)</code> ของ Keras รายงานเมื่อ input มี 64 channel.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p19-other-noteworthy-architectures.png" alt="Slide: Other Noteworthy Architectures. MobileNet (2017): streamlined, lightweight and fast models for mobile and web, based on depthwise separable convolutional layers. DenseNet (2016): dense blocks where the output of each layer is fed as input to every layer after it within the same block; layer 4 takes the depthwise concatenation of outputs of layers 1, 2 and 3; few parameters. EfficientNet (2019): compound scaling of depth, width and resolution; neural architecture search. ConvNeXt: pure ConvNet inspired by Vision Transformers, built step by step on ResNet-50, outperforming Swin Transformer">
+<figcaption>Slide: Other Noteworthy Architectures (Lecture8, p.19)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>รุ่น</th><th>สาระสำคัญตามสไลด์</th></tr>
+<tr><td>MobileNet (Howard et al., 2017)</td><td>โมเดลที่ออกแบบให้ lightweight และ fast นิยมใช้ใน mobile และ web application. ใช้ depthwise separable convolutional layer เหมือน Xception</td></tr>
+<tr><td>DenseNet (Huang et al., 2016)</td><td>ประกอบด้วย dense block หลายตัว. Densely connected หมายถึง output ของแต่ละ layer ถูกป้อนเป็น input ให้<strong>ทุก layer ถัดไป</strong>ใน block เดียวกัน. เช่น layer 4 รับ depthwise concatenation ของ output จาก layer 1, 2 และ 3. Dense block คั่นด้วย transition layer. ได้ accuracy ดีมากด้วย parameter ค่อนข้างน้อย</td></tr>
+<tr><td>EfficientNet (Tan &amp; Le, 2019)</td><td>วิธี scale CNN อย่างมีหลักการโดยเพิ่ม depth (จำนวน layer), width (จำนวน filter ต่อ layer) และ resolution (ความละเอียดของภาพ input) <strong>ร่วมกัน</strong> เรียกว่า <strong>compound scaling</strong>. ใช้ neural architecture search หาสถาปัตยกรรมตั้งต้นบน ImageNet ฉบับย่อ แล้ว scale ขึ้น</td></tr>
+<tr><td>ConvNeXt (Liu et al.)</td><td>ConvNet ล้วนที่ได้แรงบันดาลใจจาก Vision Transformer. ปรับ ResNet-50 ทีละขั้นด้วยแนวคิดจาก transformer จนทำได้ดีกว่า Swin Transformer</td></tr>
+</table>
+<p>ตัวอย่าง DenseNet เป็นตัวเลข: ถ้าทุก layer ใน block ให้ output 32 channel และ input ของ block มี 64 channel, layer 4 จะรับ \(64 + 32 + 32 + 32 = 160\) channel. การนำ feature เดิมกลับมาใช้ (feature reuse) ทำให้แต่ละ layer ต้องผลิต feature ใหม่เพียงเล็กน้อย.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p20-architecture-design.png" alt="Slide: Architecture Design. 1. Build model from scratch: organize into repeated blocks of layers; number of filters should increase as spatial feature maps decrease; deep and narrow is better than broad and shallow; residual connections help train deeper networks; batch normalization after convolution layers can be beneficial; replace Conv2D with SeparableConv2D for parameter efficiency. 2. Use transfer learning, especially when your dataset is small. Note: hyperparameter tuning is very time-consuming; the common use is to build on top of existing CNN architectures">
+<figcaption>Slide: Architecture Design — สองทางเลือก (Lecture8, p.20)</figcaption>
+</figure>
+
+<p>เมื่อต้องสร้าง CNN มีสองทางเลือก.</p>
+<p><strong><mark class="src" data-p="20">1. Build model from scratch</mark></strong> (หลักจากหนังสือ Deep Learning with Python):</p>
+<ul>
+<li>จัดโมเดลเป็น repeated blocks of layers ซึ่งมักประกอบด้วย convolution หลายชั้น</li>
+<li>จำนวน filter ควร<strong>เพิ่ม</strong>เมื่อขนาด spatial feature map <strong>ลด</strong></li>
+<li>Deep and narrow ดีกว่า broad and shallow</li>
+<li>ใส่ residual connection รอบบล็อกช่วยให้เทรน network ลึกขึ้นได้</li>
+<li>ใส่ batch normalization หลัง convolution layer อาจช่วย</li>
+<li>แทน <code>Conv2D</code> ด้วย <code>SeparableConv2D</code> ซึ่ง parameter-efficient กว่า อาจช่วย</li>
+</ul>
+<p><strong><mark class="src" data-p="20">2. Use transfer learning</mark></strong> โดยเฉพาะเมื่อ dataset เล็ก.</p>
+<p>หมายเหตุ: ใช้ <mark class="src" data-p="20">hyperparameter tuning</mark> (<a href="0006-callbacks-and-hyperparameter-tuning.html">Lesson 6</a>) หาค่าที่เหมาะได้ แต่ใช้เวลามาก. วิธีที่ใช้ทั่วไปคือสร้างต่อยอดจากสถาปัตยกรรม CNN ที่มีอยู่.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 11</span><span>Separable convolution</span></div>
+  <div class="qtext">Depthwise separable convolution ใช้ kernel 3×3 กับ input 32 channel และให้ output 64 channel ถ้าไม่นับ bias layer นี้มี weight กี่ตัว?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Depthwise: 3·3·32 = 288. Pointwise 1×1: 32·64 = 2,048. รวม 2,336. ค่า 18,432 = 3·3·32·64 คือ convolution ปกติ ซึ่งมากกว่าราว 7.9 เท่า.">18,432</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Depthwise: 3·3·32 = 288. Pointwise 1×1: 32·64 = 2,048. รวม 2,336. ค่า 18,432 = 3·3·32·64 คือ convolution ปกติ ซึ่งมากกว่าราว 7.9 เท่า.">2,336</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Depthwise: 3·3·32 = 288. Pointwise 1×1: 32·64 = 2,048. รวม 2,336. ค่า 18,432 = 3·3·32·64 คือ convolution ปกติ ซึ่งมากกว่าราว 7.9 เท่า.">2,912</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Depthwise: 3·3·32 = 288. Pointwise 1×1: 32·64 = 2,048. รวม 2,336. ค่า 18,432 = 3·3·32·64 คือ convolution ปกติ ซึ่งมากกว่าราว 7.9 เท่า.">608</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 12</span><span>Modern CNN</span></div>
+  <div class="qtext">ข้อใดอธิบาย compound scaling ของ EfficientNet ได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Compound scaling เพิ่มจำนวน layer (depth), จำนวน filter ต่อ layer (width) และความละเอียดของภาพ (resolution) พร้อมกัน. การแยก pattern คือ separable convolution และการป้อนให้ทุก layer ถัดไปคือ DenseNet.">เพิ่มเฉพาะจำนวน layer ให้ลึกขึ้นเรื่อยๆ โดยคงจำนวน filter และขนาดภาพ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Compound scaling เพิ่มจำนวน layer (depth), จำนวน filter ต่อ layer (width) และความละเอียดของภาพ (resolution) พร้อมกัน. การแยก pattern คือ separable convolution และการป้อนให้ทุก layer ถัดไปคือ DenseNet.">แยก spatial pattern กับ cross-channel pattern ออกเป็นสอง convolution</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Compound scaling เพิ่มจำนวน layer (depth), จำนวน filter ต่อ layer (width) และความละเอียดของภาพ (resolution) พร้อมกัน. การแยก pattern คือ separable convolution และการป้อนให้ทุก layer ถัดไปคือ DenseNet.">ป้อน output ของแต่ละ layer ให้ทุก layer ถัดไปภายใน block เดียวกัน</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Compound scaling เพิ่มจำนวน layer (depth), จำนวน filter ต่อ layer (width) และความละเอียดของภาพ (resolution) พร้อมกัน. การแยก pattern คือ separable convolution และการป้อนให้ทุก layer ถัดไปคือ DenseNet.">เพิ่ม depth, width และ resolution ของภาพ input ร่วมกันอย่างมีหลักการ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Xception แทน inception module ด้วย <mark class="src" data-p="18">depthwise separable convolutional layer</mark>; สมมติฐาน: <mark class="src" data-p="18">spatial patterns and cross- channel patterns can be modeled separately</mark>; ผล: <mark class="src" data-p="18">fewer parameters</mark></li>
+<li>จับคู่: Xception/MobileNet = depthwise separable; DenseNet = dense connections/feature reuse; EfficientNet = compound scaling; ConvNeXt = CNN ที่ได้แรงบันดาลใจจาก Transformers</li>
+<li>สองทางเลือก: <mark class="src" data-p="20">1. Build model from scratch</mark> หรือ <mark class="src" data-p="20">2. Use transfer learning</mark> (เมื่อ dataset เล็ก). <mark class="src" data-p="20">hyperparameter tuning</mark> ใช้ได้แต่ time-consuming</li>
+</ul>
+</div>
+
+<h2 id="s8">8. Transfer Learning: แนวคิด สามแนวทาง และ Guidelines</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p21-transfer-learning.png" alt="Slide: Transfer Learning. Instead of training a very large model from scratch, we can reuse pretrained layers with their optimized weights of an existing model previously trained on a large dataset to train our model. Transfer learning is knowledge transfer from a pretrained model to your model. Highly effective on small image datasets, speeds up training considerably, generalizes the learning and avoids overfitting. Model A classifies pictures into many categories (animals, plants, vehicles); Model B classifies specific types of vehicles">
+<figcaption>Slide: Transfer Learning — Model A และ Model B (Lecture8, p.21)</figcaption>
+</figure>
+
+<p>แทนการเทรนโมเดลขนาดใหญ่มากจากศูนย์ เราสามารถ <mark class="src" data-p="21">reuse a pretrained layers with its optimized weights</mark> ของ <mark class="src" data-p="21">existing model</mark> ที่เทรนบน dataset ขนาดใหญ่มาแล้ว เพื่อเทรน <mark class="src" data-p="21">our model</mark>. <mark class="src" data-p="21">Transfer learning</mark> คือการถ่ายโอนความรู้จาก pretrained model มายังโมเดลของเรา. ได้ผลดีมากกับ <strong>small image datasets</strong>, <strong>speed up training considerably</strong> และ <strong>generalize the learning and avoid overfitting</strong>.</p>
+<p>ตัวอย่างในสไลด์: Model A จำแนกภาพเป็นหลายประเภท (สัตว์, พืช, ยานพาหนะ และวัตถุอื่น). Model B ต้องจำแนกเฉพาะชนิดของยานพาหนะ (แท็กซี่, ตุ๊กตุ๊ก, รถตู้, สามล้อ). Model A เรียน feature ระดับล่าง (ขอบ, สี, ล้อ, กระจก) มาแล้ว Model B จึงนำ layer เหล่านั้นมาใช้ได้โดยไม่ต้องเรียนใหม่.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p22-transfer-learning-approaches.png" alt="Slide: Transfer Learning Approaches. Three major approaches: (1) Pretrained model as a classifier: used directly with no changes and no extra training. (2) Pretrained model as feature detector: freeze the feature extractor part, add a new classifier trained from scratch. (3) Fine tuning: freeze part of the feature extraction part (not all), jointly train the non-frozen layers and the newly added classifier. Diagram shows freeze points along the network">
+<figcaption>Slide: Transfer Learning Approaches — สามแนวทาง (Lecture8, p.22)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>แนวทาง</th><th>ข้อความในสไลด์</th><th>ส่วนที่ถูกเทรน</th></tr>
+<tr><td><mark class="src" data-p="22">Pretrained model as a classifier</mark></td><td>ใช้จำแนกภาพใหม่โดยตรง มี <mark class="src" data-p="22">no changes</mark> และ <mark class="src" data-p="22">no extra training</mark></td><td>ไม่มี</td></tr>
+<tr><td><mark class="src" data-p="22">Pretrained model as feature detector</mark></td><td><mark class="src" data-p="22">Freeze a feature extractor part</mark> เพื่อถ่ายโอน feature map ที่เรียนแล้วทั้งหมด แล้ว <mark class="src" data-p="22">add a new classifier</mark> ซึ่งจะ <mark class="src" data-p="22">train from scratch</mark> (งานจำแนกไม่เหมือนเดิม)</td><td>classifier ใหม่เท่านั้น</td></tr>
+<tr><td><mark class="src" data-p="22">Find tuning</mark> (fine tuning)</td><td><mark class="src" data-p="22">Freeze part of the feature extraction part</mark> ของ pretrained model (ไม่ใช่ทั้งหมด) แล้ว <mark class="src" data-p="22">Jointly train both</mark> <mark class="src" data-p="22">non-frozen layers</mark> และ <mark class="src" data-p="22">classifier</mark> ที่เพิ่มใหม่</td><td>layer ท้ายของ feature extractor + classifier ใหม่</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl8-p23-transfer-learning-guidelines.png" alt="Slide: Transfer Learning Guidelines. Input pictures should be the same size as the original task (resize), but smaller inputs reduce computation. Hidden layers: earlier layers extract local, highly generic feature maps (edges, colors, textures), so lower layers can be reused. The output layer should usually be replaced: not useful for the new task and may not have the right number of outputs. Diagram: existing DNN for task A with hidden 1-5; new DNN for similar task B reuses hidden 1-4, hidden 1-2 fixed weights, hidden 3-4 trainable, new output">
+<figcaption>Slide: Transfer Learning Guidelines — input, hidden, output (Lecture8, p.23)</figcaption>
+</figure>
+
+<ul>
+<li><mark class="src" data-p="23">The input pictures</mark> ของงานใหม่ <u>ควร</u>มี <strong>the same size</strong> กับที่ใช้ใน <strong>original task</strong> (resize ให้ตรงกับที่โมเดลเดิมคาดหวัง). แต่ตั้งขนาดเล็กลงได้ถ้าต้องการลด computation</li>
+<li><mark class="src" data-p="23">hidden layers</mark> ของโมเดลเดิม: layer ต้นของโมเดลสกัด feature map ที่ local และ generic มาก (visual edges, colors, textures) จึงน่าจะ <strong>reuse lower layers</strong> กับงานของเราได้</li>
+<li><mark class="src" data-p="23">The output layer</mark> ของโมเดลเดิม <u>ควร</u><strong>ถูกแทนที่</strong> (usually be replaced) เพราะมักไม่มีประโยชน์กับงานใหม่ และอาจมีจำนวน output ไม่ตรง</li>
+</ul>
+<p>รูปในสไลด์: DNN เดิมของ task A มี Hidden 1–5. DNN ใหม่ของ task B ที่คล้ายกันนำ Hidden 1–4 มาใช้ โดย Hidden 1–2 เป็น fixed weights (frozen) และ Hidden 3–4 เป็น trainable weights. Hidden 5 และ Output เดิมถูกทิ้ง แล้วใส่ Output ใหม่.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p24-transfer-learning-guidelines-2.png" alt="Slide: Transfer Learning Guidelines (2). Choose the appropriate level of tuning based on two factors: domain similarity of source and target domain, and the amount of data (small or large). Small dataset tends to overfit so do less fine tuning. Scenario 1 small and similar: pretrained network as feature extractor. Scenario 2 large and similar: fine tune from activations lately in the model (freeze 60-80%). Scenario 3 small and different: fine tune from activations earlier (freeze 33-50%). Scenario 4 large and different: fine-tune through the entire model">
+<figcaption>Slide: Transfer Learning Guidelines (2) — สี่สถานการณ์ (Lecture8, p.24)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="24">Choose the appropriate levels of tuning based on</mark> <mark class="src" data-p="24">two important factors</mark><mark class="src" data-p="24">.</mark> ได้แก่ (1) domain <mark class="src" data-p="24">similarity</mark> <mark class="src" data-p="24">of the</mark> <mark class="src" data-p="24">source</mark> <mark class="src" data-p="24">and</mark> <mark class="src" data-p="24">target</mark> <mark class="src" data-p="24">domain</mark> และ (2) <mark class="src" data-p="24">amount of data</mark> ที่มี (<mark class="src" data-p="24">small</mark> หรือ <mark class="src" data-p="24">large</mark>). Dataset เล็กมักทำให้ overfit จึง fine tune น้อยลงและพึ่ง source dataset มากขึ้น.</p>
+<table class="compact">
+<tr><th>Scenario</th><th>ขนาด dataset</th><th>ความคล้ายกับ source</th><th>ระดับที่แนะนำ</th></tr>
+<tr><td>#1</td><td>small</td><td>similar</td><td>Pretrained network as a feature extractor</td></tr>
+<tr><td>#2</td><td>large</td><td>similar</td><td>Fine tune from activations lately in the model (freeze ประมาณ 60%–80% ของ pretrained model)</td></tr>
+<tr><td>#3</td><td>small</td><td>different</td><td>Fine tune from activations earlier in the model (freeze ประมาณ 33%–50%)</td></tr>
+<tr><td>#4</td><td>large</td><td>different</td><td>Fine-tune through the entire model</td></tr>
+</table>
+<p>หลักเบื้องหลังตาราง: ยิ่ง domain ต่างจาก source มาก feature ระดับสูงของโมเดลเดิมยิ่งใช้ไม่ได้ จึงต้องปลด freeze ย้อนไปถึง layer ต้นขึ้น (freeze น้อยลง). ยิ่งข้อมูลมาก ยิ่งเทรน layer จำนวนมากได้โดยไม่ overfit.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p25-transfer-learning-guidelines-3.png" alt="Slide: Transfer Learning Guidelines (3). Use smaller learning rate when fine tuning: pretrained weights are relatively good, do not distort them too quickly. Strategies to help convergence: the new output layer is initialized randomly so there will be large error gradients that may wreck the reused weights; freeze the reused layers during the first few epochs, giving the new layer time to learn reasonable weights; then unfreeze the reused layers (requires compiling the model again) and continue training; after unfreezing reduce the learning rate">
+<figcaption>Slide: Transfer Learning Guidelines (3) — learning rate และลำดับการเทรน (Lecture8, p.25)</figcaption>
+</figure>
+
+<p><strong><mark class="src" data-p="25">Use smaller learning rate when</mark> <mark class="src" data-p="25">fine tuning</mark>.</strong> weight ของ pretrained model ถือว่าดีอยู่แล้ว จึงไม่ต้องการบิดมันเร็วเกินและมากเกิน.</p>
+<p><strong><mark class="src" data-p="25">Some strategies to help convergence (if any problem)</mark>:</strong></p>
+<ol>
+<li>output layer ใหม่ถูกกำหนดค่าเริ่มต้นแบบสุ่ม จึงผิดพลาดมากในช่วง epoch แรกๆ ทำให้เกิด <mark class="src" data-p="25">large error gradients</mark> ที่อาจทำลาย weight ที่นำมาใช้ซ้ำ</li>
+<li>วิธีหนึ่งคือ freeze layer ที่นำมาใช้ซ้ำในช่วง epoch แรก เพื่อ <mark class="src" data-p="25">giving the new layer some time to learn reasonable weights.</mark></li>
+<li>เทรนสองสาม epoch <mark class="src" data-p="25">then unfreeze the reused layers</mark> (ซึ่งต้อง <u>compile</u> โมเดลใหม่) แล้วเทรนต่อเพื่อ fine-tune layer เหล่านั้น</li>
+<li>หลัง unfreeze ควร <mark class="src" data-p="25">reduce the learning rate</mark> อีกครั้งเพื่อไม่ให้ weight ที่นำมาใช้ซ้ำเสียหาย</li>
+</ol>
+
+<div class="box mech">
+<div class="label">กลไกที่ต้องอธิบายได้</div>
+<dl>
+<dt>ทำไมต้องมี</dt>
+<dd>Update rule คือ \(\theta := \theta - \alpha \cdot \text{gradient}\). classifier ใหม่ที่สุ่มค่าให้ loss สูง gradient ที่ไหลย้อนเข้า conv base จึงใหญ่. ถ้า conv base ไม่ถูก freeze และ \(\alpha\) สูง weight ที่เทรนมาอย่างดีจะถูกขยับไกลในไม่กี่ step.</dd>
+<dt>เปลี่ยนแล้วเกิดอะไร</dt>
+<dd>เปลี่ยน <code>trainable</code> หลัง <code>compile</code> โดยไม่ compile ใหม่ ⇒ การเปลี่ยนไม่มีผล. ใช้ learning rate เดิม (เช่น 0.001) ตอน fine-tune ⇒ เสี่ยงทำลาย pretrained weight; ตัวอย่างในสไลด์ลดเหลือ 0.00001.</dd>
+<dt>เชื่อมกับ</dt>
+<dd>ลำดับชั้นของ feature ใน <a href="0007-convolutional-neural-networks.html#s2">Lesson 7 §2</a>: layer ต้นเรียน feature ทั่วไป จึง freeze ได้; layer ลึกเรียน feature เฉพาะงาน จึงเป็นส่วนที่ fine-tune.</dd>
+</dl>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 13</span><span>Transfer learning</span></div>
+  <div class="qtext">มีภาพ 800 ภาพสำหรับจำแนกชนิดดอกไม้ และ pretrained model เทรนมาบนภาพธรรมชาติทั่วไปซึ่งมีดอกไม้จำนวนมาก ตามแนวทางเลือกระดับ transfer learning ควรใช้วิธีใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Dataset เล็กและ domain คล้าย source คือ scenario 1: freeze feature extractor ทั้งหมดแล้วเทรนเฉพาะ classifier ใหม่. Dataset เล็กมักทำให้ overfit จึง fine tune น้อยและพึ่ง source dataset มาก.">ใช้ pretrained network เป็น feature extractor</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Dataset เล็กและ domain คล้าย source คือ scenario 1: freeze feature extractor ทั้งหมดแล้วเทรนเฉพาะ classifier ใหม่. Dataset เล็กมักทำให้ overfit จึง fine tune น้อยและพึ่ง source dataset มาก.">Fine-tune ทั้งโมเดลตั้งแต่ layer แรก</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Dataset เล็กและ domain คล้าย source คือ scenario 1: freeze feature extractor ทั้งหมดแล้วเทรนเฉพาะ classifier ใหม่. Dataset เล็กมักทำให้ overfit จึง fine tune น้อยและพึ่ง source dataset มาก.">Fine-tune โดย freeze ประมาณ 33%–50% แรกของโมเดล</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Dataset เล็กและ domain คล้าย source คือ scenario 1: freeze feature extractor ทั้งหมดแล้วเทรนเฉพาะ classifier ใหม่. Dataset เล็กมักทำให้ overfit จึง fine tune น้อยและพึ่ง source dataset มาก.">เทรนโมเดลใหม่จากศูนย์โดยไม่ใช้ pretrained weight</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 14</span><span>Transfer learning</span></div>
+  <div class="qtext">ข้อใดคือความต่างระหว่างการใช้ pretrained model เป็น feature detector กับ fine tuning?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ทั้งสองแบบเพิ่ม classifier ใหม่. Feature detector freeze feature extractor ทั้งหมดและเทรนเฉพาะ classifier; fine tuning freeze เพียงบางส่วนแล้วเทรน layer ที่ไม่ถูก freeze ร่วมกับ classifier.">Feature detector ไม่เพิ่ม classifier ใหม่ ส่วน fine tuning เพิ่ม classifier ใหม่</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ทั้งสองแบบเพิ่ม classifier ใหม่. Feature detector freeze feature extractor ทั้งหมดและเทรนเฉพาะ classifier; fine tuning freeze เพียงบางส่วนแล้วเทรน layer ที่ไม่ถูก freeze ร่วมกับ classifier.">Feature detector freeze ส่วนสกัด feature ทั้งหมด ส่วน fine tuning freeze เพียงบางส่วน</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ทั้งสองแบบเพิ่ม classifier ใหม่. Feature detector freeze feature extractor ทั้งหมดและเทรนเฉพาะ classifier; fine tuning freeze เพียงบางส่วนแล้วเทรน layer ที่ไม่ถูก freeze ร่วมกับ classifier.">Feature detector ใช้ learning rate ต่ำกว่า ส่วน fine tuning ใช้ค่าที่สูงกว่าเสมอ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ทั้งสองแบบเพิ่ม classifier ใหม่. Feature detector freeze feature extractor ทั้งหมดและเทรนเฉพาะ classifier; fine tuning freeze เพียงบางส่วนแล้วเทรน layer ที่ไม่ถูก freeze ร่วมกับ classifier.">Feature detector เทรนทุก layer ของโมเดล ส่วน fine tuning ไม่เทรน layer ใดเลย</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 15</span><span>Fine tuning</span></div>
+  <div class="qtext">ข้อใดเป็นลำดับที่เหมาะสมเมื่อ fine-tune pretrained model ที่ต่อ classifier ใหม่ซึ่งสุ่มค่าเริ่มต้น?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Classifier ที่สุ่มค่าให้ error gradient ขนาดใหญ่ที่อาจทำลาย weight เดิม จึง freeze layer เดิมไว้ก่อน. เมื่อ unfreeze ต้อง compile ใหม่ให้การเปลี่ยนมีผล และลด learning rate เพื่อไม่ให้ weight เดิมเสียหาย.">Unfreeze ทุก layer ก่อน เทรนด้วย learning rate สูง แล้วจึง freeze เมื่อ loss ลดลง</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Classifier ที่สุ่มค่าให้ error gradient ขนาดใหญ่ที่อาจทำลาย weight เดิม จึง freeze layer เดิมไว้ก่อน. เมื่อ unfreeze ต้อง compile ใหม่ให้การเปลี่ยนมีผล และลด learning rate เพื่อไม่ให้ weight เดิมเสียหาย.">Freeze classifier ใหม่ เทรน layer เดิมก่อน แล้ว unfreeze classifier ด้วย learning rate สูง</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Classifier ที่สุ่มค่าให้ error gradient ขนาดใหญ่ที่อาจทำลาย weight เดิม จึง freeze layer เดิมไว้ก่อน. เมื่อ unfreeze ต้อง compile ใหม่ให้การเปลี่ยนมีผล และลด learning rate เพื่อไม่ให้ weight เดิมเสียหาย.">Freeze layer เดิม เทรน classifier ก่อน แล้ว unfreeze, compile ใหม่ และลด learning rate</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Classifier ที่สุ่มค่าให้ error gradient ขนาดใหญ่ที่อาจทำลาย weight เดิม จึง freeze layer เดิมไว้ก่อน. เมื่อ unfreeze ต้อง compile ใหม่ให้การเปลี่ยนมีผล และลด learning rate เพื่อไม่ให้ weight เดิมเสียหาย.">Freeze layer เดิม เทรน classifier ก่อน แล้ว unfreeze และเพิ่ม learning rate โดยไม่ compile</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>นิยาม: <mark class="src" data-p="21">reuse a pretrained layers with its optimized weights</mark> ของ <mark class="src" data-p="21">existing model</mark> เพื่อเทรน <mark class="src" data-p="21">our model</mark></li>
+<li>สามแนวทาง: <mark class="src" data-p="22">Pretrained model as a classifier</mark> (<mark class="src" data-p="22">no changes</mark>, <mark class="src" data-p="22">no extra training</mark>); <mark class="src" data-p="22">Pretrained model as feature detector</mark> (<mark class="src" data-p="22">Freeze a feature extractor part</mark>, <mark class="src" data-p="22">add a new classifier</mark>, <mark class="src" data-p="22">train from scratch</mark>); <mark class="src" data-p="22">Find tuning</mark> (<mark class="src" data-p="22">Freeze part of the feature extraction part</mark>, <mark class="src" data-p="22">Jointly train both</mark>)</li>
+<li>สามส่วนของ guideline: <mark class="src" data-p="23">The input pictures</mark> (ขนาดเท่างานเดิม), <mark class="src" data-p="23">hidden layers</mark> (reuse lower layers), <mark class="src" data-p="23">The output layer</mark> (แทนที่)</li>
+<li><mark class="src" data-p="24">two important factors</mark>: <mark class="src" data-p="24">similarity</mark> ของ domain และ <mark class="src" data-p="24">amount of data</mark>. จำสี่ scenario และเปอร์เซ็นต์ freeze (60–80% / 33–50%)</li>
+<li><mark class="src" data-p="25">fine tuning</mark> ⇒ learning rate เล็กลง; <mark class="src" data-p="25">large error gradients</mark> จาก layer ใหม่; <mark class="src" data-p="25">then unfreeze the reused layers</mark> ต้อง compile ใหม่; แล้ว <mark class="src" data-p="25">reduce the learning rate</mark></li>
+</ul>
+</div>
+
+<h2 id="s9">9. ตัวอย่าง Dog-Cat: สามแนวทางด้วย VGG16 ใน Keras</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p26-dog-cat-example.png" alt="Slide: Example - Dog-Cat Classification. Build a model classifying dog or cat images using pretrained VGG; dataset of 4,000 images (2,000 dogs, 2,000 cats). Create directory structure cats_and_dogs_small with test, train, validation folders each containing cats and dogs. Code: train_dataset = image_dataset_from_directory(train_dir, image_size=(224,224), batch_size=64), same for validation and test. Output: data batch shape (64, 224, 224, 3), label batch shape (64,)">
+<figcaption>Slide: Example – Dog-Cat Classification — เตรียม dataset (Lecture8, p.26)</figcaption>
+</figure>
+
+<p>โจทย์: จำแนกภาพสุนัขหรือแมวด้วย pretrained model คือ VGG. Dataset มี 4,000 ภาพ (สุนัขและแมวอย่างละ 2,000). ขั้นแรกตามสไลด์คือ <mark class="src" data-p="26">create directory in the structure format that Keras's ImageDataGenerator can read the images from folders containing images</mark>: โฟลเดอร์ <code>cats_and_dogs_small</code> มี <code>train</code>, <code>validation</code>, <code>test</code> และแต่ละโฟลเดอร์มีโฟลเดอร์ย่อย <code>cats</code>, <code>dogs</code>. ชื่อโฟลเดอร์ย่อยถูกใช้เป็น label.</p>
+
+<pre data-p="26"><code>train_dataset = image_dataset_from_directory(
+    train_dir,
+    image_size = (224,224),
+    batch_size = 64
+)
+val_dataset = image_dataset_from_directory(
+    validation_dir,
+    image_size = (224,224),
+    batch_size = 64
+)
+test_dataset = image_dataset_from_directory(
+    test_dir,
+    image_size = (224,224),
+    batch_size = 64
+)
+
+for data_batch, labels_batch in train_dataset.take(1):
+    print("data batch shape", data_batch.shape)
+    print("label batch shape", labels_batch.shape)
+    print("labels_batch", labels_batch)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>image_dataset_from_directory(train_dir, ...)</td><td>อ่านภาพจากโฟลเดอร์ แล้วกำหนด label จากชื่อโฟลเดอร์ย่อยตามลำดับตัวอักษร (cats = 0, dogs = 1)</td></tr>
+<tr><td>image_size = (224,224)</td><td>resize ทุกภาพเป็น 224×224 ซึ่งเป็นขนาดที่ VGG16 ใช้ในงานเดิม (guideline หน้า 23)</td></tr>
+<tr><td>batch_size = 64</td><td>dataset คืนข้อมูลทีละ 64 ภาพ</td></tr>
+<tr><td>train_dataset.take(1)</td><td>ดึง 1 batch มาตรวจ shape</td></tr>
+</table>
+<p><strong>ผลลัพธ์ที่พิมพ์ในสไลด์:</strong> <code>data batch shape (64, 224, 224, 3)</code>, <code>label batch shape (64,)</code> และ <code>labels_batch</code> เป็น tensor ของ 0/1 จำนวน 64 ค่า (<code>dtype=int32</code>). Train set มี 2,000 ภาพ จึงมี \(\lceil 2000/64 \rceil = 32\) batch ต่อ epoch (31 batch เต็ม และ batch สุดท้าย \(2000 - 31 \times 64 = 16\) ภาพ).</p>
+
+<figure>
+<img src="../assets/slides/dl8-p27-dog-cat-approach-1.png" alt="Slide: Dog-Cat Approach#1 Pretrained model as a classifier. Code: model = VGG16(weights=&quot;imagenet&quot;, include_top=True, input_shape=(224,224,3)); load_img with target_size=(224,224); img_to_array; reshape to (1, 224, 224, 3); preprocess_input; pred = model.predict(image); label = decode_predictions(pred). Model summary of vgg16 with fc1, fc2, predictions (None, 1000); Total params 138,357,544">
+<figcaption>Slide: Dog-Cat Approach#1 — Pretrained model as a classifier (Lecture8, p.27)</figcaption>
+</figure>
+
+<p><strong>Approach #1: Pretrained model as a classifier.</strong> โหลด VGG16 ทั้งตัวรวม classifier 1,000 class แล้วทำนายทันที ไม่มีการเทรน.</p>
+
+<pre data-p="27"><code># load the VGG16 model and its pretrained weights
+model = VGG16(weights="imagenet", include_top=True,input_shape=(224,224,3))
+model.summary()
+
+# load an image from a file
+image = load_img('S__5988354.jpg',target_size=(224,224))
+# convert the image pixels to a numpy array
+image = img_to_array(image)
+plt.imshow(image/255)
+
+# reshape data for the model
+image = image.reshape((1,image.shape[0],image.shape[1],image.shape[2]))
+# print(image.shape) #(1, 224, 224, 3)
+# BGR and zero-centered
+image = preprocess_input(image)
+image
+
+# predict the probabilites across all output classes
+pred = model.predict(image)
+# decode_predictions() - display the top K predictions,
+# including theclass name and the estimated probability of each predicted class
+# let 's convert the probabilities to class labels
+label = decode_predictions(pred)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>VGG16(weights="imagenet", include_top=True, input_shape=(224,224,3))</td><td>โหลดสถาปัตยกรรม VGG16 พร้อม weight ที่เทรนบน ImageNet. <code>include_top=True</code> = รวม classifier (fc1, fc2, predictions) ไว้ด้วย</td></tr>
+<tr><td>load_img(..., target_size=(224,224))</td><td>โหลดภาพและ resize เป็นขนาดที่โมเดลต้องการ</td></tr>
+<tr><td>img_to_array(image)</td><td>แปลงเป็น numpy array shape (224, 224, 3) ค่า 0–255</td></tr>
+<tr><td>image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))</td><td>เพิ่มมิติ batch ⇒ (1, 224, 224, 3). โมเดลรับ input เป็น batch เสมอ</td></tr>
+<tr><td>preprocess_input(image)</td><td>ปรับภาพแบบเดียวกับตอนเทรน VGG16: สลับ RGB เป็น BGR และลบค่าเฉลี่ยของแต่ละ channel (zero-centered)</td></tr>
+<tr><td>model.predict(image)</td><td>ได้ความน่าจะเป็น 1,000 ค่า shape (1, 1000)</td></tr>
+<tr><td>decode_predictions(pred)</td><td>แปลงเป็นชื่อ class พร้อมความน่าจะเป็นของ top K (default 5)</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณตาม summary ในสไลด์: VGG16 มี 138,357,544 parameter อยู่ที่ไหน</div>
+<div class="given">ให้ ค่าจาก <code>model.summary()</code>: conv base ทั้งหมด (ถึง block5_pool) ให้ output (None, 7, 7, 512); fc1 และ fc2 มี 4,096 node; predictions มี 1,000 node</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — block1_conv1 และ block1_conv2 (64 filter, 3×3)</div>
+$$(3 \cdot 3 \cdot 3 + 1) \cdot 64 = 1{,}792 \qquad (3 \cdot 3 \cdot 64 + 1) \cdot 64 = 36{,}928$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Flatten แล้วเข้า fc1</div>
+$$\begin{gathered}7 \times 7 \times 512 = 25{,}088 \\[0.35em] 25{,}088 \times 4{,}096 + 4{,}096 = 102{,}764{,}544\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — fc2 และ predictions</div>
+$$\begin{gathered}4{,}096 \times 4{,}096 + 4{,}096 = 16{,}781{,}312 \\[0.35em] 4{,}096 \times 1{,}000 + 1{,}000 = 4{,}097{,}000\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 4 — ส่วน conv base = ทั้งหมด − classifier</div>
+$$\begin{gathered}138{,}357{,}544 - (102{,}764{,}544 + 16{,}781{,}312 + 4{,}097{,}000) \\[0.35em] = 14{,}714{,}688\end{gathered}$$</li>
+</ol>
+<div class="answer"><p>Classifier สาม dense layer มี 123.6 ล้าน parameter (89%) ส่วน convolution 13 ชั้นมีเพียง 14.7 ล้าน (11%). ค่า 14,714,688 คือ Total params ที่จะเห็นเมื่อโหลดด้วย <code>include_top=False</code> ใน approach #2. ข้อจำกัดของ approach #1: output เป็น 1,000 class ของ ImageNet (เช่น สายพันธุ์สุนัขและแมว) ไม่ใช่สอง class "dog/cat" ที่โจทย์ต้องการ.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p28-dog-cat-approach-2.png" alt="Slide: Dog-Cat Approach#2 Pretrained model as feature detector. Without data augmentation: get_features_and_labels(dataset) runs preprocess_input and conv_base.predict to extract features of shape (2000, 7, 7, 512); build_model_feature_extractor1: Flatten, Dense(256, relu), Dropout(0.5), Dense(1, sigmoid). With data augmentation: conv_base.trainable = False; build_model_feature_extractor2: Input(shape=(224,224,3)), data_augmentation, Lambda(preprocess_input), conv_base, Flatten, Dense(256), Dropout(0.5), Dense(1, sigmoid). vgg16 summary without top: Total params 14,714,688">
+<figcaption>Slide: Dog-Cat Approach#2 — Pretrained model as feature detector (Lecture8, p.28)</figcaption>
+</figure>
+
+<p><strong>Approach #2: Pretrained model as feature detector.</strong> โหลดเฉพาะ conv base (<code>include_top=False</code>) แล้วต่อ classifier ใหม่. สไลด์แสดงสองวิธี.</p>
+<p><strong>วิธี A — Without Data Augmentation:</strong> ส่งภาพทั้งหมดผ่าน conv base <em>ครั้งเดียว</em>แล้วเก็บ feature เป็น array จากนั้นเทรน classifier เล็กๆ บน feature เหล่านั้น.</p>
+
+<pre data-p="28"><code># instantiate the VGG16 model.
+conv_base = VGG16(weights='imagenet',include_top=False,input_shape=(224,224,3))
+
+# extracting features as NumPy arrays by calling the predict() method of the VGG model on our training, validation, and testing datasets.
+def get_features_and_labels(dataset):
+  all_features = []
+  all_labels = []
+  for images, labels in dataset:
+    # the VGG16 model expects inputs that are preprocessed with the function preprocess_input, which scales pixel values to an appropriate range.
+    preprocessed_image = preprocess_input(images)
+    features = conv_base.predict(preprocessed_image)
+    all_features.append(features)
+    all_labels.append(labels)
+  # predict() only expects images, not labels, but our current dataset yields batches that contain both images and their labels.
+  return np.concatenate(all_features),np.concatenate(all_labels)
+
+train_features, train_labels = get_features_and_labels(train_dataset)
+val_features, val_labels = get_features_and_labels(val_dataset)
+test_features, test_labels = get_features_and_labels(test_dataset)
+train_features.shape # (2000, 7, 7, 512)
+
+def build_model_feature_extractor1():
+  model = Sequential()
+  model.add(Flatten(input_shape=(last_layer.output_shape[1:])))
+  model.add(Dense(256, activation='relu'))
+  model.add(Dropout(0.5))
+  model.add(Dense(1, activation='sigmoid'))
+  return model</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>VGG16(weights='imagenet', include_top=False, input_shape=(224,224,3))</td><td><code>include_top=False</code> ตัด classifier (Flatten, fc1, fc2, predictions) ออก เหลือ conv base ที่จบที่ block5_pool. Total params 14,714,688</td></tr>
+<tr><td>for images, labels in dataset:</td><td>วนทีละ batch (64 ภาพ)</td></tr>
+<tr><td>preprocess_input(images)</td><td>ปรับ pixel ให้อยู่ในรูปแบบที่ VGG16 คาดหวัง</td></tr>
+<tr><td>conv_base.predict(preprocessed_image)</td><td>forward อย่างเดียว ไม่มีการเทรน. ได้ feature shape (64, 7, 7, 512) ต่อ batch</td></tr>
+<tr><td>np.concatenate(all_features), np.concatenate(all_labels)</td><td>ต่อทุก batch เป็น array เดียว ⇒ <code>train_features.shape</code> = (2000, 7, 7, 512)</td></tr>
+<tr><td>Flatten(input_shape=(last_layer.output_shape[1:]))</td><td>input ของโมเดลใหม่คือ feature (7, 7, 512) ไม่ใช่ภาพ. Flatten ได้ 25,088 ค่า</td></tr>
+<tr><td>Dense(256, activation='relu') + Dropout(0.5)</td><td>classifier ใหม่ที่เทรนจากศูนย์</td></tr>
+<tr><td>Dense(1, activation='sigmoid')</td><td>binary classification (dog/cat) ⇒ 1 node + sigmoid คู่กับ loss <code>binary_crossentropy</code></td></tr>
+</table>
+
+<p><strong>วิธี B — With Data Augmentation:</strong> วิธี A ใช้ augmentation ไม่ได้ เพราะ feature ถูกคำนวณครั้งเดียวจากภาพเดิม. วิธี B จึงวาง conv base ไว้<em>ในโมเดล</em> เพื่อให้ภาพที่ถูก augment ใหม่ทุก epoch ไหลผ่าน conv base ทุกครั้ง และต้อง freeze conv base ด้วย <code>conv_base.trainable = False</code>.</p>
+
+<pre data-p="28"><code>conv_base.trainable = False
+
+def build_model_feature_extractor2():
+  model = Sequential()
+  model.add(Input(shape=(224,224,3)))
+  model.add(data_augmentation)
+  model.add(Lambda(lambda x: preprocess_input(x)))
+  model.add(conv_base) #models behave just like layers
+  model.add(Flatten())
+  model.add(Dense(256, activation='relu'))
+  model.add(Dropout(0.5))
+  model.add(Dense(1, activation='sigmoid'))
+  return model</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>conv_base.trainable = False</td><td>freeze ทุก layer ของ conv base. ต้องทำ<strong>ก่อน</strong> compile</td></tr>
+<tr><td>model.add(data_augmentation)</td><td>pipeline ของ preprocessing layers จาก <a href="0007-convolutional-neural-networks.html#s11">Lesson 7 §11</a></td></tr>
+<tr><td>Lambda(lambda x: preprocess_input(x))</td><td>ห่อ <code>preprocess_input</code> เป็น layer เพื่อให้อยู่ใน Sequential model ได้</td></tr>
+<tr><td>model.add(conv_base)</td><td>ใส่โมเดลทั้งตัวเป็น layer หนึ่งชั้น ("models behave just like layers")</td></tr>
+<tr><td>Flatten → Dense(256) → Dropout(0.5) → Dense(1, sigmoid)</td><td>classifier ชุดเดียวกับวิธี A</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: trainable และ non-trainable parameter ของ approach #2 วิธี B</div>
+<div class="given">ให้ conv base ของ VGG16 มี 14,714,688 parameter และถูก freeze. Classifier: Flatten(7×7×512) → Dense(256) → Dense(1)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Dense(256)</div>
+$$25{,}088 \times 256 + 256 = 6{,}422{,}784$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Dense(1)</div>
+$$256 \times 1 + 1 = 257$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Trainable = classifier ทั้งหมด</div>
+$$6{,}422{,}784 + 257 = 6{,}423{,}041$$</li>
+<li><div class="st-title">ขั้นที่ 4 — Total</div>
+$$14{,}714{,}688 + 6{,}423{,}041 = 21{,}137{,}729$$</li>
+</ol>
+<div class="answer"><p>Total params 21,137,729; Trainable 6,423,041; Non-trainable 14,714,688. Dropout, Flatten, Lambda และ data augmentation ไม่มี parameter. วิธี A เทรนเร็วมาก (ราว 1 วินาทีต่อ epoch) เพราะเทรนเพียงสอง dense layer บน feature ที่คำนวณไว้แล้ว; วิธี B ช้ากว่าเพราะทุก batch ต้อง forward ผ่าน conv base. Test accuracy ที่ผู้สอนรันได้: วิธี A 0.974, วิธี B 0.980.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p29-dog-cat-approach-3.png" alt="Slide: Dog-Cat Approach#3 Fine Tuning. conv_base = VGG16(weights=&#x27;imagenet&#x27;, include_top=False, input_shape=(224,224,3)). Loop: set_trainable = False; for layer in conv_base.layers: if layer.name == &#x27;block5_conv1&#x27;: set_trainable = True; layer.trainable set accordingly. Printout shows layers up to block4_pool False and block5_conv1, block5_conv2, block5_conv3, block5_pool True. build_model_fine_tuning1 (without augmentation) and build_model_fine_tuning2 (with augmentation) using the functional API">
+<figcaption>Slide: Dog-Cat Approach#3 — Fine Tuning (Lecture8, p.29)</figcaption>
+</figure>
+
+<p><strong>Approach #3: Fine Tuning.</strong> freeze conv base ถึง block4 และปล่อย block5 (convolution สามชั้นสุดท้าย) ให้เทรนร่วมกับ classifier ใหม่.</p>
+
+<pre data-p="29"><code>#instantiate the VGG16 model.
+conv_base = VGG16(weights='imagenet',include_top=False,input_shape=(224,224,3))
+conv_base.summary()
+
+set_trainable = False
+for layer in conv_base.layers:
+  if layer.name == 'block5_conv1':
+    set_trainable = True
+  if set_trainable:
+    layer.trainable = True
+  else:
+    layer.trainable = False
+  print("layer name",layer.name, layer.trainable)
+
+def build_model_fine_tuning2():
+  inputs = Input(shape=(224,224,3))
+  x = data_augmentation(inputs)
+  x = preprocess_input(x)
+  x = conv_base(x)
+  x = Flatten()(x)
+  x = Dense(256, activation='relu')(x)
+  x = Dropout(0.5)(x)
+  outputs = Dense(1, activation='sigmoid')(x)
+  model = Model(inputs,outputs)
+  return model</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>set_trainable = False</td><td>ธงเริ่มต้น: layer ที่วนเจอก่อนถึงจุดตัดจะถูก freeze</td></tr>
+<tr><td>for layer in conv_base.layers:</td><td>วนตามลำดับจาก input ถึง block5_pool</td></tr>
+<tr><td>if layer.name == 'block5_conv1': set_trainable = True</td><td>เมื่อถึง block5_conv1 พลิกธงเป็น True และคงค่านั้นกับทุก layer ถัดไป</td></tr>
+<tr><td>layer.trainable = True / False</td><td>ตั้งค่าของแต่ละ layer ตามธง</td></tr>
+<tr><td>print("layer name", layer.name, layer.trainable)</td><td>ผลลัพธ์: <code>input</code> ถึง <code>block4_pool</code> เป็น False; <code>block5_conv1</code>, <code>block5_conv2</code>, <code>block5_conv3</code>, <code>block5_pool</code> เป็น True</td></tr>
+<tr><td>inputs = Input(shape=(224,224,3)) … model = Model(inputs, outputs)</td><td>Functional API: เรียกแต่ละ layer เป็นฟังก์ชันบน tensor <code>x</code> แล้วสร้างโมเดลจาก input และ output. <code>build_model_fine_tuning1</code> (without data augmentation) เหมือนกันแต่ไม่มีบรรทัด <code>data_augmentation</code></td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: trainable parameter ของ approach #3</div>
+<div class="given">ให้ block5_conv1, block5_conv2, block5_conv3 มี 512 filter 3×3 และ input 512 channel. Classifier ชุดเดิม 6,423,041 parameter</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Convolution หนึ่งชั้นของ block5</div>
+$$(3 \cdot 3 \cdot 512 + 1) \cdot 512 = 2{,}359{,}808$$</li>
+<li><div class="st-title">ขั้นที่ 2 — สามชั้นที่ปลด freeze</div>
+$$3 \times 2{,}359{,}808 = 7{,}079{,}424$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Trainable และ non-trainable</div>
+$$\begin{gathered}7{,}079{,}424 + 6{,}423{,}041 = 13{,}502{,}465 \\[0.35em] 14{,}714{,}688 - 7{,}079{,}424 = 7{,}635{,}264\end{gathered}$$</li>
+</ol>
+<div class="answer"><p>Trainable 13,502,465; Non-trainable 7,635,264; Total 21,137,729 เท่า approach #2. ในแง่จำนวน layer: 4 จาก 19 layer ของ conv base ถูกปลด (ราว 21%) และ 79% ถูก freeze ซึ่งอยู่ในช่วง 60%–80% ของ scenario #2 เพราะ domain สุนัข/แมวคล้าย ImageNet มาก. ผู้สอน compile ด้วย <code>Adam(learning_rate=0.00001)</code> ซึ่งเล็กกว่า 0.001 ของ approach #2 ถึง 100 เท่า ตาม guideline หน้า 25. Test accuracy: without augmentation 0.972, with augmentation 0.980.</p></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 16</span><span>Keras transfer learning</span></div>
+  <div class="qtext">ต้องการโหลด VGG16 พร้อม weight ของ ImageNet โดยตัดส่วน fully connected classifier ออก เพื่อนำมาต่อ classifier ของตัวเอง ต้องเติมอาร์กิวเมนต์ใดในช่องว่างของ <code>VGG16(weights='imagenet', ______, input_shape=(224,224,3))</code>?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. include_top=False ตัด Flatten และ dense layer ทั้งสาม (fc1, fc2, predictions) ออก เหลือ conv base 14,714,688 parameter. trainable ไม่ใช่อาร์กิวเมนต์ของการโหลด ต้องตั้งภายหลังด้วย conv_base.trainable = False.">trainable=False</button>
+    <button class="opt" data-correct="false" data-note="ผิด. include_top=False ตัด Flatten และ dense layer ทั้งสาม (fc1, fc2, predictions) ออก เหลือ conv base 14,714,688 parameter. trainable ไม่ใช่อาร์กิวเมนต์ของการโหลด ต้องตั้งภายหลังด้วย conv_base.trainable = False.">include_top=True</button>
+    <button class="opt" data-correct="true" data-note="ถูก. include_top=False ตัด Flatten และ dense layer ทั้งสาม (fc1, fc2, predictions) ออก เหลือ conv base 14,714,688 parameter. trainable ไม่ใช่อาร์กิวเมนต์ของการโหลด ต้องตั้งภายหลังด้วย conv_base.trainable = False.">include_top=False</button>
+    <button class="opt" data-correct="false" data-note="ผิด. include_top=False ตัด Flatten และ dense layer ทั้งสาม (fc1, fc2, predictions) ออก เหลือ conv base 14,714,688 parameter. trainable ไม่ใช่อาร์กิวเมนต์ของการโหลด ต้องตั้งภายหลังด้วย conv_base.trainable = False.">pooling='flatten'</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 17</span><span>Keras transfer learning</span></div>
+  <div class="qtext">Conv base ที่ถูก freeze มี 14,714,688 parameter และให้ output 7×7×512 ต่อด้วย Flatten → Dense(128, relu) → Dropout(0.5) → Dense(1, sigmoid) โมเดลนี้มี trainable parameter กี่ตัว?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Flatten = 25,088. Dense(128): 25,088·128 + 128 = 3,211,392. Dense(1): 128 + 1 = 129. รวม 3,211,521. Dropout ไม่มี parameter และ conv base ที่ freeze เป็น non-trainable. ค่า 17,926,209 คือ total params.">17,926,209</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Flatten = 25,088. Dense(128): 25,088·128 + 128 = 3,211,392. Dense(1): 128 + 1 = 129. รวม 3,211,521. Dropout ไม่มี parameter และ conv base ที่ freeze เป็น non-trainable. ค่า 17,926,209 คือ total params.">3,211,521</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Flatten = 25,088. Dense(128): 25,088·128 + 128 = 3,211,392. Dense(1): 128 + 1 = 129. รวม 3,211,521. Dropout ไม่มี parameter และ conv base ที่ freeze เป็น non-trainable. ค่า 17,926,209 คือ total params.">3,211,392</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Flatten = 25,088. Dense(128): 25,088·128 + 128 = 3,211,392. Dense(1): 128 + 1 = 129. รวม 3,211,521. Dropout ไม่มี parameter และ conv base ที่ freeze เป็น non-trainable. ค่า 17,926,209 คือ total params.">3,211,649</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 18</span><span>Keras transfer learning</span></div>
+  <div class="qtext">Train set มี 3,000 ภาพ โหลดด้วย <code>image_dataset_from_directory(..., image_size=(224,224), batch_size=64)</code> ข้อใดคือ shape ของ batch ข้อมูลหนึ่ง batch เต็ม และจำนวน batch ต่อ epoch?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Batch มี shape (batch, สูง, กว้าง, channel) = (64, 224, 224, 3). จำนวน batch = ⌈3000/64⌉ = ⌈46.875⌉ = 47 โดย batch สุดท้ายมี 3000 − 46·64 = 56 ภาพ.">(64, 224, 224) และ 46 batch</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Batch มี shape (batch, สูง, กว้าง, channel) = (64, 224, 224, 3). จำนวน batch = ⌈3000/64⌉ = ⌈46.875⌉ = 47 โดย batch สุดท้ายมี 3000 − 46·64 = 56 ภาพ.">(64, 224, 224, 3) และ 46 batch</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Batch มี shape (batch, สูง, กว้าง, channel) = (64, 224, 224, 3). จำนวน batch = ⌈3000/64⌉ = ⌈46.875⌉ = 47 โดย batch สุดท้ายมี 3000 − 46·64 = 56 ภาพ.">(224, 224, 3, 64) และ 47 batch</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Batch มี shape (batch, สูง, กว้าง, channel) = (64, 224, 224, 3). จำนวน batch = ⌈3000/64⌉ = ⌈46.875⌉ = 47 โดย batch สุดท้ายมี 3000 − 46·64 = 56 ภาพ.">(64, 224, 224, 3) และ 47 batch</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — โค้ดและตัวเลขของตัวอย่าง Dog-Cat</div>
+<ul>
+<li><mark class="src" data-p="26">create directory in the structure format that Keras's ImageDataGenerator can read the images from folders containing images</mark>: train/validation/test และโฟลเดอร์ย่อยต่อ class</li>
+<li><code>include_top=True</code> ⇒ 138,357,544 parameter, ทำนาย 1,000 class; <code>include_top=False</code> ⇒ 14,714,688 parameter, output (7, 7, 512)</li>
+<li>ลำดับก่อน predict: <code>load_img</code> → <code>img_to_array</code> → <code>reshape</code> เป็น (1, 224, 224, 3) → <code>preprocess_input</code> → <code>predict</code> → <code>decode_predictions</code></li>
+<li>Feature extractor: <code>conv_base.trainable = False</code>; trainable 6,423,041. Fine tuning: ปลดตั้งแต่ <code>block5_conv1</code>; trainable 13,502,465; learning rate เล็กลง</li>
+<li>Binary output: <code>Dense(1, activation='sigmoid')</code>; classifier ใช้ <code>Dropout(0.5)</code></li>
+</ul>
+</div>
+
+<h2 id="s10">10. Beyond CNNs: Vision Transformer และ Swin Transformer</h2>
+
+<figure>
+<img src="../assets/slides/dl8-p30-beyond-cnns-vision-transformers.png" alt="Slide: Beyond CNNs: Vision Transformers. Recent vision models can represent images as patches and process them using Transformer-based architectures such as ViT and Swin Transformer. Replace convolution with attention: ViT. Recover hierarchy/locality in ViT: Swin Transformer. CNN flow: image, convolution, local feature extraction, deeper layers with larger receptive field. Vision Transformer flow: image, split into patches, patch embeddings, transformer encoder, classification">
+<figcaption>Slide: Beyond CNNs: Vision Transformers — CNN เทียบกับ ViT (Lecture8, p.30)</figcaption>
+</figure>
+
+<p>โมเดล vision รุ่นใหม่แทนภาพเป็น patch แล้วประมวลผลด้วยสถาปัตยกรรมแบบ Transformer เช่น <strong>ViT</strong> และ <strong>Swin Transformer</strong>:</p>
+<ul>
+<li>replace convolution with attention → <strong>ViT</strong></li>
+<li>recover hierarchy/locality in ViT → <strong>Swin Transformer</strong></li>
+</ul>
+<table class="compact">
+<tr><th>CNN</th><th>Vision Transformer</th></tr>
+<tr><td>Image → Convolution → Local feature extraction → Deeper layers → larger receptive field</td><td>Image → Split into patches → Patch embeddings → Transformer encoder → Classification</td></tr>
+</table>
+<p>สไลด์หมายเหตุว่ารายละเอียดของ attention และ transformer จะเรียนในคาบถัดไป. ในบทนี้ให้เข้าใจ self-attention ว่าเป็นกลไกที่ทุก token คำนวณความสัมพันธ์กับ token อื่นแล้วรวมข้อมูลตามน้ำหนักความสัมพันธ์นั้น.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p31-vision-transformer.png" alt="Slide: Vision Transformer (ViT), Dosovitskiy et al. (2020). Applies the Transformer architecture to image recognition. ViT divides the image into fixed-size patches; a 224x224 image with 16x16 patches gives 14x14 = 196 patches. Each patch is treated like a token, flattened and linearly transformed into a patch embedding; position embeddings are added; the sequence is processed by a Transformer that learns relationships among patches (self-attention). Diagram: patches, linear projection of flattened patches, patch + position embedding with extra class embedding, transformer encoder, MLP head, class">
+<figcaption>Slide: Vision Transformer (ViT) — patch และ embedding (Lecture8, p.31)</figcaption>
+</figure>
+
+<p>ViT (Dosovitskiy et al., 2020) ใช้ <strong>Transformer architecture to image recognition</strong>. ขั้นตอนตามสไลด์:</p>
+<ol>
+<li>แทนการใช้ convolutional filter ViT แบ่งภาพเป็น <strong>fixed-size patches</strong> และถือแต่ละ patch เป็น <strong>token</strong> เหมือน token ใน NLP</li>
+<li>แต่ละ patch ถูก flatten แล้วแปลงเชิงเส้นเป็น vector ขนาดคงที่ เรียกว่า <strong>patch embedding</strong></li>
+<li>บวก <strong>position embeddings</strong> เข้ากับ patch embedding เพื่อให้โมเดลรู้ว่า patch อยู่ตรงไหนของภาพ</li>
+<li>ลำดับของ patch embedding ถูกประมวลผลด้วย <strong>Transformer</strong> ซึ่งเรียน <strong>relationships among these patches (self-attention)</strong> ทำให้ข้อมูลจาก <strong>different parts of the image</strong> ถูก <strong>combined for prediction</strong></li>
+</ol>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: จำนวน patch ของ ViT</div>
+<div class="given">ให้ ภาพ 224×224×3 แบ่งเป็น patch ขนาด 16×16</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — จำนวน patch ต่อด้าน</div>
+$$\frac{224}{16} = 14$$</li>
+<li><div class="st-title">ขั้นที่ 2 — จำนวน patch ทั้งหมด</div>
+$$14 \times 14 = 196 \text{ patches}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — ขนาดของ patch หนึ่งชิ้นหลัง flatten</div>
+$$16 \times 16 \times 3 = 768 \text{ ค่า}$$</li>
+<li><div class="st-title">ขั้นที่ 4 — จำนวนคู่ที่ global self-attention ต้องคำนวณ (ทุก patch กับทุก patch)</div>
+$$196^2 = 38{,}416$$</li>
+</ol>
+<div class="answer"><p>ภาพหนึ่งภาพกลายเป็นลำดับ 196 token (รูปในสไลด์มี class embedding พิเศษอีก 1 ตัวที่ตำแหน่ง 0 สำหรับการจำแนก). ต้นทุนของ self-attention โตตามกำลังสองของจำนวน patch ซึ่งเป็นปัญหาที่ Swin แก้.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p32-vit-key-properties.png" alt="Slide: Key Properties of Vision Transformer. Patch-based representation; no convolution is required in the original ViT; can model relationships between different image regions using self-attention; has less built-in image-specific inductive bias than CNNs; benefits substantially from large-scale pretraining; a pretrained ViT can be transferred/fine-tuned for downstream tasks. Table CNN vs ViT: convolution vs self-attention; strong locality bias vs global interactions; pixels/features organized spatially vs image as patch tokens; hierarchical features naturally vs original ViT less inherently hierarchical">
+<figcaption>Slide: Key Properties of Vision Transformer — CNN vs ViT (Lecture8, p.32)</figcaption>
+</figure>
+
+<ul>
+<li><strong>Patch-based representation:</strong> ภาพถูกแทนด้วยลำดับของ image patch</li>
+<li><strong>No convolution is required</strong> ในสถาปัตยกรรม ViT ดั้งเดิม</li>
+<li>จำลองความสัมพันธ์ระหว่าง <strong>different image regions</strong> ด้วย self-attention</li>
+<li>มี <strong>less built-in image-specific inductive bias</strong> กว่า CNN (CNN ถูกออกแบบให้เชื่อว่า pixel ใกล้กันสัมพันธ์กัน; ViT ต้องเรียนสิ่งนี้จากข้อมูล)</li>
+<li>ได้ประโยชน์มากจาก <u>large-scale pretraining</u> และ pretrained ViT นำไป transfer/fine-tune กับงาน downstream ได้</li>
+</ul>
+<table class="compact">
+<tr><th>CNN</th><th>ViT</th></tr>
+<tr><td>Convolution</td><td>Self-attention</td></tr>
+<tr><td>Strong locality bias</td><td>Global interactions</td></tr>
+<tr><td>Pixels/features organized spatially</td><td>Image represented as patch tokens</td></tr>
+<tr><td>Hierarchical features naturally</td><td>Original ViT is less inherently hierarchical</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl8-p33-swin-why-modify-vit.png" alt="Slide: Swin Transformer: Why Modify ViT? ViT performs global self-attention among image patches. Problems: global self-attention becomes computationally expensive as the number of image patches increases (high-resolution images); the original ViT maintains a relatively single-scale representation, unlike hierarchical feature maps of CNNs; multi-scale features are useful for object detection and segmentation. Swin combines Transformer-based feature learning with locality and hierarchical representations">
+<figcaption>Slide: Swin Transformer: Why Modify ViT? (Lecture8, p.33)</figcaption>
+</figure>
+
+<p>ViT ทำ <strong>global self-attention</strong> ระหว่างทุก patch. สไลด์ระบุปัญหาสองข้อ:</p>
+<ol>
+<li>Global self-attention <strong>computational expensive</strong> เมื่อจำนวน patch เพิ่ม. ภาพความละเอียดสูงมี patch มาก การให้ทุก patch โต้ตอบกันทั้งหมดจึงแพงขึ้นตามความละเอียด</li>
+<li>ViT ดั้งเดิมคง <strong>single-scale representation</strong> ต่างจาก hierarchical feature map ของ CNN. Multi-scale feature มีประโยชน์กับ <strong>object detection and segmentation</strong> ที่วัตถุมีหลายขนาด (ความละเอียดสูงเก็บรายละเอียดเชิงพื้นที่; ความละเอียดต่ำเก็บ representation ระดับสูง)</li>
+</ol>
+<p>คำถามที่ Swin ตอบ: คง vision แบบ Transformer ไว้โดยทำให้ <u>more hierarchical and efficient</u> ได้หรือไม่. Swin รวม <strong>Transformer-based feature learning</strong> กับ <strong>locality</strong> และ <strong>hierarchical representations</strong>.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p34-swin-transformer.png" alt="Slide: Swin Transformer (Hierarchical Vision Transformer), Liu et al. (2021). Instead of every patch attending to every other patch, Swin (Shifted Window) divides the feature map into small windows, computes self-attention within local windows and shifts the windows between layers, while building hierarchical feature maps. Figure: Layer l windows and Layer l+1 shifted windows. Note: Swin reintroduces locality, analogous to local processing of CNNs (but still self-attention)">
+<figcaption>Slide: Swin Transformer — shifted window (Lecture8, p.34)</figcaption>
+</figure>
+
+<p>แทนที่จะให้ทุก patch attend ไปยัง <strong>every other patch</strong>, <strong>Swin (from Shifted Window)</strong> แบ่ง feature map เป็น <strong>windows</strong> เล็กๆ. คำนวณ <strong>self-attention</strong> ภายใน <strong>local windows</strong> <u>and shifts those windows between layers</u> พร้อมสร้าง <u>hierarchical feature maps</u>:</p>
+<ul>
+<li>แบ่ง image representation เป็น <strong>local windows</strong></li>
+<li>คำนวณ <strong>within each window</strong> ไม่ใช่ global ข้ามทุก patch</li>
+<li>Window ถูก <strong>shifted between successive layers</strong> ทำให้ข้อมูลไหลข้าม window ที่อยู่ติดกันได้</li>
+</ul>
+<p>รูปในสไลด์: Layer l แบ่งเป็น 4 window ปกติ. Layer l+1 เลื่อนขอบ window ไปครึ่งหนึ่ง patch ที่เคยอยู่คนละ window จึงมาอยู่ window เดียวกัน. หมายเหตุ: Swin <strong>reintroduces locality</strong> คือการประมวลผลช่วงต้นเกิดระหว่าง patch ใกล้กัน คล้าย local processing ของ CNN แต่ยังเป็น self-attention.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: global attention เทียบกับ window attention</div>
+<div class="given">ให้ feature map มี 14×14 = 196 patch. Swin ใช้ window ขนาด 7×7 patch</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Global attention (ViT)</div>
+$$196^2 = 38{,}416 \text{ คู่}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Window attention: จำนวน window และคู่ต่อ window</div>
+$$\frac{196}{49} = 4 \text{ windows} \qquad 49^2 = 2{,}401 \text{ คู่ต่อ window}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — รวม</div>
+$$4 \times 2{,}401 = 9{,}604 \text{ คู่}$$</li>
+<li><div class="st-title">ขั้นที่ 4 — เพิ่มความละเอียดสองเท่าต่อด้าน (28×28 = 784 patch)</div>
+$$\text{global: } 784^2 = 614{,}656 \qquad \text{window: } 16 \times 2{,}401 = 38{,}416$$</li>
+</ol>
+<div class="answer"><p>ที่ 196 patch window attention ถูกกว่า 4 เท่า. เมื่อ patch เพิ่ม 4 เท่า global attention แพงขึ้น 16 เท่า (กำลังสอง) แต่ window attention แพงขึ้นเพียง 4 เท่า (เชิงเส้น) ตรงกับแถว "High-resolution efficiency" ของตารางหน้า 36.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p35-swin-architecture.png" alt="Slide: Architecture. As the network becomes deeper: fewer spatial locations / higher-level features. This builds hierarchical, multi-scale feature maps, similar in spirit to CNN feature hierarchies. Designed as a general-purpose backbone for classification, object detection and segmentation. Swin-T diagram: images HxWx3, patch partition H/4 x W/4 x 48, Stage 1 linear embedding and 2 Swin blocks H/4 x W/4 x C, Stage 2 patch merging and 2 blocks H/8 x W/8 x 2C, Stage 3 patch merging and 6 blocks H/16 x W/16 x 4C, Stage 4 patch merging and 2 blocks H/32 x W/32 x 8C; two successive Swin Transformer blocks with W-MSA and SW-MSA">
+<figcaption>Slide: Architecture — Swin-T สี่ stage (Lecture8, p.35)</figcaption>
+</figure>
+
+<p>เมื่อ network ลึกขึ้น: <strong>fewer spatial locations / higher-level features</strong>. สิ่งนี้สร้าง <strong>hierarchical, multi-scale feature maps</strong> คล้ายลำดับชั้น feature ของ CNN. Swin ออกแบบเป็น general-purpose backbone สำหรับ classification, object detection และ segmentation.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามรูปในสไลด์: ขนาด feature map ของ Swin-T แต่ละ stage</div>
+<div class="given">ให้ ภาพ 224×224×3 และ \(C = 96\). Patch partition ใช้ patch 4×4. Patch Merging ระหว่าง stage ลดด้านลงครึ่งและเพิ่ม channel สองเท่า</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Patch partition: patch 4×4 หนึ่งชิ้นมี \(4 \times 4 \times 3 = 48\) ค่า</div>
+$$\frac{H}{4} \times \frac{W}{4} \times 48 = 56 \times 56 \times 48$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Stage 1 (Linear Embedding + 2 block)</div>
+$$\frac{H}{4} \times \frac{W}{4} \times C = 56 \times 56 \times 96$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Stage 2 (Patch Merging + 2 block) และ Stage 3 (Patch Merging + 6 block)</div>
+$$\begin{gathered}\frac{H}{8} \times \frac{W}{8} \times 2C = 28 \times 28 \times 192 \\[0.35em] \frac{H}{16} \times \frac{W}{16} \times 4C = 14 \times 14 \times 384\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 4 — Stage 4 (Patch Merging + 2 block)</div>
+$$\frac{H}{32} \times \frac{W}{32} \times 8C = 7 \times 7 \times 768$$</li>
+</ol>
+<div class="answer"><p>ลำดับ 56 → 28 → 14 → 7 พร้อม channel 96 → 192 → 384 → 768 คือรูปแบบ "เล็กลงแต่ลึกขึ้น" เดียวกับ CNN (VGG16: 112 → 56 → 28 → 14 → 7). Patch Merging ทำหน้าที่แทน pooling. ในรูป (b) บล็อกคู่ใช้ W-MSA (window ปกติ) แล้ว SW-MSA (shifted window) สลับกัน จำนวนบล็อกต่อ stage จึงเป็นเลขคู่ (2, 2, 6, 2).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl8-p36-cnn-vs-vit-vs-swin.png" alt="Slide: CNN vs ViT vs Swin table. Basic unit: pixels/features, patch tokens, patch tokens. Main operation: convolution, self-attention, window self-attention. Early processing: local, global, local windows. Long-range interaction: builds progressively, direct global attention, progressively via shifted windows. Hierarchical: yes, limited in original ViT, yes. Multi-scale features: yes, not inherent in original ViT, yes. Downsampling: pooling/stride, none, patch merging. High-resolution efficiency: strong, global attention costly, designed to scale efficiently">
+<figcaption>Slide: CNN vs ViT vs Swin — ตารางเปรียบเทียบ (Lecture8, p.36)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th></th><th>CNN</th><th>ViT</th><th>Swin</th></tr>
+<tr><td>Basic unit</td><td>Pixels/features</td><td>Patch tokens</td><td>Patch tokens</td></tr>
+<tr><td>Main operation</td><td>Convolution</td><td>Self-attention</td><td>Window self-attention</td></tr>
+<tr><td>Early processing</td><td>Local</td><td>Global</td><td><strong>Local windows</strong></td></tr>
+<tr><td>Long-range interaction</td><td>Builds progressively</td><td>Direct global attention</td><td><strong>Progressively via shifted windows</strong></td></tr>
+<tr><td>Hierarchical</td><td>✓</td><td>Limited in original ViT</td><td>✓</td></tr>
+<tr><td>Multi-scale features</td><td>✓</td><td>Not inherent in original ViT</td><td>✓</td></tr>
+<tr><td>Downsampling</td><td>Pooling / stride etc.</td><td>—</td><td><strong>Patch Merging</strong></td></tr>
+<tr><td>High-resolution efficiency</td><td>Strong</td><td>Global attention costly</td><td><strong>Designed to scale efficiently</strong></td></tr>
+</table>
+<p>อ่านตารางตามคอลัมน์: Swin ใช้ basic unit เดียวกับ ViT (patch tokens) แต่ในหกแถวที่เหลือมีคุณสมบัติตรงกับ CNN (local, progressive, hierarchical, multi-scale, มี downsampling, scale ได้). Swin จึงเป็น Transformer ที่นำข้อดีเชิงโครงสร้างของ CNN กลับมา.</p>
+
+<figure>
+<img src="../assets/slides/dl8-p37-architecture-summary.png" alt="Slide: Architecture Summary. CNNs progressively improve convolutional architectures. Classical: LeNet, AlexNet, VGG, Inception, ResNet. Modern: Xception, MobileNet, DenseNet, EfficientNet, ConvNeXt. Transformers: ViT asks whether convolution is necessary at all; Swin adapts Transformer-based vision toward locality, hierarchy and multi-scale tasks. Chart of ImageNet-1K accuracy for ResNet, DeiT, Swin Transformer, ConvNeXt, ViT">
+<figcaption>Slide: Architecture Summary (Lecture8, p.37)</figcaption>
+</figure>
+
+<p>สรุปทั้งบทตามสไลด์:</p>
+<ul>
+<li><strong>CNNs:</strong> ปรับปรุงสถาปัตยกรรม convolution ทีละขั้น. <strong>Classical Architecture:</strong> LeNet → AlexNet → VGG → Inception → ResNet. <strong>Modern Architecture:</strong> Xception / MobileNet / DenseNet / EfficientNet / ConvNeXt</li>
+<li><strong>Transformers:</strong> <strong>ViT</strong> ถามว่า convolution จำเป็นหรือไม่; <strong>Swin</strong> ปรับ vision แบบ Transformer ไปสู่ locality, hierarchy และ multi-scale tasks</li>
+</ul>
+<p>กราฟในสไลด์แสดง ImageNet-1K accuracy: กลุ่มที่เทรนบน ImageNet-1K อยู่ช่วง 78–84% (ResNet ต่ำสุด, Swin และ ConvNeXt สูงสุด); กลุ่มที่ pretrain บน ImageNet-22K (ViT, Swin, ConvNeXt) ขึ้นไปถึง 85–88%. ทั้งสองข้อสอดคล้องกับที่สไลด์กล่าว: Transformer ได้ประโยชน์จาก large-scale pretraining และ ConvNeXt ซึ่งเป็น CNN ล้วนยังแข่งขันได้.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 19</span><span>ViT</span></div>
+  <div class="qtext">ภาพขนาด 384×384 ถูกแบ่งเป็น patch ขนาด 32×32 โดย Vision Transformer จำนวน patch ทั้งหมดคือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. 384/32 = 12 patch ต่อด้าน จึงมี 12 × 12 = 144 patch. ค่า 12 คือจำนวนต่อด้านเท่านั้น, ค่า 196 คือกรณีภาพ 224 กับ patch 16, ค่า 1,024 = 32 × 32 คือจำนวน pixel ต่อ patch ต่อ channel.">12</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 384/32 = 12 patch ต่อด้าน จึงมี 12 × 12 = 144 patch. ค่า 12 คือจำนวนต่อด้านเท่านั้น, ค่า 196 คือกรณีภาพ 224 กับ patch 16, ค่า 1,024 = 32 × 32 คือจำนวน pixel ต่อ patch ต่อ channel.">196</button>
+    <button class="opt" data-correct="true" data-note="ถูก. 384/32 = 12 patch ต่อด้าน จึงมี 12 × 12 = 144 patch. ค่า 12 คือจำนวนต่อด้านเท่านั้น, ค่า 196 คือกรณีภาพ 224 กับ patch 16, ค่า 1,024 = 32 × 32 คือจำนวน pixel ต่อ patch ต่อ channel.">144</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 384/32 = 12 patch ต่อด้าน จึงมี 12 × 12 = 144 patch. ค่า 12 คือจำนวนต่อด้านเท่านั้น, ค่า 196 คือกรณีภาพ 224 กับ patch 16, ค่า 1,024 = 32 × 32 คือจำนวน pixel ต่อ patch ต่อ channel.">1,024</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 20</span><span>ViT vs Swin</span></div>
+  <div class="qtext">ข้อใดอธิบายความต่างของการคำนวณ self-attention ระหว่าง ViT ดั้งเดิมกับ Swin Transformer ได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ViT ทำ global self-attention ระหว่างทุก patch ซึ่งแพงเมื่อ patch มาก. Swin (Shifted Window) คำนวณ self-attention ภายใน local window แล้วเลื่อน window ระหว่าง layer ที่ต่อกันเพื่อให้ข้อมูลไหลข้าม window.">ViT คำนวณภายใน window เฉพาะที่ ส่วน Swin คำนวณระหว่างทุก patch ทั้งภาพ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ViT ทำ global self-attention ระหว่างทุก patch ซึ่งแพงเมื่อ patch มาก. Swin (Shifted Window) คำนวณ self-attention ภายใน local window แล้วเลื่อน window ระหว่าง layer ที่ต่อกันเพื่อให้ข้อมูลไหลข้าม window.">ViT ใช้ convolution ก่อน attention ส่วน Swin ใช้ attention เพียงอย่างเดียว</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ViT ทำ global self-attention ระหว่างทุก patch ซึ่งแพงเมื่อ patch มาก. Swin (Shifted Window) คำนวณ self-attention ภายใน local window แล้วเลื่อน window ระหว่าง layer ที่ต่อกันเพื่อให้ข้อมูลไหลข้าม window.">ViT เลื่อน window ระหว่าง layer ส่วน Swin ใช้ window ตำแหน่งเดิมทุก layer</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ViT ทำ global self-attention ระหว่างทุก patch ซึ่งแพงเมื่อ patch มาก. Swin (Shifted Window) คำนวณ self-attention ภายใน local window แล้วเลื่อน window ระหว่าง layer ที่ต่อกันเพื่อให้ข้อมูลไหลข้าม window.">ViT คำนวณระหว่างทุก patch ทั้งภาพ ส่วน Swin คำนวณภายใน window ที่เลื่อนระหว่าง layer</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 21</span><span>ViT vs CNN</span></div>
+  <div class="qtext">ข้อใดเป็นคุณสมบัติของ Vision Transformer ดั้งเดิมเมื่อเทียบกับ CNN?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. ViT ดั้งเดิมไม่ต้องใช้ convolution มี inductive bias เฉพาะภาพน้อยกว่า CNN จึงต้องเรียนโครงสร้างเชิงพื้นที่จากข้อมูล และได้ประโยชน์มากจาก large-scale pretraining. Locality bias แรงและ hierarchical feature เป็นคุณสมบัติของ CNN.">มี inductive bias เฉพาะภาพน้อยกว่า และได้ประโยชน์มากจาก pretraining ขนาดใหญ่</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ViT ดั้งเดิมไม่ต้องใช้ convolution มี inductive bias เฉพาะภาพน้อยกว่า CNN จึงต้องเรียนโครงสร้างเชิงพื้นที่จากข้อมูล และได้ประโยชน์มากจาก large-scale pretraining. Locality bias แรงและ hierarchical feature เป็นคุณสมบัติของ CNN.">มี locality bias แรงกว่า และสร้าง hierarchical feature โดยธรรมชาติ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ViT ดั้งเดิมไม่ต้องใช้ convolution มี inductive bias เฉพาะภาพน้อยกว่า CNN จึงต้องเรียนโครงสร้างเชิงพื้นที่จากข้อมูล และได้ประโยชน์มากจาก large-scale pretraining. Locality bias แรงและ hierarchical feature เป็นคุณสมบัติของ CNN.">ต้องใช้ convolution ในทุก layer และไม่ต้องการ position embedding</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ViT ดั้งเดิมไม่ต้องใช้ convolution มี inductive bias เฉพาะภาพน้อยกว่า CNN จึงต้องเรียนโครงสร้างเชิงพื้นที่จากข้อมูล และได้ประโยชน์มากจาก large-scale pretraining. Locality bias แรงและ hierarchical feature เป็นคุณสมบัติของ CNN.">มี inductive bias เฉพาะภาพมากกว่า จึงต้องการข้อมูล pretrain น้อยกว่า</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำตัวหนา (หน้า 30–37 ไม่มีข้อความทำสี)</div>
+<ul>
+<li>ViT = replace convolution with attention; Swin = recover hierarchy/locality in ViT</li>
+<li>ViT: <strong>fixed-size patches</strong>, patch = <strong>token</strong>, <strong>patch embedding</strong>, <strong>position embeddings</strong>; 224×224 กับ patch 16×16 ⇒ 14×14 = 196 patches</li>
+<li>Key properties: <strong>No convolution is required</strong>; <strong>less built-in image-specific inductive bias</strong>; ได้ประโยชน์จาก <u>large-scale pretraining</u></li>
+<li>ปัญหาของ ViT: global self-attention <strong>computational expensive</strong>; <strong>single-scale representation</strong></li>
+<li>Swin: self-attention ภายใน <strong>local windows</strong>, <strong>shifted between successive layers</strong>, <strong>hierarchical, multi-scale feature maps</strong>, downsampling ด้วย <strong>Patch Merging</strong></li>
+<li>กับดัก: ตัวเลือกที่บอกว่า Swin กลับไปใช้ convolution (Swin ยังเป็น self-attention แต่จำกัดใน window)</li>
+</ul>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควร (1) บอกได้ว่าแต่ละสถาปัตยกรรมแก้ปัญหาอะไร พร้อมตัวเลขคู่ จำนวน layer / top-5 error (8 / 15.3%, 16 / 7.3%, 22 / 6.67%, 152 / 4.49%); (2) คำนวณขนาด feature map ของ AlexNet (227 → 55 → 27 → 13 → 6) และ parameter ของ LeNet-5 (61,706); (3) แสดงด้วยตัวเลขว่า 3×3 ซ้อนกันประหยัดกว่า kernel ใหญ่ (73,856 เทียบกับ 102,464) และ 1×1 bottleneck ลดการคูณจาก 120,422,400 เหลือ 12,443,648; (4) อธิบาย \(h(x) = f(x) + x\) และนับ layer ของ ResNet-34/50/152; (5) คำนวณ parameter ของ depthwise separable convolution (8,896 เทียบกับ 73,856); (6) เลือกระดับ transfer learning จากขนาด dataset และความคล้ายของ domain และเขียนโค้ด VGG16 ทั้งสามแนวทาง พร้อมคำนวณ trainable parameter (6,423,041 และ 13,502,465); (7) คำนวณจำนวน patch ของ ViT (196) และเทียบ CNN / ViT / Swin ได้ครบแปดแถว.
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน deep_learning_part3_2.pdf (37 หน้า) — เช็คว่าอ่านครบ</h2>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>ปก Part 3 — Convolutional Neural Network &amp; Transfer Learning</td><td>etc — สไลด์ปก (ชื่อวิชา, ภาคเรียน, เวลาเรียน) ไม่มีเนื้อหาวิชา</td></tr>
+<tr><td>2</td><td>Evolution of CNN Architectures</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + ตารางแผนที่)</td></tr>
+<tr><td>3</td><td>Classical CNN Architectures / ILSVRC</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + ตารางผู้ชนะ)</td></tr>
+<tr><td>4</td><td>LeNet-5</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + คำนวณ 61,706)</td></tr>
+<tr><td>5</td><td>AlexNet</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + คำนวณ 227→55→27→13→6)</td></tr>
+<tr><td>6</td><td>AlexNet Key Takeaways</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + โค้ด Keras)</td></tr>
+<tr><td>7</td><td>VGGNet</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + รูปแบบ channel)</td></tr>
+<tr><td>8</td><td>VGGNet Key Takeaways</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + คำนวณ 3×3 เทียบ 5×5)</td></tr>
+<tr><td>9</td><td>Inception and GoogLeNet</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + การทำงานของโมดูล)</td></tr>
+<tr><td>10</td><td>Computational Cost of Naive Inception Module</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + คำนวณเต็ม + แก้ตัวเลขพิมพ์ผิด)</td></tr>
+<tr><td>11</td><td>GoogLeNet Architecture</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + คำนวณ 256/480)</td></tr>
+<tr><td>12</td><td>Inception Key Takeaways</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + สามข้อสรุป)</td></tr>
+<tr><td>13</td><td>ResNet (Residual Network)</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + h(x) = f(x) + x)</td></tr>
+<tr><td>14</td><td>ResNet Architecture</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + นับ layer 34/50/152)</td></tr>
+<tr><td>15</td><td>ResNet Key Takeaways</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + ตาราง 5 รุ่น)</td></tr>
+<tr><td>16</td><td>Comparison</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + ตาราง + อัตราส่วน)</td></tr>
+<tr><td>17</td><td>Modern CNNs</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + ตาราง 5 รุ่น)</td></tr>
+<tr><td>18</td><td>Xception</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + คำนวณ separable)</td></tr>
+<tr><td>19</td><td>Other Noteworthy Architectures</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + ตาราง + ตัวอย่าง DenseNet)</td></tr>
+<tr><td>20</td><td>Architecture Design</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + หลักออกแบบ)</td></tr>
+<tr><td>21</td><td>Transfer Learning</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + Model A/B)</td></tr>
+<tr><td>22</td><td>Transfer Learning Approaches</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + ตารางสามแนวทาง)</td></tr>
+<tr><td>23</td><td>Transfer Learning Guidelines</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + input/hidden/output)</td></tr>
+<tr><td>24</td><td>Transfer Learning Guidelines (2)</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + ตารางสี่ scenario)</td></tr>
+<tr><td>25</td><td>Transfer Learning Guidelines (3)</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + ลำดับการเทรน)</td></tr>
+<tr><td>26</td><td>Example – Dog-Cat Classification</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + โค้ด + คำนวณ batch)</td></tr>
+<tr><td>27</td><td>Dog-Cat Approach#1</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + โค้ด + คำนวณ 138,357,544)</td></tr>
+<tr><td>28</td><td>Dog-Cat Approach#2</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + โค้ดสองวิธี + คำนวณ 6,423,041)</td></tr>
+<tr><td>29</td><td>Dog-Cat Approach#3</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + โค้ด + คำนวณ 13,502,465)</td></tr>
+<tr><td>30</td><td>Beyond CNNs: Vision Transformers</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + CNN เทียบ ViT)</td></tr>
+<tr><td>31</td><td>Vision Transformer (ViT)</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + คำนวณ 196 patch)</td></tr>
+<tr><td>32</td><td>Key Properties of Vision Transformer</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + ตาราง)</td></tr>
+<tr><td>33</td><td>Swin Transformer: Why Modify ViT?</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + สองปัญหา)</td></tr>
+<tr><td>34</td><td>Swin Transformer</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + คำนวณ window attention)</td></tr>
+<tr><td>35</td><td>Architecture (Swin-T)</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + คำนวณสี่ stage)</td></tr>
+<tr><td>36</td><td>CNN vs ViT vs Swin</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + ตารางแปดแถว)</td></tr>
+<tr><td>37</td><td>Architecture Summary</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + สรุป)</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0007-convolutional-neural-networks.html">← Lesson 7: CNN</a></span>
+  <span><a href="0009-functional-api-and-object-detection.html">Lesson 9: Functional API &amp; Object Detection →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
