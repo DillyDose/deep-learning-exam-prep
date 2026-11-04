@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 11: Text Generation, Machine Translation &amp; Transformer</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0010-sequence-models-and-rnn.html">← Lesson 10: Sequence Models &amp; RNN</a></span>
+  <span>Lesson 11 / 12 · Text Generation, Translation &amp; Transformer</span>
+  <span><a href="0012-transformers-for-nlp-and-transfer-learning.html">Lesson 12: Transformers for NLP →</a></span>
+</nav>
+
+<p class="kicker">Lecture11 (deep_learning_part4_2.pdf, 46 หน้า) · 2603520 Deep Learning</p>
+<h1>Text Generation, Machine Translation, Attention และ Transformer</h1>
+
+<p><a href="0010-sequence-models-and-rnn.html">Lesson 10</a> ใช้ RNN กับงาน sequence-to-vector (จำแนกรีวิว) เป็นหลัก. บทนี้ใช้ RNN ชนิดที่เหลือ แล้วชี้ว่าทำไมต้องเปลี่ยนเป็น Transformer. หัวข้อตาม agenda ของสไลด์:</p>
+<ol>
+<li><strong>Text Generation</strong> (หน้า 3–9): language model, การสุ่มคำถัดไป และ softmax temperature</li>
+<li><strong>Machine Translation</strong> (หน้า 10–22): encoder–decoder, training กับ inference, BLEU และ beam search</li>
+<li><strong>Attention Mechanisms and Transformer</strong> (หน้า 23–46): attention, positional embedding, self-attention, query–key–value, multi-head attention, encoder, decoder และชนิดของ Transformer</li>
+</ol>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+Chollet, <em>Deep Learning with Python</em> บทที่ 11–12 (ที่มาของโค้ด text generation, NMT และรูป self-attention ในสไลด์) · <a href="https://arxiv.org/abs/1706.03762" target="_blank" rel="noopener">Vaswani et al. (2017) — Attention Is All You Need</a> (สูตร positional encoding และ scaled dot-product attention) · <a href="https://www.tensorflow.org/text/tutorials/transformer" target="_blank" rel="noopener">TensorFlow — Neural machine translation with a Transformer</a> (สไลด์หน้า 28–30 อ้างถึง) · Tunstall et al., <em>Natural Language Processing with Transformers</em> บทที่ 3.
+</div>
+
+<div class="box beginner">
+<div class="label">คำและสัญลักษณ์ที่ใช้ทั้งบท</div>
+<ul>
+<li><strong>Language model</strong> = โมเดลที่ให้ความน่าจะเป็นของคำถัดไปเมื่อรู้คำก่อนหน้า: \(P(y^{\langle t \rangle} \mid x^{\langle 1 \rangle}, \ldots, x^{\langle t \rangle})\)</li>
+<li><strong>Token</strong> = หน่วยของข้อความที่โมเดลเห็น (คำหรือส่วนของคำ); <code>&lt;SOS&gt;</code>/<code>[start]</code> = token เริ่มประโยค; <code>&lt;EOS&gt;</code>/<code>[end]</code> = token จบประโยค</li>
+<li><strong>Encoder</strong> = ส่วนที่อ่านประโยคต้นทาง; <strong>Decoder</strong> = ส่วนที่สร้างประโยคปลายทางทีละ token</li>
+<li><strong>Attention weight</strong> = น้ำหนัก (รวมเป็น 1) ที่บอกว่าแต่ละตำแหน่งสำคัญต่อตำแหน่งปัจจุบันเท่าใด</li>
+<li>\(Q, K, V\) = query, key, value; \(d_k\) = มิติของ key; \(d_{model}\) = มิติของ embedding</li>
+</ul>
+</div>
+
+<div class="box prereq">
+<div class="label">ต้องรู้ก่อน — softmax และ dot product</div>
+<p><strong>Softmax</strong> (<a href="0001-machine-learning-foundations.html">Lesson 1</a>) แปลงคะแนนเป็นความน่าจะเป็น: \(\text{softmax}(z)_j = e^{z_j} / \sum_k e^{z_k}\). คะแนน [2, 0, 0] ให้ \(e^2 = 7.389\), \(e^0 = 1\), \(e^0 = 1\) ⇒ \([7.389, 1, 1] / 9.389 = [0.787, 0.107, 0.107]\).</p>
+<p><strong>Dot product</strong> (<a href="0002-neural-network-basics.html">Lesson 2</a>) ของสอง vector วัดว่าชี้ไปทางเดียวกันแค่ไหน: \([1, 0, 1] \cdot [1, 1, 1] = 2\), \([1, 0, 1] \cdot [0, 1, 0] = 0\). ค่ายิ่งมากยิ่งคล้ายกัน. สองแนวคิดนี้คือแกนของ attention ทั้งบท.</p>
+</div>
+
+<h2 id="s1">1. Text Generation: language model ทำนายคำถัดไป</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p02-agenda.png" alt="Slide: Agenda. Lecture 0.5 hour: Text Generation. Lecture 1 hour: Machine Translation. Lecture 1.5 hour: Attention Mechanisms and Transformer">
+<figcaption>Slide: AGENDA — สามส่วนของ lecture (Lecture11, p.2)</figcaption>
+</figure>
+
+<p>Lecture แบ่งเวลาเป็น 0.5 ชั่วโมงสำหรับ Text Generation, 1 ชั่วโมงสำหรับ Machine Translation และ 1.5 ชั่วโมงสำหรับ Attention กับ Transformer. ส่วนที่สามใช้เวลามากที่สุด และเป็นพื้นฐานของ <a href="0012-transformers-for-nlp-and-transfer-learning.html">Lesson 12</a> ทั้งบท.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p03-text-generation-training.png" alt="Slide: Text Generation. Generate sequence by training a language model to predict a probability distribution over the next word in a sequence, using previous words as input. Example: given story was so lovely because it was, predict the target true. Training time diagram: RNN unrolled with outputs P(y1">
+<figcaption>Slide: x1), P(y2 | x1, x2), P(y3 | x1, x2, x3) | Text Generation — training time (Lecture11, p.3)</figcaption>
+</figure>
+
+<p>สร้างลำดับข้อความด้วยการเทรน <mark class="src" data-p="3">a language model</mark> ให้ <mark class="src" data-p="3">predict a probability distribution over the next word (</mark>หรือหลายคำถัดไป) ในลำดับ โดยใช้ <mark class="src" data-p="3">previous words</mark> เป็น input. ตัวอย่างในสไลด์: ให้ "story was so lovely because it was" แล้วทำนาย target "true".</p>
+<p>ตอน training ทุก time step มี target: output ที่ step \(t\) คือ \(P(y^{\langle t \rangle} \mid x^{\langle 1 \rangle}, \ldots, x^{\langle t \rangle})\) และ target \(y^{\langle t \rangle}\) คือคำที่ \(t + 1\) ของประโยค. ประโยคเดียวจึงให้โจทย์หลายข้อพร้อมกัน.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: input กับ target ของ language model จากประโยคเดียว</div>
+<div class="given">ให้ ประโยค "story was so lovely because it was true" (8 token)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — input = token ที่ 1 ถึง 7, target = token ที่ 2 ถึง 8</div>
+$$x = [\text{story}, \text{was}, \text{so}, \text{lovely}, \text{because}, \text{it}, \text{was}]$$
+$$y = [\text{was}, \text{so}, \text{lovely}, \text{because}, \text{it}, \text{was}, \text{true}]$$</li>
+<li><div class="st-title">ขั้นที่ 2 — โจทย์ที่ time step 7</div>
+$$P(y^{\langle 7 \rangle} = \text{true} \mid \text{story}, \ldots, \text{it}, \text{was})$$</li>
+<li><div class="st-title">ขั้นที่ 3 — จำนวนโจทย์ต่อประโยค</div>
+$$8 - 1 = 7$$</li>
+</ol>
+<div class="answer"><p>ไม่ต้องมี label แยก: target คือ input ที่เลื่อนไป 1 ตำแหน่ง. นี่คือสิ่งที่โค้ดหน้า 8 ทำด้วย <code>x = vectorized_sequences[:, :-1]</code> และ <code>y = vectorized_sequences[:, 1:]</code>.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p04-text-generation-inference.png" alt="Slide: Inference Time. Once you have a trained model, you can sample from it to generate new sequences. Feed it an initial string of text, ask it to generate the next character or word, add generated output back to input data, and repeat. Diagram: SOS input, output distributions at each step, each sampled output fed back as the next input until EOS">
+<figcaption>Slide: Inference Time — สุ่มแล้วป้อนกลับ (Lecture11, p.4)</figcaption>
+</figure>
+
+<p>เมื่อเทรนเสร็จ โมเดลใช้ <mark class="src" data-p="4">sample</mark> ลำดับใหม่ได้: ป้อนข้อความตั้งต้น ให้สร้างตัวอักษรหรือคำถัดไป (หรือหลาย token ทีเดียว) เติมผลที่ได้กลับเข้า input แล้วทำซ้ำหลายรอบ. ในแผนภาพ แต่ละ step ให้ histogram ของความน่าจะเป็น; คำที่สุ่มได้ (\(\hat{y}^{\langle 1 \rangle}\)) ถูกป้อนเป็น input ของ step ถัดไป (เส้นโค้งสีส้ม) จนได้ <code>&lt;EOS&gt;</code>. นี่คือ RNN ชนิด vector-to-sequence ของ <a href="0010-sequence-models-and-rnn.html#s4">Lesson 10 §4</a>.</p>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Text generation = เทรน <mark class="src" data-p="3">a language model</mark> ให้ <mark class="src" data-p="3">predict a probability distribution over the next word (</mark>โดยใช้ <mark class="src" data-p="3">previous words</mark></li>
+<li>Training: target = input เลื่อนไป 1 ตำแหน่ง. Inference: <mark class="src" data-p="4">sample</mark> คำถัดไปแล้วป้อนกลับเป็น input</li>
+</ul>
+</div>
+
+<h2 id="s2">2. Sampling Strategies และ Softmax Temperature</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p05-greedy-sampling.png" alt="Slide: Sampling Strategies. Greedy sampling: choosing the most likely next character; results in repetitive, predictable strings that don&#x27;t look like coherent language. Tree: The -&gt; dog 0.4, nice 0.5, car 0.1; nice -&gt; woman 0.4, house 0.3, guy 0.3; dog -&gt; and 0.05, runs 0.05, has 0.9; car -&gt; is 0.3, drives 0.5, turns 0.2. Greedy path The nice woman">
+<figcaption>Slide: Sampling Strategies — greedy sampling (Lecture11, p.5)</figcaption>
+</figure>
+
+<p><strong>Greedy sampling</strong>: เลือกตัวที่น่าจะเป็นที่สุดเสมอ ผลคือข้อความซ้ำๆ เดาได้ และไม่เหมือนภาษาที่ต่อเนื่องจริง. ต้นไม้ในสไลด์มาจาก Hugging Face:</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามรูปในสไลด์: greedy เทียบกับประโยคที่น่าจะเป็นที่สุดจริง</div>
+<div class="given">ให้ หลัง "The": dog 0.4, nice 0.5, car 0.1. หลัง "nice": woman 0.4, house 0.3, guy 0.3. หลัง "dog": and 0.05, runs 0.05, has 0.9</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Greedy: เลือกสูงสุดทีละ step</div>
+$$\text{nice}\ (0.5) \;\rightarrow\; \text{woman}\ (0.4) \qquad P = 0.5 \times 0.4 = 0.20$$</li>
+<li><div class="st-title">ขั้นที่ 2 — อีกเส้นทางที่ greedy ทิ้งไปตั้งแต่ step แรก</div>
+$$\text{dog}\ (0.4) \;\rightarrow\; \text{has}\ (0.9) \qquad P = 0.4 \times 0.9 = 0.36$$</li>
+</ol>
+<div class="answer"><p>"The dog has" (0.36) น่าจะเป็นกว่า "The nice woman" (0.20) แต่ greedy ไม่เห็นเพราะเลือกที่ step แรกแล้ว. ปัญหาเดียวกันนี้คือเหตุผลของ beam search ใน <a href="#s6">§6</a>.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p06-stochastic-sampling.png" alt="Slide: Sampling Strategies (2). Stochastic sampling introduces randomness in the sampling process by sampling from the probability distribution for the next word. However it doesn&#x27;t offer a way to control the amount of randomness. Interestingness is highly subjective. Arrow from no randomness (greedy sampling) to maximum randomness (stochastic sampling)">
+<figcaption>Slide: Sampling Strategies (2) — stochastic sampling (Lecture11, p.6)</figcaption>
+</figure>
+
+<p><strong>Stochastic Sampling</strong> เลือกแปลกใจขึ้นเล็กน้อย: เพิ่ม <mark class="src" data-p="6">randomness</mark> ในการสุ่ม โดยสุ่มตาม <mark class="src" data-p="6">probability distribution</mark> ของคำถัดไป. หลัง "The" จะได้ "nice" ด้วยโอกาส 50%, "dog" 40%, "car" 10%. ข้อจำกัด: ไม่มีวิธีควบคุม <mark class="src" data-p="6">amount of randomness</mark> และ "ความน่าสนใจ" เป็นเรื่องอัตวิสัย ไม่รู้ว่าจุดที่ดีที่สุดอยู่ตรงไหน. สองวิธีนี้คือปลายสองข้างของเส้น: no randomness (greedy) ถึง maximum randomness (stochastic).</p>
+
+<figure>
+<img src="../assets/slides/dl11-p07-softmax-temperature.png" alt="Slide: Softmax Temperature. Temperature parameter controls the amount of stochasticity in sampling. A new distribution is computed from the softmax output by reweighting. Code: def sample_next(predictions, temperature=1.0): predictions = np.asarray(predictions).astype(&quot;float64&quot;); predictions = np.log(predictions) / temperature; exp_preds = np.exp(predictions); predictions = exp_preds / np.sum(exp_preds); probas = np.random.multinomial(1, predictions, 1); return np.argmax(probas). Example predictions [0.2, 0.5, 0.1, 0.2] with temperature 0.01 and 100; bar charts for temperature 0.01, 0.2, 0.4, 0.6, 0.8, 1.0">
+<figcaption>Slide: Softmax Temperature — reweighting (Lecture11, p.7)</figcaption>
+</figure>
+
+<p><strong>Temperature parameter</strong> ควบคุมระดับความสุ่ม. จากความน่าจะเป็นเดิม \(p\) (output ของ softmax) คำนวณการกระจายใหม่ดังนี้:</p>
+$$p_j^{(T)} = \frac{\exp(\log p_j / T)}{\sum_k \exp(\log p_k / T)} = \frac{p_j^{1/T}}{\sum_k p_k^{1/T}}$$
+<p class="plain-thai">ยกกำลัง 1/T แล้ว normalize ใหม่: T &lt; 1 ทำให้ตัวที่สูงยิ่งสูง, T &gt; 1 ทำให้ทุกตัวใกล้เท่ากัน</p>
+
+<pre data-p="7"><code>def sample_next(predictions, temperature=1.0):
+    predictions = np.asarray(predictions).astype("float64")
+    predictions = np.log(predictions) / temperature
+    print(predictions)
+    exp_preds = np.exp(predictions)
+    predictions = exp_preds / np.sum(exp_preds)
+    print(predictions)
+    probas = np.random.multinomial(1, predictions, 1)
+    print(f"Temperature:{temperature} probas:{probas}")
+    return np.argmax(probas)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>np.log(predictions) / temperature</td><td>แปลงความน่าจะเป็นเป็น log แล้วหารด้วย T (เทียบเท่าการยกกำลัง 1/T)</td></tr>
+<tr><td>exp_preds = np.exp(predictions)</td><td>แปลงกลับจาก log</td></tr>
+<tr><td>exp_preds / np.sum(exp_preds)</td><td>normalize ให้รวมเป็น 1 อีกครั้ง</td></tr>
+<tr><td>np.random.multinomial(1, predictions, 1)</td><td>สุ่ม 1 ครั้งตามการกระจายใหม่ คืน one-hot เช่น <code>[[0 1 0 0]]</code></td></tr>
+<tr><td>np.argmax(probas)</td><td>index ของ token ที่สุ่มได้</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: predictions = [0.2, 0.5, 0.1, 0.2]</div>
+<div class="given">ให้ \(\log 0.2 = -1.6094\), \(\log 0.5 = -0.6931\), \(\log 0.1 = -2.3026\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — T = 0.01: หารด้วย 0.01 = คูณ 100</div>
+$$[-160.94,\ -69.31,\ -230.26,\ -160.94]$$
+<p>หลัง exp และ normalize: \([1.6 \times 10^{-40},\ 1.0,\ 1.3 \times 10^{-70},\ 1.6 \times 10^{-40}]\) ⇒ สุ่มได้ index 1 เสมอ (เท่ากับ greedy)</p></li>
+<li><div class="st-title">ขั้นที่ 2 — T = 0.5: ยกกำลัง 2</div>
+$$[0.04, 0.25, 0.01, 0.04] / 0.34 = [0.118, 0.735, 0.029, 0.118]$$</li>
+<li><div class="st-title">ขั้นที่ 3 — T = 1: การกระจายเดิม</div>
+$$[0.2, 0.5, 0.1, 0.2]$$</li>
+<li><div class="st-title">ขั้นที่ 4 — T = 100: ยกกำลัง 0.01</div>
+$$[-0.0161,\ -0.0069,\ -0.0230,\ -0.0161] \;\Rightarrow\; [0.2499, 0.2522, 0.2481, 0.2499]$$</li>
+</ol>
+<div class="answer"><p>ผลที่พิมพ์ในสไลด์ตรงกันทั้งสองกรณี: T = 0.01 ให้ <code>probas:[[0 1 0 0]]</code>, T = 100 ให้การกระจายเกือบเท่ากัน. กราฟแท่งในสไลด์แสดงลำดับนี้: T = 0.01 มีแท่งเดียว, T = 1.0 มีหลายแท่ง. Low temperature = more deterministic, high temperature = more random.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p08-imdb-text-generation.png" alt="Slide: Generate Movie Reviews from IMDB Dataset. Code: for X, y in lm_dataset.take(1): print X, y, shapes (256, 99) (256, 99). Model: inputs = Input(shape=(None,), dtype=&quot;int64&quot;); embedded = Embedding(input_dim=vocab_size, output_dim=256, mask_zero=True)(inputs); x = GRU(1024, return_sequences=True)(embedded); outputs = Dense(vocab_size, activation=&quot;softmax&quot;)(x); model = Model(inputs, outputs). Tensors show y equal to X shifted by one">
+<figcaption>Slide: Generate Movie Reviews from IMDB Dataset — dataset และโมเดล (Lecture11, p.8)</figcaption>
+</figure>
+
+<p>ตัวอย่างสร้างรีวิวภาพยนตร์จาก IMDB. ข้อมูลแต่ละ batch: <code>X</code> และ <code>y</code> มี shape (256, 99) เท่ากัน และในตารางที่พิมพ์ แถวแรกของ <code>y</code> (9, 4408, 4, …) คือแถวแรกของ <code>X</code> (314, 9, 4408, …) เลื่อนไป 1 ตำแหน่ง.</p>
+
+<pre data-p="8"><code>for X, y  in lm_dataset.take(1):
+  print("X", X)
+  print("y", y)
+  print(X.shape, y.shape)
+
+inputs = Input(shape=(None,), dtype="int64")
+# Instantiating an Embedding layer
+embedded = Embedding(input_dim=vocab_size, output_dim=256, mask_zero=True)(inputs)
+# Add a GRU.
+x = GRU(1024, return_sequences=True)(embedded)
+# Softmax over possible vocabulary words, computed for each output sequence timestep.
+outputs = Dense(vocab_size, activation="softmax")(x)
+model = Model(inputs, outputs)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>lm_dataset</td><td>dataset ของคู่ (X, y) ที่สร้างด้วย <code>x = vectorized_sequences[:, :-1]</code>, <code>y = vectorized_sequences[:, 1:]</code> จากข้อความยาว 100 token ⇒ 99 token ต่อคู่</td></tr>
+<tr><td>Embedding(input_dim=vocab_size, output_dim=256, mask_zero=True)</td><td>vocab 20,000 คำ แปลงเป็น vector 256 มิติ และ mask padding (index 0)</td></tr>
+<tr><td>GRU(1024, return_sequences=True)</td><td>ต้องคืน output <strong>ทุก</strong> time step เพราะทุก step มี target (sequence-to-sequence)</td></tr>
+<tr><td>Dense(vocab_size, activation="softmax")</td><td>ความน่าจะเป็นของคำถัดไปทั้ง 20,000 คำ <strong>ต่อ time step</strong></td></tr>
+<tr><td>Model(inputs, outputs)</td><td>Functional API (<a href="0009-functional-api-and-object-detection.html#s1">Lesson 9 §1</a>). คอมไพล์ด้วย <code>loss="sparse_categorical_crossentropy"</code> เพราะ target เป็น index</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: parameter ของ language model เมื่อใช้ GRU(128) แบบที่รันจริง</div>
+<div class="given">ให้ vocab 20,000, embedding 256, GRU 128 unit. GRU ของ Keras มี 3 ชุด weight และ bias สองชุดต่อชุด</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Embedding</div>
+$$20{,}000 \times 256 = 5{,}120{,}000$$</li>
+<li><div class="st-title">ขั้นที่ 2 — GRU(128) รับ 256 ค่า</div>
+$$3 \times [128 \times (128 + 256) + 2 \times 128] = 3 \times 49{,}408 = 148{,}224$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Dense(20,000)</div>
+$$128 \times 20{,}000 + 20{,}000 = 2{,}580{,}000$$</li>
+<li><div class="st-title">ขั้นที่ 4 — รวม</div>
+$$5{,}120{,}000 + 148{,}224 + 2{,}580{,}000 = 7{,}848{,}224$$</li>
+</ol>
+<div class="answer"><p>ตรงกับ Total params: 7,848,224 ใน notebook ของผู้สอน (สไลด์เขียน GRU(1024); notebook ที่รันใช้ GRU(128)). Output layer ใหญ่เพราะต้องให้คะแนนทุกคำใน vocabulary ทุก time step ซึ่งเป็นปัญหาที่หน้า 17 พูดถึง.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p09-text-generation-results.png" alt="Slide: Results. Low temperature value results in very boring and repetitive text and can sometimes get stuck in a loop. Higher temperatures make generated text more interesting, surprising, even creative. Very high temperature: local structure breaks down and output looks largely random. Log at epoch 18/20 with generations at temperature 0.2, 0.5, 0.7, 1.0, 1.5 starting with This movie">
+<figcaption>Slide: Results — ข้อความที่ temperature ต่างกัน (Lecture11, p.9)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>Temperature</th><th>ผลตามสไลด์</th><th>ตัวอย่างใน log (epoch 18/20)</th></tr>
+<tr><td>ต่ำ (0.2)</td><td>very boring and repetitive และอาจติด loop</td><td>"This movie film is that possibly title a is parody …"</td></tr>
+<tr><td>กลาง (0.5–1.0)</td><td>more interesting, surprising, even creative</td><td>"This movie is is so something [UNK] that meets its shadow uneventful …"</td></tr>
+<tr><td>สูงมาก (1.5)</td><td>local structure starts to break down, output largely random</td><td>"This movie is started apparently to trying be very poorly good crafted …"</td></tr>
+</table>
+<p>สังเกต <code>[UNK]</code> ในข้อความที่สร้าง: คำที่ไม่อยู่ใน 20,000 คำแรกถูกแทนด้วย OOV token ตอนเทรน โมเดลจึงเรียนที่จะสร้าง <code>[UNK]</code> ด้วย.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Temperature</span></div>
+  <div class="qtext">โมเดลให้ความน่าจะเป็นของคำถัดไปสามคำเป็น [0.25, 0.50, 0.25] ถ้าใช้ softmax temperature T = 0.5 ความน่าจะเป็นใหม่ของคำที่สองคือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. T = 0.5 เท่ากับยกกำลัง 1/T = 2: [0.0625, 0.25, 0.0625] รวม 0.375. คำที่สอง 0.25/0.375 = 0.667. Temperature ต่ำทำให้ตัวที่สูงยิ่งสูง ค่า 0.50 คือการกระจายเดิมที่ T = 1.">0.50</button>
+    <button class="opt" data-correct="true" data-note="ถูก. T = 0.5 เท่ากับยกกำลัง 1/T = 2: [0.0625, 0.25, 0.0625] รวม 0.375. คำที่สอง 0.25/0.375 = 0.667. Temperature ต่ำทำให้ตัวที่สูงยิ่งสูง ค่า 0.50 คือการกระจายเดิมที่ T = 1.">0.67</button>
+    <button class="opt" data-correct="false" data-note="ผิด. T = 0.5 เท่ากับยกกำลัง 1/T = 2: [0.0625, 0.25, 0.0625] รวม 0.375. คำที่สอง 0.25/0.375 = 0.667. Temperature ต่ำทำให้ตัวที่สูงยิ่งสูง ค่า 0.50 คือการกระจายเดิมที่ T = 1.">0.25</button>
+    <button class="opt" data-correct="false" data-note="ผิด. T = 0.5 เท่ากับยกกำลัง 1/T = 2: [0.0625, 0.25, 0.0625] รวม 0.375. คำที่สอง 0.25/0.375 = 0.667. Temperature ต่ำทำให้ตัวที่สูงยิ่งสูง ค่า 0.50 คือการกระจายเดิมที่ T = 1.">0.80</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>Temperature</span></div>
+  <div class="qtext">ข้อใดอธิบายผลของ softmax temperature ต่อข้อความที่สร้างได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Temperature ต่ำทำให้การกระจายแหลมจนใกล้ greedy ได้ข้อความน่าเบื่อซ้ำและอาจติด loop. Temperature สูงทำให้การกระจายเรียบ โครงสร้างระดับท้องถิ่นพังและข้อความดูสุ่ม.">temperature ต่ำมากทำให้ข้อความซ้ำและติด loop ส่วนสูงมากทำให้ข้อความสุ่ม</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Temperature ต่ำทำให้การกระจายแหลมจนใกล้ greedy ได้ข้อความน่าเบื่อซ้ำและอาจติด loop. Temperature สูงทำให้การกระจายเรียบ โครงสร้างระดับท้องถิ่นพังและข้อความดูสุ่ม.">temperature สูงมากทำให้ข้อความซ้ำและติด loop ส่วนต่ำมากทำให้ข้อความสุ่ม</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Temperature ต่ำทำให้การกระจายแหลมจนใกล้ greedy ได้ข้อความน่าเบื่อซ้ำและอาจติด loop. Temperature สูงทำให้การกระจายเรียบ โครงสร้างระดับท้องถิ่นพังและข้อความดูสุ่ม.">temperature ไม่เปลี่ยนการกระจาย เพียงเปลี่ยนจำนวน token ที่สร้างต่อครั้ง</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Temperature ต่ำทำให้การกระจายแหลมจนใกล้ greedy ได้ข้อความน่าเบื่อซ้ำและอาจติด loop. Temperature สูงทำให้การกระจายเรียบ โครงสร้างระดับท้องถิ่นพังและข้อความดูสุ่ม.">temperature ต่ำมากทำให้ข้อความสร้างสรรค์ที่สุด ส่วนสูงมากทำให้ซ้ำเดิม</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Greedy = เลือกสูงสุด ⇒ ซ้ำ เดาได้. Stochastic = สุ่มตาม <mark class="src" data-p="6">probability distribution</mark> เพิ่ม <mark class="src" data-p="6">randomness</mark> แต่คุม <mark class="src" data-p="6">amount of randomness</mark> ไม่ได้</li>
+<li>Softmax temperature ควบคุมระดับความสุ่ม: \(p^{1/T}\) แล้ว normalize. ต่ำ ⇒ deterministic; สูง ⇒ random</li>
+<li>โค้ด: <code>np.log(predictions) / temperature</code> → <code>np.exp</code> → normalize → <code>np.random.multinomial(1, predictions, 1)</code> → <code>np.argmax</code></li>
+</ul>
+</div>
+
+<h2 id="s3">3. Machine Translation: Encoder–Decoder</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p10-machine-translation.png" alt="Slide: Machine Translation. Translate a sentence in one language to another (sequence-to-sequence model). The encoder produces a vector that encodes the entire source sequence, used as the initial state for the decoder (MT as conditional language modeling). Diagram: encoder RNN over x1..xTx passes its final state as initial state to decoder RNN producing y1..yTy">
+<figcaption>Slide: Machine Translation — encoder ส่ง state ให้ decoder (Lecture11, p.10)</figcaption>
+</figure>
+
+<p>Machine translation คือการ <mark class="src" data-p="10">• Translate</mark> ประโยคจากภาษาหนึ่งไปอีกภาษาหนึ่ง (sequence-to-sequence model). <mark class="src" data-p="10">encoder</mark> สร้าง vector ที่เข้ารหัสประโยคต้นทางทั้งประโยค แล้ว vector นั้นเป็น initial state ของ <mark class="src" data-p="10">decoder</mark>. สไลด์ให้มองว่า MT คือ <strong>conditional language modeling</strong>: decoder เป็น language model แบบ §1 ที่มีเงื่อนไขเพิ่มคือประโยคต้นทาง \(x\).</p>
+$$P(y^{\langle t \rangle} \mid x,\ y^{\langle 1 \rangle}, \ldots, y^{\langle t-1 \rangle})$$
+
+<figure>
+<img src="../assets/slides/dl11-p11-mt-training-time.png" alt="Slide: Training Time (during training). An encoder turns the source sequence into an intermediate representation. A decoder is trained to predict the next token i in the target sequence by looking at both previous tokens (0 to i-1) and the encoded source sequence. Good Morning Madam -&gt; SOS สวัสดี คุณ ผู้ หญิง; target สวัสดี คุณ ผู้ หญิง EOS. Note: target sentences shifted back by one step from the input sentence">
+<figcaption>Slide: Training Time (during training) — teacher forcing (Lecture11, p.11)</figcaption>
+</figure>
+
+<ul>
+<li><mark class="src" data-p="11">encoder</mark> แปลงประโยคต้นทางเป็น <mark class="src" data-p="11">intermediate representation</mark></li>
+<li><mark class="src" data-p="11">decoder</mark> ถูกเทรนให้ทำนาย token ที่ \(i\) ของประโยคปลายทาง โดยดูทั้ง <mark class="src" data-p="11">previous tokens (0 to i - 1)</mark> และ <mark class="src" data-p="11">encoded source sequence</mark></li>
+</ul>
+<p><mark class="src" data-p="11">Note: target sentences shifted back by one step from the input sentence</mark>. ตอนเทรน input ของ decoder คือคำ<strong>ที่ถูกต้อง</strong>จากประโยคปลายทาง (ไม่ใช่คำที่โมเดลทายเอง) เรียกว่า teacher forcing.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: input และ target ของ decoder</div>
+<div class="given">ให้ ต้นทาง "Good Morning Madam" และปลายทาง "&lt;SOS&gt; สวัสดี คุณ ผู้ หญิง &lt;EOS&gt;"</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Decoder input: ตัด token สุดท้ายออก</div>
+$$y^{\langle 0 \rangle \ldots \langle 4 \rangle} = [\langle\text{SOS}\rangle, \text{สวัสดี}, \text{คุณ}, \text{ผู้}, \text{หญิง}]$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Target: ตัด token แรกออก</div>
+$$[\text{สวัสดี}, \text{คุณ}, \text{ผู้}, \text{หญิง}, \langle\text{EOS}\rangle]$$</li>
+<li><div class="st-title">ขั้นที่ 3 — โจทย์ที่ step ที่ 3</div>
+$$P(y^{\langle 3 \rangle} = \text{ผู้} \mid x,\ \text{สวัสดี},\ \text{คุณ})$$</li>
+</ol>
+<div class="answer"><p>สองลำดับยาวเท่ากัน (5 token) แต่เหลื่อมกัน 1 ตำแหน่ง. โค้ด NMT ใน §4 ทำสิ่งนี้ด้วย <code>spa[:, :-1]</code> (decoder input) และ <code>spa[:, 1:]</code> (target).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p12-mt-inference-time.png" alt="Slide: Inference Time (after training). Since the model will not have the target sentence to feed to the decoder, the model simply feeds the decoder the word that it output at the previous time step. Expected target สวัสดี คุณ ผู้ หญิง EOS; prediction just example ?????">
+<figcaption>Slide: Inference Time (after training) — ป้อนคำที่ทายเอง (Lecture11, p.12)</figcaption>
+</figure>
+
+<p>หลังเทรน ไม่มีประโยคปลายทางให้ป้อน decoder อีกแล้ว โมเดลจึง <mark class="src" data-p="12">feed</mark> <mark class="src" data-p="12">decoder</mark> ด้วยคำที่มันเองเป็น <mark class="src" data-p="12">output at the previous time step</mark>. แถว "<mark class="src" data-p="12">Prediction (just example)</mark>" ในสไลด์เป็น "?????" ทุกช่อง: เราไม่รู้ล่วงหน้าว่าโมเดลจะทายอะไร และถ้าทายผิดที่ step แรก คำผิดนั้นจะถูกป้อนต่อไปทุก step.</p>
+<table class="compact">
+<tr><th></th><th>Training time</th><th>Inference time</th></tr>
+<tr><td>input ของ decoder ที่ step \(t\)</td><td>คำจริง \(y^{\langle t-1 \rangle}\) จากประโยคปลายทาง</td><td>คำที่ทาย \(\hat{y}^{\langle t-1 \rangle}\)</td></tr>
+<tr><td>คำนวณทุก step</td><td>พร้อมกันได้</td><td>ทีละ step (ต้องรอผลของ step ก่อน)</td></tr>
+<tr><td>หยุดเมื่อ</td><td>ครบความยาว target</td><td>ได้ <code>&lt;EOS&gt;</code> หรือครบความยาวสูงสุด</td></tr>
+</table>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>Teacher forcing</span></div>
+  <div class="qtext">ประโยคปลายทางหลังเติม token พิเศษคือ "[start] ich bin hier [end]" ระหว่างการเทรน decoder ของโมเดลแปลภาษา ข้อใดคือ input ของ decoder และ target ตามลำดับ?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Decoder input คือประโยคปลายทางที่ตัด token สุดท้าย ส่วน target คือประโยคเดียวกันที่ตัด token แรก สองลำดับยาวเท่ากันและเหลื่อมกันหนึ่งตำแหน่ง ทุก step จึงทำนายคำถัดไป.">[start] ich bin hier และ ich bin hier [end]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Decoder input คือประโยคปลายทางที่ตัด token สุดท้าย ส่วน target คือประโยคเดียวกันที่ตัด token แรก สองลำดับยาวเท่ากันและเหลื่อมกันหนึ่งตำแหน่ง ทุก step จึงทำนายคำถัดไป.">ich bin hier [end] และ [start] ich bin hier</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Decoder input คือประโยคปลายทางที่ตัด token สุดท้าย ส่วน target คือประโยคเดียวกันที่ตัด token แรก สองลำดับยาวเท่ากันและเหลื่อมกันหนึ่งตำแหน่ง ทุก step จึงทำนายคำถัดไป.">[start] ich bin hier [end] และ ich bin hier</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Decoder input คือประโยคปลายทางที่ตัด token สุดท้าย ส่วน target คือประโยคเดียวกันที่ตัด token แรก สองลำดับยาวเท่ากันและเหลื่อมกันหนึ่งตำแหน่ง ทุก step จึงทำนายคำถัดไป.">[start] ich bin hier และ [start] ich bin hier</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>MT: <mark class="src" data-p="10">• Translate</mark> ด้วย <mark class="src" data-p="10">encoder</mark> กับ <mark class="src" data-p="10">decoder</mark>; state สุดท้ายของ encoder เป็น initial state ของ decoder</li>
+<li>Training: <mark class="src" data-p="11">encoder</mark> → <mark class="src" data-p="11">intermediate representation</mark>; <mark class="src" data-p="11">decoder</mark> ใช้ <mark class="src" data-p="11">previous tokens (0 to i - 1)</mark> + <mark class="src" data-p="11">encoded source sequence</mark>; <mark class="src" data-p="11">Note: target sentences shifted back by one step from the input sentence</mark></li>
+<li>Inference: <mark class="src" data-p="12">feed</mark> <mark class="src" data-p="12">decoder</mark> ด้วย <mark class="src" data-p="12">output at the previous time step</mark>; <mark class="src" data-p="12">Prediction (just example)</mark></li>
+</ul>
+</div>
+
+<h2 id="s4">4. ตัวอย่าง Neural Machine Translation (อังกฤษ → สเปน) ด้วย Keras</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p13-nmt-preparing-text.png" alt="Slide: Neural Machine Translation Example. Preparing text. spa.txt lines like Go. Ve. Code: text_file = &quot;spa-eng/spa.txt&quot;; with open(text_file) as f: lines = f.read().split(&quot;\n&quot;)[:-1]; print(len(lines)) # 118964. text_pairs = []; for line in lines: english, spanish = line.split(&quot;\t&quot;); spanish = &quot;[start] &quot; + spanish + &quot; [end]&quot;; text_pairs.append((english, spanish)); print(len(text_pairs)) #118964. Output pairs (&#x27;Go.&#x27;, &#x27;[start] Ve. [end]&#x27;)">
+<figcaption>Slide: Neural Machine Translation Example — เตรียมข้อความ (Lecture11, p.13)</figcaption>
+</figure>
+
+<p>ไฟล์ <code>spa.txt</code> มีหนึ่งคู่ประโยคต่อบรรทัด คั่นด้วย tab เช่น <code>Go.\tVe.</code>.</p>
+<pre data-p="13"><code>text_file = "spa-eng/spa.txt"
+with open(text_file) as f:
+  lines = f.read().split("\n")[:-1]
+print(len(lines)) # 118964
+print(lines)
+
+text_pairs = []
+  # Iterate over the lines in the file.
+for line in lines:
+  # Each line contains an English phrase and its Spanish translation, tab-separated.
+  english,spanish = line.split("\t")
+  # prepend "[start]" and append "[end]" to the Spanish sentence for decoder
+  spanish = "[start] " + spanish + " [end]"
+  text_pairs.append((english, spanish))
+print(len(text_pairs)) #118964</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>f.read().split("\n")[:-1]</td><td>แยกบรรทัด และตัดบรรทัดว่างตัวสุดท้าย ⇒ 118,964 บรรทัด</td></tr>
+<tr><td>line.split("\t")</td><td>แยกประโยคอังกฤษกับสเปน</td></tr>
+<tr><td>"[start] " + spanish + " [end]"</td><td>เติม token เริ่ม/จบให้<strong>ประโยคปลายทางเท่านั้น</strong> (decoder ต้องการ; encoder ไม่ต้อง)</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl11-p14-nmt-split.png" alt="Slide: Neural Machine Translation Example (2). Shuffle and split into training, validation, and test sets (70:15:15). Code: random.shuffle(text_pairs); num_val_samples = int(0.15 * len(text_pairs)); num_train_samples = len(text_pairs) - 2 * num_val_samples; train_pairs, val_pairs, test_pairs slices. Create both lists: train_english_texts = [pair[0] for pair in train_pairs]; train_spanish_texts = [pair[1] for pair in train_pairs]">
+<figcaption>Slide: Neural Machine Translation Example (2) — แบ่ง 70:15:15 (Lecture11, p.14)</figcaption>
+</figure>
+
+<pre data-p="14"><code># shuffle them and split them into the usual training, validation, and test sets (70:15:15)
+random.shuffle(text_pairs)
+num_val_samples = int(0.15 * len(text_pairs))
+num_train_samples = len(text_pairs) - 2 * num_val_samples
+train_pairs = text_pairs[:num_train_samples]
+val_pairs = text_pairs[num_train_samples:num_train_samples + num_val_samples]
+test_pairs = text_pairs[num_train_samples + num_val_samples:]
+
+train_english_texts = [pair[0] for pair in train_pairs]
+train_spanish_texts = [pair[1] for pair in train_pairs]</code></pre>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: ขนาดของแต่ละชุด</div>
+<div class="given">ให้ 118,964 คู่ประโยค</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — validation และ test</div>
+$$\lfloor 0.15 \times 118{,}964 \rfloor = \lfloor 17{,}844.6 \rfloor = 17{,}844$$</li>
+<li><div class="st-title">ขั้นที่ 2 — train = ที่เหลือ</div>
+$$118{,}964 - 2 \times 17{,}844 = 83{,}276$$</li>
+</ol>
+<div class="answer"><p>Train 83,276 (70.0%), validation 17,844, test 17,844. <code>random.shuffle</code> ต้องมาก่อนการตัด เพราะไฟล์เรียงจากประโยคสั้นไปยาว.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p15-nmt-textvectorization.png" alt="Slide: Neural Machine Translation Example (3). Prepare two separate TextVectorization layers, one for English and one for Spanish. vocab_size = 15000; sequence_length = 20. source_vectorization with output_sequence_length=sequence_length; target_vectorization with output_sequence_length=sequence_length + 1 and standardize=custom_standardization. strip_chars = string.punctuation + &quot;¿&quot; with [ and ] removed. format_dataset returns english and spanish[:, :-1] inputs and spa[:, 1:] targets; shapes (64, 20)">
+<figcaption>Slide: Neural Machine Translation Example (3) — TextVectorization สองภาษา (Lecture11, p.15)</figcaption>
+</figure>
+
+<pre data-p="15"><code>vocab_size = 15000
+sequence_length = 20
+
+# The English layer
+source_vectorization = TextVectorization(
+  max_tokens=vocab_size,
+  output_mode="int",
+  output_sequence_length=sequence_length,
+)
+# The Spanish layer
+target_vectorization = TextVectorization(
+  max_tokens=vocab_size,
+  output_mode="int",
+  # Generate Spanish sentences that have one extra token,
+  # since we'll need to offset the sentence by one step during training.
+  output_sequence_length=sequence_length + 1,
+  standardize=custom_standardization,
+)
+# Learn the vocabulary of each language.
+source_vectorization.adapt(train_english_texts)
+target_vectorization.adapt(train_spanish_texts)
+
+strip_chars = string.punctuation + "¿"
+strip_chars = strip_chars.replace("[", "")
+strip_chars = strip_chars.replace("]", "")
+def custom_standardization(input_string):
+  lowercase = tf.strings.lower(input_string)
+  return tf.strings.regex_replace(lowercase, f"[{re.escape(strip_chars)}]", "")
+
+batch_size = 64
+def format_dataset(eng, spa):
+  eng = source_vectorization(eng)
+  spa = target_vectorization(spa)
+  return ({
+      "english": eng,
+      "spanish": spa[:, :-1],
+      }, spa[:, 1:])</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>vocab_size = 15000, sequence_length = 20</td><td>ใช้ 15,000 คำที่พบบ่อยที่สุดของแต่ละภาษา และจำกัดประโยคที่ 20 token</td></tr>
+<tr><td>output_sequence_length=sequence_length + 1</td><td>ฝั่งสเปนยาว 21 เพื่อให้ตัดได้สองแบบ (<code>[:, :-1]</code> และ <code>[:, 1:]</code>) แล้วได้ 20 ทั้งคู่</td></tr>
+<tr><td>strip_chars = string.punctuation + "¿"</td><td>เครื่องหมายที่จะลบ: <mark class="src" data-p="15">!"#$%&amp;'()*+,-./:;&lt;=&gt;?@\^_`{|}~¿</mark> (ภาษาสเปนมี ¿ เพิ่ม และเอา [ ] ออกจากรายการเพื่อเก็บ token <code>[start]</code>, <code>[end]</code> ไว้)</td></tr>
+<tr><td>custom_standardization</td><td>ทำเป็นตัวพิมพ์เล็กแล้วลบเครื่องหมายด้วย regular expression; ใช้กับฝั่งสเปนเท่านั้น</td></tr>
+<tr><td>.adapt(...)</td><td>สร้าง vocabulary แยกต่อภาษาจาก training set</td></tr>
+<tr><td>"spanish": spa[:, :-1] และ spa[:, 1:]</td><td>decoder input และ target ที่เหลื่อมกัน 1 ตำแหน่ง (§3). Batch: <code>inputs['english'].shape</code> = <code>inputs['spanish'].shape</code> = <code>targets.shape</code> = (64, 20)</td></tr>
+</table>
+<p>ผลในสไลด์: <code>target_vectorization('[start] Eso no ocurrirá nunca. [end]')</code> ได้ tensor shape (21,) = <code>[2, 40, 7, 4158, 80, 3, 0, …, 0]</code>. Index 2 = <code>[start]</code>, 3 = <code>[end]</code> (0 = padding, 1 = <code>[UNK]</code>), และ "nunca." ถูกลบจุดก่อนแปลง.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p16-encoder-decoder-models.png" alt="Slide: Encoder-Decoder Models. GRU-based encoder: embed_dim = 256; latent_dim = 1024; source = Input(shape=(None,), dtype=&quot;int64&quot;, name=&quot;english&quot;); x = Embedding(vocab_size, embed_dim, mask_zero=True)(source); encoded_source = Bidirectional(GRU(latent_dim), merge_mode=&quot;sum&quot;)(x). Decoder: past_target = Input(..., name=&quot;spanish&quot;); embedding; decoder_gru = GRU(latent_dim, return_sequences=True); x = decoder_gru(x, initial_state=encoded_source); Dropout(0.5); Dense(vocab_size, softmax); seq2seq_rnn = Model([source, past_target], target_next_step). Summary total params 34,869,912. Example: You speak French, right? -&gt; [start] habla francés [end]">
+<figcaption>Slide: Encoder-Decoder Models — seq2seq ด้วย GRU (Lecture11, p.16)</figcaption>
+</figure>
+
+<pre data-p="16"><code># GRU-based encoders. Note that GRU only has a single= state vector, whereas LSTM has multiple
+embed_dim = 256
+latent_dim = 1024
+# The English source sentence goes here. Specifying the name of the input enables us to fit() the model with a dict of inputs.
+source = Input(shape=(None,), dtype="int64", name="english")
+x = Embedding(vocab_size, embed_dim, mask_zero=True)(source)
+# Our encoded source sentence is the last output of a bidirectional GRU.
+encoded_source = Bidirectional(GRU(latent_dim), merge_mode="sum")(x)
+
+# GRU-based decoder and the end-to-end model
+past_target = Input(shape=(None,), dtype="int64", name="spanish") # The Spanish target sentence goes here
+x = Embedding(vocab_size, embed_dim, mask_zero=True)(past_target)
+decoder_gru = GRU(latent_dim, return_sequences=True)
+# The encoded source sentence serves as the initial state of the decoder GRU.
+x = decoder_gru(x, initial_state=encoded_source)
+x = Dropout(0.5)(x)
+# Predicts the next token
+target_next_step = Dense(vocab_size, activation="softmax")(x)
+# End-to-end model: maps the source sentence and the target sentence to the target sentence one step in the future
+seq2seq_rnn = Model([source, past_target], target_next_step)
+seq2seq_rnn.summary()</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>Input(..., name="english") / Input(..., name="spanish")</td><td>ตั้งชื่อ input ให้ตรงกับ key ของ dict ใน <code>format_dataset</code> จึง <code>fit</code> ด้วย dict ได้</td></tr>
+<tr><td>Bidirectional(GRU(latent_dim), merge_mode="sum")</td><td>encoder อ่านสองทิศ แล้ว<strong>บวก</strong> state ของสองทิศ (ไม่ต่อ) จึงได้ vector 1,024 ค่า ซึ่งเท่ากับขนาด state ของ decoder</td></tr>
+<tr><td>GRU(latent_dim, return_sequences=True)</td><td>decoder คืน output ทุก step เพราะทุก step ต้องทำนายคำถัดไป</td></tr>
+<tr><td>decoder_gru(x, initial_state=encoded_source)</td><td>จุดเชื่อม encoder กับ decoder: state เริ่มต้นของ decoder คือประโยคต้นทางที่เข้ารหัสแล้ว</td></tr>
+<tr><td>Dense(vocab_size, activation="softmax")</td><td>ความน่าจะเป็นของ 15,000 คำต่อ step</td></tr>
+<tr><td>Model([source, past_target], target_next_step)</td><td>โมเดลสอง input หนึ่ง output (<a href="0009-functional-api-and-object-detection.html#s2">Lesson 9 §2</a>)</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณตาม summary ในสไลด์: 34,869,912 parameter</div>
+<div class="given">ให้ vocab 15,000, embedding 256, GRU 1,024. หนึ่ง GRU ของ Keras = \(3 \times [n(n + m) + 2n]\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Embedding สองตัว (อังกฤษ, สเปน)</div>
+$$2 \times 15{,}000 \times 256 = 2 \times 3{,}840{,}000 = 7{,}680{,}000$$</li>
+<li><div class="st-title">ขั้นที่ 2 — GRU(1024) หนึ่งตัวที่รับ 256 ค่า</div>
+$$3 \times [1{,}024 \times (1{,}024 + 256) + 2{,}048] = 3{,}938{,}304$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Encoder (bidirectional = 2 GRU) และ decoder (1 GRU)</div>
+$$2 \times 3{,}938{,}304 = 7{,}876{,}608 \qquad 3{,}938{,}304$$</li>
+<li><div class="st-title">ขั้นที่ 4 — Dense output</div>
+$$1{,}024 \times 15{,}000 + 15{,}000 = 15{,}375{,}000$$</li>
+<li><div class="st-title">ขั้นที่ 5 — รวม</div>
+$$7{,}680{,}000 + 7{,}876{,}608 + 3{,}938{,}304 + 15{,}375{,}000 = 34{,}869{,}912$$</li>
+</ol>
+<div class="answer"><p>ตรงกับ Total params ในสไลด์ (3,840,000 / 7,876,608 / 3,938,304 / 15,375,000 ปรากฏในคอลัมน์ Param #). Output layer มี 44% ของ parameter. ผลแปลตัวอย่าง: "You speak French, right?" → <code>[start] habla francés [end]</code> (val_accuracy ราว 0.645 ที่ epoch 15).</p></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>Seq2seq code</span></div>
+  <div class="qtext">ในโมเดล encoder–decoder ที่ใช้ <code>encoded_source = Bidirectional(GRU(512), merge_mode="sum")(x)</code> และ <code>decoder_gru = GRU(512, return_sequences=True)</code> เหตุใดจึงใช้ <code>merge_mode="sum"</code> แทน "concat"?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Bidirectional แบบ concat ให้ state ยาว 512 + 512 = 1,024 ซึ่งไม่ตรงกับขนาด state ของ decoder GRU(512). การบวกสองทิศได้ vector ยาว 512 จึงส่งเป็น initial_state ได้โดยตรง.">เพื่อให้ encoder คืน output ทุก time step แทนที่จะคืนเฉพาะ state สุดท้าย</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Bidirectional แบบ concat ให้ state ยาว 512 + 512 = 1,024 ซึ่งไม่ตรงกับขนาด state ของ decoder GRU(512). การบวกสองทิศได้ vector ยาว 512 จึงส่งเป็น initial_state ได้โดยตรง.">เพื่อลดจำนวน parameter ของ GRU ที่อ่านย้อนหลังให้เหลือครึ่งหนึ่ง</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Bidirectional แบบ concat ให้ state ยาว 512 + 512 = 1,024 ซึ่งไม่ตรงกับขนาด state ของ decoder GRU(512). การบวกสองทิศได้ vector ยาว 512 จึงส่งเป็น initial_state ได้โดยตรง.">เพื่อให้ state มีขนาด 512 เท่ากับ state ของ decoder จึงใช้เป็น initial state ได้</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Bidirectional แบบ concat ให้ state ยาว 512 + 512 = 1,024 ซึ่งไม่ตรงกับขนาด state ของ decoder GRU(512). การบวกสองทิศได้ vector ยาว 512 จึงส่งเป็น initial_state ได้โดยตรง.">เพื่อให้ decoder อ่านประโยคต้นทางได้ทั้งสองทิศทางในตอน inference</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>Seq2seq parameters</span></div>
+  <div class="qtext"><code>Embedding(10000, 128)</code> ตามด้วย <code>Dense(10000, activation="softmax")</code> ที่รับ input จาก GRU 256 unit สอง layer นี้มี parameter รวมกันกี่ตัว?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Embedding: 10,000 × 128 = 1,280,000. Dense: 256 × 10,000 + 10,000 = 2,570,000. รวม 3,850,000. ค่า 3,840,000 คือลืม bias ของ Dense, ค่า 2,560,000 คือ weight ของ Dense อย่างเดียว.">3,850,000</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000 × 128 = 1,280,000. Dense: 256 × 10,000 + 10,000 = 2,570,000. รวม 3,850,000. ค่า 3,840,000 คือลืม bias ของ Dense, ค่า 2,560,000 คือ weight ของ Dense อย่างเดียว.">2,560,000</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000 × 128 = 1,280,000. Dense: 256 × 10,000 + 10,000 = 2,570,000. รวม 3,850,000. ค่า 3,840,000 คือลืม bias ของ Dense, ค่า 2,560,000 คือ weight ของ Dense อย่างเดียว.">3,840,000</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000 × 128 = 1,280,000. Dense: 256 × 10,000 + 10,000 = 2,570,000. รวม 3,850,000. ค่า 3,840,000 คือลืม bias ของ Dense, ค่า 2,560,000 คือ weight ของ Dense อย่างเดียว.">1,290,000</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s5">5. Sampled Softmax, Padding และ BLEU</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p17-note-sampled-softmax.png" alt="Slide: Note. When the output vocabulary is large, outputting a probability for every possible word would be terribly slow; computing the softmax over a large vector (15,000 vocab) is very computationally expensive. One solution: look only at the logits for the correct words and a random sample of incorrect words and approximate the loss (sampled softmax). At inference we must use the normal softmax. Give SOS first and feed outputs as inputs until EOS. The 0 tokens from padding should not contribute to the loss">
+<figcaption>Slide: Note — sampled softmax และ padding (Lecture11, p.17)</figcaption>
+</figure>
+
+<ul>
+<li>เมื่อ vocabulary ใหญ่ การคำนวณ <mark class="src" data-p="17">softmax function</mark> บน vector ขนาดใหญ่ (เช่น 15,000 คำ) ทุก step เป็น <mark class="src" data-p="17">computational expensive</mark></li>
+<li>ทางแก้: ดูเฉพาะ logit ของคำที่ถูกและของคำผิดที่สุ่มมาจำนวนหนึ่ง แล้วประมาณ loss จาก logit เหล่านั้น เรียกว่า <mark class="src" data-p="17">sampled softmax</mark>. แต่ตอน <strong>inference</strong> ต้องใช้ softmax ปกติ เพราะไม่รู้ target</li>
+<li>ในงานนี้ป้อน <mark class="src" data-p="17">&lt;SOS&gt;</mark> เป็นคำแรก แล้ว output ของแต่ละ step เป็น input ของ step ถัดไป จนกว่าจะทาย <mark class="src" data-p="17">&lt;EOS&gt;</mark></li>
+<li>token "0" จาก padding ไม่ควรมีส่วนใน loss (ต้องถูก mask ออก): ใช้ <code>mask_zero=True</code> (<a href="0010-sequence-models-and-rnn.html#s13">Lesson 10 §13</a>)</li>
+</ul>
+<p>ตัวอย่าง: ถ้า sampled softmax ใช้คำผิด 500 คำ จะคำนวณ \(1 + 500 = 501\) logit แทน 15,000 คือลดลงราว 30 เท่าต่อ step ตอนเทรน.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p18-bleu-score.png" alt="Slide: Machine Translation Evaluation Metrics. BLEU score compares a predicted sentence against one or more target sentences, output 0 to 1. Example target The guard arrived late because it was raining; predicted The guard arrived late because of the rain. Precision n-gram = correct predicted n-grams / total predicted n-grams for 1- to 4-gram. Geometric average precision = p1^(1/4) p2^(1/4) p3^(1/4) p4^(1/4). Brevity penalty = 1 if c &gt; r, e^(1 - r/c) if c &lt;= r. BLEU(N) = brevity penalty times geometric average precision. ROUGE link">
+<figcaption>Slide: Machine Translation Evaluation Metrics — BLEU (Lecture11, p.18)</figcaption>
+</figure>
+
+<p><strong>BLEU score</strong> เปรียบเทียบประโยคที่ทำนายกับประโยคเป้าหมายหนึ่งหรือหลายประโยค ได้คะแนนระหว่าง 0 (ไม่ตรงเลย) ถึง 1 (ตรงทั้งหมด).</p>
+$$\begin{gathered}\text{Precision}_{n} = \frac{\text{จำนวน n-gram ที่ทำนายถูก}}{\text{จำนวน n-gram ที่ทำนายทั้งหมด}} \\[0.35em] \text{GAP}(N) = \prod_{n=1}^{N} p_n^{w_n} = (p_1 p_2 p_3 p_4)^{1/4}\end{gathered}$$
+$$\text{BP} = \begin{cases} 1 & c > r \\ e^{(1 - r/c)} & c \le r \end{cases} \qquad \text{BLEU}(N) = \text{BP} \times \text{GAP}(N)$$
+<p class="plain-thai">c = ความยาวประโยคที่ทำนาย, r = ความยาวประโยคเป้าหมาย; BP ลงโทษคำแปลที่สั้นเกิน</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามตัวอย่างในสไลด์</div>
+<div class="given">ให้ target "The guard arrived late because it was raining" (8 คำ) และ predicted "The guard arrived late because of the rain" (8 คำ)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — 1-gram: predicted มี 8 คำ; ตรง: The, guard, arrived, late, because</div>
+$$p_1 = 5/8 = 0.625$$</li>
+<li><div class="st-title">ขั้นที่ 2 — 2-gram: predicted มี 7; ตรง: the guard, guard arrived, arrived late, late because</div>
+$$p_2 = 4/7 = 0.571$$</li>
+<li><div class="st-title">ขั้นที่ 3 — 3-gram (6 ตัว, ตรง 3) และ 4-gram (5 ตัว, ตรง 2)</div>
+$$p_3 = 3/6 = 0.5 \qquad p_4 = 2/5 = 0.4$$</li>
+<li><div class="st-title">ขั้นที่ 4 — Geometric average</div>
+$$(0.625 \times 0.571 \times 0.5 \times 0.4)^{1/4} = (0.0714)^{1/4} = 0.517$$</li>
+<li><div class="st-title">ขั้นที่ 5 — Brevity penalty: \(c = 8 \le r = 8\)</div>
+$$e^{(1 - 8/8)} = e^0 = 1 \qquad \text{BLEU} = 1 \times 0.517 = 0.517$$</li>
+</ol>
+<div class="answer"><p>BLEU ≈ 0.52. Precision ลดลงเมื่อ n โต เพราะ n-gram ยาวต้องตรงต่อเนื่องหลายคำ. ตัวอย่างหัวสไลด์ "the ball is blue" เทียบ "the ball has a blue color" ให้ 1-gram precision = 3/4 (the, ball, blue). หมายเหตุ: สไลด์เขียน "Blue score"; ชื่อที่ถูกคือ BLEU (Bilingual Evaluation Understudy). ROUGE เป็นอีก metric ที่สไลด์ให้ลิงก์ไว้ (นิยมใช้กับ summarization).</p></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>BLEU</span></div>
+  <div class="qtext">ประโยคเป้าหมายคือ "the cat sat on the mat" (6 คำ) และประโยคที่โมเดลแปลคือ "the cat sat on mat" (5 คำ) ข้อใดคือ 2-gram precision และ brevity penalty ตามลำดับ?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Bigram ของประโยคที่แปล: the cat, cat sat, sat on, on mat (4 ตัว) ตรง 3 ตัว (on mat ไม่มีใน target) ⇒ 3/4. c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819.">3/4 และ 1</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Bigram ของประโยคที่แปล: the cat, cat sat, sat on, on mat (4 ตัว) ตรง 3 ตัว (on mat ไม่มีใน target) ⇒ 3/4. c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819.">4/4 และ e^(−0.2)</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Bigram ของประโยคที่แปล: the cat, cat sat, sat on, on mat (4 ตัว) ตรง 3 ตัว (on mat ไม่มีใน target) ⇒ 3/4. c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819.">3/5 และ e^(−0.2)</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Bigram ของประโยคที่แปล: the cat, cat sat, sat on, on mat (4 ตัว) ตรง 3 ตัว (on mat ไม่มีใน target) ⇒ 3/4. c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819.">3/4 และ e^(−0.2)</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li><mark class="src" data-p="17">softmax function</mark> บน vocabulary ใหญ่ <mark class="src" data-p="17">computational expensive</mark> ⇒ <mark class="src" data-p="17">sampled softmax</mark> ตอนเทรน; inference ใช้ softmax ปกติ</li>
+<li>เริ่มด้วย <mark class="src" data-p="17">&lt;SOS&gt;</mark> จนถึง <mark class="src" data-p="17">&lt;EOS&gt;</mark>; padding 0 ต้องไม่ถูกนับใน loss</li>
+<li>BLEU = BP × geometric mean ของ n-gram precision; BP = 1 เมื่อ c &gt; r, \(e^{(1 - r/c)}\) เมื่อ c ≤ r; คะแนน 0 ถึง 1</li>
+</ul>
+</div>
+
+<h2 id="s6">6. ปัญหาของ Encoder–Decoder และ Beam Search</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p19-problems-encoder-decoder.png" alt="Slide: The Problems of Encoder-Decoder Framework. The model could not go back and fix the words translated; it generates the most likely word at every step and tries to complete the sentence, ending up with a suboptimal translation. Example I am going to school now versus I will go to school tomorrow. One solution is beam search">
+<figcaption>Slide: The Problems of Encoder-Decoder Framework — แก้คำที่แปลแล้วไม่ได้ (Lecture11, p.19)</figcaption>
+</figure>
+
+<p>โมเดล <mark class="src" data-p="19">not go back</mark> ไปแก้คำที่แปลไปแล้วไม่ได้. มันสร้างคำที่น่าจะเป็นที่สุดทุก step แล้วพยายามเติมประโยคให้ดีที่สุดเท่าที่ทำได้ ผลคือ <mark class="src" data-p="19">suboptimal translation</mark>. ตัวอย่างในสไลด์: ถ้า step ที่ 2 เลือก "am" ประโยคจะถูกบังคับเป็น "I am going to school now"; ถ้าบริบทจริงเป็นอนาคต คำที่ควรได้คือ "will" แต่แก้ย้อนไม่ได้แล้ว. ทางแก้หนึ่งคือ <mark class="src" data-p="19">beam search</mark>.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p20-beam-search.png" alt="Slide: Beam Search keeps track of a short list of the k most promising sentences (top three) and at each decoder step tries to extend them by one word, keeping only the k most likely sentences; k is the beam width. Beam width = 3: step 1 keeps I, My, We from P(y1">
+<figcaption>Slide: x); step 2 extends each and keeps I am, I will, My parents | Beam Search — beam width 3 (Lecture11, p.20)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="20">• Beam search</mark> เก็บ <mark class="src" data-p="20">short list of the k most promising sentences</mark> (เช่น 3 ประโยค) และทุก step ของ decoder ขยายแต่ละประโยคด้วยคำอีก 1 คำ แล้วเก็บเฉพาะ k ประโยคที่น่าจะเป็นที่สุด. k เรียกว่า <mark class="src" data-p="20">beam width</mark>. ความน่าจะเป็นของประโยคคือผลคูณตาม chain rule:</p>
+$$P(y^1, y^2 \mid x) = P(y^1 \mid x) \times P(y^2 \mid x, y^1)$$
+<p>ในรูป (ประโยคต้นทางภาษาฮินดี): step 1 เก็บ \(P(y^1 \mid x)\) = [I, My, We]. Step 2 ขยายแต่ละตัวด้วยคำที่เป็นไปได้ทั้งหมด แล้วเหลือ [I am, I will, My parents]: "We" หลุดเพราะทุกประโยคที่ขึ้นต้นด้วย We มีผลคูณต่ำกว่าสามอันดับแรก.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p21-beam-search-2.png" alt="Slide: Beam Search (2). Step 3 extends I am, I will, My parents and keeps I am visiting, I will visit, I am going. Final candidates: I am going to meet my parents in India 0.56; I am visiting my parents in India 0.49; I will visit India to meet my parents 0.39. A higher beam width gives a better translation but uses a lot of memory and computational power. Beam search works well for fairly short sentences; models are still not good at translating long sentences">
+<figcaption>Slide: Beam Search (2) — ผลลัพธ์และข้อจำกัด (Lecture11, p.21)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: จำนวน candidate ที่ beam search ต้องประเมิน</div>
+<div class="given">ให้ beam width \(k = 3\), vocabulary 10,000 คำ</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — ทุก step: ขยาย k ประโยค × ทุกคำ</div>
+$$3 \times 10{,}000 = 30{,}000 \text{ candidate}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — เก็บไว้ k ตัว</div>
+$$30{,}000 \;\rightarrow\; 3$$</li>
+<li><div class="st-title">ขั้นที่ 3 — เทียบ greedy (k = 1) และ k = 10</div>
+$$1 \times 10{,}000 = 10{,}000 \qquad 10 \times 10{,}000 = 100{,}000$$</li>
+</ol>
+<div class="answer"><p>ต้นทุนต่อ step โตเป็นเส้นตรงตาม k. ผลลัพธ์ในสไลด์มีสามประโยค: "I am going to meet my parents in India" (0.56), "I am visiting my parents in India" (0.49), "I will visit India to meet my parents" (0.39); เลือก 0.56.</p></div>
+</div>
+
+<p>ข้อสรุปของหน้า 21: beam width สูงให้คำแปลดีขึ้นแต่ใช้ <mark class="src" data-p="21">a lot of memory and computational power</mark>; beam search ทำงานได้ดี <mark class="src" data-p="21">for fairly short sentences</mark> แต่โมเดลยังแปล <mark class="src" data-p="21">long sentences</mark> ได้ไม่ดี.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p22-problems-encoder-decoder-2.png" alt="Slide: The Problems of Encoder-Decoder Framework (2). Models are not good at translating long sentences: accessing the encoder hidden states, which compress everything into a single fixed representation, might lose information, especially at the start of an input sequence. RNNs have trouble with very long sequences since they progressively forget the past. Attention mechanisms allow the decoder to focus on the appropriate words at each time step">
+<figcaption>Slide: The Problems of Encoder-Decoder Framework (2) — คอขวดของ vector เดียว (Lecture11, p.22)</figcaption>
+</figure>
+
+<ul>
+<li>โมเดลแปล <mark class="src" data-p="22">translating long sentences</mark> ได้ไม่ดี: hidden state ของ encoder <mark class="src" data-p="22">compress everything</mark> ไว้ใน representation เดียวที่ขนาดตายตัว จึงอาจเสียข้อมูล โดยเฉพาะต้นประโยค</li>
+<li>RNN และรุ่นต่างๆ มีปัญหากับ <mark class="src" data-p="22">long sequences</mark> เพราะค่อยๆ ลืมอดีต (<a href="0010-sequence-models-and-rnn.html#s5">Lesson 10 §5</a>)</li>
+<li>Attention Mechanisms ให้ decoder <mark class="src" data-p="22">focus on the appropriate words</mark> (ตามที่ encoder เข้ารหัส) ในแต่ละ time step</li>
+</ul>
+<p>ตัวเลขของคอขวด: ในโมเดล §4 ประโยคต้นทาง 20 token ถูกบีบเป็น vector เดียว 1,024 ค่า. ประโยค 5 คำหรือ 20 คำได้ vector ขนาดเท่ากัน ประโยคยาวจึงมีพื้นที่ต่อคำน้อยลง.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>Beam search</span></div>
+  <div class="qtext">ใช้ beam search ที่ beam width 4 กับ vocabulary 5,000 คำ ทุก step ของ decoder ต้องให้คะแนน candidate กี่ประโยค และเก็บไว้กี่ประโยค?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. แต่ละประโยคใน beam ทั้ง 4 ถูกขยายด้วยทุกคำ: 4 × 5,000 = 20,000 candidate แล้วเก็บเฉพาะ 4 ประโยคที่ความน่าจะเป็นรวมสูงสุด. การเก็บไว้ประโยคเดียวคือ greedy decoding.">5,000 ประโยค และเก็บไว้ 4 ประโยค</button>
+    <button class="opt" data-correct="true" data-note="ถูก. แต่ละประโยคใน beam ทั้ง 4 ถูกขยายด้วยทุกคำ: 4 × 5,000 = 20,000 candidate แล้วเก็บเฉพาะ 4 ประโยคที่ความน่าจะเป็นรวมสูงสุด. การเก็บไว้ประโยคเดียวคือ greedy decoding.">20,000 ประโยค และเก็บไว้ 4 ประโยค</button>
+    <button class="opt" data-correct="false" data-note="ผิด. แต่ละประโยคใน beam ทั้ง 4 ถูกขยายด้วยทุกคำ: 4 × 5,000 = 20,000 candidate แล้วเก็บเฉพาะ 4 ประโยคที่ความน่าจะเป็นรวมสูงสุด. การเก็บไว้ประโยคเดียวคือ greedy decoding.">20,000 ประโยค และเก็บไว้ 1 ประโยค</button>
+    <button class="opt" data-correct="false" data-note="ผิด. แต่ละประโยคใน beam ทั้ง 4 ถูกขยายด้วยทุกคำ: 4 × 5,000 = 20,000 candidate แล้วเก็บเฉพาะ 4 ประโยคที่ความน่าจะเป็นรวมสูงสุด. การเก็บไว้ประโยคเดียวคือ greedy decoding.">625 ประโยค และเก็บไว้ 4 ประโยค</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>ปัญหา 1: <mark class="src" data-p="19">not go back</mark> ⇒ <mark class="src" data-p="19">suboptimal translation</mark> ⇒ ทางแก้ <mark class="src" data-p="19">beam search</mark></li>
+<li><mark class="src" data-p="20">• Beam search</mark>: เก็บ <mark class="src" data-p="20">short list of the k most promising sentences</mark>; k = <mark class="src" data-p="20">beam width</mark></li>
+<li>k สูง ⇒ ดีขึ้นแต่ใช้ <mark class="src" data-p="21">a lot of memory and computational power</mark>; ดี <mark class="src" data-p="21">for fairly short sentences</mark> แต่แย่กับ <mark class="src" data-p="21">long sentences</mark></li>
+<li>ปัญหา 2: <mark class="src" data-p="22">translating long sentences</mark> เพราะ <mark class="src" data-p="22">compress everything</mark> และ RNN ลืมใน <mark class="src" data-p="22">long sequences</mark> ⇒ attention ให้ <mark class="src" data-p="22">focus on the appropriate words</mark></li>
+</ul>
+</div>
+
+<h2 id="s7">7. Attention Mechanisms</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p23-attention-mechanisms.png" alt="Slide: Attention Mechanisms (Bahdanau, 2014) allow the decoder to focus on the appropriate words at each time step, so the path from an input word to its translation becomes shorter. Instead of sending only a final hidden state, the encoder sends all of its outputs to the decoder. At each step the decoder memory cell computes a weighted sum of all encoder outputs. The decoder also receives the hidden state and target word from the previous step. Diagram: encoder outputs for I drink milk, alignment model computes e(3,0), e(3,1), e(3,2), softmax gives alpha(3,0), alpha(3,1), alpha(3,2)">
+<figcaption>Slide: Attention Mechanisms — Bahdanau attention (Lecture11, p.23)</figcaption>
+</figure>
+
+<p>Attention Mechanisms (Bahdanau, 2014) ให้ decoder <mark class="src" data-p="23">focus on the appropriate words</mark> (ตามที่ encoder เข้ารหัส) ในแต่ละ time step เส้นทางจากคำต้นทางไปยังคำแปลจึงสั้นลง:</p>
+<ul>
+<li>แทนการส่งเฉพาะ hidden state สุดท้าย encoder ส่ง<strong>ทุก output</strong> ให้ decoder</li>
+<li>ทุก time step memory cell ของ decoder คำนวณผลรวมถ่วงน้ำหนัก (attention) ของ <mark class="src" data-p="23">encoder’s outputs</mark> ทั้งหมด ซึ่งกำหนดว่า step นี้จะ focus คำไหน</li>
+<li>ทุก time step decoder ยังได้รับ <mark class="src" data-p="23">hidden state</mark> และ <mark class="src" data-p="23">target word</mark> จาก step ก่อนหน้า</li>
+</ul>
+<p>ในแผนภาพ alignment model รับ state \(h_{(2)}\) ของ decoder กับ encoder output แต่ละตัว ได้คะแนน \(e_{(3,0)}, e_{(3,1)}, e_{(3,2)}\) แล้วผ่าน softmax เป็น \(\alpha_{(3,0)}, \alpha_{(3,1)}, \alpha_{(3,2)}\) ซึ่งใช้ถ่วงผลรวมก่อนทำนายคำที่ 3 ("lait").</p>
+
+<figure>
+<img src="../assets/slides/dl11-p24-attention-weights-computation.png" alt="Slide: Attention Weights Computation. Weights are generated by a small neural network called an alignment model (attention layer), trained jointly with the rest of the encoder-decoder. It outputs a score for each encoder output measuring how well it aligns with the decoder&#x27;s current state; scores go through softmax so weights for a decoder step add up to 1. Example: encoder I drink milk with vectors [88, 99, 13...], [43, 56, 80...], [23, 54, 31...]; decoder Je bois du laid with vectors [89, 49, 13...], [43, 54, 80...], [33, 26, 60...], [23, 55, 33...]">
+<figcaption>Slide: Attention Weights Computation — alignment model (Lecture11, p.24)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="24">• Weights</mark> มาจาก neural network ขนาดเล็กที่เรียกว่า <strong>alignment model</strong> (หรือ attention layer) ซึ่ง <mark class="src" data-p="24">trained jointly</mark> กับส่วนที่เหลือของ encoder–decoder. Attention layer ให้คะแนนแต่ละ encoder output ว่า align กับ state ปัจจุบันของ decoder (hidden state และ target word) ดีเพียงใด แล้วผ่าน softmax ⇒ น้ำหนักของ decoder step หนึ่งรวมกันเป็น 1.</p>
+<p>ตัวอย่างในสไลด์: encoder อ่าน "I", "drink", "milk" ได้ vector [88, 99, 13, …], [43, 56, 80, …], <mark class="src" data-p="24">[23, 54, 31……]</mark>. ขณะ decoder จะเขียนคำที่สี่ ("laid") state ของ decoder คือ [<mark class="src" data-p="24">23, 55, 33, ……]</mark> ซึ่งใกล้กับ vector ของ "milk" มากที่สุด attention จึงให้น้ำหนักสูงกับ "milk". ตาราง slot ในสไลด์ ({"subject": "Je", "verb": "bois", "adj": "du", "object": ___}) อธิบายสิ่งเดียวกัน: ตำแหน่ง object ต้องการข้อมูลจากคำ object ของต้นทาง.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: attention weight และ context vector ของ decoder step หนึ่ง</div>
+<div class="given">ให้ encoder outputs (ย่อเหลือ 2 มิติ) \(h_1 = [1, 0]\) (I), \(h_2 = [0, 1]\) (drink), \(h_3 = [1, 1]\) (milk). Alignment model ให้คะแนน \(e = [0, 0, 2]\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Softmax ของคะแนน</div>
+$$\alpha = \frac{[e^0, e^0, e^2]}{1 + 1 + 7.389} = [0.107, 0.107, 0.787]$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Context vector = ผลรวมถ่วงน้ำหนักของ encoder outputs</div>
+$$0.107[1, 0] + 0.107[0, 1] + 0.787[1, 1] = [0.894, 0.894]$$</li>
+</ol>
+<div class="answer"><p>น้ำหนักรวม \(0.107 + 0.107 + 0.787 = 1\). Context vector ใกล้ \(h_3\) (milk) มากที่สุด และ decoder step นี้ใช้ vector นี้ร่วมกับ state ของตัวเองเพื่อทำนายคำ. ทุก decoder step คำนวณน้ำหนักชุดใหม่.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p25-visualize-attention-weights.png" alt="Slide: Visualize the Attention Weights for an English to French translation model, each pixel a weight. Correctly aligns zone and Area, which are ordered differently. Although attention enabled much better translations, there was still a major shortcoming with recurrent encoder and decoder: computations are inherently sequential and cannot be parallelized. Heatmap: The agreement on the European Economic Area was signed in August 1992 versus L&#x27;accord sur la zone économique européenne a été signé en août 1992">
+<figcaption>Slide: Visualize the Attention Weights — heatmap อังกฤษ–ฝรั่งเศส (Lecture11, p.25)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="25">visualize the attention weights</mark> ของโมเดลแปลอังกฤษ → ฝรั่งเศส: แต่ละ pixel คือ weight หนึ่งตัว (ขาว = สูง). ส่วนใหญ่ weight อยู่บนเส้นทแยง (แปลตามลำดับ) แต่ช่วงกลางเส้นทแยงกลับทิศ: "European Economic Area" ↔ "zone économique européenne" เรียงกลับกัน และ attention align "zone" กับ "Area" ได้ถูกแม้ตำแหน่งต่างกัน.</p>
+<p>แม้ attention ให้คำแปลดีขึ้นมาก ยังมี <mark class="src" data-p="25">major shortcoming</mark> จากการใช้ recurrent model เป็น encoder และ decoder: การคำนวณเป็น <mark class="src" data-p="25">sequential</mark> โดยธรรมชาติ และ <mark class="src" data-p="25">parallelized</mark> ข้ามลำดับ input ไม่ได้. step ที่ 20 ต้องรอ step ที่ 19 เสร็จก่อน ซึ่งเป็นเหตุผลของ Transformer.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>Attention</span></div>
+  <div class="qtext">Decoder step หนึ่งได้คะแนน alignment ของ encoder output สองตำแหน่งเป็น [0, ln 3] (ln 3 ≈ 1.099) attention weight ของสองตำแหน่งคือข้อใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Softmax: e^0 = 1 และ e^(ln 3) = 3 รวม 4 จึงได้ [1/4, 3/4] = [0.25, 0.75]. น้ำหนักต้องรวมเป็น 1 ทุก decoder step. ค่า [0.33, 0.67] คือหารคะแนนด้วยผลรวมโดยไม่ผ่าน exp.">[0.50, 0.50]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Softmax: e^0 = 1 และ e^(ln 3) = 3 รวม 4 จึงได้ [1/4, 3/4] = [0.25, 0.75]. น้ำหนักต้องรวมเป็น 1 ทุก decoder step. ค่า [0.33, 0.67] คือหารคะแนนด้วยผลรวมโดยไม่ผ่าน exp.">[0.33, 0.67]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Softmax: e^0 = 1 และ e^(ln 3) = 3 รวม 4 จึงได้ [1/4, 3/4] = [0.25, 0.75]. น้ำหนักต้องรวมเป็น 1 ทุก decoder step. ค่า [0.33, 0.67] คือหารคะแนนด้วยผลรวมโดยไม่ผ่าน exp.">[0.00, 1.00]</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Softmax: e^0 = 1 และ e^(ln 3) = 3 รวม 4 จึงได้ [1/4, 3/4] = [0.25, 0.75]. น้ำหนักต้องรวมเป็น 1 ทุก decoder step. ค่า [0.33, 0.67] คือหารคะแนนด้วยผลรวมโดยไม่ผ่าน exp.">[0.25, 0.75]</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Attention (Bahdanau, 2014): <mark class="src" data-p="23">focus on the appropriate words</mark>; encoder ส่ง <mark class="src" data-p="23">encoder’s outputs</mark> ทั้งหมด; decoder ใช้ <mark class="src" data-p="23">hidden state</mark> + <mark class="src" data-p="23">target word</mark> ของ step ก่อน</li>
+<li><mark class="src" data-p="24">• Weights</mark> มาจาก alignment model ที่ <mark class="src" data-p="24">trained jointly</mark>; คะแนนผ่าน softmax รวมเป็น 1</li>
+<li><mark class="src" data-p="25">visualize the attention weights</mark>: align คำที่เรียงต่างกันได้. <mark class="src" data-p="25">major shortcoming</mark>: RNN <mark class="src" data-p="25">sequential</mark>, ไม่ <mark class="src" data-p="25">parallelized</mark></li>
+</ul>
+</div>
+
+<h2 id="s8">8. Transformer: ภาพรวม</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p26-transformers-timeline.png" alt="Slide: Transformers. Vaswani (Google Brain) et al. published Attention Is All You Need (2017), a novel architecture for sequence modeling that outperformed RNNs on machine translation in translation quality and training cost. Timeline 2017-2021: Transformer, ULMFiT, GPT, BERT, GPT-2, RoBERTa, XLM-R, DistilBERT, GPT-3, T5, DeBERTa, GPT-Neo, GPT-J">
+<figcaption>Slide: Transformers — timeline (Lecture11, p.26)</figcaption>
+</figure>
+
+<p>Vaswani (Google Brain) และคณะเผยแพร่ "Attention Is All You Need" (2017) เสนอสถาปัตยกรรมใหม่สำหรับ sequence modeling ที่ทำได้ดีกว่า RNN ในงานแปลภาษา ทั้งด้าน<strong>คุณภาพการแปล</strong>และ<strong>ต้นทุนการเทรน</strong>. Timeline ในสไลด์: Transformer (2017) → ULMFiT, GPT, BERT (2018) → GPT-2, RoBERTa, XLM-R, DistilBERT (2019) → GPT-3, T5, DeBERTa (2020) → GPT-Neo, GPT-J (2021).</p>
+
+<figure>
+<img src="../assets/slides/dl11-p27-transformer-architecture.png" alt="Slide: Transformer Architecture. Transformer Encoder converts input tokens into a sequence of context-aware embedding vectors (hidden states). Transformer Decoder uses the encoder hidden state to iteratively generate output tokens one at a time, like RNNs. Diagram: Time flies like an arrow -&gt; token encodings, embeds, positional embeds, encoder stack, hidden states K,V; decoder: Die Zeit fliegt wie ein -&gt; Pfeil. Paper figure with Nx encoder and decoder blocks">
+<figcaption>Slide: Transformer Architecture — encoder และ decoder (Lecture11, p.27)</figcaption>
+</figure>
+
+<ul>
+<li><mark class="src" data-p="27">• Transformer Encoder</mark>: แปลงลำดับ token เป็นลำดับของ embedding vector ที่ <mark class="src" data-p="27">context-aware</mark> (คือ hidden states)</li>
+<li><mark class="src" data-p="27">• Transformer Decoder</mark>: ใช้ hidden state ของ encoder สร้างลำดับ output ทีละ token (เหมือน RNN)</li>
+</ul>
+<p>ตัวอย่างในรูป: "Time flies like an arrow" ผ่าน encoder stack ได้ hidden states (K, V) แล้ว decoder ที่อ่าน "Die Zeit fliegt wie ein" จึงทำนาย token ถัดไป "Pfeil". แม้ encoder ประมวลผลทั้งประโยคพร้อมกัน decoder ตอน inference ยังสร้างทีละ token.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p28-compared-to-rnn.png" alt="Slide: Compared to Encoder-Decoder RNNs. Transformer is almost identical to the encoder-decoder RNN model; the only difference is that the RNN layers are replaced with self attention layers. Diagram: RNN+Attention model versus a 1-layer transformer translating je suis etudiant into I am a student">
+<figcaption>Slide: Compared to Encoder-Decoder RNNs — แทน RNN ด้วย self-attention (Lecture11, p.28)</figcaption>
+</figure>
+
+<p>Transformer เกือบเหมือน encoder–decoder RNN ทุกส่วน. ความต่างเดียวคือ RNN layer ถูกแทนด้วย <mark class="src" data-p="28">self attention layers</mark>. ในรูป: ฝั่ง RNN แต่ละตำแหน่งต่อกับตำแหน่งข้างเคียงเป็นลูกโซ่; ฝั่ง Transformer ทุกตำแหน่งต่อตรงกับทุกตำแหน่ง (เส้นโยงหลายเส้นในชั้นล่าง).</p>
+
+<figure>
+<img src="../assets/slides/dl11-p29-why-transformer.png" alt="Slide: Why Transformer. Unlike RNNs, Transformers offer distinct advantages: Long-Range Dependencies (distant elements connect through attention); Parallel Efficiency (parallel processing on GPUs and TPUs; RNNs process step by step); Explainability (plot which parts of the source the model attended to). These capabilities have a significant impact in natural language processing">
+<figcaption>Slide: Why Transformer — สามข้อดี (Lecture11, p.29)</figcaption>
+</figure>
+
+<p>ต่างจาก RNN, <mark class="src" data-p="29">Transformers</mark> มี <mark class="src" data-p="29">advantages</mark> สามข้อ:</p>
+<table class="compact">
+<tr><th>ข้อดี</th><th>ความหมายตามสไลด์</th><th>เป็นตัวเลข (ประโยค \(n\) token)</th></tr>
+<tr><td><mark class="src" data-p="29">• Long-Range Dependencies</mark></td><td>ตำแหน่งที่อยู่ไกลกันเชื่อมกันได้ตรงผ่าน attention; RNN ต้องส่งข้อมูลผ่านหลาย step</td><td>ระยะระหว่างคำแรกกับคำสุดท้าย: RNN \(n - 1\) step; Transformer 1 step</td></tr>
+<tr><td><mark class="src" data-p="29">• Parallel Efficiency</mark></td><td>ใช้การประมวลผลขนานบน GPU/TPU; RNN ประมวลผลทีละ step</td><td>RNN: \(n\) step ต่อกัน; Transformer: ทุกตำแหน่งพร้อมกันใน layer เดียว</td></tr>
+<tr><td><mark class="src" data-p="29">• Explainability</mark></td><td>plot ได้ว่าโมเดล attend ส่วนไหนของต้นทางขณะสร้าง output แต่ละตัว</td><td>attention weight เป็น matrix \(n \times n\) ที่วาดเป็น heatmap ได้</td></tr>
+</table>
+<p>ความสามารถเหล่านี้ทำให้ Transformer มี <mark class="src" data-p="29">significant impact in natural language processing</mark>. หมายเหตุใต้รูป: ใน encoder–decoder ความต่างเดียวคือ RNN layer ถูกแทนด้วย <mark class="src" data-p="29">self attention layers in transformer</mark>.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p30-transformer-components.png" alt="Slide: Transformer Components. The embedding and positional encoding layer; the encoder (encoder layer can be stacked, self attention layer, feed forward network); the decoder (decoder layer can be stacked, masked causal self attention layer, cross attention layer, feed forward network). Diagrams: the original Transformer diagram and a representation of a 4-layer Transformer">
+<figcaption>Slide: Transformer Components — รายการชิ้นส่วน (Lecture11, p.30)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>ส่วน</th><th>ชิ้นย่อย</th><th>หัวข้อ</th></tr>
+<tr><td>The embedding &amp; positional encoding layer</td><td>token embedding + position embedding</td><td><a href="#s9">§9</a></td></tr>
+<tr><td>The encoder</td><td>encoder layer (ซ้อนได้) = self attention layer + feed forward network</td><td><a href="#s10">§10</a></td></tr>
+<tr><td>The decoder</td><td>decoder layer (ซ้อนได้) = (masked) causal self attention layer + cross attention layer + feed forward network</td><td><a href="#s12">§12</a></td></tr>
+</table>
+<p>รูปขวา "A representation of a 4-layer Transformer" คือ encoder layer และ decoder layer อย่างละ 4 ชั้นซ้อนกัน (Nx = 4); output ของ encoder ชั้นสุดท้ายถูกส่งเข้า cross attention ของ decoder <strong>ทุกชั้น</strong>.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>Why Transformer</span></div>
+  <div class="qtext">ข้อใดเป็นเหตุผลหลักที่ Transformer เทรนได้เร็วกว่า encoder–decoder ที่ใช้ RNN บน GPU?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. RNN ต้องคำนวณ state ที่ step t จาก state ที่ step t − 1 จึงขนานข้ามลำดับไม่ได้. Self-attention คำนวณความสัมพันธ์ของทุกตำแหน่งพร้อมกันด้วยการคูณ matrix จึงใช้ GPU/TPU ได้เต็มที่ (parallel efficiency).">Transformer มีจำนวน parameter น้อยกว่า RNN เสมอในทุกขนาดของโมเดล</button>
+    <button class="opt" data-correct="false" data-note="ผิด. RNN ต้องคำนวณ state ที่ step t จาก state ที่ step t − 1 จึงขนานข้ามลำดับไม่ได้. Self-attention คำนวณความสัมพันธ์ของทุกตำแหน่งพร้อมกันด้วยการคูณ matrix จึงใช้ GPU/TPU ได้เต็มที่ (parallel efficiency).">Transformer ไม่ต้องใช้ embedding layer จึงลดการคำนวณในชั้นแรก</button>
+    <button class="opt" data-correct="true" data-note="ถูก. RNN ต้องคำนวณ state ที่ step t จาก state ที่ step t − 1 จึงขนานข้ามลำดับไม่ได้. Self-attention คำนวณความสัมพันธ์ของทุกตำแหน่งพร้อมกันด้วยการคูณ matrix จึงใช้ GPU/TPU ได้เต็มที่ (parallel efficiency).">Transformer คำนวณทุกตำแหน่งของลำดับพร้อมกัน ไม่ต้องรอ time step ก่อนหน้า</button>
+    <button class="opt" data-correct="false" data-note="ผิด. RNN ต้องคำนวณ state ที่ step t จาก state ที่ step t − 1 จึงขนานข้ามลำดับไม่ได้. Self-attention คำนวณความสัมพันธ์ของทุกตำแหน่งพร้อมกันด้วยการคูณ matrix จึงใช้ GPU/TPU ได้เต็มที่ (parallel efficiency).">Transformer ใช้ sampled softmax ในทุก layer แทน softmax ปกติ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>"Attention Is All You Need" (Vaswani et al., 2017): ดีกว่า RNN ทั้งคุณภาพและต้นทุนการเทรน</li>
+<li><mark class="src" data-p="27">• Transformer Encoder</mark> → embedding ที่ <mark class="src" data-p="27">context-aware</mark>; <mark class="src" data-p="27">• Transformer Decoder</mark> สร้างทีละ token</li>
+<li>ต่างจาก RNN encoder–decoder แค่ใช้ <mark class="src" data-p="28">self attention layers</mark> / <mark class="src" data-p="29">self attention layers in transformer</mark></li>
+<li><mark class="src" data-p="29">Transformers</mark> <mark class="src" data-p="29">advantages</mark>: <mark class="src" data-p="29">• Long-Range Dependencies</mark>, <mark class="src" data-p="29">• Parallel Efficiency</mark>, <mark class="src" data-p="29">• Explainability</mark>; <mark class="src" data-p="29">significant impact in natural language processing</mark></li>
+</ul>
+</div>
+
+<h2 id="s9">9. Embedding และ Positional Encoding</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p31-embedding-positional-encoding.png" alt="Slide: The Embedding and Positional Encoding Layer. Embeddings combine through addition the input embeddings (word independent of context) and position embeddings (word position in the sentence). To handle large position values that might disrupt input embedding ranges, the authors add positional embeddings with cyclically varying values in [-1, 1] using sinusoidal functions. Paper figure with the positional encoding block highlighted">
+<figcaption>Slide: The Embedding &amp; Positional Encoding Layer (Lecture11, p.31)</figcaption>
+</figure>
+
+<p>Self-attention ไม่มีลำดับในตัว: ถ้าสลับคำในประโยค ผลรวมถ่วงน้ำหนักของ §10 ก็เพียงสลับตาม. ข้อมูลตำแหน่งจึงต้องเติมเข้าไปใน input. Embedding ของ Transformer มีสองส่วนที่<strong>บวกกัน</strong>:</p>
+<ul>
+<li><mark class="src" data-p="31">input embeddings</mark>: แทนคำโดยไม่สนบริบท (เหมือน Embedding layer ของ Lesson 10)</li>
+<li><mark class="src" data-p="31">position embeddings</mark>: แทนตำแหน่งของคำในประโยค</li>
+</ul>
+<p>ค่าตำแหน่งดิบ (0, 1, 2, …, 500) ใหญ่เกินช่วงของ embedding และจะกลบความหมายของคำ. ผู้เขียนจึงบวก positional embedding ที่มีค่าวนเป็นรอบในช่วง [−1, 1] ซึ่งสร้างด้วย <mark class="src" data-p="31">sinusoidal functions</mark>.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p32-sinusoidal-formula.png" alt="Slide: Positional Embeddings (2). Fixed sinusoidal positional embeddings provide sequential information without learning additional parameters, using sine and cosine of different frequencies. Each position is a vector of sine and cosine values; the shift between tokens should be small; frequencies vary across dimensions. Even dimensions PE(pos, 2i) = sin(pos / 10000^(2i/d_model)); odd dimensions PE(pos, 2i+1) = cos(pos / 10000^(2i/d_model)); pos is the position, i the dimension index, d_model the embedding size (e.g. 512 or 768)">
+<figcaption>Slide: Positional Embeddings (2) — สูตร sinusoidal (Lecture11, p.32)</figcaption>
+</figure>
+
+<p><strong>Fixed (sinusoidal) positional embeddings</strong> ให้ข้อมูลลำดับ <u>without learning additional parameters</u>: ใช้ sine และ cosine หลายความถี่.</p>
+$$\begin{gathered}\text{PE}_{(pos,\,2i)} = \sin\!\left(\frac{pos}{10000^{2i/d_{model}}}\right) \\[0.35em] \text{PE}_{(pos,\,2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d_{model}}}\right)\end{gathered}$$
+<p class="plain-thai">มิติคู่ใช้ sin มิติคี่ใช้ cos; มิติคู่ 2i กับมิติคี่ 2i+1 ใช้ความถี่เดียวกัน; มิติยิ่งสูงความถี่ยิ่งต่ำ</p>
+<ul>
+<li>\(pos\) = ตำแหน่งในลำดับ; \(i\) = ดัชนีของคู่มิติ; \(d_{model}\) = มิติของ embedding (เช่น 512 หรือ 768)</li>
+<li>แต่ละตำแหน่งแทนด้วย vector ของค่า sin/cos; การเปลี่ยนระหว่าง token ที่ติดกันควรเล็ก ไม่เช่นนั้นจะรบกวนความหมายใน embedding</li>
+</ul>
+
+<figure>
+<img src="../assets/slides/dl11-p33-sinusoidal-example.png" alt="Slide: Positional Embeddings (3). Example with three tokens at positions 0, 1, 2 and d_model = 4. Position 0: sin(0)=0, cos(0)=1, sin(0)=0, cos(0)=1 -&gt; [0, 1, 0, 1]. Position 1: sin(1)=0.8415, cos(1)=0.5403, sin(1/10000^0.5) approx 0.0001, cos approx 1 -&gt; [0.8415, 0.5403, 0.0001, 1]. Position 2: sin(2)=0.9093, cos(2)=-0.4161, sin(2/10000^0.5) approx 0.0002, cos approx 1 -&gt; [0.9093, -0.4161, 0.0002, 1]">
+<figcaption>Slide: Positional Embeddings (3) — ตัวอย่าง d_model = 4 (Lecture11, p.33)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: positional embedding ของตำแหน่ง 0, 1, 2 เมื่อ \(d_{model} = 4\)</div>
+<div class="given">ให้ มิติ 0, 1 ใช้ \(i = 0\) ⇒ ตัวหาร \(10000^{0/4} = 1\). มิติ 2, 3 ใช้ \(i = 1\) ⇒ ตัวหาร \(10000^{2/4} = 10000^{0.5} = 100\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — ตำแหน่ง 0</div>
+$$[\sin 0,\ \cos 0,\ \sin 0,\ \cos 0] = [0, 1, 0, 1]$$</li>
+<li><div class="st-title">ขั้นที่ 2 — ตำแหน่ง 1</div>
+$$[\sin 1,\ \cos 1,\ \sin(0.01),\ \cos(0.01)] = [0.8415, 0.5403, 0.0100, 0.99995]$$</li>
+<li><div class="st-title">ขั้นที่ 3 — ตำแหน่ง 2</div>
+$$[\sin 2,\ \cos 2,\ \sin(0.02),\ \cos(0.02)] = [0.9093, -0.4161, 0.0200, 0.9998]$$</li>
+</ol>
+<div class="answer"><p><strong>หมายเหตุสำคัญ:</strong> สไลด์เขียนตัวหารของมิติ 2 ถูกเป็น \(10000^{0.5}\) แต่พิมพ์ผลเป็น ≈ 0.0001 และ ≈ 0.0002. ค่าที่ถูกคือ \(\sin(1/100) = 0.0100\) และ \(\sin(2/100) = 0.0200\) (ค่า 0.0001 ตรงกับตัวหาร 10,000 ไม่ใช่ 100). ในข้อสอบที่ใช้ตัวเลขจากสไลด์ ให้จำ vector ที่สไลด์พิมพ์ [0.8415, 0.5403, 0.0001, 1] ไว้ด้วย. มิติ 0–1 (ความถี่สูง) เปลี่ยนเร็วระหว่างตำแหน่ง; มิติ 2–3 (ความถี่ต่ำ) เปลี่ยนช้ามาก.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p34-positional-plus-token.png" alt="Slide: Positional Embeddings (4). Position embeddings are added to the token embeddings. If the token at position 1 has embedding [0.5, 0.3, -0.6, 0.8], the combined input embedding is [0.5+0.8415, 0.3+0.5403, -0.6+0.0001, 0.8+1] approx [1.3415, 0.8403, -0.5999, 1.8]. A 2D word embedding plot with Wolf, Tiger, Dog, Cat">
+<figcaption>Slide: Positional Embeddings (4) — บวกกับ token embedding (Lecture11, p.34)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: input embedding ของ token ที่ตำแหน่ง 1</div>
+<div class="given">ให้ token embedding \([0.5, 0.3, -0.6, 0.8]\) และ positional embedding ของตำแหน่ง 1 ตามสไลด์ \([0.8415, 0.5403, 0.0001, 1]\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — บวกทีละมิติ</div>
+$$\begin{gathered}[0.5 + 0.8415,\ 0.3 + 0.5403,\ -0.6 + 0.0001,\ 0.8 + 1] \\ = [1.3415, 0.8403, -0.5999, 1.8]\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — ด้วยค่าที่ถูก (มิติ 2 = 0.0100)</div>
+$$\begin{gathered}-0.6 + 0.0100 = -0.5900 \\[0.35em] \Rightarrow\; [1.3415, 0.8403, -0.5900, 1.79995]\end{gathered}$$</li>
+</ol>
+<div class="answer"><p>ขนาดของ vector คงเดิม (4 มิติ) เพราะเป็นการ<strong>บวก</strong> ไม่ใช่การต่อ. คำเดียวกันที่ตำแหน่งต่างกันจะได้ input embedding ต่างกัน. รูปเวกเตอร์ Wolf/Tiger/Dog/Cat (จาก Lesson 10) แสดงว่า token embedding เข้ารหัสความหมาย ส่วน positional embedding เลื่อนแต่ละคำเล็กน้อยตามตำแหน่ง.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p35-positional-distance.png" alt="Slide: Positional Embeddings (5). Differences between positional embeddings of successive positions represent relative positions and distances. Euclidean distance: positions 0 and 1 approx 0.96; positions 1 and 2 approx 0.96; positions 0 and 2 approx 1.68. Observation: adjacent positions are closer and non-adjacent positions are further apart">
+<figcaption>Slide: Positional Embeddings (5) — ระยะห่างระหว่างตำแหน่ง (Lecture11, p.35)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามสไลด์: Euclidean distance ระหว่าง positional embedding</div>
+<div class="given">ให้ \(P_0 = [0, 1, 0, 1]\), \(P_1 = [0.8415, 0.5403, 0.0001, 1]\), \(P_2 = [0.9093, -0.4161, 0.0002, 1]\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — ตำแหน่ง 0 กับ 1</div>
+$$\begin{gathered}\sqrt{0.8415^2 + (-0.4597)^2 + 0.0001^2 + 0} \\[0.35em] = \sqrt{0.7081 + 0.2113} = \sqrt{0.9194} \approx 0.96\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — ตำแหน่ง 1 กับ 2</div>
+$$\begin{gathered}\sqrt{0.0678^2 + (-0.9564)^2 + 0.0001^2 + 0} \\[0.35em] = \sqrt{0.0046 + 0.9146} = \sqrt{0.9192} \approx 0.96\end{gathered}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — ตำแหน่ง 0 กับ 2</div>
+$$\begin{gathered}\sqrt{0.9093^2 + (-1.4161)^2 + 0.0002^2 + 0} \\[0.35em] = \sqrt{0.8268 + 2.0053} = \sqrt{2.8331} \approx 1.68\end{gathered}$$</li>
+</ol>
+<div class="answer"><p><strong>Observation:</strong> ตำแหน่งที่ติดกันอยู่ใกล้กัน (0.96) และตำแหน่งที่ห่างกันอยู่ไกลกว่า (1.68). ระยะของคู่ที่ติดกันเท่ากันทุกคู่ แปลว่าระยะขึ้นกับ<em>ระยะห่างสัมพัทธ์</em>ไม่ใช่ตำแหน่งสัมบูรณ์. ใช้ค่าที่ถูกของมิติ 2 แล้วระยะเปลี่ยนน้อยกว่า 0.001 ทุกคู่ ข้อสรุปจึงไม่เปลี่ยน.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p36-positional-encoding-code.png" alt="Slide: Positional Embeddings (6). Code: def positional_encoding(length, depth): depth = depth/2; positions = np.arange(length)[:, np.newaxis]; depths = np.arange(depth)[np.newaxis, :]/depth; angle_rates = 1 / (10000**depths); angle_rads = positions * angle_rates; pos_encoding[:, 0::2] = np.sin(angle_rads[:, 0::2]); pos_encoding[:, 1::2] = np.cos(angle_rads[:, 1::2]); return tf.convert_to_tensor(pos_encoding). pos_encoding = positional_encoding(length=2048, depth=512*2); shape (2048, 512); pcolormesh plot Depth vs Position">
+<figcaption>Slide: Positional Embeddings (6) — โค้ดและภาพ (Lecture11, p.36)</figcaption>
+</figure>
+
+<pre data-p="36"><code>def positional_encoding(length, depth):
+  depth = depth/2
+
+  positions = np.arange(length)[:, np.newaxis]     # (seq, 1)
+  depths = np.arange(depth)[np.newaxis, :]/depth   # (1, depth)
+
+  angle_rates = 1 / (10000**depths)         # (1, depth)
+  angle_rads = positions * angle_rates      # (pos, depth)
+
+  # Compute sine and cosine values directly
+  pos_encoding = np.zeros(angle_rads.shape, dtype=np.float32)
+  pos_encoding[:, 0::2] = np.sin(angle_rads[:, 0::2])  # Apply sine to even indices
+  pos_encoding[:, 1::2] = np.cos(angle_rads[:, 1::2])  # Apply cosine to odd indices
+
+  return tf.convert_to_tensor(pos_encoding)
+
+pos_encoding = positional_encoding(length=2048, depth=512*2)
+# Check the shape.
+print(pos_encoding.shape)
+# Plot the dimensions.
+plt.pcolormesh(pos_encoding.numpy().T, cmap='RdBu')
+plt.ylabel('Depth')
+plt.xlabel('Position')
+plt.colorbar()
+plt.show()</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>depth = depth/2</td><td>เรียก <code>depth=512*2</code> = 1,024 แล้วหารสอง ⇒ ตาราง 512 มิติ (ผล <code>(2048, 512)</code>)</td></tr>
+<tr><td>positions = np.arange(length)[:, np.newaxis]</td><td>ตำแหน่ง 0 ถึง 2,047 เป็นคอลัมน์ shape (2048, 1)</td></tr>
+<tr><td>depths = np.arange(depth)[np.newaxis, :]/depth</td><td>สัดส่วน \(k/512\) ของแต่ละมิติ shape (1, 512)</td></tr>
+<tr><td>angle_rates = 1 / (10000**depths)</td><td>ความถี่ของแต่ละมิติ: มิติ 0 = 1, มิติท้ายๆ ≈ 1/10000</td></tr>
+<tr><td>angle_rads = positions * angle_rates</td><td>broadcasting ได้มุม shape (2048, 512)</td></tr>
+<tr><td>pos_encoding[:, 0::2] = np.sin(...) / [:, 1::2] = np.cos(...)</td><td>คอลัมน์คู่ใช้ sin คอลัมน์คี่ใช้ cos ตามสูตร</td></tr>
+<tr><td>plt.pcolormesh(pos_encoding.numpy().T, cmap='RdBu')</td><td>วาดเป็นภาพ: แกนตั้ง = มิติ (Depth), แกนนอน = ตำแหน่ง</td></tr>
+</table>
+<p>ในภาพ มิติล่าง (ความถี่สูง) สลับแดง-น้ำเงินถี่มาก; มิติบน (ความถี่ต่ำ) แทบเป็นแถบสีเดียวตลอด 2,048 ตำแหน่ง. แต่ละตำแหน่ง (แต่ละคอลัมน์) จึงมีรูปแบบสีไม่ซ้ำกัน. หมายเหตุ: โค้ดนี้คำนวณมุมของทุก index แล้วเลือกคอลัมน์คู่/คี่ จึงใช้ความถี่ \(10000^{-k/512}\) ต่อ index \(k\) ซึ่งต่างจากสูตรของ paper เล็กน้อย (paper ให้คู่ \(2i, 2i+1\) ใช้ความถี่เดียวกัน) แต่หลักการเดียวกัน.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p37-sinusoidal-benefits.png" alt="Slide: Positional Embeddings (7). Benefits of sinusoidal positional embeddings: position invariance (sine and cosine vary gradually and are periodic so relative positions are easy to learn); fixed pattern (no training needed, simplifies the model and reduces overfitting); flexibility in length (generalize to sequences longer than in training)">
+<figcaption>Slide: Positional Embeddings (7) — สามข้อดี (Lecture11, p.37)</figcaption>
+</figure>
+
+<ul>
+<li><strong>Position Invariance:</strong> sin และ cos เปลี่ยนอย่างค่อยเป็นค่อยไปและเป็นคาบ จึงเข้ารหัสความสัมพันธ์เชิงตำแหน่งให้โมเดลเรียนตำแหน่งสัมพัทธ์ได้ง่าย (ระยะ 0.96 ของทุกคู่ที่ติดกัน)</li>
+<li><strong>Fixed Pattern:</strong> ไม่ต้องเทรน โมเดลจึงง่ายลงและลดความเสี่ยง overfitting</li>
+<li><strong>Flexibility in Length:</strong> ใช้กับลำดับที่ยาวกว่าตอนเทรนได้ เพราะเป็นฟังก์ชันคณิตศาสตร์ ไม่ใช่ parameter ที่เรียน</li>
+</ul>
+<p>เทียบกับ <code>PositionalEmbedding</code> ใน notebook ของผู้สอนซึ่งใช้ <code>Embedding(input_dim=sequence_length, output_dim=output_dim)</code> แบบเรียนได้: มี parameter \(20 \times 256 = 5{,}120\) ตัว และรับประโยคยาวเกิน 20 ไม่ได้ ซึ่งเป็นข้อเสียที่ข้อดีข้อ 2–3 ข้างบนแก้.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Positional encoding</span></div>
+  <div class="qtext">ใช้ sinusoidal positional encoding ที่ d_model = 4 ค่าของมิติที่ 2 (มิติคู่ตัวที่สอง ซึ่งใช้ตัวหาร 10000^(2/4)) ที่ตำแหน่ง pos = 4 คือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. 10000^(2/4) = 10000^0.5 = 100 จึงได้ sin(4/100) = sin(0.04) ≈ 0.040. มิติคู่ใช้ sin มิติคี่ใช้ cos. ค่า sin(4) คือมิติ 0 ที่ตัวหารเป็น 1.">sin(4) ≈ −0.757</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 10000^(2/4) = 10000^0.5 = 100 จึงได้ sin(4/100) = sin(0.04) ≈ 0.040. มิติคู่ใช้ sin มิติคี่ใช้ cos. ค่า sin(4) คือมิติ 0 ที่ตัวหารเป็น 1.">cos(0.04) ≈ 0.999</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 10000^(2/4) = 10000^0.5 = 100 จึงได้ sin(4/100) = sin(0.04) ≈ 0.040. มิติคู่ใช้ sin มิติคี่ใช้ cos. ค่า sin(4) คือมิติ 0 ที่ตัวหารเป็น 1.">sin(0.0004) ≈ 0.0004</button>
+    <button class="opt" data-correct="true" data-note="ถูก. 10000^(2/4) = 10000^0.5 = 100 จึงได้ sin(4/100) = sin(0.04) ≈ 0.040. มิติคู่ใช้ sin มิติคี่ใช้ cos. ค่า sin(4) คือมิติ 0 ที่ตัวหารเป็น 1.">sin(0.04) ≈ 0.040</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 11</span><span>Positional encoding</span></div>
+  <div class="qtext">Token embedding [0.2, −0.1, 0.4, 0.0] อยู่ที่ตำแหน่ง 0 ของประโยคและใช้ sinusoidal positional encoding ที่ d_model = 4 input embedding ที่ส่งเข้า encoder คือข้อใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Positional encoding ของตำแหน่ง 0 คือ [sin 0, cos 0, sin 0, cos 0] = [0, 1, 0, 1] และนำมาบวกทีละมิติ (ไม่ต่อกัน): [0.2, −0.1 + 1, 0.4, 0 + 1] = [0.2, 0.9, 0.4, 1.0].">[0.2, −1.1, 0.4, −1.0]</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Positional encoding ของตำแหน่ง 0 คือ [sin 0, cos 0, sin 0, cos 0] = [0, 1, 0, 1] และนำมาบวกทีละมิติ (ไม่ต่อกัน): [0.2, −0.1 + 1, 0.4, 0 + 1] = [0.2, 0.9, 0.4, 1.0].">[0.2, 0.9, 0.4, 1.0]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Positional encoding ของตำแหน่ง 0 คือ [sin 0, cos 0, sin 0, cos 0] = [0, 1, 0, 1] และนำมาบวกทีละมิติ (ไม่ต่อกัน): [0.2, −0.1 + 1, 0.4, 0 + 1] = [0.2, 0.9, 0.4, 1.0].">[1.2, −0.1, 1.4, 0.0]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Positional encoding ของตำแหน่ง 0 คือ [sin 0, cos 0, sin 0, cos 0] = [0, 1, 0, 1] และนำมาบวกทีละมิติ (ไม่ต่อกัน): [0.2, −0.1 + 1, 0.4, 0 + 1] = [0.2, 0.9, 0.4, 1.0].">[0.2, −0.1, 0.4, 0.0]</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Embedding = <mark class="src" data-p="31">input embeddings</mark> + <mark class="src" data-p="31">position embeddings</mark> (บวกกัน); ค่าใน [−1, 1] ด้วย <mark class="src" data-p="31">sinusoidal functions</mark></li>
+<li>มิติคู่ sin, มิติคี่ cos, ตัวหาร \(10000^{2i/d_{model}}\); ไม่มี parameter ให้เรียน</li>
+<li>ตัวอย่าง d_model = 4: ตำแหน่ง 0 = [0, 1, 0, 1]; ตำแหน่ง 1 = [0.8415, 0.5403, …, 1]; ระยะคู่ติดกัน ≈ 0.96, ห่างสอง ≈ 1.68</li>
+<li>ข้อดี: position invariance, fixed pattern, flexibility in length</li>
+</ul>
+</div>
+
+<h2 id="s10">10. Encoder และ Self-Attention</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p38-the-encoder.png" alt="Slide: The Encoder. Each encoder layer receives a sequence of embeddings and feeds them through a multi-head self-attention layer and a fully connected feed-forward layer applied to each input embedding. The encoder stack updates the input embeddings to produce representations encoding contextual information. Output embeddings of each encoder layer have the same size as the inputs. Diagram: Time flies like an arrow -&gt; token encodings, embeds, positional embeds, encoder stack, hidden states">
+<figcaption>Slide: The Encoder — สองชั้นย่อย (Lecture11, p.38)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="38">encoder</mark> layer แต่ละชั้นรับลำดับของ <mark class="src" data-p="38">embeddings</mark> แล้วส่งผ่านสองชั้นย่อย:</p>
+<ol>
+<li>multi-head self-attention layer</li>
+<li>fully connected feed-forward layer ที่ใช้กับ embedding แต่ละตัวแยกกัน (weight เดียวกันทุกตำแหน่ง)</li>
+</ol>
+<p>หน้าที่ของ encoder stack คือ "update" input embedding ให้เป็น representation ที่เข้ารหัส <mark class="src" data-p="38">contextual information</mark> ในลำดับ. <mark class="src" data-p="38">output</mark> embedding ของแต่ละ encoder layer มี <mark class="src" data-p="38">same size as the inputs</mark>: ประโยค 5 token ที่ \(d_{model} = 512\) เข้าเป็น (5, 512) ออกเป็น (5, 512) จึงซ้อนกี่ชั้นก็ได้.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p39-self-attention.png" alt="Slide: Self-attention. Transformer encoder uses self-attention to produce context-aware representations of each token. The self part refers to weights computed for all hidden states in the same set, e.g. all encoder outputs at a layer. By contrast attention in recurrent models computes relevance of each encoder output to the decoder state at a decoding step. Example: input the train left the station on time; scores for station: the 0.2, train 0.8, left 0.6, the 0.3, station 1.0, on 0.2, time 0.2; softmax, scaling and multiplication give weighted token vectors summed into a context-aware vector">
+<figcaption>Slide: Self-attention — ตัวอย่าง "station" (Lecture11, p.39)</figcaption>
+</figure>
+
+<p>Transformer encoder ใช้ self-attention สร้าง <mark class="src" data-p="39">context-aware representations</mark> ของ <mark class="src" data-p="39">each token</mark> ในลำดับ input. คำว่า "<mark class="src" data-p="39">self</mark>" หมายความว่า weight ถูกคำนวณระหว่าง <mark class="src" data-p="39">all hidden states in the same set</mark> เช่น output ทั้งหมดของ encoder ใน layer เดียวกัน. ต่างจาก attention ของ recurrent model (§7) ซึ่งคำนวณความเกี่ยวข้องของ encoder output แต่ละตัวกับ state ปัจจุบันของ decoder.</p>
+<p>ตัวอย่างในสไลด์: ประโยค "the train left the station on time". คะแนนของแถว "station" คือ the 0.2, train 0.8, left 0.6, the 0.3, station 1.0, on 0.2, time 0.2. หลัง softmax คำว่า "train" ได้น้ำหนักสูงรองจากตัวเอง vector ใหม่ของ "station" จึงมีความหมายของ "train station" (สถานีรถไฟ) ไม่ใช่ "radio station" หรือ "police station".</p>
+
+<figure>
+<img src="../assets/slides/dl11-p40-self-attention-computation.png" alt="Slide: Self-attention Computation. (1) compute attention scores between the vector for station and every other word using the dot product, then scaling and softmax. (2) compute the sum of all word vectors weighted by the attention scores; the result is the new representation for station incorporating context. Pseudocode def self_attention(input_sequence) with nested loops using np.dot, scaling by np.sqrt(input_sequence.shape[1]) and softmax. Keras: num_heads = 4; embed_dim = 256; mha_layer = MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim); outputs = mha_layer(inputs, inputs, inputs)">
+<figcaption>Slide: Self-attention Computation — pseudocode (Lecture11, p.40)</figcaption>
+</figure>
+
+<ol>
+<li>คำนวณ <mark class="src" data-p="40">attention scores</mark> ระหว่าง vector ของ "station" กับทุกคำในประโยค โดยใช้ <mark class="src" data-p="40">dot product</mark> ระหว่างสอง word vector เป็นตัววัดความสัมพันธ์ แล้วผ่าน <mark class="src" data-p="40">scaling function</mark> และ <mark class="src" data-p="40">softmax</mark></li>
+<li>คำนวณ <mark class="src" data-p="40">sum of all word vectors in the sentence</mark> ถ่วงน้ำหนักด้วย attention score. ผลคือ representation ใหม่ของ "station" ที่รวมบริบทรอบข้าง</li>
+</ol>
+
+<pre data-p="40"><code>def self_attention(input_sequence):
+    output = np.zeros(shape=input_sequence.shape)
+    # Iterate over each token in the input sequence.
+    for i, pivot_vector in enumerate(input_sequence):
+        scores = np.zeros(shape=(len(input_sequence),))
+        for j, vector in enumerate(input_sequence):
+            # Compute the dot product (attention score)
+            # between the token and every other token
+            scores[j] = np.dot(pivot_vector, vector.T)
+        # Scale by a normalization factor, and apply a softmax.
+        scores /= np.sqrt(input_sequence.shape[1])
+        scores = softmax(scores)
+        new_pivot_representation = np.zeros(shape=pivot_vector.shape)
+        for j, vector in enumerate(input_sequence):
+            # Take the sum of all tokens weighted by the attention scores.
+            new_pivot_representation += vector * scores[j]
+        output[i] = new_pivot_representation # That sum is the output.
+    return output
+
+# Keras built-in layer to handle it:
+num_heads = 4
+embed_dim = 256
+mha_layer = MultiHeadAttention(num_heads=num_heads, key_dim=embed_dim)
+outputs = mha_layer(inputs, inputs, inputs)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>for i, pivot_vector in enumerate(input_sequence)</td><td>วนทีละ token ที่จะสร้าง representation ใหม่ (pivot)</td></tr>
+<tr><td>scores[j] = np.dot(pivot_vector, vector.T)</td><td>คะแนนของ token j = dot product กับ pivot</td></tr>
+<tr><td>scores /= np.sqrt(input_sequence.shape[1])</td><td>หารด้วย \(\sqrt{d}\) (d = มิติของ vector) เพื่อไม่ให้คะแนนใหญ่เกินจน softmax อิ่มตัว</td></tr>
+<tr><td>scores = softmax(scores)</td><td>แปลงเป็นน้ำหนักที่รวมเป็น 1</td></tr>
+<tr><td>new_pivot_representation += vector * scores[j]</td><td>ผลรวมถ่วงน้ำหนักของทุก token</td></tr>
+<tr><td>MultiHeadAttention(num_heads=4, key_dim=256)</td><td>layer สำเร็จรูปของ Keras (§11)</td></tr>
+<tr><td>mha_layer(inputs, inputs, inputs)</td><td>ส่ง query, value, key เป็นลำดับเดียวกันทั้งสาม = self-attention</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: self-attention ของ token แรกในลำดับ 3 token</div>
+<div class="given">ให้ \(v_1 = [1, 0]\), \(v_2 = [0, 1]\), \(v_3 = [1, 1]\) (d = 2) คำนวณ representation ใหม่ของ \(v_1\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Dot product กับทุก token</div>
+$$v_1 \cdot v_1 = 1 \qquad v_1 \cdot v_2 = 0 \qquad v_1 \cdot v_3 = 1$$</li>
+<li><div class="st-title">ขั้นที่ 2 — หารด้วย \(\sqrt{2} = 1.414\)</div>
+$$[0.707,\ 0,\ 0.707]$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Softmax: \(e^{0.707} = 2.028\)</div>
+$$\frac{[2.028, 1, 2.028]}{5.056} = [0.401, 0.198, 0.401]$$</li>
+<li><div class="st-title">ขั้นที่ 4 — ผลรวมถ่วงน้ำหนัก</div>
+$$0.401[1, 0] + 0.198[0, 1] + 0.401[1, 1] = [0.802, 0.599]$$</li>
+</ol>
+<div class="answer"><p>\(v_1\) ใหม่ = [0.802, 0.599]: ยังคล้ายตัวเดิม [1, 0] แต่ถูกดึงเข้าหา \(v_3\) ซึ่งคล้ายกัน. ขนาด output (2 มิติ) เท่า input ตามข้อความหน้า 38.</p></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Encoder layer = multi-head self-attention + feed-forward; สร้าง <mark class="src" data-p="38">contextual information</mark>; <mark class="src" data-p="38">output</mark> มี <mark class="src" data-p="38">same size as the inputs</mark></li>
+<li>Self-attention สร้าง <mark class="src" data-p="39">context-aware representations</mark> ของ <mark class="src" data-p="39">each token</mark>; "<mark class="src" data-p="39">self</mark>" = คำนวณใน <mark class="src" data-p="39">all hidden states in the same set</mark></li>
+<li>สองขั้น: <mark class="src" data-p="40">attention scores</mark> ด้วย <mark class="src" data-p="40">dot product</mark> → <mark class="src" data-p="40">scaling function</mark> → <mark class="src" data-p="40">softmax</mark>; แล้ว <mark class="src" data-p="40">sum of all word vectors in the sentence</mark> ถ่วงน้ำหนัก</li>
+</ul>
+</div>
+
+<h2 id="s11">11. Query–Key–Value, Scaled Dot-Product และ Multi-Head Attention</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p41-query-key-value.png" alt="Slide: The Query-Key-Value Model. outputs = sum(inputs * pairwise_scores(inputs, inputs)) with C, A, B: for each token in inputs A compute relation to every token in inputs B and use scores to weight a sum of tokens from inputs C. outputs = sum(values * pairwise_scores(query, keys)). In machine translation: self attention in the encoder uses the source sequence as query, keys and values; cross attention in the decoder uses the target sequence as query and the source sequence as keys and values. Image retrieval analogy: query dogs on the beach matched against keys Beach/Tree/Boat 0.5, Beach/Dog/Tree 1.0, Dog 0.5 to rank values (images)">
+<figcaption>Slide: The Query-Key-Value Model — การค้นรูปจากฐานข้อมูล (Lecture11, p.41)</figcaption>
+</figure>
+
+<p>Self-attention เขียนเป็นรูปทั่วไปได้:</p>
+<pre data-p="41"><code>outputs = sum(inputs * pairwise_scores(inputs, inputs))
+#             C                        A       B
+outputs = sum(values * pairwise_scores(query, keys))</code></pre>
+<p class="plain-thai">สำหรับแต่ละ token ใน A คำนวณความสัมพันธ์กับทุก token ใน B แล้วใช้คะแนนถ่วงผลรวมของ token จาก C</p>
+<p>ตั้งชื่อใหม่: A = <strong>query</strong>, B = <strong>keys</strong>, C = <strong>values</strong>. อุปมาในสไลด์: ค้นรูปด้วย query "dogs on the beach" เทียบกับ keys (ป้ายกำกับของแต่ละรูป): {Beach, Tree, Boat} match 0.5, {Beach, Dog, Tree} match 1.0, {Dog} match 0.5 แล้วใช้คะแนนจัดอันดับ values (ตัวรูป).</p>
+<table class="compact">
+<tr><th>ใน machine translation</th><th>query</th><th>keys</th><th>values</th></tr>
+<tr><td>self attention ใน encoder</td><td>source sequence</td><td>source sequence</td><td>source sequence</td></tr>
+<tr><td>cross attention ใน decoder</td><td>target sequence</td><td>source sequence</td><td>source sequence</td></tr>
+</table>
+<p>ข้อความตามสไลด์: ใน self attention ของ encoder <mark class="src" data-p="41">source sequence</mark> เล่นทั้งบทบาท <mark class="src" data-p="41">query</mark>, <mark class="src" data-p="41">keys</mark> และ <mark class="src" data-p="41">values</mark>; ใน cross attention ของ decoder <mark class="src" data-p="41">query</mark> คือ <mark class="src" data-p="41">target sequence</mark> และ <mark class="src" data-p="41">source sequence</mark> เล่นทั้ง <mark class="src" data-p="41">keys</mark> และ <mark class="src" data-p="41">values</mark>.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p42-scaled-dot-product.png" alt="Slide: Generalized Self-attention Computation. Project each token embedding into query, key, value. Compute attention scores: how much query and key relate using a similarity function (matrix multiplication); share much in common -&gt; high score. Compute attention weights. Update token embeddings. Diagram: Q, K -&gt; matrix multiplication -&gt; scale -&gt; mask (optional) -&gt; softmax -&gt; matrix multiplication with V">
+<figcaption>Slide: Generalized Self-attention Computation — scaled dot-product attention (Lecture11, p.42)</figcaption>
+</figure>
+
+<ol>
+<li>Project token embedding แต่ละตัวเป็นสาม vector: query, key, value (คูณด้วย weight matrix \(W^Q, W^K, W^V\) ที่เรียนได้)</li>
+<li>คำนวณ attention scores: query กับ key สัมพันธ์กันแค่ไหน ด้วย similarity function (การคูณ matrix); embedding ที่มีส่วนร่วมกันมากได้คะแนนสูง</li>
+<li>คำนวณ attention weights (scale → mask (optional) → softmax)</li>
+<li>Update token embedding ด้วยการคูณ weight กับ value</li>
+</ol>
+$$\text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^{T}}{\sqrt{d_k}}\right) V$$
+
+<div class="calc">
+<div class="calc-title">คำนวณ: scaled dot-product attention ของ query หนึ่งตัว</div>
+<div class="given">ให้ \(d_k = 4\), query \(q = [1, 0, 1, 0]\), keys \(k_1 = [1, 1, 1, 1]\), \(k_2 = [0, 1, 0, 1]\), values \(v_1 = [10, 0]\), \(v_2 = [0, 10]\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Matrix multiplication: \(q \cdot k_j\)</div>
+$$q \cdot k_1 = 2 \qquad q \cdot k_2 = 0$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Scale: หารด้วย \(\sqrt{4} = 2\)</div>
+$$[1, 0]$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Softmax</div>
+$$\frac{[e^1, e^0]}{e + 1} = \frac{[2.718, 1]}{3.718} = [0.731, 0.269]$$</li>
+<li><div class="st-title">ขั้นที่ 4 — Matrix multiplication กับ V</div>
+$$0.731[10, 0] + 0.269[0, 10] = [7.31, 2.69]$$</li>
+</ol>
+<div class="answer"><p>ถ้าไม่ scale คะแนน [2, 0] ให้ softmax [0.881, 0.119] ซึ่งแหลมกว่า. เมื่อ \(d_k\) ใหญ่ (เช่น 64) dot product มีค่าใหญ่ตาม การหารด้วย \(\sqrt{d_k}\) จึงกัน softmax ไม่ให้อิ่มตัวจน gradient หาย (<a href="0005-vanishing-gradients-and-initialization.html">Lesson 5</a>). ขั้น mask (optional) ใช้ใน decoder (§12).</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p43-multi-head-attention.png" alt="Slide: Multi-headed attention. Multi-head attention is an extra tweak to self-attention: the self-attention layer applies three independent linear transformations to each embedding to generate query, key and value vectors (each an attention head); each projection has its own learnable parameters, allowing focus on different semantic aspects of the sequence. Diagram: two attention heads each with Dense layers for query, key, value, outputs concatenated">
+<figcaption>Slide: Multi-headed attention — หลาย head ต่อกัน (Lecture11, p.43)</figcaption>
+</figure>
+
+<p>"<mark class="src" data-p="43">• Multi-head attention</mark>" เป็นการปรับเพิ่มของ self-attention: layer ใช้ linear transformation สามตัว (Dense) สร้าง query, key, value และทำซ้ำหลายชุดอิสระกัน แต่ละชุดคือ <strong>attention head</strong> หนึ่งตัว. แต่ละ projection มี parameter ของตัวเอง layer จึงโฟกัสได้หลาย <mark class="src" data-p="43">different semantic aspects of the sequence</mark> (เช่น head หนึ่งดูความสัมพันธ์ประธาน–กริยา อีก head ดูคำที่อยู่ติดกัน). Output ของทุก head ถูก Concatenate.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: ขนาดของแต่ละ head และ parameter ของ projection</div>
+<div class="given">ให้ \(d_{model} = 768\), 12 heads (ค่าของ BERT/DistilBERT ใน Lesson 12)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — มิติต่อ head</div>
+$$768 / 12 = 64$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Projection Q, K, V แต่ละตัวเป็น matrix 768 × 768 (12 head × 64)</div>
+$$3 \times (768 \times 768 + 768) = 1{,}771{,}776$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Output projection หลัง concatenate (768 → 768)</div>
+$$768 \times 768 + 768 = 590{,}592$$</li>
+<li><div class="st-title">ขั้นที่ 4 — รวมต่อ attention layer</div>
+$$1{,}771{,}776 + 590{,}592 = 2{,}362{,}368$$</li>
+</ol>
+<div class="answer"><p>12 head × 64 มิติ = 768 เท่าขนาด input จึงใช้ parameter เท่ากับ single head ขนาด 768 แต่ได้ 12 มุมมอง. หมายเหตุ: ใน <code>MultiHeadAttention(num_heads=4, key_dim=256)</code> ของ Keras <code>key_dim</code> คือขนาด<strong>ต่อ head</strong> (4 × 256 = 1,024) ไม่ใช่ขนาดรวม.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl11-p44-encoder-model.png" alt="Slide: Put It Together into an Encoder Model. Add MultiHeadAttention to factor outputs into multiple independent spaces; add residual connections so we don&#x27;t destroy valuable information; add normalization layers to help gradients flow; add two dense projections to the output of attention. Diagram: inputs -&gt; MultiHeadAttention -&gt; add residual -&gt; LayerNormalization -&gt; Dense -&gt; Dense -&gt; add residual -&gt; LayerNormalization">
+<figcaption>Slide: Put It Together into an Encoder Model — residual + LayerNorm (Lecture11, p.44)</figcaption>
+</figure>
+
+<p>ประกอบเป็น encoder model หนึ่งชั้น:</p>
+<ol>
+<li>เพิ่ม <code>MultiHeadAttention</code> เพื่อแยก output เป็นหลาย space อิสระ</li>
+<li>เพิ่ม <strong>residual connections</strong> เพื่อไม่ให้ข้อมูลที่มีค่าถูกทำลายระหว่างทาง (เหมือน ResNet ใน <a href="0008-cnn-architectures-and-transfer-learning.html#s6">Lesson 8 §6</a>)</li>
+<li>เพิ่ม <strong>normalization layers</strong> (LayerNormalization, <a href="0005-vanishing-gradients-and-initialization.html#s4">Lesson 5 §4</a>) ให้ gradient ไหลดีขึ้นระหว่าง backpropagation</li>
+<li>เพิ่ม dense projection สองชั้นต่อจาก output ของ attention</li>
+</ol>
+$$\begin{gathered}h = \text{LayerNorm}(x + \text{MHA}(x)) \\[0.35em] \text{out} = \text{LayerNorm}(h + \text{Dense}_2(\text{Dense}_1(h)))\end{gathered}$$
+<p>ใน notebook ของผู้สอน: <code>embed_dim = 256</code>, <code>dense_dim = 2048</code>, <code>num_heads = 8</code>; Dense ชั้นแรกขยายเป็น 2,048 มิติด้วย ReLU และ Dense ชั้นที่สองคืนเป็น 256 เพื่อให้บวก residual ได้. Feed-forward นี้มี parameter \((256 \times 2048 + 2048) + (2048 \times 256 + 256) = 1{,}050{,}880\).</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 12</span><span>Scaled dot-product</span></div>
+  <div class="qtext">Query q = [2, 0] และ keys k₁ = [1, 0], k₂ = [0, 1] (d_k = 2) ใช้ scaled dot-product attention ข้อใดคือคะแนนหลังการ scale ก่อนเข้า softmax?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Dot product: q·k₁ = 2, q·k₂ = 0. Scale ด้วย √d_k = √2: [2/√2, 0] = [√2, 0] ≈ [1.414, 0]. ค่า [1, 0] คือหารด้วย d_k แทน √d_k, ค่า [2, 0] คือยังไม่ scale.">[2, 0]</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Dot product: q·k₁ = 2, q·k₂ = 0. Scale ด้วย √d_k = √2: [2/√2, 0] = [√2, 0] ≈ [1.414, 0]. ค่า [1, 0] คือหารด้วย d_k แทน √d_k, ค่า [2, 0] คือยังไม่ scale.">[√2, 0]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Dot product: q·k₁ = 2, q·k₂ = 0. Scale ด้วย √d_k = √2: [2/√2, 0] = [√2, 0] ≈ [1.414, 0]. ค่า [1, 0] คือหารด้วย d_k แทน √d_k, ค่า [2, 0] คือยังไม่ scale.">[1, 0]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Dot product: q·k₁ = 2, q·k₂ = 0. Scale ด้วย √d_k = √2: [2/√2, 0] = [√2, 0] ≈ [1.414, 0]. ค่า [1, 0] คือหารด้วย d_k แทน √d_k, ค่า [2, 0] คือยังไม่ scale.">[4, 0]</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 13</span><span>Query Key Value</span></div>
+  <div class="qtext">ใน cross attention ของ Transformer decoder ที่แปลอังกฤษเป็นสเปน ข้อใดจับคู่บทบาทได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Cross attention ให้ target sequence (สเปนที่ decoder กำลังสร้าง) เป็น query และ source sequence (อังกฤษที่ encoder เข้ารหัส) เป็นทั้ง key และ value. ถ้าทั้งสามมาจากลำดับเดียวกันคือ self-attention.">query มาจากประโยคอังกฤษ ส่วน key และ value มาจากประโยคสเปน</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Cross attention ให้ target sequence (สเปนที่ decoder กำลังสร้าง) เป็น query และ source sequence (อังกฤษที่ encoder เข้ารหัส) เป็นทั้ง key และ value. ถ้าทั้งสามมาจากลำดับเดียวกันคือ self-attention.">query, key และ value มาจากประโยคสเปนทั้งหมด</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Cross attention ให้ target sequence (สเปนที่ decoder กำลังสร้าง) เป็น query และ source sequence (อังกฤษที่ encoder เข้ารหัส) เป็นทั้ง key และ value. ถ้าทั้งสามมาจากลำดับเดียวกันคือ self-attention.">query มาจากประโยคสเปน ส่วน key และ value มาจากประโยคอังกฤษ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Cross attention ให้ target sequence (สเปนที่ decoder กำลังสร้าง) เป็น query และ source sequence (อังกฤษที่ encoder เข้ารหัส) เป็นทั้ง key และ value. ถ้าทั้งสามมาจากลำดับเดียวกันคือ self-attention.">query และ key มาจากประโยคสเปน ส่วน value มาจากประโยคอังกฤษ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 14</span><span>Multi-head attention</span></div>
+  <div class="qtext">Transformer มี d_model = 512 และใช้ multi-head attention 8 heads โดยแบ่งมิติเท่ากัน ข้อใดถูกต้องเกี่ยวกับมิติของแต่ละ head และขนาด output ของ layer?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. 512/8 = 64 มิติต่อ head. Output ของ 8 head ถูกต่อกันได้ 8 × 64 = 512 แล้วผ่าน output projection จึงยาวเท่า input ทำให้ encoder layer ซ้อนกันได้.">head ละ 512 มิติ และ output ต่อ token ยาว 4,096</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 512/8 = 64 มิติต่อ head. Output ของ 8 head ถูกต่อกันได้ 8 × 64 = 512 แล้วผ่าน output projection จึงยาวเท่า input ทำให้ encoder layer ซ้อนกันได้.">head ละ 8 มิติ และ output ต่อ token ยาว 64</button>
+    <button class="opt" data-correct="false" data-note="ผิด. 512/8 = 64 มิติต่อ head. Output ของ 8 head ถูกต่อกันได้ 8 × 64 = 512 แล้วผ่าน output projection จึงยาวเท่า input ทำให้ encoder layer ซ้อนกันได้.">head ละ 64 มิติ และ output ต่อ token ยาว 64</button>
+    <button class="opt" data-correct="true" data-note="ถูก. 512/8 = 64 มิติต่อ head. Output ของ 8 head ถูกต่อกันได้ 8 × 64 = 512 แล้วผ่าน output projection จึงยาวเท่า input ทำให้ encoder layer ซ้อนกันได้.">head ละ 64 มิติ และ output ต่อ token ยาว 512</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>QKV: encoder self attention ใช้ <mark class="src" data-p="41">source sequence</mark> เป็น <mark class="src" data-p="41">query</mark>, <mark class="src" data-p="41">keys</mark>, <mark class="src" data-p="41">values</mark>; decoder cross attention ใช้ <mark class="src" data-p="41">target sequence</mark> เป็น <mark class="src" data-p="41">query</mark> และ <mark class="src" data-p="41">source sequence</mark> เป็น <mark class="src" data-p="41">keys</mark> กับ <mark class="src" data-p="41">values</mark></li>
+<li>ลำดับใน scaled dot-product: MatMul(Q, K) → Scale → Mask (optional) → Softmax → MatMul(V)</li>
+<li><mark class="src" data-p="43">• Multi-head attention</mark>: Q, K, V projection หลายชุด ⇒ <mark class="src" data-p="43">different semantic aspects of the sequence</mark></li>
+<li>Encoder block: MHA → residual + LayerNorm → Dense → Dense → residual + LayerNorm</li>
+</ul>
+</div>
+
+<h2 id="s12">12. Decoder และชนิดของ Transformer</h2>
+
+<figure>
+<img src="../assets/slides/dl11-p45-the-decoder.png" alt="Slide: The Decoder. Like the RNN decoder, it reads tokens 0...N of the target and predicts token N+1. The decoder has 2 attention sublayers: cross attention layer (identify which tokens of the encoded source are most related to the target token being predicted) and masked (causal) self-attention layer (tokens at each timestep based only on past outputs and the current token; without it the decoder could cheat by copying target translations). Diagrams: cross attention layer, causal self attention layer with triangular attention weights, end-to-end Transformer with TransformerEncoder and TransformerDecoder, target offset by one step">
+<figcaption>Slide: The Decoder — cross attention และ causal mask (Lecture11, p.45)</figcaption>
+</figure>
+
+<p>เหมือน RNN decoder: decoder อ่าน token 0…N ของประโยคปลายทางแล้วทำนาย token N+1. ความต่างหลักจาก encoder คือ decoder มี attention สองชั้นย่อย:</p>
+<ul>
+<li><mark class="src" data-p="45">• Cross attention layer</mark>: ใช้ attention ระบุว่า token ใดในประโยคต้นทางที่เข้ารหัสแล้วสัมพันธ์มากที่สุดกับ token ปลายทางที่กำลังทำนาย (query = target, key/value = encoder output)</li>
+<li><mark class="src" data-p="45">• Masked (Causal) self-attention layer</mark>: ทำให้ token ที่สร้างในแต่ละ step อิงเฉพาะ output ในอดีตและ token ปัจจุบัน. ถ้าไม่มี decoder จะ "โกง" ตอนเทรนด้วยการ copy คำแปลจาก target ได้ (ตอนเทรน decoder เห็น target ทั้งประโยคพร้อมกัน). mask ทำให้โจทย์ไม่ง่ายเกินจริง และ mask ถูกส่งต่อไปยัง layer บน</li>
+</ul>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: causal mask ของลำดับ 4 token</div>
+<div class="given">ให้ decoder input [start], สวัสดี, คุณ, ผู้ (ตำแหน่ง 1–4). mask = 1 คือมองเห็นได้</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — แถว i มองเห็นคอลัมน์ j เมื่อ \(j \le i\)</div>
+$$M = \begin{bmatrix} 1 &amp; 0 &amp; 0 &amp; 0\\ 1 &amp; 1 &amp; 0 &amp; 0\\ 1 &amp; 1 &amp; 1 &amp; 0\\ 1 &amp; 1 &amp; 1 &amp; 1 \end{bmatrix}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — นำไปใช้ก่อน softmax: ตำแหน่งที่ mask = 0 ถูกแทนคะแนนด้วย \(-\infty\)</div>
+$$e^{-\infty} = 0 \;\Rightarrow\; \text{weight} = 0$$</li>
+<li><div class="st-title">ขั้นที่ 3 — จำนวนคู่ที่มองเห็นได้</div>
+$$1 + 2 + 3 + 4 = 10 \text{ จาก } 16$$</li>
+</ol>
+<div class="answer"><p>แถวที่ 2 ("สวัสดี") ทำนาย "คุณ" โดยเห็นเพียง [start] กับ สวัสดี. รูปสามเหลี่ยมนี้คือ "The causal self attention layer" ในสไลด์. ทุกตำแหน่งยังคำนวณพร้อมกันได้ตอนเทรน (parallel) แต่ไม่มีตำแหน่งใดเห็นอนาคต.</p></div>
+</div>
+
+<p>ใน end-to-end architecture ของสไลด์: TransformerEncoder (MHA → Add &amp; LayerNorm → Dense → Dense → Add &amp; LayerNorm) รับ Source; TransformerDecoder มี MultiHeadAttention สองตัว: ตัวล่างเป็น causal self-attention บน Target และตัวกลางรับ "Encoded source" เป็น key/value. ป้ายด้านบนเขียนว่า "Target offset by one step" ซึ่งคือการเหลื่อม input/target ของ §3. ในโค้ดของผู้สอน: <code>x = TransformerDecoder(embed_dim, dense_dim, num_heads)(x, encoder_outputs)</code>.</p>
+
+<figure>
+<img src="../assets/slides/dl11-p46-transformer-model-types.png" alt="Slide: Different Transformer Models. Encoder-only: convert input text into rich numerical representation for tasks like text classification; BERT, RoBERTa, DistilBERT. Decoder-only: auto-complete the sequence by iteratively predicting the most probable next word; GPT family; text generation. Encoder-decoder: model complex mappings from one sequence to another; machine translation and summarization; the Transformer, BART and T5">
+<figcaption>Slide: Different Transformer Models — สามชนิด (Lecture11, p.46)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>ชนิด</th><th>ทำอะไร (ตามสไลด์)</th><th>ตัวอย่างโมเดล</th><th>งานที่เหมาะ</th></tr>
+<tr><td><mark class="src" data-p="46">• Encoder-Only</mark></td><td>แปลงข้อความเป็น representation เชิงตัวเลขที่สมบูรณ์</td><td>BERT, RoBERTa, DistilBERT</td><td>text classification</td></tr>
+<tr><td><mark class="src" data-p="46">• Decoder-Only</mark></td><td>เติมลำดับให้สมบูรณ์ด้วยการทำนายคำถัดไปที่น่าจะเป็นที่สุดซ้ำๆ</td><td>GPT family</td><td>text generation</td></tr>
+<tr><td><mark class="src" data-p="46">• Encoder-decoder</mark></td><td>จำลอง mapping ซับซ้อนจากลำดับข้อความหนึ่งไปอีกลำดับ</td><td>Transformer ดั้งเดิม, BART, T5</td><td>machine translation, summarization</td></tr>
+</table>
+<p>เชื่อมกับบทนี้: language model ของ §1 คือแนวคิดของ decoder-only; โมเดลแปลของ §3–4 คือ encoder-decoder; Lesson 12 ใช้ DistilBERT (encoder-only) จำแนกอารมณ์. Decoder-only ไม่มี encoder จึงไม่มี cross attention เหลือเพียง causal self-attention. ดูโมเดล pretrained เพิ่มเติมได้ที่ <a href="https://huggingface.co/docs/transformers/main/en/index" target="_blank" rel="noopener">Hugging Face Transformers</a>.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 15</span><span>Causal mask</span></div>
+  <div class="qtext">Decoder ของ Transformer รับลำดับ 5 token และใช้ causal self-attention เมื่อคำนวณ representation ของ token ที่ 3 จะใช้ attention weight ที่ไม่เป็นศูนย์กับ token ใดบ้าง?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Causal mask ให้ตำแหน่ง i มองเห็นเฉพาะตำแหน่ง j ≤ i ตำแหน่ง 3 จึงเห็น token 1, 2, 3. ตำแหน่ง 4 และ 5 ถูกแทนคะแนนด้วย −∞ ก่อน softmax ได้น้ำหนัก 0 เพื่อไม่ให้ decoder เห็นคำตอบในอนาคต.">token ที่ 1, 2 และ 3</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Causal mask ให้ตำแหน่ง i มองเห็นเฉพาะตำแหน่ง j ≤ i ตำแหน่ง 3 จึงเห็น token 1, 2, 3. ตำแหน่ง 4 และ 5 ถูกแทนคะแนนด้วย −∞ ก่อน softmax ได้น้ำหนัก 0 เพื่อไม่ให้ decoder เห็นคำตอบในอนาคต.">token ที่ 3 ตัวเดียว</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Causal mask ให้ตำแหน่ง i มองเห็นเฉพาะตำแหน่ง j ≤ i ตำแหน่ง 3 จึงเห็น token 1, 2, 3. ตำแหน่ง 4 และ 5 ถูกแทนคะแนนด้วย −∞ ก่อน softmax ได้น้ำหนัก 0 เพื่อไม่ให้ decoder เห็นคำตอบในอนาคต.">token ที่ 3, 4 และ 5</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Causal mask ให้ตำแหน่ง i มองเห็นเฉพาะตำแหน่ง j ≤ i ตำแหน่ง 3 จึงเห็น token 1, 2, 3. ตำแหน่ง 4 และ 5 ถูกแทนคะแนนด้วย −∞ ก่อน softmax ได้น้ำหนัก 0 เพื่อไม่ให้ decoder เห็นคำตอบในอนาคต.">token ทั้ง 5 ตัว</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 16</span><span>Transformer types</span></div>
+  <div class="qtext">งานใดเหมาะกับ Transformer แบบ encoder-only มากที่สุด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Encoder-only (เช่น BERT, DistilBERT) แปลงข้อความเป็น representation เชิงตัวเลขที่เหมาะกับ classification. การสร้างข้อความต่อเหมาะกับ decoder-only (GPT) ส่วนการแปลและสรุปความเหมาะกับ encoder-decoder (T5, BART).">สร้างเรื่องสั้นต่อจากประโยคเริ่มต้นที่ผู้ใช้พิมพ์</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Encoder-only (เช่น BERT, DistilBERT) แปลงข้อความเป็น representation เชิงตัวเลขที่เหมาะกับ classification. การสร้างข้อความต่อเหมาะกับ decoder-only (GPT) ส่วนการแปลและสรุปความเหมาะกับ encoder-decoder (T5, BART).">แปลประโยคภาษาอังกฤษเป็นภาษาสเปนแบบทั้งประโยค</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Encoder-only (เช่น BERT, DistilBERT) แปลงข้อความเป็น representation เชิงตัวเลขที่เหมาะกับ classification. การสร้างข้อความต่อเหมาะกับ decoder-only (GPT) ส่วนการแปลและสรุปความเหมาะกับ encoder-decoder (T5, BART).">จำแนกรีวิวสินค้าว่าเป็นเชิงบวกหรือเชิงลบจากข้อความทั้งหมด</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Encoder-only (เช่น BERT, DistilBERT) แปลงข้อความเป็น representation เชิงตัวเลขที่เหมาะกับ classification. การสร้างข้อความต่อเหมาะกับ decoder-only (GPT) ส่วนการแปลและสรุปความเหมาะกับ encoder-decoder (T5, BART).">สรุปบทความยาวให้เหลือย่อหน้าเดียวที่ครอบคลุมใจความ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
+<ul>
+<li>Decoder มี attention สองชั้นย่อย: <mark class="src" data-p="45">• Cross attention layer</mark> และ <mark class="src" data-p="45">• Masked (Causal) self-attention layer</mark>; mask กัน decoder copy target ตอนเทรน</li>
+<li><mark class="src" data-p="46">• Encoder-Only</mark> (BERT, RoBERTa, DistilBERT; classification); <mark class="src" data-p="46">• Decoder-Only</mark> (GPT; generation); <mark class="src" data-p="46">• Encoder-decoder</mark> (Transformer, BART, T5; translation, summarization)</li>
+</ul>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควร (1) อธิบาย language model และสร้างคู่ input/target ด้วยการเลื่อน 1 ตำแหน่ง; (2) คำนวณ softmax temperature (\(p^{1/T}\) แล้ว normalize) และบอกผลของ T ต่ำ/สูง; (3) แยก training (teacher forcing) กับ inference ของ encoder–decoder และอ่านโค้ด NMT ได้ทุกบรรทัด พร้อมคำนวณ 34,869,912 parameter; (4) คำนวณ BLEU (n-gram precision, brevity penalty) และต้นทุนของ beam search; (5) คำนวณ attention weight และ context vector; (6) คำนวณ sinusoidal positional encoding (และรู้จุดที่สไลด์พิมพ์ 0.0001 แทน 0.0100) และระยะ 0.96/1.68; (7) คำนวณ scaled dot-product attention, จับคู่บทบาท Q/K/V ของ self กับ cross attention และมิติของ multi-head; (8) วาด causal mask และจับคู่ encoder-only/decoder-only/encoder-decoder กับงาน.
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน deep_learning_part4_2.pdf (46 หน้า) — เช็คว่าอ่านครบ</h2>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>ปก Part4: Different Types of RNN &amp; Transformer</td><td>etc — สไลด์ปก (ชื่อหัวข้อ, ภาคเรียน, เวลาเรียน) ไม่มีเนื้อหาวิชา</td></tr>
+<tr><td>2</td><td>AGENDA</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + สามส่วน)</td></tr>
+<tr><td>3</td><td>Text Generation — training time</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + คำนวณ input/target)</td></tr>
+<tr><td>4</td><td>Inference Time</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป)</td></tr>
+<tr><td>5</td><td>Sampling Strategies — greedy</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + คำนวณ 0.20 เทียบ 0.36)</td></tr>
+<tr><td>6</td><td>Sampling Strategies (2) — stochastic</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป)</td></tr>
+<tr><td>7</td><td>Softmax Temperature</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + โค้ด + คำนวณสี่ค่า T)</td></tr>
+<tr><td>8</td><td>Generate Movie Reviews from IMDB Dataset</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + โค้ด + คำนวณ 7,848,224)</td></tr>
+<tr><td>9</td><td>Results</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + ตาราง)</td></tr>
+<tr><td>10</td><td>Machine Translation</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + conditional LM)</td></tr>
+<tr><td>11</td><td>Training Time (during training)</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + คำนวณ shift)</td></tr>
+<tr><td>12</td><td>Inference Time (after training)</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + ตารางเทียบ)</td></tr>
+<tr><td>13</td><td>Neural Machine Translation Example — preparing text</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โค้ด)</td></tr>
+<tr><td>14</td><td>Neural Machine Translation Example (2) — split</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โค้ด + คำนวณ 83,276)</td></tr>
+<tr><td>15</td><td>Neural Machine Translation Example (3) — TextVectorization</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โค้ด)</td></tr>
+<tr><td>16</td><td>Encoder-Decoder Models</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โค้ด + คำนวณ 34,869,912)</td></tr>
+<tr><td>17</td><td>Note — sampled softmax, padding</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป)</td></tr>
+<tr><td>18</td><td>Machine Translation Evaluation Metrics — BLEU</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + คำนวณ BLEU 0.517)</td></tr>
+<tr><td>19</td><td>The Problems of Encoder-Decoder Framework</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป)</td></tr>
+<tr><td>20</td><td>Beam Search</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + chain rule)</td></tr>
+<tr><td>21</td><td>Beam Search (2)</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + คำนวณจำนวน candidate)</td></tr>
+<tr><td>22</td><td>The Problems of Encoder-Decoder Framework (2)</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป)</td></tr>
+<tr><td>23</td><td>Attention Mechanisms</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป)</td></tr>
+<tr><td>24</td><td>Attention Weights Computation</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + คำนวณ context vector)</td></tr>
+<tr><td>25</td><td>Visualize the Attention Weights</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป)</td></tr>
+<tr><td>26</td><td>Transformers — timeline</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป)</td></tr>
+<tr><td>27</td><td>Transformer Architecture</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป)</td></tr>
+<tr><td>28</td><td>Compared to Encoder-Decoder RNNs</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป)</td></tr>
+<tr><td>29</td><td>Why Transformer</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + ตารางสามข้อดี)</td></tr>
+<tr><td>30</td><td>Transformer Components</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + ตาราง)</td></tr>
+<tr><td>31</td><td>The Embedding &amp; Positional Encoding Layer</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป)</td></tr>
+<tr><td>32</td><td>Positional Embeddings (2) — สูตร</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + สูตร)</td></tr>
+<tr><td>33</td><td>Positional Embeddings (3) — ตัวอย่าง</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + คำนวณ + แก้ตัวเลข)</td></tr>
+<tr><td>34</td><td>Positional Embeddings (4) — บวก token embedding</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + คำนวณ)</td></tr>
+<tr><td>35</td><td>Positional Embeddings (5) — ระยะห่าง</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + คำนวณ 0.96/1.68)</td></tr>
+<tr><td>36</td><td>Positional Embeddings (6) — โค้ด</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + โค้ด)</td></tr>
+<tr><td>37</td><td>Positional Embeddings (7) — ข้อดี</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป)</td></tr>
+<tr><td>38</td><td>The Encoder</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป)</td></tr>
+<tr><td>39</td><td>Self-attention</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + ตัวอย่าง station)</td></tr>
+<tr><td>40</td><td>Self-attention Computation</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + pseudocode + คำนวณ)</td></tr>
+<tr><td>41</td><td>The Query-Key-Value Model</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + ตารางบทบาท)</td></tr>
+<tr><td>42</td><td>Generalized Self-attention Computation</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + คำนวณ scaled dot-product)</td></tr>
+<tr><td>43</td><td>Multi-headed attention</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + คำนวณ 768/12)</td></tr>
+<tr><td>44</td><td>Put It Together into an Encoder Model</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + สูตร block)</td></tr>
+<tr><td>45</td><td>The Decoder</td><td>✓ <a href="#s12">หัวข้อ 12</a> (รูป + คำนวณ causal mask)</td></tr>
+<tr><td>46</td><td>Different Transformer Models</td><td>✓ <a href="#s12">หัวข้อ 12</a> (รูป + ตาราง)</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0010-sequence-models-and-rnn.html">← Lesson 10: Sequence Models &amp; RNN</a></span>
+  <span><a href="0012-transformers-for-nlp-and-transfer-learning.html">Lesson 12: Transformers for NLP →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>

@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 12: Transformers for NLP &amp; Transfer Learning</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+</head>
+<body>
+
+<nav class="lesson-nav">
+  <span><a href="0011-text-generation-translation-and-transformer.html">← Lesson 11: Text Generation, Translation &amp; Transformer</a></span>
+  <span>Lesson 12 / 12 · Transformers for NLP &amp; Transfer Learning</span>
+  <span><a href="0001-machine-learning-foundations.html">กลับไป Lesson 1 →</a></span>
+</nav>
+
+<p class="kicker">Lecture12 (deep_learning_part4_3.pdf, 40 หน้า) · 2603520 Deep Learning</p>
+<h1>Transfer Learning และ Transformers สำหรับ NLP (Hugging Face)</h1>
+
+<p><a href="0011-text-generation-translation-and-transformer.html">Lesson 11</a> สร้าง Transformer จากชิ้นส่วน (positional encoding, self-attention, multi-head, encoder, decoder). บทนี้ไม่สร้างเองแล้ว แต่<strong>หยิบโมเดลที่เทรนมาแล้ว</strong>จาก Hugging Face มาใช้และปรับให้เข้ากับงานของเรา ซึ่งเป็นแนวคิดเดียวกับ transfer learning ของ CNN ใน <a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8</a>. ลำดับของบท:</p>
+<ol>
+<li><strong>LLM และ Hugging Face</strong> (หน้า 2–6): Hub, Datasets, Tokenizers, Transformers</li>
+<li><strong>pipeline()</strong> (หน้า 7–13): classification, NER, question answering, generation, summarization, translation</li>
+<li><strong>Tokenizer + Model และการดู attention</strong> (หน้า 14–16)</li>
+<li><strong>Transfer learning, LoRA และ RAG</strong> (หน้า 17–22)</li>
+<li><strong>Workshop: จำแนกอารมณ์ของ tweet ด้วย DistilBERT</strong> (หน้า 23–39): dataset, tokenizer, feature extraction, fine-tuning</li>
+<li><strong>Transformer architectures</strong> (หน้า 40)</li>
+</ol>
+
+<div class="box source">
+<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
+<a href="https://huggingface.co/learn/llm-course/chapter1/3?fw=pt" target="_blank" rel="noopener">Hugging Face LLM Course บทที่ 1–2</a> (pipeline และ tokenizer/model ที่สไลด์หน้า 7 และ 14 อ้างถึง) · Tunstall, von Werra &amp; Wolf, <em>Natural Language Processing with Transformers</em> บทที่ 1–2 (ที่มาของ workshop จำแนกอารมณ์และรูป feature extraction/fine-tuning) · <a href="https://arxiv.org/abs/2106.09685" target="_blank" rel="noopener">Hu et al. (2021) — LoRA</a> · <a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener">Lewis et al. (2020) — RAG</a>.
+</div>
+
+<div class="box beginner">
+<div class="label">คำและสัญลักษณ์ที่ใช้ทั้งบท</div>
+<ul>
+<li><strong>Checkpoint</strong> = ชื่อของชุด weight ที่เทรนแล้วบน Hub เช่น <code>distilbert-base-uncased</code></li>
+<li><strong>Body / Head</strong> = ส่วนของโมเดลที่ไม่ขึ้นกับงาน (encoder stack) / ส่วนท้ายที่เฉพาะงาน (เช่น Dense ที่ให้ logit 6 คลาส)</li>
+<li><strong>Hidden state</strong> = vector ที่ encoder ให้ต่อ token (DistilBERT: 768 มิติ)</li>
+<li><strong>Logit</strong> = คะแนนก่อน softmax; <strong>Macro F1</strong> = ค่าเฉลี่ย F1 ของทุกคลาสแบบน้ำหนักเท่ากัน</li>
+<li>\(W_0\) = weight เดิมที่ถูกแช่แข็ง; \(A, B\) = matrix เล็กของ LoRA; \(r\) = rank; \(\alpha\) = ตัวคูณ scale</li>
+</ul>
+</div>
+
+<div class="box prereq">
+<div class="label">ต้องรู้ก่อน — transfer learning และ F1</div>
+<p><strong>Transfer learning</strong> (<a href="0008-cnn-architectures-and-transfer-learning.html#s8">Lesson 8 §8</a>): ใช้ weight ที่เรียนจากข้อมูลขนาดใหญ่เป็นจุดเริ่ม แล้ว (ก) แช่แข็ง body และเทรนเฉพาะ head ใหม่ หรือ (ข) fine-tune ทั้งโมเดลด้วย learning rate ต่ำ. บทนี้ใช้สองแบบนี้เหมือนเดิม แต่ body เป็น Transformer แทน CNN.</p>
+<p><strong>F1</strong> = \(2PR/(P + R)\) (<a href="0001-machine-learning-foundations.html#s7">Lesson 1 §7</a>). ถ้ามี 3 คลาสที่ F1 = 0.9, 0.9, 0.3 จะได้ macro F1 = \((0.9 + 0.9 + 0.3)/3 = 0.70\) แม้ accuracy อาจสูงถึง 0.9 เมื่อคลาสที่ได้ 0.3 มีข้อมูลน้อย. Macro F1 จึงจับได้ว่าโมเดลอ่อนกับคลาสเล็ก.</p>
+</div>
+
+<h2 id="s1">1. LLM และ Hugging Face</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p02-llms.png" alt="Slide: LLMs. A Large Language Model (LLM) is a deep learning model trained on large amounts of text to learn language patterns and relationships. LLMs such as GPT and BERT support tasks including text classification, translation, summarization, and question answering. Logos of ChatGPT, Copilot, Meta, Claude, Gemini and others; links to techradar best LLMs and lifearchitect timeline">
+<figcaption>Slide: LLMs — โมเดลภาษาขนาดใหญ่ (Lecture12, p.2)</figcaption>
+</figure>
+
+<p><strong>Large Language Model (LLM)</strong> คือ deep learning model ที่เทรนบนข้อความปริมาณมหาศาลเพื่อเรียนรูปแบบและความสัมพันธ์ของภาษา. สไลด์ยกตัวอย่างทั้ง GPT (decoder-only) และ BERT (encoder-only) ว่าเป็น LLM ซึ่งรองรับงาน text classification, translation, summarization และ question answering. ทุกตัวสร้างจากบล็อกของ Lesson 11: GPT คือ decoder ที่มี causal mask; BERT คือ encoder stack. ลิงก์ <a href="https://lifearchitect.ai/timeline" target="_blank" rel="noopener">lifearchitect.ai/timeline</a> ให้ timeline ของโมเดลภาษา (ต่อจาก timeline 2017–2021 ในหน้า 26 ของ Lesson 11).</p>
+
+<figure>
+<img src="../assets/slides/dl12-p03-hugging-face.png" alt="Slide: The Hugging Face. Hugging Face is an AI platform providing open-source libraries and a Hub for sharing pretrained models, datasets, and machine learning applications; its tools support NLP, computer vision, audio processing and generative AI. Screenshot of huggingface.co with trending models">
+<figcaption>Slide: The Hugging Face — แพลตฟอร์มและ Hub (Lecture12, p.3)</figcaption>
+</figure>
+
+<p><strong>Hugging Face</strong> คือแพลตฟอร์ม AI ที่ให้ library แบบ open-source และ <strong>Hub</strong> สำหรับแบ่งปันโมเดลที่เทรนแล้ว, dataset และแอป machine learning. เครื่องมือรองรับทั้ง NLP, computer vision, audio และ generative AI. ในหน้าจอตัวอย่าง รายการ Trending มีทั้งโมเดลข้อความเป็นรูป (stable-diffusion-3.5-large) และข้อความเป็นวิดีโอ แสดงว่า Hub ไม่ได้มีแค่โมเดลภาษา.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p04-why-hugging-face.png" alt="Slide: Why use Hugging Face. Pretrained models through the Hub reduce the need to train from scratch. Consistent APIs: load models and tokenizers using Auto classes, and run supported tasks with pipeline(). Task adaptation: fine-tune pretrained models with task-specific heads. Broad coverage: text, vision, audio, multimodal. Comparing Hugging Face Transformers with Keras: both simplify deep learning and support transfer learning; Transformers emphasizes using and fine-tuning pretrained models, Keras emphasizes building and training custom models. Note: Transformers v5 uses PyTorch as its core backend">
+<figcaption>Slide: Why use Hugging Face — สี่เหตุผล (Lecture12, p.4)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>เหตุผล</th><th>ความหมาย</th><th>เห็นได้ในบทนี้ที่</th></tr>
+<tr><td>Pretrained models</td><td>ใช้โมเดลซ้ำจาก Hub ไม่ต้องเทรนจากศูนย์</td><td>DistilBERT 66 ล้าน parameter โหลดด้วยบรรทัดเดียว (§10)</td></tr>
+<tr><td>Consistent APIs</td><td>โหลด model/tokenizer ด้วย Auto classes; รันงานด้วย <code>pipeline()</code></td><td>§2–3, §9</td></tr>
+<tr><td>Task adaptation</td><td>fine-tune ด้วย head เฉพาะงาน เช่น classification, NER</td><td>§11</td></tr>
+<tr><td>Broad coverage</td><td>text, vision, audio, multimodal</td><td>§1</td></tr>
+</table>
+<p><strong>เทียบกับ Keras:</strong> ทั้งคู่ทำให้ deep learning ง่ายขึ้นและรองรับ transfer learning แต่ Hugging Face Transformers เน้น<em>ใช้และ fine-tune โมเดลที่เทรนแล้ว</em> ส่วน Keras เน้น<em>สร้างและเทรนโมเดลของเราเอง</em> (Lesson 11 สร้าง TransformerEncoder เองใน Keras). หมายเหตุ: Transformers v5 ใช้ PyTorch เป็น backend หลัก โค้ดในบทนี้จึงเป็น PyTorch (<code>torch.no_grad()</code>, <code>.to(device)</code>).</p>
+
+<figure>
+<img src="../assets/slides/dl12-p05-hugging-face-ecosystem.png" alt="Slide: Hugging Face Ecosystem. Two main components: the Hub and its libraries. The Hub: a platform for sharing and accessing pretrained models, datasets, and interactive applications called Spaces. Libraries: Transformers for text, vision, audio and multimodal models; Diffusers for generating images, video and audio using diffusion models; and Datasets for loading and processing datasets">
+<figcaption>Slide: Hugging Face Ecosystem — Hub กับ Libraries (Lecture12, p.5)</figcaption>
+</figure>
+
+<p>Ecosystem มีสององค์ประกอบหลัก:</p>
+<ul>
+<li><strong>The Hub</strong>: ที่แบ่งปันและเข้าถึง pretrained models, datasets และแอปแบบโต้ตอบที่เรียกว่า <strong>Spaces</strong></li>
+<li><strong>Libraries</strong>: <strong>Transformers</strong> (โมเดล text/vision/audio/multimodal), <strong>Diffusers</strong> (สร้างรูป วิดีโอ เสียงด้วย diffusion model), <strong>Datasets</strong> (โหลดและประมวลผล dataset)</li>
+</ul>
+<p>ใน workshop ทุกชิ้นมาจาก Hub: dataset <code>"emotion"</code> โหลดด้วย Datasets, checkpoint <code>distilbert-base-uncased</code> โหลดด้วย Transformers.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p06-three-core-libraries.png" alt="Slide: Three Core Libraries. Datasets: simplifies loading, preprocessing and managing datasets; evaluation metrics provided separately through Evaluate. Tokenizers: fast methods for splitting text into tokens and converting them into numerical IDs; supports special tokens, padding, truncation; contextual understanding is learned by the model rather than the tokenizer. Transformers: model implementations and pretrained weights for BERT, GPT-2, T5; inference and fine-tuning. Flow: Datasets (load and process datasets) -&gt; Tokenizers (tokenize input texts) -&gt; Transformers (load models, train and infer) -&gt; Datasets (load metrics and evaluate models)">
+<figcaption>Slide: Three Core Libraries — ลำดับการใช้งาน (Lecture12, p.6)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>Library</th><th>ทำอะไร</th><th>ข้อควรจำ</th></tr>
+<tr><td>Datasets</td><td>โหลด, preprocess, จัดการ dataset ทุกชนิดข้อมูล</td><td>metric สำหรับประเมินผลแยกไปอยู่ใน <strong>Evaluate</strong></td></tr>
+<tr><td>Tokenizers</td><td>ตัดข้อความเป็น token และแปลงเป็น ID; เติม special token, padding, truncation</td><td>ความเข้าใจบริบท<strong>เรียนโดยโมเดล</strong> ไม่ใช่ tokenizer</td></tr>
+<tr><td>Transformers</td><td>โครงโมเดลและ weight ที่เทรนแล้ว (BERT, GPT-2, T5); inference และ fine-tuning</td><td>ปรับโมเดลให้เข้ากับงานเฉพาะได้</td></tr>
+</table>
+<p>ลำดับของงานหนึ่งชิ้นในแผนภาพลูกศร: Datasets (โหลดข้อมูล) → Tokenizers (ตัดคำ) → Transformers (โหลดโมเดล เทรน ทำนาย) → Datasets/Evaluate (วัดผล). Workshop ใน §8–§11 เดินตามลำดับนี้ทุกขั้น.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 1</span><span>Hugging Face libraries</span></div>
+  <div class="qtext">ทีมหนึ่งใช้ Hugging Face และต้องการคำนวณ macro F1 ของโมเดลบน test set ควรใช้ library ใด และข้อใดถูกเกี่ยวกับ tokenizer?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Datasets ไม่ได้รวม metric ไว้แล้ว metric แยกไปอยู่ใน Evaluate. Tokenizer เพียงตัดข้อความเป็น token และแปลงเป็น ID ความเข้าใจบริบทเกิดใน self-attention ของโมเดล.">Tokenizers สำหรับ metric และ tokenizer เป็นผู้เรียนบริบทของคำในประโยค</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Datasets ไม่ได้รวม metric ไว้แล้ว metric แยกไปอยู่ใน Evaluate. Tokenizer เพียงตัดข้อความเป็น token และแปลงเป็น ID ความเข้าใจบริบทเกิดใน self-attention ของโมเดล.">Evaluate สำหรับ metric และบริบทของคำถูกเรียนโดยโมเดล ไม่ใช่ tokenizer</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Datasets ไม่ได้รวม metric ไว้แล้ว metric แยกไปอยู่ใน Evaluate. Tokenizer เพียงตัดข้อความเป็น token และแปลงเป็น ID ความเข้าใจบริบทเกิดใน self-attention ของโมเดล.">Diffusers สำหรับ metric และ tokenizer เป็นผู้เรียนบริบทของคำในประโยค</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Datasets ไม่ได้รวม metric ไว้แล้ว metric แยกไปอยู่ใน Evaluate. Tokenizer เพียงตัดข้อความเป็น token และแปลงเป็น ID ความเข้าใจบริบทเกิดใน self-attention ของโมเดล.">Transformers สำหรับ metric และบริบทของคำถูกเรียนโดย tokenizer ทั้งหมด</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s2">2. pipeline(): สามขั้นในคำสั่งเดียว</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p07-using-transformer-pipeline.png" alt="Slide: Using Transformer. The pipeline() function provides a simple way to use pretrained models; it combines preprocessing, model inference, and postprocessing. Three steps: Preprocessing tokenize the text and convert into numerical inputs; Model inference pass inputs to the model to obtain predictions; Postprocessing convert outputs into a readable format">
+<figcaption>Slide: Using Transformer — pipeline() (Lecture12, p.7)</figcaption>
+</figure>
+
+<p><code>pipeline()</code> รวมสามขั้นไว้ในคำสั่งเดียว ผู้ใช้ส่งข้อความเข้า แล้วได้ผลตามงาน (label ที่ทำนายหรือข้อความที่สร้าง):</p>
+<ol>
+<li><strong>Preprocessing</strong>: tokenize ข้อความและแปลงเป็นตัวเลข</li>
+<li><strong>Model inference</strong>: ส่งตัวเลขเข้าโมเดลเพื่อได้ผลทำนาย (logit)</li>
+<li><strong>Postprocessing</strong>: แปลง output ของโมเดลเป็นรูปที่อ่านได้ (เช่น softmax แล้วจับคู่กับชื่อ label)</li>
+</ol>
+
+<figure>
+<img src="../assets/slides/dl12-p08-text-classification-pipeline.png" alt="Slide: Example of Text Classification. Use the pipeline() function to classify the sentiment of sample movie reviews; by default, the text-classification pipeline loads a sentiment analysis model; with an appropriate model, multiclass or multilabel classification. Code: from transformers import pipeline; classifier_pipeline = pipeline(&quot;text-classification&quot;); classifier_pipeline(&quot;This film is one of the classics of cinema history ... somewhat poorly done.&quot;). Output [{&#x27;label&#x27;: &#x27;NEGATIVE&#x27;, &#x27;score&#x27;: 0.7022482752799988}]">
+<figcaption>Slide: Example of Text Classification — ผล NEGATIVE 0.70 (Lecture12, p.8)</figcaption>
+</figure>
+
+<pre data-p="8"><code>from transformers import pipeline
+# instantiate a pipeline and providing the name of the task we are interested in
+classifier_pipeline = pipeline("text-classification")
+
+# generate some predictions
+classifier_pipeline("This film is one of the classics of cinema history. It was not made to please modern audiences, \
+so some people nowadays may think it is creaky or stilted. ... The subtitles were strangely worded, and it\'s \
+hard for me to tell whether this was to reflect an older manner of speaking, or whether the subtitles were just somewhat poorly done.")</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>pipeline("text-classification")</td><td>ระบุเฉพาะชื่องาน ไม่ระบุโมเดล ⇒ โหลดโมเดล sentiment analysis ตั้งต้น (บวก/ลบ)</td></tr>
+<tr><td>classifier_pipeline("...")</td><td>ทำทั้งสามขั้นของหน้า 7 แล้วคืน list ของ dict</td></tr>
+<tr><td>[{'label': 'NEGATIVE', 'score': 0.7022…}]</td><td>label ที่ความน่าจะเป็นสูงสุดและความน่าจะเป็นนั้น</td></tr>
+</table>
+<p>รีวิวนี้ชมว่า "classics of cinema history" และ "music was beautiful" แต่ติเรื่องเสียงและคำบรรยาย โมเดลตอบ NEGATIVE ด้วย score เพียง 0.70 ซึ่งแปลว่า POSITIVE ได้ราว 0.30: ความไม่แน่ใจสะท้อนรีวิวที่ปนสองทาง. ถ้าเปลี่ยนเป็นโมเดลที่เหมาะสม งานเดียวกันทำได้ทั้ง <strong>multiclass</strong> (หนึ่ง label ต่อข้อความ เช่น 6 อารมณ์ใน workshop) และ <strong>multilabel</strong> (หลาย label ต่อข้อความ).</p>
+
+<h2 id="s3">3. งานอื่นของ pipeline(): NER, QA, Generation, Summarization, Translation</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p09-ner-pipeline.png" alt="Slide: Example of Name Entity Recognition. NER identifies and classifies named entities such as people, organizations, and locations; in movie reviews it can identify actors, directors or movie titles provided the model supports these entity categories. Code: pipeline(&quot;ner&quot;, aggregation_strategy=&quot;simple&quot;); result = classifier_pipeline(&quot;I would like to know whether the actors from the Apple company were using archaic Russian or even Old Church&quot;); print(pd.DataFrame(result)). Output: ORG 0.995806 Apple 49 54; MISC 0.997995 Russian 82 89; MISC 0.864037 Old Church 98 108">
+<figcaption>Slide: Example of Name Entity Recognition — ORG และ MISC (Lecture12, p.9)</figcaption>
+</figure>
+
+<p><strong>Named Entity Recognition (NER)</strong> ระบุและจัดกลุ่มชื่อเฉพาะในข้อความ เช่น คน องค์กร สถานที่. ในรีวิวหนังอาจใช้หานักแสดง ผู้กำกับ หรือชื่อหนังได้ <strong>ถ้าโมเดลรองรับประเภท entity เหล่านั้น</strong>.</p>
+<pre data-p="9"><code>classifier_pipeline = pipeline("ner", aggregation_strategy="simple")
+result = classifier_pipeline("I would like to know whether the actors from the Apple company \
+were using archaic Russian or even Old Church")
+print(pd.DataFrame(result))</code></pre>
+<table class="compact">
+<tr><th>entity_group</th><th>score</th><th>word</th><th>start</th><th>end</th></tr>
+<tr><td>ORG</td><td>0.995806</td><td>Apple</td><td>49</td><td>54</td></tr>
+<tr><td>MISC</td><td>0.997995</td><td>Russian</td><td>82</td><td>89</td></tr>
+<tr><td>MISC</td><td>0.864037</td><td>Old Church</td><td>98</td><td>108</td></tr>
+</table>
+<p><code>start</code>/<code>end</code> คือตำแหน่งตัวอักษรในข้อความ: "Apple" เริ่มที่ตัวที่ 49 และยาว 5 ตัว ⇒ end = 54. <code>aggregation_strategy="simple"</code> รวม token ย่อยที่ติดกันและมี entity เดียวกันเป็นคำเดียว จึงได้ "Old Church" (2 คำ, 98→108) เป็นแถวเดียว ไม่ใช่สองแถว. "Old Church" ได้ score ต่ำสุด (0.864) เพราะเป็นชื่อเฉพาะที่ไม่ครบ (ชื่อเต็มคือ Old Church Slavonic).</p>
+
+<figure>
+<img src="../assets/slides/dl12-p10-question-answering-pipeline.png" alt="Slide: Example of Question Answering. In extractive question answering we provide a context passage along with a question; the model identifies a span of text within the context that answers the question (not supported in latest version of transformer 5.x). Code: pipeline(&quot;question-answering&quot;); question = &quot;How does the author feel about this movie&quot;; text = &quot;The music was beautiful; I was listening to it in the library.&quot;; output: defaulted to distilbert-base-cased-distilled-squad; score 0.2515, start 0, end 23, answer &#x27;The music was beautiful&#x27;">
+<figcaption>Slide: Example of Question Answering — extractive QA (Lecture12, p.10)</figcaption>
+</figure>
+
+<p><strong>Extractive question answering</strong>: ให้ context กับคำถาม แล้วโมเดลหา<strong>ช่วงข้อความ (span) ใน context</strong> ที่ตอบคำถาม ไม่ได้แต่งคำตอบใหม่. ตัวอย่าง: question "How does the author feel about this movie", context "The music was beautiful; I was listening to it in the library." ⇒ answer = context[0:23] = "The music was beautiful" (score 0.2515). Score ต่ำเพราะ context ไม่ได้บอกความรู้สึกต่อ<em>หนัง</em>ตรงๆ โมเดลจึงเลือกช่วงที่ใกล้ที่สุดเท่าที่มี. ข้อสังเกตสองข้อ: pipeline ไม่ได้ระบุโมเดลจึงใช้ค่าตั้งต้น <code>distilbert-base-cased-distilled-squad</code> (มีคำเตือนว่าไม่แนะนำใน production) และสไลด์ระบุว่างาน question-answering แบบนี้<strong>ไม่รองรับใน transformers รุ่นล่าสุด (5.x)</strong>.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p11-text-generation-pipeline.png" alt="Slide: Example of Text Generation. Text generation generates sequences of text. Code: classifier_pipeline = pipeline(&#x27;text-generation&#x27;); response = &quot;Dear Customer, we are sorry to hear that you are&quot;; prompt = response; classifier_pipeline(prompt, max_length=100). Output generated_text: Dear Customer, we are sorry to hear that you are no longer able to accept credit card or debit card payments at our facilities ...">
+<figcaption>Slide: Example of Text Generation — เติมข้อความต่อ (Lecture12, p.11)</figcaption>
+</figure>
+
+<p><strong>Text generation</strong> สร้างลำดับข้อความต่อจาก prompt: นี่คือ language model ของ Lesson 11 §1 ในรูป decoder-only (ค่าตั้งต้นคือ GPT-2). Prompt "Dear Customer, we are sorry to hear that you are" ถูกเติมเป็นจดหมายตอบลูกค้าเรื่องรับบัตรเครดิตไม่ได้ ซึ่งลื่นไหลแต่เนื้อหาแต่งขึ้นเอง. <code>max_length=100</code> คือจำนวน token สูงสุดของข้อความ<strong>รวม prompt</strong> ข้อความจึงถูกตัดกลางประโยค ("This could result").</p>
+
+<figure>
+<img src="../assets/slides/dl12-p12-summarization-pipeline.png" alt="Slide: Example of Summarization. Text summarization aims to take a long text and generate a concise version that includes all relevant facts; more complex as it requires coherent and meaningful text. Code: pipeline(&quot;summarization&quot;); text = the movie review; classifier_pipeline(text, max_length=56, clean_up_tokenization_spaces=True). Output summary_text: This film is one of the classics of cinema history. It was not made to please modern audiences, so some people nowadays may think it is creaky or stilted. Cherkassov has exactly the right presence to play Alexander Nevskyi, just as">
+<figcaption>Slide: Example of Summarization — สรุปรีวิว (Lecture12, p.12)</figcaption>
+</figure>
+
+<p><strong>Text summarization</strong> รับข้อความยาวแล้วสร้างฉบับสั้นที่ครอบคลุมข้อเท็จจริงสำคัญ. ยากกว่างานก่อนหน้าเพราะโมเดลต้อง<em>สร้าง</em>ข้อความที่ต่อเนื่องและมีความหมาย (encoder-decoder เช่น BART/T5). ผลจริงในสไลด์: summary กลายเป็นสามประโยคแรกของรีวิวแทบคำต่อคำ และถูกตัดที่ "just as" เพราะ <code>max_length=56</code> token. ข้อสรุปเรื่องเสียงและคำบรรยาย (ส่วนที่ติ) หายไปทั้งหมด จึงยังไม่ได้ "all the relevant facts" ตามนิยาม.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p13-translation-pipeline.png" alt="Slide: Example of Machine Translation. Machine translation is the automatic conversion of text from one language to another. Code: # https://huggingface.co/Helsinki-NLP/opus-mt-th-en; pipeline(&quot;translation_en_to_th&quot;, model=&quot;Helsinki-NLP/opus-mt-th-en&quot;); text = Thai movie review; classifier_pipeline(text, clean_up_tokenization_spaces=True, min_length=100). Output translation_text: It&#x27;s one of the classics in the history of movies, not to impress audiences today ...">
+<figcaption>Slide: Example of Machine Translation — ไทยเป็นอังกฤษ (Lecture12, p.13)</figcaption>
+</figure>
+
+<p><strong>Machine translation</strong> แปลงข้อความจากภาษาหนึ่งเป็นอีกภาษาโดยอัตโนมัติ. ตัวอย่างนี้แปลรีวิวภาษาไทยเป็นอังกฤษด้วย <code>model="Helsinki-NLP/opus-mt-th-en"</code> (ชื่อบอกทิศ: th → en). สังเกตว่าชื่องานในโค้ดเขียน <code>"translation_en_to_th"</code> ซึ่งกลับทิศกับโมเดล แต่เมื่อระบุ <code>model=</code> แล้ว ทิศการแปลมาจากโมเดลที่เลือก ผลจึงเป็นภาษาอังกฤษ. คำแปลจับใจความได้ ("one of the classics in the history of movies") แต่ชื่อเฉพาะเพี้ยน เช่น เชอร์คัสซอฟ กลายเป็น "Shercus Sof". <code>min_length=100</code> บังคับให้ output ยาวอย่างน้อย 100 token.</p>
+
+<table class="compact">
+<tr><th>ชื่องานใน pipeline()</th><th>input</th><th>output ในสไลด์</th><th>ชนิด Transformer ที่เหมาะ</th></tr>
+<tr><td>"text-classification"</td><td>ข้อความ</td><td>label + score</td><td>encoder-only</td></tr>
+<tr><td>"ner"</td><td>ข้อความ</td><td>entity_group, score, word, start, end</td><td>encoder-only</td></tr>
+<tr><td>"question-answering"</td><td>question + context</td><td>answer (span), score, start, end</td><td>encoder-only</td></tr>
+<tr><td>"text-generation"</td><td>prompt</td><td>generated_text</td><td>decoder-only</td></tr>
+<tr><td>"summarization"</td><td>ข้อความยาว</td><td>summary_text</td><td>encoder-decoder</td></tr>
+<tr><td>"translation_xx_to_yy"</td><td>ข้อความภาษาต้นทาง</td><td>translation_text</td><td>encoder-decoder</td></tr>
+</table>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 2</span><span>NER</span></div>
+  <div class="qtext">ใช้ <code>pipeline("ner", aggregation_strategy="simple")</code> กับข้อความ "We met Tim Cook in Paris" ข้อใดอธิบายผลของ aggregation_strategy="simple" ได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. aggregation_strategy=&quot;simple&quot; รวม token ย่อยที่ติดกันและมีชนิด entity เดียวกันเป็นคำเดียว เช่นเดียวกับ &quot;Old Church&quot; (98→108) ในตัวอย่าง. ค่า start/end ยังเป็นตำแหน่งตัวอักษรในข้อความ.">ทำให้ได้ผลเฉพาะ entity ที่ score เกิน 0.9 และตัดแถวที่เหลือทิ้งทั้งหมด</button>
+    <button class="opt" data-correct="false" data-note="ผิด. aggregation_strategy=&quot;simple&quot; รวม token ย่อยที่ติดกันและมีชนิด entity เดียวกันเป็นคำเดียว เช่นเดียวกับ &quot;Old Church&quot; (98→108) ในตัวอย่าง. ค่า start/end ยังเป็นตำแหน่งตัวอักษรในข้อความ.">ทำให้ start และ end เป็นตำแหน่งของ token แทนตำแหน่งของตัวอักษร</button>
+    <button class="opt" data-correct="false" data-note="ผิด. aggregation_strategy=&quot;simple&quot; รวม token ย่อยที่ติดกันและมีชนิด entity เดียวกันเป็นคำเดียว เช่นเดียวกับ &quot;Old Church&quot; (98→108) ในตัวอย่าง. ค่า start/end ยังเป็นตำแหน่งตัวอักษรในข้อความ.">ทำให้โมเดลจัด Tim และ Cook เป็นสอง entity แยกกันเสมอ ไม่ว่าชนิดใด</button>
+    <button class="opt" data-correct="true" data-note="ถูก. aggregation_strategy=&quot;simple&quot; รวม token ย่อยที่ติดกันและมีชนิด entity เดียวกันเป็นคำเดียว เช่นเดียวกับ &quot;Old Church&quot; (98→108) ในตัวอย่าง. ค่า start/end ยังเป็นตำแหน่งตัวอักษรในข้อความ.">ทำให้ token ที่ติดกันและมี entity เดียวกัน เช่น Tim Cook รวมเป็นแถวเดียว</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 3</span><span>Extractive QA</span></div>
+  <div class="qtext">ระบบ extractive question answering ได้ context "The battery lasts ten hours but the screen is dim." และคำถาม "How long does the battery last?" ข้อใดเป็นคำตอบที่ระบบชนิดนี้สามารถคืนได้?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Extractive QA เลือก span (ตำแหน่ง start ถึง end) จาก context เท่านั้น จึงคืนได้เฉพาะข้อความที่มีอยู่จริง. การเรียบเรียงใหม่หรือเติมความเห็นเป็นงานของโมเดลแบบ generative.">"ten hours" ซึ่งเป็นช่วงข้อความที่ตัดออกมาจาก context โดยตรง</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Extractive QA เลือก span (ตำแหน่ง start ถึง end) จาก context เท่านั้น จึงคืนได้เฉพาะข้อความที่มีอยู่จริง. การเรียบเรียงใหม่หรือเติมความเห็นเป็นงานของโมเดลแบบ generative.">"about 10 hrs" ซึ่งโมเดลเรียบเรียงคำตอบขึ้นใหม่จากความเข้าใจ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Extractive QA เลือก span (ตำแหน่ง start ถึง end) จาก context เท่านั้น จึงคืนได้เฉพาะข้อความที่มีอยู่จริง. การเรียบเรียงใหม่หรือเติมความเห็นเป็นงานของโมเดลแบบ generative.">"The battery lasts a long time" ซึ่งเป็นการสรุปความจาก context</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Extractive QA เลือก span (ตำแหน่ง start ถึง end) จาก context เท่านั้น จึงคืนได้เฉพาะข้อความที่มีอยู่จริง. การเรียบเรียงใหม่หรือเติมความเห็นเป็นงานของโมเดลแบบ generative.">"Ten hours, which is good" ซึ่งเติมความเห็นจากความรู้ของโมเดล</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s4">4. Tokenizer + Model และการดู Attention Weight</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p14-tokenizer-and-model.png" alt="Slide: Using Tokenizer and Model. The pipeline groups three steps: preprocessing with tokenizers, passing the inputs through the model, and postprocessing. Diagram: Raw text This course is amazing -&gt; Tokenizer -&gt; Input IDs [101, 2023, 2607, 2003, 6429, 999, 102] -&gt; Model -&gt; Logits [-4.3630, 4.6859] -&gt; Post Processing -&gt; Predictions POSITIVE 99.89% NEGATIVE 0.11%. The tokenizer handles text and returns IDs; the model handles IDs and outputs a prediction; the tokenizer can convert predictions back to text">
+<figcaption>Slide: Using Tokenizer and Model — แยกสามขั้นของ pipeline (Lecture12, p.14)</figcaption>
+</figure>
+
+<p>เปิดฝาดู pipeline: <strong>tokenizer</strong> รับข้อความแล้วคืน ID; <strong>model</strong> รับ ID แล้วคืนผลทำนาย; tokenizer ใช้อีกครั้งได้เพื่อแปลงผลกลับเป็นข้อความ (ในงานสร้างข้อความ).</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามแผนภาพ: "This course is amazing" ผ่านสามขั้น</div>
+<div class="given">ให้ Input IDs = [101, 2023, 2607, 2003, 6429, 999, 102] และ logits = [−4.3630, 4.6859] สำหรับ [NEGATIVE, POSITIVE]</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Tokenizer: 4 คำ + "!" + special token สองตัว</div>
+$$[\text{CLS}]{=}101,\ \text{this}{=}2023,\ \ldots,\ \text{!}{=}999,\ [\text{SEP}]{=}102 \;\Rightarrow\; 7 \text{ ID}$$</li>
+<li><div class="st-title">ขั้นที่ 2 — Model: ได้ logit สองค่า ผลต่าง</div>
+$$4.6859 - (-4.3630) = 9.0489$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Postprocessing: softmax</div>
+$$P(\text{NEG}) = \frac{1}{1 + e^{9.0489}} = 0.000118 \qquad P(\text{POS}) = 0.99988$$</li>
+</ol>
+<div class="answer"><p>ได้ POSITIVE ≈ 99.99% และ NEGATIVE ≈ 0.01%. <strong>หมายเหตุ:</strong> แผนภาพในสไลด์พิมพ์ POSITIVE 99.89% / NEGATIVE "0.,11%" ซึ่งไม่ตรงกับ softmax ของ logit ที่แสดง (ถ้าจะได้ 99.89% ผลต่าง logit ต้องเป็นราว 6.8). ใช้แผนภาพเพื่อจำลำดับ Raw text → Input IDs → Logits → Predictions; ถ้าข้อสอบให้ logit มา ให้คำนวณ softmax เอง. ID 101 และ 102 คือ [CLS] และ [SEP] ซึ่งตรงกับตาราง special token ใน §9.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl12-p15-visualize-attention-bertviz.png" alt="Slide: Visualize Attention Weights. Use the BertViz library to explore attention in transformer models; the neuron_view module traces how query and key vectors combine to produce attention weights; load the BERT checkpoint using BertViz&#x27;s compatible model class and generate an interactive visualization with show(). Code: from bertviz.transformers_neuron_view import BertModel; from bertviz.neuron_view import show; model_ckpt = &quot;bert-base-uncased&quot;; text = &quot;The train left station on time.&quot;; show(model, &quot;bert&quot;, tokenizer, text, display_mode=&quot;light&quot;, layer=0, head=8). View: Layer 0 Head 8, train attending to station">
+<figcaption>Slide: Visualize Attention Weights — BertViz neuron_view (Lecture12, p.15)</figcaption>
+</figure>
+
+<p>ใช้ library <strong>BertViz</strong> ดู attention ใน Transformer. module <code>neuron_view</code> ให้ไล่ดูว่า <strong>query และ key vector รวมกันเป็น attention weight อย่างไร</strong> (ขั้น \(QK^T\) → scale → softmax ของ Lesson 11 §11).</p>
+<pre data-p="15"><code>from transformers import AutoTokenizer
+from bertviz.transformers_neuron_view import BertModel
+from bertviz.neuron_view import show
+
+model_ckpt = "bert-base-uncased"
+
+# Load tokenizer and model
+tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
+model = BertModel.from_pretrained(model_ckpt)
+
+# Text input and neuron visualization
+text = "The train left station on time."
+show(model, "bert", tokenizer, text, display_mode="light", layer=0, head=8)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>from bertviz.transformers_neuron_view import BertModel</td><td>ต้องใช้ BertModel รุ่นของ BertViz (ไม่ใช่ของ transformers) เพื่อให้ดึง query/key ภายในได้</td></tr>
+<tr><td>"bert-base-uncased"</td><td>BERT ขนาด base: 12 layer × 12 head, ไม่แยกตัวพิมพ์ใหญ่-เล็ก</td></tr>
+<tr><td>show(..., layer=0, head=8)</td><td>แสดง head หมายเลข 8 ของ layer แรก (นับจาก 0)</td></tr>
+</table>
+<p>ประโยคเดียวกับตัวอย่าง self-attention ใน Lesson 11 §10 ("the train left the station on time"). ใน layer 0 head 8 คำว่า "train" ให้ weight สูงกับ "station" ซึ่งเป็นความสัมพันธ์ "train station" แบบที่ self-attention ควรเรียน. BERT base มี 12 × 12 = 144 head ให้เลือกดู และแต่ละ head โฟกัสต่างกัน (multi-head = different semantic aspects).</p>
+
+<figure>
+<img src="../assets/slides/dl12-p16-visualize-attention-t5.png" alt="Slide: Continue. To visualize attention weights extracted from a T5 model using Matplotlib: extract the attention weights, select a specific layer and head, use Matplotlib to plot. Code: model_ckpt = &quot;t5-small&quot;; T5ForConditionalGeneration with attn_implementation=&quot;eager&quot;; input_text = &quot;The house is wonderful&quot;; target_text = &quot;La maison est magnifique&quot;; outputs = model(**inputs, labels=target_ids, output_attentions=True, use_cache=False, return_dict=True); attn = outputs.cross_attentions[layer][0, head].cpu().numpy(). Heatmap Attention Weights Layer 0 Head 0: decoder tokens La, maison, est, magnifique, &lt;/s&gt; versus encoder tokens The, house, is, wonderful, &lt;/s&gt;">
+<figcaption>Slide: Continue… — cross-attention ของ T5 (Lecture12, p.16)</figcaption>
+</figure>
+
+<p>อีกวิธี: ดึง attention ของ <strong>T5</strong> (encoder-decoder) แล้ว plot ด้วย Matplotlib ในสามขั้น: ดึง attention weight → เลือก layer และ head → plot.</p>
+<pre data-p="16"><code># Load T5 using eager attention so attention weights can be returned
+model_ckpt = "t5-small"
+tokenizer = T5Tokenizer.from_pretrained(model_ckpt)
+model = T5ForConditionalGeneration.from_pretrained(
+    model_ckpt,
+    attn_implementation="eager",
+)
+model.eval()  # Disable dropout
+
+input_text = "The house is wonderful"
+target_text = "La maison est magnifique"
+
+inputs = tokenizer(input_text, return_tensors="pt")
+target_ids = tokenizer(target_text, return_tensors="pt").input_ids
+
+with torch.inference_mode():
+    outputs = model(
+        **inputs,
+        labels=target_ids,          # T5 prepares shifted inputs
+        output_attentions=True,     # Return attention weights
+        use_cache=False,
+        return_dict=True,
+    )
+
+# Cross-attention shape per layer: (batch size, number of heads, target length, source length)
+layer = 0
+head = 0
+attn = outputs.cross_attentions[layer][0, head].cpu().numpy()</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>attn_implementation="eager"</td><td>ใช้ attention แบบคำนวณตรงๆ เพื่อให้คืน weight ได้ (แบบเร่งความเร็วไม่เก็บ weight)</td></tr>
+<tr><td>labels=target_ids</td><td>ให้คำแปลที่ถูก T5 จะเลื่อนเป็น decoder input เอง (teacher forcing ของ Lesson 11 §3)</td></tr>
+<tr><td>output_attentions=True</td><td>คืน attention weight ทุก layer</td></tr>
+<tr><td>outputs.cross_attentions[layer][0, head]</td><td>cross attention ของ layer และ head ที่เลือก, ตัวอย่างที่ 0 ใน batch ⇒ matrix (target length, source length)</td></tr>
+</table>
+<p>Heatmap Layer 0 Head 0 มี 5 × 5 ช่อง: แถว = token ฝรั่งเศส (La, maison, est, magnifique, &lt;/s&gt;) และคอลัมน์ = token อังกฤษ (The, house, is, wonderful, &lt;/s&gt;). ช่องสว่างเรียงเป็นเส้นทแยง: La↔The, maison↔house, est↔is, magnifique↔wonderful เพราะสองประโยคเรียงคำตรงกัน. นี่คือ cross attention ของ Lesson 11 §12 (query = target, key/value = source) และเป็นข้อดี "Explainability" ของ Transformer.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 4</span><span>Cross-attention shape</span></div>
+  <div class="qtext">ใช้ T5 แปลประโยคต้นทางยาว 7 token เป็นประโยคปลายทางยาว 9 token โดย batch size 1 และแต่ละ layer มี 8 heads ข้อใดคือ shape ของ <code>outputs.cross_attentions[0]</code>?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Cross-attention หนึ่ง layer มี shape (batch size, number of heads, target length, source length) = (1, 8, 9, 7). แต่ละแถวคือ token ปลายทางหนึ่งตัว (query) ที่กระจาย weight ไปยัง token ต้นทาง 7 ตัว (key).">(1, 8, 7, 9)</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Cross-attention หนึ่ง layer มี shape (batch size, number of heads, target length, source length) = (1, 8, 9, 7). แต่ละแถวคือ token ปลายทางหนึ่งตัว (query) ที่กระจาย weight ไปยัง token ต้นทาง 7 ตัว (key).">(1, 8, 9, 7)</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Cross-attention หนึ่ง layer มี shape (batch size, number of heads, target length, source length) = (1, 8, 9, 7). แต่ละแถวคือ token ปลายทางหนึ่งตัว (query) ที่กระจาย weight ไปยัง token ต้นทาง 7 ตัว (key).">(1, 9, 7, 8)</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Cross-attention หนึ่ง layer มี shape (batch size, number of heads, target length, source length) = (1, 8, 9, 7). แต่ละแถวคือ token ปลายทางหนึ่งตัว (query) ที่กระจาย weight ไปยัง token ต้นทาง 7 ตัว (key).">(8, 1, 9, 7)</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s5">5. Transfer Learning ใน NLP และวิธีใช้ pretrained model</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p17-transfer-learning-nlp.png" alt="Slide: Transfer Learning in NLP. Transfer learning allows us to leverage pre-trained models to quickly adapt to new tasks, reducing the need for extensive data and training time. LLMs benefit from transfer learning by using knowledge from pre-trained models to perform well on new tasks with minimal additional data and fine-tuning. Successful applications include customer support chatbots, analyzing medical records, sentiment analysis on reviews, and processing legal documents">
+<figcaption>Slide: Transfer Learning in NLP (Lecture12, p.17)</figcaption>
+</figure>
+
+<ul>
+<li><strong>Transfer learning</strong> ใช้ pretrained model ปรับเข้ากับงานใหม่ได้เร็ว ลดความต้องการข้อมูลจำนวนมากและเวลาเทรน</li>
+<li>LLM ได้ประโยชน์จาก transfer learning: ใช้ความรู้จากการ pretrain ทำงานใหม่ได้ดีด้วยข้อมูลและการ fine-tune เพิ่มเพียงเล็กน้อย</li>
+<li>ตัวอย่างงานที่สำเร็จ: chatbot บริการลูกค้า, วิเคราะห์เวชระเบียน, sentiment analysis ของรีวิว, ประมวลผลเอกสารกฎหมาย</li>
+</ul>
+<p>ตัวเลขจาก workshop: DistilBERT ถูก pretrain บนข้อความหลายพันล้านคำ แต่เราใช้ tweet เพียง 16,000 ข้อความ fine-tune 5 epoch (ราว 193 วินาทีบน GPU) ได้ test accuracy 0.9235 (§11). การเทรน Transformer ขนาดนี้จากศูนย์ด้วย 16,000 ข้อความทำไม่ได้จริง.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p18-approaches-pretrained.png" alt="Slide: Approaches for Using and Adapting Pre-trained Models. Table: Direct inference (no additional training; use a pretrained task-specific model immediately); Prompting zero-shot/few-shot (input instructions or examples, weights unchanged; guide a generative model without training); Feature extraction + classifier (train an external classifier; pretrained model frozen; classification with limited computing resources); Full fine-tuning (update all model parameters; adapt to task-specific data); PEFT such as LoRA (train a small subset of parameters or added adapters; lower training memory and storage); RAG (retrieve external information and add to the input; usually no model training; answer using private, external or updated knowledge)">
+<figcaption>Slide: Approaches for Using and Adapting Pre-trained Models — หกวิธี (Lecture12, p.18)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>Approach</th><th>อะไรถูกเทรน/เปลี่ยน</th><th>ใช้เมื่อ</th><th>ในบทนี้</th></tr>
+<tr><td>Direct inference</td><td>ไม่เทรนเพิ่ม</td><td>มีโมเดลเฉพาะงานอยู่แล้ว ใช้ทันที</td><td>pipeline() §2–3</td></tr>
+<tr><td>Prompting (zero-shot / few-shot)</td><td>ใส่คำสั่งหรือตัวอย่างใน input; weight ไม่เปลี่ยน</td><td>ชี้นำ generative model โดยไม่เทรน</td><td>prompt "Dear Customer…" §3</td></tr>
+<tr><td>Feature extraction + classifier</td><td>เทรน classifier ภายนอก; pretrained model แช่แข็ง</td><td>classification ที่ทรัพยากรคำนวณจำกัด</td><td>§10 (acc 0.635)</td></tr>
+<tr><td>Full fine-tuning</td><td>update parameter ทั้งหมด</td><td>ปรับโมเดลเข้ากับข้อมูลเฉพาะงาน</td><td>§11 (acc 0.9235)</td></tr>
+<tr><td>PEFT เช่น LoRA</td><td>เทรน parameter ส่วนเล็กหรือ adapter ที่เพิ่ม</td><td>ต้องการประหยัดหน่วยความจำและพื้นที่เก็บ</td><td>§6 (acc 0.9005)</td></tr>
+<tr><td>RAG</td><td>ค้นข้อมูลภายนอกแล้วเติมใน input; ปกติไม่เทรน</td><td>ตอบด้วยความรู้ส่วนตัว ภายนอก หรือที่อัปเดต</td><td>§7</td></tr>
+</table>
+<p>เรียงจากบนลงล่างคร่าวๆ ตามปริมาณที่ต้องเทรน: สองแถวแรกไม่เทรนเลย; feature extraction เทรนแค่ classifier; full fine-tuning เทรนทั้ง 66,958,086 parameter; LoRA เทรนเพียง 742,662 parameter; RAG เปลี่ยน<em>input</em> แทน weight.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 5</span><span>Approaches</span></div>
+  <div class="qtext">บริษัทมีคู่มือภายในที่แก้ไขทุกสัปดาห์ และต้องการให้ generative model ตอบคำถามพนักงานจากคู่มือฉบับล่าสุดโดยไม่ต้องเทรนโมเดลใหม่ทุกครั้งที่คู่มือเปลี่ยน วิธีใดเหมาะที่สุด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. RAG ดึงข้อมูลภายนอกมาเติมใน input ของ generator จึงอัปเดตความรู้ได้ด้วยการอัปเดต knowledge base และ embedding โดยไม่ต้องเทรน generator ใหม่. วิธีอื่นต้องเทรนทุกครั้งที่ข้อมูลเปลี่ยน.">Full fine-tuning บนคู่มือฉบับใหม่ทุกสัปดาห์</button>
+    <button class="opt" data-correct="true" data-note="ถูก. RAG ดึงข้อมูลภายนอกมาเติมใน input ของ generator จึงอัปเดตความรู้ได้ด้วยการอัปเดต knowledge base และ embedding โดยไม่ต้องเทรน generator ใหม่. วิธีอื่นต้องเทรนทุกครั้งที่ข้อมูลเปลี่ยน.">RAG ที่ค้นส่วนที่เกี่ยวข้องจากคู่มือแล้วเติมใน input</button>
+    <button class="opt" data-correct="false" data-note="ผิด. RAG ดึงข้อมูลภายนอกมาเติมใน input ของ generator จึงอัปเดตความรู้ได้ด้วยการอัปเดต knowledge base และ embedding โดยไม่ต้องเทรน generator ใหม่. วิธีอื่นต้องเทรนทุกครั้งที่ข้อมูลเปลี่ยน.">Feature extraction แล้วเทรน logistic regression</button>
+    <button class="opt" data-correct="false" data-note="ผิด. RAG ดึงข้อมูลภายนอกมาเติมใน input ของ generator จึงอัปเดตความรู้ได้ด้วยการอัปเดต knowledge base และ embedding โดยไม่ต้องเทรน generator ใหม่. วิธีอื่นต้องเทรนทุกครั้งที่ข้อมูลเปลี่ยน.">LoRA ที่เทรน adapter ใหม่ทุกสัปดาห์บนคู่มือ</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s6">6. PEFT และ LoRA</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p19-peft-why-lora.png" alt="Slide: Parameter-Efficient Fine-Tuning (PEFT): Why LoRA? Full fine-tuning updates all pretrained model parameters for a downstream task; challenge: large models require substantial GPU memory, computation and storage for each fine-tuned model. PEFT freezes most pretrained parameters and trains only a small set of task-specific parameters. LoRA (Low-Rank Adaptation): a PEFT method that learns compact updates to selected weight matrices instead of updating the original matrices. Diagram: full fine-tuning (pretrained model, all weights trainable, save a full model for each task) versus PEFT with LoRA (pretrained model original weights frozen, small LoRA adapters trainable)">
+<figcaption>Slide: PEFT: Why LoRA? — full fine-tuning เทียบ PEFT (Lecture12, p.19)</figcaption>
+</figure>
+
+<ul>
+<li><strong>Full fine-tuning</strong>: update parameter ที่ pretrain มาทั้งหมดสำหรับงานปลายทาง. ปัญหา: โมเดลใหญ่ต้องใช้หน่วยความจำ GPU, การคำนวณ และพื้นที่เก็บมาก <strong>ต่อหนึ่งโมเดลที่ fine-tune</strong> (ต้องเก็บโมเดลเต็มหนึ่งชุดต่องาน)</li>
+<li><strong>PEFT</strong> (Parameter-Efficient Fine-Tuning): แช่แข็ง parameter ส่วนใหญ่และเทรนเฉพาะชุดเล็กที่เฉพาะงาน</li>
+<li><strong><mark class="src" data-p="19">LoRA</mark></strong> (Low-Rank Adaptation): วิธี PEFT ที่เรียน<em>ส่วนปรับแบบกะทัดรัด</em>ของ weight matrix ที่เลือก แทนการแก้ matrix เดิม</li>
+</ul>
+<p>ตัวเลข: ถ้ามี 10 งาน full fine-tuning ของ DistilBERT ต้องเก็บ 10 × 66,958,086 ≈ 670 ล้าน parameter; LoRA เก็บโมเดลเต็มชุดเดียว + adapter 10 × 742,662 ≈ 7.4 ล้าน.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p20-how-lora-works.png" alt="Slide: How LoRA Works: Low-Rank Weight Updates. Instead of updating a large weight matrix, LoRA learns a low-rank correction. Full fine-tuning: W_new = W0 + delta W. LoRA approximates delta W = (alpha/r) B A. Output of the adapted linear layer h = W0 x + (alpha/r) B A x. r: rank of the update; alpha/r: scaling factor; only A and B are trained, W0 frozen; update can be merged into W0 for inference. Diagram: Input x 768 -&gt; Original W0 768 -&gt; 768 frozen, parallel A 768 -&gt; 8 and B 8 -&gt; 768, summed to Output 768. For DistilBERT with hidden dimension 768 and rank r = 8: full matrix 768 x 768 with 589,824 trainable parameters; LoRA update A 8 x 768, B 768 x 8 with 12,288">
+<figcaption>Slide: How LoRA Works — low-rank update (Lecture12, p.20)</figcaption>
+</figure>
+
+<p>LoRA ไม่ update matrix ใหญ่ แต่เรียน "การแก้แบบ low-rank":</p>
+$$W_{new} = W_0 + \Delta W \qquad \Delta W = \frac{\alpha}{r} BA \qquad h = W_0 x + \frac{\alpha}{r} BAx$$
+<p class="plain-thai">W0 แช่แข็ง; เทรนเฉพาะ A (r × d) และ B (d × r); ผลคูณ BA มีขนาด d × d เท่า W0 แต่ rank ไม่เกิน r</p>
+<ul>
+<li>\(r\): rank ของ update; rank เล็ก ⇒ parameter น้อย</li>
+<li>\(\alpha / r\): scaling factor ควบคุมว่า update มีผลมากเท่าใด</li>
+<li>เทรนเฉพาะ A และ B; \(W_0\) คงเดิม</li>
+<li>ตอน inference รวม update เข้า \(W_0\) ได้ (\(W_0 + \frac{\alpha}{r}BA\) เป็น matrix เดียว) จึงไม่ช้าลง</li>
+</ul>
+
+<div class="calc">
+<div class="calc-title">คำนวณตามตารางในสไลด์: LoRA บน projection 768 × 768 ที่ r = 8</div>
+<div class="given">ให้ \(d = 768\), \(r = 8\), \(\alpha = 16\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Full matrix</div>
+$$768 \times 768 = 589{,}824$$</li>
+<li><div class="st-title">ขั้นที่ 2 — LoRA: A (8 × 768) + B (768 × 8)</div>
+$$8 \times 768 + 768 \times 8 = 6{,}144 + 6{,}144 = 12{,}288$$</li>
+<li><div class="st-title">ขั้นที่ 3 — สัดส่วน</div>
+$$12{,}288 / 589{,}824 = 2.08\% \qquad \text{ทั่วไป: } \frac{2dr}{d^2} = \frac{2r}{d}$$</li>
+<li><div class="st-title">ขั้นที่ 4 — Scaling factor</div>
+$$\alpha / r = 16 / 8 = 2$$</li>
+</ol>
+<div class="answer"><p>LoRA เทรน 12,288 ตัวแทน 589,824 ตัว (น้อยกว่า 48 เท่า) ต่อ matrix. Shape ตามแผนภาพ: input x (768) → A ลดเป็น 8 มิติ → B ขยายกลับเป็น 768 แล้วบวกกับ \(W_0 x\). ตอนเริ่มเทรน B ถูกตั้งเป็นศูนย์ \(BA = 0\) โมเดลจึงเริ่มเหมือน pretrained model ทุกประการ.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl12-p21-lora-attention.png" alt="Slide: Applying LoRA to Transformer Attention. LoRA can be applied to selected linear layers, commonly attention projections. In DistilBERT each Transformer layer contains Query, Key, Value and attention output projection matrices, each 768 x 768. Workshop configuration: lora_config = LoraConfig(task_type=TaskType.SEQ_CLS, r=8, lora_alpha=16, lora_dropout=0.1, target_modules=[&quot;q_lin&quot;, &quot;v_lin&quot;], modules_to_save=[&quot;pre_classifier&quot;, &quot;classifier&quot;]). Objective: compare LoRA with full fine-tuning in trainable parameters, training time, test accuracy and macro F1. Diagram: Query WQ LoRA, Key WK frozen, Value WV LoRA, split Q,K,V into 12 heads 64 dimensions per head, attention output projection WO frozen, FFN frozen; same configuration in each of DistilBERT&#x27;s six layers">
+<figcaption>Slide: Applying LoRA to Transformer Attention — config ของ workshop (Lecture12, p.21)</figcaption>
+</figure>
+
+<pre data-p="21"><code>lora_config = LoraConfig(
+    task_type=TaskType.SEQ_CLS,
+    r=8, # rank 8 for Query and Value
+    lora_alpha=16, # scale updates by 16/8 = 2
+    lora_dropout=0.1,
+    target_modules=["q_lin", "v_lin"],
+    modules_to_save=["pre_classifier", "classifier"],
+)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>task_type=TaskType.SEQ_CLS</td><td>งาน sequence classification (หนึ่ง label ต่อข้อความ)</td></tr>
+<tr><td>r=8, lora_alpha=16</td><td>rank 8, scale 16/8 = 2</td></tr>
+<tr><td>lora_dropout=0.1</td><td>dropout บนเส้นทางของ LoRA ระหว่างเทรน</td></tr>
+<tr><td>target_modules=["q_lin", "v_lin"]</td><td>เติม LoRA ให้ <strong>Query และ Value</strong> projection เท่านั้น; Key, output projection (WO) และ FFN แช่แข็ง</td></tr>
+<tr><td>modules_to_save=["pre_classifier", "classifier"]</td><td>head ใหม่ถูกเทรนเต็มที่ (ไม่ใช่ LoRA) เพราะ head เริ่มจาก weight สุ่ม ไม่มีความรู้เดิมให้รักษา</td></tr>
+</table>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: trainable parameter ของ LoRA ใน workshop</div>
+<div class="given">ให้ DistilBERT 6 layer; LoRA ที่ q_lin และ v_lin (12,288 ต่อ matrix); pre_classifier = Dense 768 → 768; classifier = Dense 768 → 6</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — LoRA adapter</div>
+$$6 \text{ layer} \times 2 \text{ matrix} \times 12{,}288 = 147{,}456$$</li>
+<li><div class="st-title">ขั้นที่ 2 — pre_classifier และ classifier</div>
+$$(768 \times 768 + 768) + (768 \times 6 + 6) = 590{,}592 + 4{,}614 = 595{,}206$$</li>
+<li><div class="st-title">ขั้นที่ 3 — รวม trainable</div>
+$$147{,}456 + 595{,}206 = 742{,}662$$</li>
+<li><div class="st-title">ขั้นที่ 4 — เทียบ total ที่ notebook รายงาน (67,700,748)</div>
+$$742{,}662 / 67{,}700{,}748 = 1.097\%$$</li>
+</ol>
+<div class="answer"><p>ตรงกับผลของผู้สอน: trainable 742,662 / 67,700,748 (1.10%). Total มากกว่าโมเดลเดิม (66,958,086) พอดี 742,662 เพราะ PEFT เก็บ adapter และสำเนาของ head แยกไว้. แผนภาพในสไลด์ยังเตือนว่า Q, K, V ถูกแบ่งเป็น 12 head × 64 มิติ (768/12) ตาม Lesson 11 §11 และ LoRA เติม<em>ก่อน</em>แบ่ง head.</p></div>
+</div>
+
+<table class="compact">
+<tr><th>ผลใน notebook ของผู้สอน</th><th>Full fine-tuning</th><th>LoRA (r = 8)</th></tr>
+<tr><td>Trainable parameters</td><td>66,958,086 (100%)</td><td>742,662 (1.10%)</td></tr>
+<tr><td>Test accuracy</td><td>0.9235</td><td>0.9005</td></tr>
+<tr><td>Test macro F1</td><td>0.8754</td><td>0.8497</td></tr>
+<tr><td>Training time</td><td>เทียบฐาน</td><td>น้อยกว่าราว 26%</td></tr>
+</table>
+<p>LoRA เสีย accuracy ไป 2.3 จุด แต่เทรน parameter เพียง 1.1%. เวลาไม่ได้ลดตามจำนวน parameter (ลดแค่ ~26%) เพราะ forward และ backward ยังต้องผ่านทั้งโมเดล; สิ่งที่ประหยัดจริงคือหน่วยความจำของ optimizer และพื้นที่เก็บโมเดลต่องาน.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 6</span><span>LoRA parameters</span></div>
+  <div class="qtext">ใช้ LoRA rank r = 4 กับ weight matrix ขนาด 1024 × 1024 หนึ่งตัว จำนวน trainable parameter ของ LoRA สำหรับ matrix นี้คือเท่าใด?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. A มีขนาด 4 × 1024 = 4,096 และ B มีขนาด 1024 × 4 = 4,096 รวม 8,192 (= 2dr). ค่า 1,048,576 คือ matrix เต็ม 1024², ค่า 4,096 คือนับแค่ A ตัวเดียว.">4,096</button>
+    <button class="opt" data-correct="false" data-note="ผิด. A มีขนาด 4 × 1024 = 4,096 และ B มีขนาด 1024 × 4 = 4,096 รวม 8,192 (= 2dr). ค่า 1,048,576 คือ matrix เต็ม 1024², ค่า 4,096 คือนับแค่ A ตัวเดียว.">1,048,576</button>
+    <button class="opt" data-correct="true" data-note="ถูก. A มีขนาด 4 × 1024 = 4,096 และ B มีขนาด 1024 × 4 = 4,096 รวม 8,192 (= 2dr). ค่า 1,048,576 คือ matrix เต็ม 1024², ค่า 4,096 คือนับแค่ A ตัวเดียว.">8,192</button>
+    <button class="opt" data-correct="false" data-note="ผิด. A มีขนาด 4 × 1024 = 4,096 และ B มีขนาด 1024 × 4 = 4,096 รวม 8,192 (= 2dr). ค่า 1,048,576 คือ matrix เต็ม 1024², ค่า 4,096 คือนับแค่ A ตัวเดียว.">16,384</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 7</span><span>LoRA formula</span></div>
+  <div class="qtext">Linear layer ที่ใช้ LoRA โดย lora_alpha = 32 และ r = 8 ข้อใดคือ output ของ layer นี้ตอนเทรน?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. LoRA: h = W₀x + (α/r)BAx และ α/r = 32/8 = 4. W₀ แช่แข็ง เทรนเฉพาะ A กับ B. ค่า 0.25 คือ r/α กลับด้าน และ scale ต้องคูณกับ BA ไม่ใช่ W₀.">h = W₀x + 4ABx โดยเทรน W₀, A และ B ทั้งหมด</button>
+    <button class="opt" data-correct="false" data-note="ผิด. LoRA: h = W₀x + (α/r)BAx และ α/r = 32/8 = 4. W₀ แช่แข็ง เทรนเฉพาะ A กับ B. ค่า 0.25 คือ r/α กลับด้าน และ scale ต้องคูณกับ BA ไม่ใช่ W₀.">h = W₀x + 0.25BAx โดยเทรน A และ B แต่ W₀ ถูกแช่แข็ง</button>
+    <button class="opt" data-correct="true" data-note="ถูก. LoRA: h = W₀x + (α/r)BAx และ α/r = 32/8 = 4. W₀ แช่แข็ง เทรนเฉพาะ A กับ B. ค่า 0.25 คือ r/α กลับด้าน และ scale ต้องคูณกับ BA ไม่ใช่ W₀.">h = W₀x + 4BAx โดยเทรน A และ B แต่ W₀ ถูกแช่แข็ง</button>
+    <button class="opt" data-correct="false" data-note="ผิด. LoRA: h = W₀x + (α/r)BAx และ α/r = 32/8 = 4. W₀ แช่แข็ง เทรนเฉพาะ A กับ B. ค่า 0.25 คือ r/α กลับด้าน และ scale ต้องคูณกับ BA ไม่ใช่ W₀.">h = 4W₀x + BAx โดยเทรน A และ B แต่ W₀ ถูกแช่แข็ง</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 8</span><span>LoRA target modules</span></div>
+  <div class="qtext">ใน LoraConfig ที่ตั้ง <code>target_modules=["q_lin", "v_lin"]</code> และ <code>modules_to_save=["pre_classifier", "classifier"]</code> กับ DistilBERT ข้อใดถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. target_modules เลือก projection ที่เติม adapter: q_lin (Query) และ v_lin (Value) เท่านั้น Key กับ FFN จึงแช่แข็ง. modules_to_save ระบุ layer ที่เทรนเต็มและบันทึกคู่กับ adapter คือ head ใหม่ทั้งสองชั้น.">Key projection ไม่ได้รับ LoRA และยังถูกแช่แข็ง ส่วน classifier ถูกเทรนเต็มที่</button>
+    <button class="opt" data-correct="false" data-note="ผิด. target_modules เลือก projection ที่เติม adapter: q_lin (Query) และ v_lin (Value) เท่านั้น Key กับ FFN จึงแช่แข็ง. modules_to_save ระบุ layer ที่เทรนเต็มและบันทึกคู่กับ adapter คือ head ใหม่ทั้งสองชั้น.">Key projection ได้รับ LoRA ด้วย ส่วน classifier ถูกแช่แข็งตลอดการเทรน</button>
+    <button class="opt" data-correct="false" data-note="ผิด. target_modules เลือก projection ที่เติม adapter: q_lin (Query) และ v_lin (Value) เท่านั้น Key กับ FFN จึงแช่แข็ง. modules_to_save ระบุ layer ที่เทรนเต็มและบันทึกคู่กับ adapter คือ head ใหม่ทั้งสองชั้น.">Query และ Value ถูกเทรนเต็มที่ทุก weight ส่วน classifier ได้รับ LoRA</button>
+    <button class="opt" data-correct="false" data-note="ผิด. target_modules เลือก projection ที่เติม adapter: q_lin (Query) และ v_lin (Value) เท่านั้น Key กับ FFN จึงแช่แข็ง. modules_to_save ระบุ layer ที่เทรนเต็มและบันทึกคู่กับ adapter คือ head ใหม่ทั้งสองชั้น.">ทุก linear layer ได้รับ LoRA และ pre_classifier ถูกตัดออกจากโมเดล</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s7">7. RAG: Retrieval-Augmented Generation</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p22-rag.png" alt="Slide: RAG retrieves relevant external information and adds it to a generative model&#x27;s input to help answer a question without retraining the generator. Update the knowledge base and its embeddings without retraining the generator. Similarity scores measure retrieval relevance, not correctness or confidence. Workshop: build a knowledge base of workshop notes; retrieve relevant notes using all-MiniLM-L6-v2 to embed question and documents and select top-k by cosine similarity; generate an answer by providing question and retrieved notes to FLAN-T5-small. Prompt: Answer the question using only the context below. If the answer is missing, say Information unavailable. Context: Source: Workshop setup ... maximum length of 64 tokens. Question: Which model and maximum token length does this workshop use?">
+<figcaption>Slide: RAG — ค้นแล้วเติมใน prompt (Lecture12, p.22)</figcaption>
+</figure>
+
+<p><strong>RAG</strong> ค้นข้อมูลภายนอกที่เกี่ยวข้องแล้วเติมเข้าใน input ของ generative model เพื่อช่วยตอบคำถาม <strong>โดยไม่ต้องเทรน generator ใหม่</strong>:</p>
+<ul>
+<li>อัปเดต knowledge base และ embedding ของมันได้โดยไม่เทรน generator</li>
+<li>Similarity score วัด<strong>ความเกี่ยวข้องของการค้น (retrieval relevance)</strong> ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ</li>
+</ul>
+<p>ขั้นตอนใน workshop:</p>
+<ol>
+<li><strong>Build a knowledge base</strong>: เก็บโน้ตของ workshop 6 ชิ้น (Workshop setup, Workshop evaluation, Feature extraction, Full fine-tuning, PEFT and LoRA, RAG concept)</li>
+<li><strong>Retrieve relevant notes</strong>: ใช้ <code>all-MiniLM-L6-v2</code> แปลงคำถามและเอกสารเป็น embedding แล้วเลือก top-k ตาม cosine similarity</li>
+<li><strong>Generate an answer</strong>: ส่งคำถามและโน้ตที่ค้นได้ให้ <code>FLAN-T5-small</code></li>
+</ol>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: cosine similarity และการเลือก top-k</div>
+<div class="given">ให้ embedding ย่อ 3 มิติ: คำถาม \(q = [1, 1, 0]\), เอกสาร \(d_1 = [1, 1, 1]\), \(d_2 = [0, 0, 1]\), \(d_3 = [1, 0, 0]\)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — สูตร: \(\cos(q, d) = \dfrac{q \cdot d}{\lVert q \rVert \lVert d \rVert}\), \(\lVert q \rVert = \sqrt{2}\)</div>
+$$\cos(q, d_1) = \frac{2}{\sqrt{2}\sqrt{3}} = 0.816 \qquad \cos(q, d_2) = \frac{0}{\sqrt{2} \cdot 1} = 0 \qquad \cos(q, d_3) = \frac{1}{\sqrt{2} \cdot 1} = 0.707$$</li>
+<li><div class="st-title">ขั้นที่ 2 — top-k = 2</div>
+$$[d_1\ (0.816),\ d_3\ (0.707)]$$</li>
+</ol>
+<div class="answer"><p>เมื่อ normalize embedding ให้ยาว 1 แล้ว (<code>normalize_embeddings=True</code> ใน notebook) dot product เท่ากับ cosine similarity. ผลจริงของผู้สอนกับคำถามเรื่อง max token length และ metric: Workshop setup 0.420, Feature extraction 0.244, Workshop evaluation 0.227. แต่ FLAN-T5-small ตอบเพียง "2." ทั้งที่ top-k = 1 และ 3 และตอนไม่มี retrieval ตอบซ้ำ "a metric that is…" วนไม่จบ: ค้นถูกไม่ได้แปลว่าตอบถูก ตรงกับข้อความ "similarity scores measure retrieval relevance, not correctness".</p></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 9</span><span>RAG similarity</span></div>
+  <div class="qtext">ระบบ RAG ค้นเอกสารให้คำถามหนึ่งได้ cosine similarity สูงสุด 0.92 แต่คำตอบที่ generator สร้างผิด ข้อใดอธิบายได้ถูกต้องที่สุด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Similarity score วัดว่าเอกสารเกี่ยวข้องกับคำถามแค่ไหน (retrieval relevance) ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ. Generator ขนาดเล็กอาจใช้ context ไม่เป็นแม้ค้นได้ถูก เหมือน FLAN-T5-small ที่ตอบ &quot;2.&quot;.">similarity วัดความเกี่ยวข้องของเอกสารที่ค้นได้ ไม่ได้รับประกันว่าคำตอบถูก</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Similarity score วัดว่าเอกสารเกี่ยวข้องกับคำถามแค่ไหน (retrieval relevance) ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ. Generator ขนาดเล็กอาจใช้ context ไม่เป็นแม้ค้นได้ถูก เหมือน FLAN-T5-small ที่ตอบ &quot;2.&quot;.">similarity 0.92 แปลว่าคำตอบถูกต้อง 92% จึงผิดได้เพียง 8% ของกรณี</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Similarity score วัดว่าเอกสารเกี่ยวข้องกับคำถามแค่ไหน (retrieval relevance) ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ. Generator ขนาดเล็กอาจใช้ context ไม่เป็นแม้ค้นได้ถูก เหมือน FLAN-T5-small ที่ตอบ &quot;2.&quot;.">similarity สูงแปลว่า generator มั่นใจในคำตอบ ระบบจึงต้องเทรนใหม่</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Similarity score วัดว่าเอกสารเกี่ยวข้องกับคำถามแค่ไหน (retrieval relevance) ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ. Generator ขนาดเล็กอาจใช้ context ไม่เป็นแม้ค้นได้ถูก เหมือน FLAN-T5-small ที่ตอบ &quot;2.&quot;.">similarity สูงแปลว่า embedding model ผิด จึงควรเลือกเอกสารที่ต่ำที่สุด</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s8">8. Workshop: จำแนกอารมณ์ของ tweet — dataset</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p23-text-classification-workshop.png" alt="Slide: Example on Text Classification. Text classification is a key task in NLP, e.g. categorizing customer feedback or filtering spam; sentiment analysis identifies polarity of text, such as tweets about Tesla&#x27;s new car roofs. To build an emotion detector we use a dataset from a study on how emotions are represented in English Twitter messages, with six basic emotions: anger, disgust, fear, joy, sadness, and surprise; classify tweets into one of these emotions; adapted from NLP with Transformers. We use DistilBERT, a smaller more efficient version of BERT with similar performance; switching to a larger BERT is as simple as changing the checkpoint">
+<figcaption>Slide: Example on Text Classification — emotion detector (Lecture12, p.23)</figcaption>
+</figure>
+
+<p><mark class="src" data-p="23">• Text classification</mark> เป็นงานหลักของ NLP เช่น จัดหมวด feedback ลูกค้าหรือกรองอีเมลสแปม. Sentiment analysis เป็นรูปหนึ่งของ text classification ที่ระบุขั้วของข้อความ (บวก/ลบ).</p>
+<p>Workshop สร้างตัวตรวจจับอารมณ์จาก <mark class="src" data-p="23">dataset</mark> ของงานวิจัยว่าอารมณ์ปรากฏใน tweet ภาษาอังกฤษอย่างไร. ต่างจาก sentiment ทั่วไป dataset นี้มีหกอารมณ์พื้นฐานตามสไลด์: <mark class="src" data-p="23">anger</mark>, <mark class="src" data-p="23">disgust</mark>, <mark class="src" data-p="23">fear</mark>, <mark class="src" data-p="23">joy</mark>, <mark class="src" data-p="23">sadness</mark> และ <mark class="src" data-p="23">surprise</mark>. งานคือจำแนกแต่ละ tweet เป็นหนึ่งในหกอารมณ์ (multiclass).</p>
+<p><strong>หมายเหตุสำคัญ:</strong> label จริงของ dataset <code>"emotion"</code> คือ sadness, joy, <strong>love</strong>, anger, fear, surprise (index 0–5). สไลด์หน้านี้เขียน "disgust" แทน "love" แต่กราฟหน้า 27 และ notebook ใช้ love. ใช้รายการของ dataset เมื่อเขียนโค้ด และจำว่าสไลด์ระบุ disgust ถ้าข้อสอบถามข้อความตามสไลด์.</p>
+<p>โมเดลที่ใช้คือ <mark class="src" data-p="23">DistilBERT</mark> ซึ่งเล็กและเร็วกว่า BERT แต่ประสิทธิภาพใกล้เคียง (6 layer แทน 12, ราว 66 ล้าน parameter แทน 110 ล้าน) จึงเทรน classifier ได้เร็ว และเปลี่ยนเป็น BERT ตัวใหญ่ได้ด้วยการเปลี่ยนชื่อ checkpoint เท่านั้น.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p24-kaggle.png" alt="Slide: Kaggle. Sign up to https://www.kaggle.com/ and click the create button on the top left of the page to create notebook (click settings =&gt; accelerator =&gt; choose GPU or TPU). Screenshot of a Kaggle notebook editor">
+<figcaption>Slide: Kaggle — สร้าง notebook ที่มี GPU (Lecture12, p.24)</figcaption>
+</figure>
+
+<p>Workshop รันบน Kaggle: สมัครที่ <a href="https://www.kaggle.com/" target="_blank" rel="noopener">kaggle.com</a>, กด Create เพื่อสร้าง notebook แล้วเลือก Settings → Accelerator → GPU หรือ TPU. ต้องใช้ GPU เพราะ full fine-tuning ของ DistilBERT 5 epoch ใช้ราว 193 วินาทีบน GPU แต่บน CPU นานกว่าหลายสิบเท่า. Feature extraction (§10) เป็นทางเลือกเมื่อไม่มี GPU.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p25-load-dataset.png" alt="Slide: Load a Dataset. Let&#x27;s load the emotion dataset with the load_dataset() function. Code: from datasets import load_dataset; emotions = load_dataset(&quot;emotion&quot;); emotions. Output DatasetDict with train num_rows 16000, validation 2000, test 2000; features [&#x27;text&#x27;, &#x27;label&#x27;]">
+<figcaption>Slide: Load a Dataset — DatasetDict (Lecture12, p.25)</figcaption>
+</figure>
+
+<pre data-p="25"><code># load the emotion dataset with the load_dataset() function:
+from datasets import load_dataset
+
+emotions = load_dataset("emotion")
+emotions  # look inside our emotions object</code></pre>
+<p>ผลเป็น <code>DatasetDict</code> ที่มีสาม split แต่ละ split มี features <code>['text', 'label']</code>: train 16,000, validation 2,000, test 2,000 แถว รวม 20,000 (สัดส่วน 80:10:10). Dataset แบ่ง split มาให้แล้ว จึงไม่ต้อง shuffle และตัดเองแบบ NMT ใน Lesson 11 §4.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p26-explore-dataset.png" alt="Slide: Explore the Dataset. Datasets provides a set_format() method to change the output format. Code: import pandas as pd; emotions.set_format(type=&quot;pandas&quot;); df = emotions[&quot;train&quot;][:]; df.head(). Rows: i didnt feel humiliated 0; i can go from feeling so hopeless to so damned... 0; im grabbing a minute to post i feel greedy wrong 3; i am ever feeling nostalgic about the fireplac... 2; i am feeling grouchy 3. df.info(): RangeIndex 16000 entries, text object, label int64, memory 250.1+ KB">
+<figcaption>Slide: Explore the Dataset — แปลงเป็น pandas (Lecture12, p.26)</figcaption>
+</figure>
+
+<pre data-p="26"><code>import pandas as pd
+
+emotions.set_format(type="pandas")
+df = emotions["train"][:]
+df.head()</code></pre>
+<p><code>set_format(type="pandas")</code> เปลี่ยนรูปแบบ output ของ Dataset (ซึ่งเก็บเป็น Arrow table) เป็น pandas DataFrame และเปลี่ยนกลับได้ภายหลัง. ห้าแถวแรก: "i didnt feel humiliated" label 0 (sadness), "i am ever feeling nostalgic about the fireplac…" label 2 (love), "i am feeling grouchy" label 3 (anger). ข้อความเป็นตัวพิมพ์เล็กทั้งหมดและไม่มีเครื่องหมายวรรคตอน (เช่น "didnt"). <code>df.info()</code> ยืนยัน 16,000 แถว ไม่มีค่าว่าง; label เป็น int64 จึงต้องแปลงเป็นชื่อด้วย <code>int2str</code> เพื่อดูผล.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p27-class-distribution.png" alt="Slide: Explore Class Distribution. The dataset is heavily imbalanced; the joy and sadness classes appear frequently. Code: df[&quot;label_name&quot;].value_counts(ascending=True).plot.barh(); plt.title(&quot;Frequency of Classes&quot;). Three horizontal bar charts for train, validation and test, classes from most to least: joy, sadness, anger, fear, love, surprise">
+<figcaption>Slide: Explore Class Distribution — ข้อมูลไม่สมดุล (Lecture12, p.27)</figcaption>
+</figure>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: ความไม่สมดุลของคลาสใน train set</div>
+<div class="given">ให้ จำนวนใน train (16,000): joy 5,362, sadness 4,666, anger 2,159, fear 1,937, love 1,304, surprise 572</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — สัดส่วนของคลาสใหญ่สุดและเล็กสุด</div>
+$$5{,}362 / 16{,}000 = 33.5\% \qquad 572 / 16{,}000 = 3.6\%$$</li>
+<li><div class="st-title">ขั้นที่ 2 — อัตราส่วน</div>
+$$5{,}362 / 572 = 9.4 \text{ เท่า}$$</li>
+<li><div class="st-title">ขั้นที่ 3 — baseline ที่ทาย joy ทุกข้อ</div>
+$$\text{accuracy} = 0.335 \qquad \text{macro F1} = \frac{0.50 + 0 \times 5}{6} = 0.084$$</li>
+</ol>
+<div class="answer"><p>joy กับ sadness รวมกัน 62.7% ⇒ "heavily imbalanced". โมเดลที่ทาย joy อย่างเดียวได้ accuracy 33.5% แต่ macro F1 เพียง 0.084 (F1 ของ joy = 2 × 0.335 × 1 / 1.335 = 0.50, คลาสอื่น = 0). Notebook จึงเลือกโมเดลด้วย <strong>macro F1</strong> ไม่ใช่ accuracy. ข้อสังเกตเรื่องกราฟ: แกน x ของกราฟ validation และ test ยาวถึง 5,000 เท่ากับ train ทั้งที่แต่ละ split มีเพียง 2,000 แถว ให้ใช้กราฟดูลำดับของคลาสเท่านั้น.</p></div>
+</div>
+
+<figure>
+<img src="../assets/slides/dl12-p28-tweet-length.png" alt="Slide: How Long Are Our Tweets? Estimate tweet lengths per emotion via distribution of words per tweet: for each emotion, most tweets are around 15 words long and the longest tweets contain 50 words. Code: df[&quot;Words Per Tweet&quot;] = df[&quot;text&quot;].str.split().apply(len); df.boxplot(&quot;Words Per Tweet&quot;, by=&quot;label_name&quot;, grid=False, showfliers=False, color=&quot;black&quot;). Boxplot for anger, fear, joy, love, sadness, surprise with medians near 15-20 and whiskers up to about 50">
+<figcaption>Slide: How Long Are Our Tweets? — จำนวนคำต่อ tweet (Lecture12, p.28)</figcaption>
+</figure>
+
+<pre data-p="28"><code>df["Words Per Tweet"] = df["text"].str.split().apply(len)
+df.boxplot("Words Per Tweet", by="label_name", grid=False, showfliers=False,
+           color="black")
+plt.suptitle("")
+plt.xlabel("")
+plt.show()</code></pre>
+<p><code>str.split().apply(len)</code> นับคำด้วยการตัดที่ช่องว่าง เช่น "i am feeling grouchy" = 4 คำ. ทุกอารมณ์ tweet ส่วนใหญ่ยาวราว 15 คำ และยาวสุดราว 50 คำ. ความยาวจึงไม่ใช่ตัวแยกอารมณ์ (กล่องของหกคลาสซ้อนกัน) แต่บอกว่าเกินขีดจำกัดของ DistilBERT (512 token) ไปไกลมาก. Notebook ตั้ง max length 64 token ซึ่งพอสำหรับ 50 คำแม้คำยาวบางคำถูกตัดเป็นหลาย token.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 10</span><span>Imbalanced metric</span></div>
+  <div class="qtext">Dataset 3 คลาสมีสัดส่วน 80%, 15%, 5% และโมเดลทายคลาสแรกทุกข้อ ข้อใดคือ accuracy และ macro F1 ของโมเดลนี้โดยประมาณ?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Accuracy = 0.80. คลาสแรก precision 0.8, recall 1 ⇒ F1 = 1.6/1.8 = 0.889; อีกสองคลาส F1 = 0. Macro F1 = 0.889/3 ≈ 0.30. นี่คือเหตุผลที่ workshop เลือกโมเดลด้วย macro F1.">accuracy 0.80 และ macro F1 0.80</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Accuracy = 0.80. คลาสแรก precision 0.8, recall 1 ⇒ F1 = 1.6/1.8 = 0.889; อีกสองคลาส F1 = 0. Macro F1 = 0.889/3 ≈ 0.30. นี่คือเหตุผลที่ workshop เลือกโมเดลด้วย macro F1.">accuracy 0.33 และ macro F1 0.89</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Accuracy = 0.80. คลาสแรก precision 0.8, recall 1 ⇒ F1 = 1.6/1.8 = 0.889; อีกสองคลาส F1 = 0. Macro F1 = 0.889/3 ≈ 0.30. นี่คือเหตุผลที่ workshop เลือกโมเดลด้วย macro F1.">accuracy 0.80 และ macro F1 0.33</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Accuracy = 0.80. คลาสแรก precision 0.8, recall 1 ⇒ F1 = 1.6/1.8 = 0.889; อีกสองคลาส F1 = 0. Macro F1 = 0.889/3 ≈ 0.30. นี่คือเหตุผลที่ workshop เลือกโมเดลด้วย macro F1.">accuracy 0.80 และ macro F1 0.30</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s9">9. Tokenizer ของ DistilBERT</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p29-autotokenizer.png" alt="Slide: Preparation. Transformers provides a convenient AutoTokenizer class to load the tokenizer associated with a pretrained model via from_pretrained(), given the model ID on the Hub or a local path. Code: from transformers import AutoTokenizer; model_ckpt = &quot;distilbert-base-uncased&quot;; tokenizer = AutoTokenizer.from_pretrained(model_ckpt). Alternatively load the specific class manually: from transformers import DistilBertTokenizer; distilbert_tokenizer = DistilBertTokenizer.from_pretrained(model_ckpt)">
+<figcaption>Slide: Preparation — AutoTokenizer (Lecture12, p.29)</figcaption>
+</figure>
+
+<pre data-p="29"><code># from the name of the checkpoint.
+from transformers import AutoTokenizer
+
+model_ckpt = "distilbert-base-uncased"
+tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
+
+# load the specific class manually
+from transformers import DistilBertTokenizer
+
+distilbert_tokenizer = DistilBertTokenizer.from_pretrained(model_ckpt)</code></pre>
+<p><code>AutoTokenizer.from_pretrained()</code> รับ ID ของโมเดลบน Hub (หรือ path ในเครื่อง) แล้วเลือก class ของ tokenizer ให้อัตโนมัติ. วิธีที่สองระบุ class เอง (<code>DistilBertTokenizer</code>) ได้ผลเหมือนกันแต่ผูกกับ DistilBERT. ข้อดีของ Auto class: เปลี่ยน <code>model_ckpt</code> เป็น <code>"bert-base-uncased"</code> หรือ <code>"roberta-base"</code> แล้วโค้ดที่เหลือไม่ต้องแก้. Tokenizer ต้องมาจาก checkpoint เดียวกับโมเดลเสมอ เพราะ ID 2023 ของ tokenizer หนึ่งอาจเป็นคนละคำในอีกตัว.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p30-how-tokenizer-works.png" alt="Slide: How Tokenizer works. text = &quot;Tokenizing text is a core task of NLP.&quot;; encoded_text = tokenizer(text); print(encoded_text) -&gt; input_ids [101, 19204, 6026, 3793, 2003, 1037, 4563, 4708, 1997, 17953, 2361, 1012, 102], attention_mask all 1. tokens = tokenizer.convert_ids_to_tokens(encoded_text.input_ids) -&gt; [&#x27;[CLS]&#x27;, &#x27;token&#x27;, &#x27;##izing&#x27;, &#x27;text&#x27;, &#x27;is&#x27;, &#x27;a&#x27;, &#x27;core&#x27;, &#x27;task&#x27;, &#x27;of&#x27;, &#x27;nl&#x27;, &#x27;##p&#x27;, &#x27;.&#x27;, &#x27;[SEP]&#x27;]. tokenizer.convert_tokens_to_string(tokens) -&gt; [CLS] tokenizing text is a core task of nlp. [SEP]. Comments: special [CLS] and [SEP] tokens added; tokens lowercased; tokenizing and NLP split into two tokens; ## prefix means preceding string is not whitespace (subword tokenization)">
+<figcaption>Slide: How Tokenizer works — subword tokenization (Lecture12, p.30)</figcaption>
+</figure>
+
+<pre data-p="30"><code>text = "Tokenizing text is a core task of NLP."
+encoded_text = tokenizer(text)
+print(encoded_text)
+tokens = tokenizer.convert_ids_to_tokens(encoded_text.input_ids)
+print(tokens)
+print(tokenizer.convert_tokens_to_string(tokens))</code></pre>
+<table class="compact">
+<tr><th>token</th><th>[CLS]</th><th>token</th><th>##izing</th><th>text</th><th>is</th><th>a</th><th>core</th></tr>
+<tr><td>input_id</td><td>101</td><td>19204</td><td>6026</td><td>3793</td><td>2003</td><td>1037</td><td>4563</td></tr>
+<tr><th>token</th><th>task</th><th>of</th><th>nl</th><th>##p</th><th>.</th><th>[SEP]</th><th></th></tr>
+<tr><td>input_id</td><td>4708</td><td>1997</td><td>17953</td><td>2361</td><td>1012</td><td>102</td><td></td></tr>
+</table>
+<p>สิ่งที่เกิดขึ้นสี่อย่าง (ตาม comment ในโค้ด):</p>
+<ol>
+<li>เติม special token <strong>[CLS]</strong> (101) ที่ต้นและ <strong>[SEP]</strong> (102) ที่ท้ายลำดับ</li>
+<li>ทุก token ถูกทำเป็นตัวพิมพ์เล็ก ซึ่งเป็นคุณสมบัติของ checkpoint แบบ <em>uncased</em> ("NLP" → "nl", "##p")</li>
+<li>"tokenizing" และ "NLP" ถูกตัดเป็นสอง token เพราะไม่ใช่คำที่พบบ่อยใน vocabulary</li>
+<li>prefix <code>##</code> แปลว่าไม่มีช่องว่างนำหน้า ต้องต่อกับ token ก่อนหน้าเมื่อแปลงกลับเป็นข้อความ เรียกว่า <strong>subword tokenization</strong></li>
+</ol>
+<p>นับได้: 7 คำ + "." = 8 หน่วยในข้อความ แต่ได้ 13 token (+2 จาก subword, +2 จาก special token, +1 จากจุด). <code>attention_mask</code> เป็น 1 ทั้ง 13 ตำแหน่งเพราะยังไม่มี padding. <code>convert_tokens_to_string</code> คืนข้อความ "[CLS] tokenizing text is a core task of nlp. [SEP]" ซึ่งต่อ ## กลับแล้วแต่ยังเป็นตัวพิมพ์เล็ก. ข้อดีของ subword: ไม่มีคำ OOV แบบ <code>[UNK]</code> ใน Lesson 11 §2 เพราะคำแปลกถูกตัดเป็นชิ้นที่รู้จัก.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p31-tokenize-whole-dataset.png" alt="Slide: Tokenizing the Whole Dataset. tokenizer.vocab_size 30522; tokenizer.model_max_length 512; tokenizer.model_input_names [&#x27;input_ids&#x27;, &#x27;attention_mask&#x27;]. Special tokens [PAD] 0, [UNK] 100, [CLS] 101, [SEP] 102, [MASK] 103. def tokenize(batch): return tokenizer(batch[&quot;text&quot;], padding=True, truncation=True). emotions_encoded = emotions.map(tokenize, batched=True, batch_size=None); column_names [&#x27;text&#x27;, &#x27;label&#x27;, &#x27;input_ids&#x27;, &#x27;attention_mask&#x27;]; first example input_ids [101, 1045, 2134, 2102, 2514, 26608, 102, 0, ...] attention_mask [1,1,1,1,1,1,1,0,...]">
+<figcaption>Slide: Tokenizing the Whole Dataset — padding และ attention mask (Lecture12, p.31)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>attribute</th><th>ค่า</th><th>ความหมาย</th></tr>
+<tr><td>vocab_size</td><td>30522</td><td>จำนวน token ใน vocabulary (เทียบ 15,000 คำของ NMT ใน Lesson 11)</td></tr>
+<tr><td>model_max_length</td><td>512</td><td>ความยาวสูงสุดที่โมเดลรับได้ (จำนวน position embedding)</td></tr>
+<tr><td>model_input_names</td><td>['input_ids', 'attention_mask']</td><td>input ที่โมเดลต้องการ</td></tr>
+</table>
+<table class="compact">
+<tr><th>Special Token</th><th>[PAD]</th><th>[UNK]</th><th>[CLS]</th><th>[SEP]</th><th>[MASK]</th></tr>
+<tr><td>Special Token ID</td><td>0</td><td>100</td><td>101</td><td>102</td><td>103</td></tr>
+</table>
+<pre data-p="31"><code># padding=True will pad the examples with zeros to the size of the longest one in a batch,
+# truncation=True will truncate the examples to the model's maximum context size.
+def tokenize(batch):
+  return tokenizer(batch["text"], padding=True, truncation=True)
+
+# setting batched=True will encode the tweets in batches.
+emotions_encoded = emotions.map(tokenize, batched=True, batch_size=None)
+print(emotions_encoded["train"].column_names)
+print(emotions_encoded["train"][0])</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>padding=True</td><td>เติม 0 ([PAD]) จนยาวเท่าข้อความที่ยาวที่สุดใน batch</td></tr>
+<tr><td>truncation=True</td><td>ตัดข้อความที่ยาวเกิน model_max_length (512)</td></tr>
+<tr><td>emotions.map(tokenize, batched=True, batch_size=None)</td><td>ใช้ฟังก์ชันกับทุก split; <code>batch_size=None</code> = ทั้ง split เป็น batch เดียว จึง pad ทุกแถวยาวเท่าแถวที่ยาวสุดของ split</td></tr>
+<tr><td>column_names</td><td>เพิ่มคอลัมน์ <code>input_ids</code> และ <code>attention_mask</code> ต่อจาก text, label</td></tr>
+</table>
+<p>แถวแรก "i didnt feel humiliated" ได้ input_ids [101, 1045, 2134, 2102, 2514, 26608, 102, 0, 0, …]: "didnt" ถูกตัดเป็น "didn" + "##t" (2134, 2102) จึงได้ 7 token จริงแล้วตามด้วย 0 จำนวนมาก. attention_mask = [1, 1, 1, 1, 1, 1, 1, 0, …] บอกโมเดลให้ไม่สนตำแหน่ง padding: ตำแหน่งที่ mask = 0 ได้คะแนน −∞ ก่อน softmax เหมือน causal mask ของ Lesson 11 §12.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 11</span><span>Tokenizer</span></div>
+  <div class="qtext">Tokenizer ของ distilbert-base-uncased แปลงประโยค "I love NLP" เป็น ['[CLS]', 'i', 'love', 'nl', '##p', '[SEP]'] ข้อใดถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. ## แปลว่า token นี้ต่อจาก token ก่อนหน้าโดยไม่มีช่องว่าง (subword). [CLS] = 101 และ [SEP] = 102 ถูกเติมที่ต้นและท้าย ไม่ใช่ [PAD] (ID 0). ตัวพิมพ์เล็กมาจาก checkpoint แบบ uncased ไม่ใช่ attention mask.">'##p' เป็น token ที่ไม่รู้จัก จึงถูกแทนด้วย [UNK] ตอนป้อนเข้าโมเดล</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ## แปลว่า token นี้ต่อจาก token ก่อนหน้าโดยไม่มีช่องว่าง (subword). [CLS] = 101 และ [SEP] = 102 ถูกเติมที่ต้นและท้าย ไม่ใช่ [PAD] (ID 0). ตัวพิมพ์เล็กมาจาก checkpoint แบบ uncased ไม่ใช่ attention mask.">ผลมี 6 token เพราะ tokenizer เติม [PAD] หนึ่งตัวที่ต้นและท้ายประโยค</button>
+    <button class="opt" data-correct="true" data-note="ถูก. ## แปลว่า token นี้ต่อจาก token ก่อนหน้าโดยไม่มีช่องว่าง (subword). [CLS] = 101 และ [SEP] = 102 ถูกเติมที่ต้นและท้าย ไม่ใช่ [PAD] (ID 0). ตัวพิมพ์เล็กมาจาก checkpoint แบบ uncased ไม่ใช่ attention mask.">'##p' ต้องต่อกับ 'nl' โดยไม่มีช่องว่าง และ [CLS] มี ID 101 กับ [SEP] มี ID 102</button>
+    <button class="opt" data-correct="false" data-note="ผิด. ## แปลว่า token นี้ต่อจาก token ก่อนหน้าโดยไม่มีช่องว่าง (subword). [CLS] = 101 และ [SEP] = 102 ถูกเติมที่ต้นและท้าย ไม่ใช่ [PAD] (ID 0). ตัวพิมพ์เล็กมาจาก checkpoint แบบ uncased ไม่ใช่ attention mask.">'i' เป็นตัวเล็กเพราะ attention_mask ทำให้ทุก token เป็นตัวพิมพ์เล็กก่อนเข้าโมเดล</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 12</span><span>Padding</span></div>
+  <div class="qtext">Tokenize batch ที่มีสองข้อความยาว 5 และ 8 token (นับ [CLS] และ [SEP] แล้ว) ด้วย padding=True ข้อใดคือ attention_mask ของข้อความแรก?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. padding=True เติม [PAD] (ID 0) ต่อท้ายจนยาวเท่าข้อความที่ยาวที่สุดใน batch (8). attention_mask เป็น 1 ที่ token จริง 5 ตำแหน่ง และ 0 ที่ padding 3 ตำแหน่งท้าย เพื่อให้โมเดลไม่สนใจ padding.">[1, 1, 1, 1, 1, 1, 0, 0]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. padding=True เติม [PAD] (ID 0) ต่อท้ายจนยาวเท่าข้อความที่ยาวที่สุดใน batch (8). attention_mask เป็น 1 ที่ token จริง 5 ตำแหน่ง และ 0 ที่ padding 3 ตำแหน่งท้าย เพื่อให้โมเดลไม่สนใจ padding.">[0, 0, 0, 1, 1, 1, 1, 1]</button>
+    <button class="opt" data-correct="false" data-note="ผิด. padding=True เติม [PAD] (ID 0) ต่อท้ายจนยาวเท่าข้อความที่ยาวที่สุดใน batch (8). attention_mask เป็น 1 ที่ token จริง 5 ตำแหน่ง และ 0 ที่ padding 3 ตำแหน่งท้าย เพื่อให้โมเดลไม่สนใจ padding.">[1, 1, 1, 1, 1, 1, 1, 1]</button>
+    <button class="opt" data-correct="true" data-note="ถูก. padding=True เติม [PAD] (ID 0) ต่อท้ายจนยาวเท่าข้อความที่ยาวที่สุดใน batch (8). attention_mask เป็น 1 ที่ token จริง 5 ตำแหน่ง และ 0 ที่ padding 3 ตำแหน่งท้าย เพื่อให้โมเดลไม่สนใจ padding.">[1, 1, 1, 1, 1, 0, 0, 0]</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s10">10. Feature Extraction: แช่แข็ง DistilBERT แล้วเทรน classifier</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p32-training-text-classifier.png" alt="Slide: Training a Text Classifier. DistilBERT is pretrained to predict masked words; we can&#x27;t use these language models directly for text classification; we need to modify them slightly. For pretraining, each hidden state is fed to a layer that predicts the masked input tokens; for classification we replace the language modeling layer with a classification layer. Two options: feature extraction (use hidden states as features and train a classifier without modifying the pretrained model) and fine-tuning (train the whole model end-to-end, updating the pretrained parameters)">
+<figcaption>Slide: Training a Text Classifier — สองทางเลือก (Lecture12, p.32)</figcaption>
+</figure>
+
+<p>DistilBERT ถูก pretrain ให้ทาย<strong>คำที่ถูก mask</strong> ในประโยค (ใส่ [MASK] ID 103 แล้วทายคำเดิม) จึงใช้จำแนกข้อความตรงๆ ไม่ได้ ต้องปรับเล็กน้อย: ตอน pretrain hidden state ทุกตัวถูกส่งเข้า layer ที่ทาย token ที่ถูก mask (output 30,522 คำ); สำหรับ classification เรา<strong>แทน language modeling layer ด้วย classification layer</strong> (output 6 คลาส). มีสองทางเลือก:</p>
+<table class="compact">
+<tr><th></th><th>Feature extraction</th><th>Fine-tuning</th></tr>
+<tr><td>ทำอย่างไร</td><td>ใช้ hidden state เป็น feature แล้วเทรน classifier แยก</td><td>เทรนทั้งโมเดลแบบ end-to-end</td></tr>
+<tr><td>pretrained weight</td><td>ไม่เปลี่ยน</td><td>ถูก update</td></tr>
+<tr><td>เทียบ Lesson 8</td><td>ใช้ CNN เป็น feature extractor</td><td>fine-tune ทั้ง CNN</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl12-p33-feature-extractor.png" alt="Slide: Using a Transformer as a Feature Extractor. Freeze its weights and use hidden states for a classifier; fast training, only requires precomputed hidden states if GPUs aren&#x27;t available. Diagram: encoder layers with model parameters frozen, then a trainable classifier producing class probabilities; gradients flow only into the trainable part">
+<figcaption>Slide: Using a Transformer as a Feature Extractor — แช่แข็ง body (Lecture12, p.33)</figcaption>
+</figure>
+
+<p>แช่แข็ง weight แล้วใช้ hidden state เป็น input ของ classifier. ข้อดีคือ <strong>เทรนเร็ว</strong>: คำนวณ hidden state ล่วงหน้าครั้งเดียว (ไม่ต้องใช้ GPU ระหว่างเทรน classifier). ในรูป เส้นประแบ่งสองส่วน: "Model parameters are frozen" ทางซ้าย และ "Trainable" ทางขวา; ลูกศร Gradients หยุดที่เส้นประ ไม่ย้อนเข้า encoder.</p>
+
+<figure>
+<img src="../assets/slides/dl12-p34-load-pretrained-model.png" alt="Slide: Load a Pretrained Model. Similar to AutoTokenizer, AutoModel has a from_pretrained() method to load the weights of a pretrained model. Code: from transformers import TFAutoModel, AutoTokenizer, AutoModel; import torch; model_ckpt = &quot;distilbert-base-uncased&quot;; tokenizer = AutoTokenizer.from_pretrained(model_ckpt); device = torch.device(&quot;cuda&quot; if torch.cuda.is_available() else &quot;cpu&quot;); model = AutoModel.from_pretrained(model_ckpt).to(device); # tf_model = TFAutoModel.from_pretrained(model_ckpt)">
+<figcaption>Slide: Load a Pretrained Model — AutoModel (Lecture12, p.34)</figcaption>
+</figure>
+
+<pre data-p="34"><code>from transformers import TFAutoModel, AutoTokenizer, AutoModel
+import torch
+import tensorflow as tf
+
+# Load the pre-trained tokenizer and model
+model_ckpt = "distilbert-base-uncased"
+tokenizer = AutoTokenizer.from_pretrained(model_ckpt)
+# Load the model and move it to the specified device
+# Check if CUDA (GPU) is available and set the device accordingly
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = AutoModel.from_pretrained(model_ckpt).to(device)
+# load DistilBERT in TensorFlow by using the TFAutoModel class
+#tf_model = TFAutoModel.from_pretrained(model_ckpt)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>torch.device("cuda" if torch.cuda.is_available() else "cpu")</td><td>ใช้ GPU ถ้ามี ไม่เช่นนั้นใช้ CPU</td></tr>
+<tr><td>AutoModel.from_pretrained(model_ckpt)</td><td>โหลด body ของ DistilBERT (embedding + encoder 6 layer) <strong>ไม่มี head</strong>; output คือ hidden states</td></tr>
+<tr><td>.to(device)</td><td>ย้าย weight ไปไว้บนอุปกรณ์ที่เลือก</td></tr>
+<tr><td>#tf_model = TFAutoModel...</td><td>รุ่น TensorFlow ถูก comment ไว้ (Transformers v5 ใช้ PyTorch เป็นหลัก)</td></tr>
+</table>
+
+<figure>
+<img src="../assets/slides/dl12-p35-extract-hidden-states.png" alt="Slide: Extracting the last hidden states. AutoModel converts token encodings to embeddings and feeds them through the encoder stack to return the hidden states. Encode the string with return_tensors=&quot;pt&quot;: text = &quot;this is a test&quot;; inputs = tokenizer(text, return_tensors=&quot;pt&quot;); Input tensor shape torch.Size([1, 6]). Place on the same device and pass inputs: inputs = {k: v.to(device) for k, v in inputs.items()}; with torch.no_grad(): outputs = model(**inputs); BaseModelOutput(last_hidden_state=tensor(...)); outputs.last_hidden_state.size() torch.Size([1, 6, 768])">
+<figcaption>Slide: Extracting the last hidden states — shape [1, 6, 768] (Lecture12, p.35)</figcaption>
+</figure>
+
+<pre data-p="35"><code>text = "this is a test"
+inputs = tokenizer(text, return_tensors="pt")
+print(f"Input tensor shape: {inputs['input_ids'].size()}")   # torch.Size([1, 6])
+
+# Move all input tensors to the specified device (GPU or CPU)
+inputs = {k: v.to(device) for k, v in inputs.items()}
+
+# Disable gradient computation for inference (saving memory and computation)
+with torch.no_grad():
+    # The '**inputs' unpacks the dictionary so that the model receives each tensor as a keyword argument
+    outputs = model(**inputs)
+print(outputs)
+outputs.last_hidden_state.size()   # torch.Size([1, 6, 768])</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>return_tensors="pt"</td><td>คืนเป็น PyTorch tensor (แทน list) shape [1, 6]: batch 1 ข้อความ, 6 token</td></tr>
+<tr><td>{k: v.to(device) …}</td><td>input ต้องอยู่บนอุปกรณ์เดียวกับโมเดล</td></tr>
+<tr><td>torch.no_grad()</td><td>ปิดการคำนวณ gradient เพราะไม่ได้เทรน ประหยัดหน่วยความจำ</td></tr>
+<tr><td>model(**inputs)</td><td>แตก dict เป็น <code>input_ids=…, attention_mask=…</code></td></tr>
+<tr><td>last_hidden_state.size()</td><td>[batch_size, n_tokens, hidden_dim] = [1, 6, 768]</td></tr>
+</table>
+<p>ทำไม 6 token: "this is a test" มี 4 คำ + [CLS] + [SEP] = 6. ทุก token ได้ vector 768 มิติ ⇒ \(6 \times 768 = 4{,}608\) ค่าต่อประโยคนี้. Encoder รักษาขนาด ("same size as the inputs" ใน Lesson 11 §10): embedding เข้า [1, 6, 768] ออก [1, 6, 768].</p>
+
+<figure>
+<img src="../assets/slides/dl12-p36-extract-hidden-states-2.png" alt="Slide: Extracting the last hidden states (2). The hidden state tensor has shape [batch_size, n_tokens, hidden_dim]: a 768-dimensional vector for each of the 6 input tokens. For classification, use the hidden state of the [CLS] token: outputs.last_hidden_state[:,0].size() -&gt; torch.Size([1, 768]). def extract_hidden_states(batch): inputs = {k: v.to(device) for k, v in batch.items() if k in tokenizer.model_input_names}; with torch.no_grad(): last_hidden_state = model(**inputs).last_hidden_state; return {&quot;hidden_state&quot;: last_hidden_state[:, 0].cpu().numpy()}. emotions_encoded.set_format(&quot;torch&quot;, columns=[&quot;input_ids&quot;, &quot;attention_mask&quot;, &quot;label&quot;]); emotions_hidden = emotions_encoded.map(extract_hidden_states, batched=True, batch_size=4)">
+<figcaption>Slide: Extracting the last hidden states (2) — เลือก [CLS] (Lecture12, p.36)</figcaption>
+</figure>
+
+<pre data-p="36"><code>outputs.last_hidden_state[:,0].size()   # torch.Size([1, 768])
+
+def extract_hidden_states(batch):
+    # Move all model inputs (e.g., input_ids, attention_mask) to the specified device (GPU or CPU)
+    inputs = {k: v.to(device) for k, v in batch.items()
+              if k in tokenizer.model_input_names}  # Ensure we only pass the model-required input
+    # Perform inference without tracking gradients (to save memory and computation)
+    with torch.no_grad():
+        # Pass the inputs through the model and extract the last hidden state (output of the model)
+        last_hidden_state = model(**inputs).last_hidden_state
+    # Extract the hidden state corresponding to the [CLS] token (first token in the sequence)
+    # `[:,0]` selects the hidden state of the [CLS] token for each example in the batch
+    # Move the tensor back to CPU and convert it to a NumPy array for easier handling
+    return {"hidden_state": last_hidden_state[:, 0].cpu().numpy()}
+
+emotions_encoded.set_format("torch", columns=["input_ids", "attention_mask", "label"])
+emotions_hidden = emotions_encoded.map(extract_hidden_states, batched=True, batch_size=4)</code></pre>
+<table class="codeexp compact">
+<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
+<tr><td>last_hidden_state[:, 0]</td><td>ทุกตัวอย่างใน batch, token ตำแหน่ง 0 ([CLS]) ⇒ [batch, 768]</td></tr>
+<tr><td>if k in tokenizer.model_input_names</td><td>ส่งเฉพาะ input_ids และ attention_mask (ตัด text และ label ออก)</td></tr>
+<tr><td>.cpu().numpy()</td><td>ย้ายกลับ CPU และเป็น NumPy เพื่อให้ scikit-learn ใช้ได้</td></tr>
+<tr><td>set_format("torch", columns=[...])</td><td>ให้ dataset คืน tensor ของสามคอลัมน์นี้</td></tr>
+<tr><td>map(..., batched=True, batch_size=4)</td><td>เพิ่มคอลัมน์ hidden_state ให้ทุกแถว ทีละ 4 แถว</td></tr>
+</table>
+<p>ทำไมใช้ [CLS]: token นี้อยู่ต้นทุกลำดับ และผ่าน self-attention ที่มองเห็นทุก token จึงสรุปทั้งประโยคไว้ใน vector เดียว 768 มิติ. ผลคือ train set กลายเป็น matrix \(16{,}000 \times 768\) ที่ป้อนเข้า classifier ใดก็ได้. ใน notebook ของผู้สอน logistic regression บน feature นี้ได้ validation accuracy 0.635 และ macro F1 0.531: ดีกว่า baseline 0.335 ชัดเจน แต่อ่อนกับคลาสเล็ก (F1 ของ love 0.371, surprise 0.361) เพราะ feature ที่แช่แข็งไม่ได้ถูกปรับให้แยกอารมณ์.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 13</span><span>Hidden state shape</span></div>
+  <div class="qtext">ป้อน batch ของ 8 ประโยคที่ pad ให้ยาว 20 token เข้า DistilBERT (hidden_dim 768) แล้วใช้ <code>outputs.last_hidden_state[:, 0]</code> ผลมี shape เท่าใดและเป็น vector ของอะไร?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. last_hidden_state มี shape [batch_size, n_tokens, hidden_dim] = [8, 20, 768]. Index [:, 0] เลือกทุกประโยคที่ token ตำแหน่ง 0 ซึ่งคือ [CLS] ได้ [8, 768]. การเฉลี่ยทุก token คือ mean pooling ซึ่งเป็นอีกทางเลือก.">[20, 768] เป็น hidden state ของทุก token ในประโยคแรก</button>
+    <button class="opt" data-correct="false" data-note="ผิด. last_hidden_state มี shape [batch_size, n_tokens, hidden_dim] = [8, 20, 768]. Index [:, 0] เลือกทุกประโยคที่ token ตำแหน่ง 0 ซึ่งคือ [CLS] ได้ [8, 768]. การเฉลี่ยทุก token คือ mean pooling ซึ่งเป็นอีกทางเลือก.">[8, 20] เป็น attention weight ของ token แรกในทุกประโยค</button>
+    <button class="opt" data-correct="true" data-note="ถูก. last_hidden_state มี shape [batch_size, n_tokens, hidden_dim] = [8, 20, 768]. Index [:, 0] เลือกทุกประโยคที่ token ตำแหน่ง 0 ซึ่งคือ [CLS] ได้ [8, 768]. การเฉลี่ยทุก token คือ mean pooling ซึ่งเป็นอีกทางเลือก.">[8, 768] เป็น hidden state ของ token [CLS] ในแต่ละประโยค</button>
+    <button class="opt" data-correct="false" data-note="ผิด. last_hidden_state มี shape [batch_size, n_tokens, hidden_dim] = [8, 20, 768]. Index [:, 0] เลือกทุกประโยคที่ token ตำแหน่ง 0 ซึ่งคือ [CLS] ได้ [8, 768]. การเฉลี่ยทุก token คือ mean pooling ซึ่งเป็นอีกทางเลือก.">[8, 768] เป็นค่าเฉลี่ยของ hidden state ทุก token ในประโยค</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s11">11. Classification Head และ Fine-tuning</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p37-classification-head.png" alt="Slide: Adding a Classification Head. Transformer models are usually divided into a task-independent body and a task-specific head. To complete our text classifier we add a classification head. In BERT, we use the hidden state of the first token, the [CLS] token, for making the final prediction; this hidden state is passed through a dropout layer to reduce overfitting, followed by a linear layer that outputs logits for each class; logits processed through softmax produce class probabilities. Alternatives: mean pooling of all hidden states or a dedicated classification token">
+<figcaption>Slide: Adding a Classification Head — body กับ head (Lecture12, p.37)</figcaption>
+</figure>
+
+<p>โมเดล Transformer แบ่งเป็น <strong>body</strong> ที่ไม่ขึ้นกับงาน และ <strong>head</strong> ที่เฉพาะงาน. Text classifier ต้องเติม classification head:</p>
+$$[\text{CLS}] \text{ hidden state } (768) \;\rightarrow\; \text{Dropout} \;\rightarrow\; \text{Linear } (768 \rightarrow 6) \;\rightarrow\; \text{logits} \;\rightarrow\; \text{softmax}$$
+<ul>
+<li>ใช้ hidden state ของ token แรก ([CLS]) ทำนายผลสุดท้าย</li>
+<li>Dropout ลด overfitting (<a href="0004-deep-networks-and-optimizers.html#s6">Lesson 4 §6</a>)</li>
+<li>Linear layer ให้ logit ต่อคลาส แล้ว softmax เป็นความน่าจะเป็น</li>
+<li>ทางเลือกอื่น: <strong>mean pooling</strong> ของ hidden state ทุกตัว หรือ classification token เฉพาะ ขึ้นกับงาน</li>
+</ul>
+<p>Head ของ <code>DistilBertForSequenceClassification</code> จริงมีสองชั้น: <code>pre_classifier</code> (768 → 768, 590,592 parameter) แล้ว <code>classifier</code> (768 → 6, 4,614 parameter) ซึ่งเป็นชื่อเดียวกับใน <code>modules_to_save</code> ของ LoRA (§6).</p>
+
+<figure>
+<img src="../assets/slides/dl12-p38-fine-tuning-transformer.png" alt="Slide: Fine-tuning a transformer. In the fine-tuning approach we do not use the hidden states as fixed features but instead train them; this requires the classification head to be differentiable, which is why this method usually uses a neural network for classification. Diagram: gradients flow back through all encoder layers and the head; all model parameters are trainable">
+<figcaption>Slide: Fine-tuning a transformer — gradient ไหลทั้งโมเดล (Lecture12, p.38)</figcaption>
+</figure>
+
+<p>Fine-tuning ไม่ใช้ hidden state เป็น feature ตายตัว แต่<strong>เทรนมันด้วย</strong>. ต้องให้ classification head <strong>differentiable</strong> เพื่อให้ gradient ย้อนผ่าน head เข้าไปใน encoder ได้ จึงใช้ neural network เป็น classifier (logistic regression ของ scikit-learn ใน §10 ส่ง gradient กลับเข้า PyTorch ไม่ได้). ในรูปต่างจากหน้า 33 ตรงที่ลูกศร Gradients ยาวตลอดทุก layer และป้าย "All model parameters are trainable".</p>
+
+<figure>
+<img src="../assets/slides/dl12-p39-automodel-sequence-classification.png" alt="Slide: Loading a Pretrained Model. Start with a pretrained DistilBERT model using AutoModelForSequenceClassification instead of AutoModel; it includes a classification head that we can train on top of the pretrained model; we only need to specify the number of labels (six) which determines the head&#x27;s output size. Code: from transformers import AutoModelForSequenceClassification; num_labels = 6; model = (AutoModelForSequenceClassification.from_pretrained(model_ckpt, num_labels=num_labels).to(device))">
+<figcaption>Slide: Loading a Pretrained Model — AutoModelForSequenceClassification (Lecture12, p.39)</figcaption>
+</figure>
+
+<pre data-p="39"><code>from transformers import AutoModelForSequenceClassification
+
+num_labels = 6
+model = (AutoModelForSequenceClassification
+         .from_pretrained(model_ckpt, num_labels=num_labels)
+         .to(device))</code></pre>
+<p>ต่างจาก <code>AutoModel</code> ตรงที่มี classification head มาด้วย. ระบุเพียง <code>num_labels=6</code> ซึ่งกำหนดขนาด output ของ head. Head นี้เริ่มจาก weight สุ่ม (notebook แสดงคำเตือนว่า classifier.weight และ pre_classifier.bias เป็น MISSING ใน checkpoint) ส่วน body โหลดจาก checkpoint.</p>
+
+<div class="calc">
+<div class="calc-title">คำนวณ: parameter ของ full fine-tuning และจำนวน step</div>
+<div class="given">ให้ DistilBERT body 66,362,880 parameter, head 768 → 768 → 6; train 16,000 แถว, batch size 32, หยุดที่ epoch 5 (EarlyStopping patience 2)</div>
+<ol class="steps">
+<li><div class="st-title">ขั้นที่ 1 — Head</div>
+$$(768 \times 768 + 768) + (768 \times 6 + 6) = 595{,}206$$</li>
+<li><div class="st-title">ขั้นที่ 2 — รวมทั้งโมเดล (trainable ทั้งหมด)</div>
+$$66{,}362{,}880 + 595{,}206 = 66{,}958{,}086$$</li>
+<li><div class="st-title">ขั้นที่ 3 — Step ต่อ epoch และรวม</div>
+$$16{,}000 / 32 = 500 \qquad 500 \times 5 = 2{,}500$$</li>
+</ol>
+<div class="answer"><p>ตรงกับ notebook: "Trainable parameters: 66,958,086 / 66,958,086 (100.00%)" และ <code>global_step=2500</code>, epoch 5.0, train_runtime 193 วินาที. ตั้ง epoch สูงสุด 20 แต่ EarlyStopping หยุดเมื่อ macro F1 บน validation ไม่ดีขึ้นเกิน 0.001 สอง epoch ติด. Learning rate 2e-5 (ต่ำมากเพื่อไม่ทำลายความรู้เดิม). ผล: validation accuracy 0.9425, macro F1 0.921; test accuracy 0.9235, macro F1 0.8754 เทียบ feature extraction 0.635/0.531.</p></div>
+</div>
+
+<table class="compact">
+<tr><th>วิธี</th><th>trainable parameter</th><th>accuracy</th><th>macro F1</th></tr>
+<tr><td>Baseline ทาย joy ทุกข้อ</td><td>0</td><td>0.335</td><td>0.084</td></tr>
+<tr><td>Feature extraction + logistic regression (validation)</td><td>classifier เท่านั้น</td><td>0.635</td><td>0.531</td></tr>
+<tr><td>LoRA r = 8 (test)</td><td>742,662</td><td>0.9005</td><td>0.8497</td></tr>
+<tr><td>Full fine-tuning (test)</td><td>66,958,086</td><td>0.9235</td><td>0.8754</td></tr>
+</table>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 14</span><span>Feature extraction vs fine-tuning</span></div>
+  <div class="qtext">ข้อใดเปรียบเทียบ feature extraction กับ fine-tuning ของ DistilBERT ได้ถูกต้อง?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Fine-tuning เทรนทั้งโมเดล gradient จึงต้องผ่าน head เข้า encoder head ต้อง differentiable (neural network). Feature extraction แช่แข็ง encoder แล้วเทรน classifier แยกบน hidden state ที่คำนวณไว้ จึงใช้ logistic regression ได้.">Feature extraction update ทุก weight ของ encoder ส่วน fine-tuning เทรนเฉพาะ classifier</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Fine-tuning เทรนทั้งโมเดล gradient จึงต้องผ่าน head เข้า encoder head ต้อง differentiable (neural network). Feature extraction แช่แข็ง encoder แล้วเทรน classifier แยกบน hidden state ที่คำนวณไว้ จึงใช้ logistic regression ได้.">Fine-tuning ใช้ classifier ใดก็ได้รวม random forest เพราะไม่ต้องส่ง gradient ย้อนกลับ</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Fine-tuning เทรนทั้งโมเดล gradient จึงต้องผ่าน head เข้า encoder head ต้อง differentiable (neural network). Feature extraction แช่แข็ง encoder แล้วเทรน classifier แยกบน hidden state ที่คำนวณไว้ จึงใช้ logistic regression ได้.">Feature extraction ต้องใช้ head ที่ differentiable เพราะ gradient ต้องไหลเข้า encoder</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Fine-tuning เทรนทั้งโมเดล gradient จึงต้องผ่าน head เข้า encoder head ต้อง differentiable (neural network). Feature extraction แช่แข็ง encoder แล้วเทรน classifier แยกบน hidden state ที่คำนวณไว้ จึงใช้ logistic regression ได้.">Fine-tuning ต้องใช้ head ที่ differentiable เพราะ gradient ต้องไหลย้อนเข้า encoder</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 15</span><span>Classification head</span></div>
+  <div class="qtext">ต้องการจำแนก tweet เป็น 4 คลาสด้วย <code>AutoModelForSequenceClassification</code> บน checkpoint ที่ hidden size 768 และ head เป็น Linear ชั้นเดียว Linear ชั้นนี้มี parameter กี่ตัว?</div>
+  <div class="options">
+    <button class="opt" data-correct="false" data-note="ผิด. Linear 768 → 4 มี weight 768 × 4 = 3,072 และ bias 4 รวม 3,076. ค่า 4,614 คือ head 6 คลาสของ workshop (768 × 6 + 6), ค่า 590,592 คือ pre_classifier 768 → 768.">3,072</button>
+    <button class="opt" data-correct="true" data-note="ถูก. Linear 768 → 4 มี weight 768 × 4 = 3,072 และ bias 4 รวม 3,076. ค่า 4,614 คือ head 6 คลาสของ workshop (768 × 6 + 6), ค่า 590,592 คือ pre_classifier 768 → 768.">3,076</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Linear 768 → 4 มี weight 768 × 4 = 3,072 และ bias 4 รวม 3,076. ค่า 4,614 คือ head 6 คลาสของ workshop (768 × 6 + 6), ค่า 590,592 คือ pre_classifier 768 → 768.">590,592</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Linear 768 → 4 มี weight 768 × 4 = 3,072 และ bias 4 รวม 3,076. ค่า 4,614 คือ head 6 คลาสของ workshop (768 × 6 + 6), ค่า 590,592 คือ pre_classifier 768 → 768.">4,614</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<h2 id="s12">12. Transformer Architectures</h2>
+
+<figure>
+<img src="../assets/slides/dl12-p40-transformer-architectures.png" alt="Slide: Transformer Architectures. The early success of transformer models spurred rapid development, resulting in a diverse array of models; they can be categorized into three types: Encoders, Decoders, Encoder-Decoders. Table: Encoder-only (understanding text; BERT, RoBERTa, DistilBERT; classification, NER). Decoder-only (generating text; GPT, LLaMA; text generation, chat). Encoder-decoder (transforming one sequence into another; T5, BART; translation, summarization)">
+<figcaption>Slide: Transformer Architectures — สามชนิด (Lecture12, p.40)</figcaption>
+</figure>
+
+<table class="compact">
+<tr><th>Architecture</th><th>Main strength</th><th>Examples</th><th>Common tasks</th><th>ในบทนี้</th></tr>
+<tr><td>Encoder-only</td><td>Understanding text</td><td>BERT, RoBERTa, DistilBERT</td><td>Classification, NER</td><td>workshop DistilBERT, NER, BertViz</td></tr>
+<tr><td>Decoder-only</td><td>Generating text</td><td>GPT, LLaMA</td><td>Text generation, chat</td><td>pipeline('text-generation')</td></tr>
+<tr><td>Encoder–decoder</td><td>Transforming one sequence into another</td><td>T5, BART</td><td>Translation, summarization</td><td>T5 cross-attention, FLAN-T5-small ใน RAG, opus-mt-th-en</td></tr>
+</table>
+<p>ความสำเร็จช่วงแรกทำให้เกิดโมเดลจำนวนมาก แต่ยังจัดได้สามชนิดเดิมจาก Lesson 11 §12. หน้านี้เพิ่ม LLaMA ในกลุ่ม decoder-only และ NER, chat ในคอลัมน์งาน. วิธีจำ: encoder มองเห็นทั้งประโยค (ไม่มี causal mask) จึงเข้าใจดี; decoder มองเฉพาะอดีตจึงสร้างทีละ token; encoder–decoder ใช้ cross attention เชื่อมสองลำดับ.</p>
+
+<div class="quiz">
+  <div class="qhead"><span>คำถาม 16</span><span>Architectures</span></div>
+  <div class="qtext">ข้อใดจับคู่ชนิดของ Transformer กับโมเดลและงานได้ถูกต้องทั้งหมด?</div>
+  <div class="options">
+    <button class="opt" data-correct="true" data-note="ถูก. Encoder-only คือ BERT, RoBERTa, DistilBERT (classification, NER). Decoder-only คือ GPT, LLaMA (text generation, chat). Encoder–decoder คือ T5, BART (translation, summarization).">Decoder-only: GPT และ LLaMA สำหรับ text generation และ chat</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Encoder-only คือ BERT, RoBERTa, DistilBERT (classification, NER). Decoder-only คือ GPT, LLaMA (text generation, chat). Encoder–decoder คือ T5, BART (translation, summarization).">Encoder-only: T5 และ BART สำหรับ translation และ summarization</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Encoder-only คือ BERT, RoBERTa, DistilBERT (classification, NER). Decoder-only คือ GPT, LLaMA (text generation, chat). Encoder–decoder คือ T5, BART (translation, summarization).">Encoder–decoder: BERT และ RoBERTa สำหรับ classification และ NER</button>
+    <button class="opt" data-correct="false" data-note="ผิด. Encoder-only คือ BERT, RoBERTa, DistilBERT (classification, NER). Decoder-only คือ GPT, LLaMA (text generation, chat). Encoder–decoder คือ T5, BART (translation, summarization).">Decoder-only: DistilBERT และ RoBERTa สำหรับ text generation</button>
+  </div>
+  <div class="feedback"></div>
+</div>
+
+<div class="box exam">
+<div class="label">ออกสอบสูง — สรุปทั้งบท</div>
+<ul>
+<li>Hugging Face = Hub (models, datasets, Spaces) + libraries (Transformers, Diffusers, Datasets; Tokenizers; Evaluate สำหรับ metric); ต่างจาก Keras ตรงเน้นใช้/fine-tune pretrained model; v5 ใช้ PyTorch</li>
+<li><code>pipeline()</code> = preprocessing → model inference → postprocessing; งาน: text-classification, ner (<code>aggregation_strategy="simple"</code>), question-answering (extractive, ไม่รองรับใน 5.x), text-generation, summarization, translation</li>
+<li>Tokenizer → Input IDs → Model → Logits → softmax → Predictions</li>
+<li>หกวิธีใช้ pretrained model: direct inference, prompting, feature extraction + classifier, full fine-tuning, PEFT/LoRA, RAG</li>
+<li>LoRA: \(h = W_0x + \frac{\alpha}{r}BAx\); 768 × 768 ⇒ 589,824 เทียบ 12,288 (r = 8); workshop: q_lin, v_lin, α/r = 2, trainable 742,662 (1.10%)</li>
+<li>RAG: all-MiniLM-L6-v2 + cosine top-k + FLAN-T5-small; similarity = relevance ไม่ใช่ correctness</li>
+<li>Workshop: <mark class="src" data-p="23">• Text classification</mark>, <mark class="src" data-p="23">dataset</mark> emotion 16,000/2,000/2,000; สไลด์ระบุ <mark class="src" data-p="23">anger</mark>, <mark class="src" data-p="23">disgust</mark>, <mark class="src" data-p="23">fear</mark>, <mark class="src" data-p="23">joy</mark>, <mark class="src" data-p="23">sadness</mark>, <mark class="src" data-p="23">surprise</mark> (dataset จริงใช้ love แทน disgust); <mark class="src" data-p="23">DistilBERT</mark>; imbalanced ⇒ macro F1</li>
+<li>Tokenizer: vocab 30,522, max 512, [PAD] 0 [UNK] 100 [CLS] 101 [SEP] 102 [MASK] 103; ## = subword</li>
+<li>Feature extraction: [CLS] = <code>last_hidden_state[:, 0]</code> [batch, 768], แช่แข็ง body. Fine-tuning: <code>AutoModelForSequenceClassification(num_labels=6)</code>, head differentiable</li>
+</ul>
+</div>
+
+<p class="quiz-score"></p>
+
+<hr>
+
+<div class="box win">
+<div class="label">ชัยชนะของบทเรียนนี้</div>
+คุณควร (1) บอกองค์ประกอบของ Hugging Face และหน้าที่ของ Datasets/Tokenizers/Transformers/Evaluate; (2) อธิบายสามขั้นของ <code>pipeline()</code> และเลือกชื่องานกับชนิด Transformer ให้ตรงกัน พร้อมอ่านผล NER/QA ได้; (3) คำนวณ softmax จาก logit และรู้ว่าแผนภาพในสไลด์พิมพ์ 99.89% ไม่ตรงกับ logit; (4) จับคู่หกวิธีใช้ pretrained model กับสถานการณ์; (5) คำนวณ parameter ของ LoRA (2dr), scale α/r และ trainable 742,662 ของ workshop; (6) คำนวณ cosine similarity และอธิบายว่าทำไม similarity ไม่ใช่ความถูกต้อง; (7) อ่าน input_ids, special token, subword และ attention_mask ได้; (8) ดึง [CLS] hidden state (shape) และเปรียบเทียบ feature extraction, LoRA, full fine-tuning ด้วยตัวเลขจริง.
+</div>
+
+<h2>ภาคผนวก: Slide ทั้งหมดใน deep_learning_part4_3.pdf (40 หน้า) — เช็คว่าอ่านครบ</h2>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
+<tr><td>1</td><td>ปก Part4: Transfer Learning and Transformers for NLP</td><td>etc — สไลด์ปก (ชื่อหัวข้อ, ภาคเรียน, เวลาเรียน) ไม่มีเนื้อหาวิชา</td></tr>
+<tr><td>2</td><td>LLMs</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป)</td></tr>
+<tr><td>3</td><td>The Hugging Face</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป)</td></tr>
+<tr><td>4</td><td>Why use Hugging Face</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + ตาราง)</td></tr>
+<tr><td>5</td><td>Hugging Face Ecosystem</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป)</td></tr>
+<tr><td>6</td><td>Three Core Libraries</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + ตาราง)</td></tr>
+<tr><td>7</td><td>Using Transformer — pipeline()</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป)</td></tr>
+<tr><td>8</td><td>Example of Text Classification</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + โค้ด)</td></tr>
+<tr><td>9</td><td>Example of Name Entity Recognition</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + โค้ด + ตารางผล)</td></tr>
+<tr><td>10</td><td>Example of Question Answering</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป)</td></tr>
+<tr><td>11</td><td>Example of Text Generation</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป)</td></tr>
+<tr><td>12</td><td>Example of Summarization</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป)</td></tr>
+<tr><td>13</td><td>Example of Machine Translation</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + ตารางงาน)</td></tr>
+<tr><td>14</td><td>Using Tokenizer and Model</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + คำนวณ softmax)</td></tr>
+<tr><td>15</td><td>Visualize Attention Weights — BertViz</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โค้ด)</td></tr>
+<tr><td>16</td><td>Continue… — T5 cross-attention</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + โค้ด)</td></tr>
+<tr><td>17</td><td>Transfer Learning in NLP</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป)</td></tr>
+<tr><td>18</td><td>Approaches for Using and Adapting Pre-trained Models</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + ตาราง)</td></tr>
+<tr><td>19</td><td>PEFT: Why LoRA?</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป)</td></tr>
+<tr><td>20</td><td>How LoRA Works</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + สูตร + คำนวณ 12,288)</td></tr>
+<tr><td>21</td><td>Applying LoRA to Transformer Attention</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + โค้ด + คำนวณ 742,662)</td></tr>
+<tr><td>22</td><td>RAG</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + คำนวณ cosine)</td></tr>
+<tr><td>23</td><td>Example on Text Classification</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + แก้ label)</td></tr>
+<tr><td>24</td><td>Kaggle</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป)</td></tr>
+<tr><td>25</td><td>Load a Dataset</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + โค้ด)</td></tr>
+<tr><td>26</td><td>Explore the Dataset</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + โค้ด)</td></tr>
+<tr><td>27</td><td>Explore Class Distribution</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + คำนวณ imbalance)</td></tr>
+<tr><td>28</td><td>How Long Are Our Tweets?</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + โค้ด)</td></tr>
+<tr><td>29</td><td>Preparation — AutoTokenizer</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + โค้ด)</td></tr>
+<tr><td>30</td><td>How Tokenizer works</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + โค้ด + ตาราง ID)</td></tr>
+<tr><td>31</td><td>Tokenizing the Whole Dataset</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + โค้ด + special token)</td></tr>
+<tr><td>32</td><td>Training a Text Classifier</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + ตาราง)</td></tr>
+<tr><td>33</td><td>Using a Transformer as a Feature Extractor</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป)</td></tr>
+<tr><td>34</td><td>Load a Pretrained Model — AutoModel</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + โค้ด)</td></tr>
+<tr><td>35</td><td>Extracting the last hidden states</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + โค้ด)</td></tr>
+<tr><td>36</td><td>Extracting the last hidden states (2)</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + โค้ด)</td></tr>
+<tr><td>37</td><td>Adding a Classification Head</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป)</td></tr>
+<tr><td>38</td><td>Fine-tuning a transformer</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป)</td></tr>
+<tr><td>39</td><td>Loading a Pretrained Model — AutoModelForSequenceClassification</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + โค้ด + คำนวณ 66,958,086)</td></tr>
+<tr><td>40</td><td>Transformer Architectures</td><td>✓ <a href="#s12">หัวข้อ 12</a> (รูป + ตาราง)</td></tr>
+</table>
+
+<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
+
+<nav class="lesson-nav">
+  <span><a href="0011-text-generation-translation-and-transformer.html">← Lesson 11: Text Generation, Translation &amp; Transformer</a></span>
+  <span><a href="0001-machine-learning-foundations.html">กลับไป Lesson 1 →</a></span>
+</nav>
+
+<script src="../assets/quiz.js"></script>
+</body>
+</html>
