@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 7: Convolutional Neural Networks</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 7</span>
+  <span><a href="0007-convolutional-neural-networks.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 7: Convolutional Neural Networks</h1>
+<p>ข้อเลือกตอบ 16 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>Convolution</span></div>
+<div class="qtext">ภาพ 4×4 มีแถว [1,2,0,1], [3,1,1,0], [0,2,4,1], [2,0,1,3] ทำ convolution กับ filter 3×3 ที่ทุกแถวเป็น [1,0,−1] (ไม่มี padding, stride 1) ค่าที่ตำแหน่งซ้ายบนของ feature map คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. หน้าต่างคลุมแถว 1–3 คอลัมน์ 1–3: คอลัมน์ซ้าย 1+3+0 = 4, คอลัมน์ขวา 0+1+4 = 5, ผลลัพธ์ 4 − 5 = −1. ค่า 9 คือบวกทั้งสองคอลัมน์, 4 คือลืมลบคอลัมน์ขวา.">9</button>
+<button class="opt" data-correct="false" data-note="ผิด. หน้าต่างคลุมแถว 1–3 คอลัมน์ 1–3: คอลัมน์ซ้าย 1+3+0 = 4, คอลัมน์ขวา 0+1+4 = 5, ผลลัพธ์ 4 − 5 = −1. ค่า 9 คือบวกทั้งสองคอลัมน์, 4 คือลืมลบคอลัมน์ขวา.">4</button>
+<button class="opt" data-correct="true" data-note="ถูก. หน้าต่างคลุมแถว 1–3 คอลัมน์ 1–3: คอลัมน์ซ้าย 1+3+0 = 4, คอลัมน์ขวา 0+1+4 = 5, ผลลัพธ์ 4 − 5 = −1. ค่า 9 คือบวกทั้งสองคอลัมน์, 4 คือลืมลบคอลัมน์ขวา.">−1</button>
+<button class="opt" data-correct="false" data-note="ผิด. หน้าต่างคลุมแถว 1–3 คอลัมน์ 1–3: คอลัมน์ซ้าย 1+3+0 = 4, คอลัมน์ขวา 0+1+4 = 5, ผลลัพธ์ 4 − 5 = −1. ค่า 9 คือบวกทั้งสองคอลัมน์, 4 คือลืมลบคอลัมน์ขวา.">−5</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>Edge detection</span></div>
+<div class="qtext">ภาพ 6×6 มี 3 คอลัมน์ซ้ายเป็น 0 และ 3 คอลัมน์ขวาเป็น 50 ทำ convolution กับ filter 3×3 ที่ทุกแถวเป็น [1,0,−1] (ไม่มี padding, stride 1) แต่ละแถวของ feature map คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. ผลลัพธ์ = ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา. หน้าต่างที่คร่อมขอบมีซ้ายเป็น 0 ขวาเป็น 50: 0 − 3(50) = −150. บริเวณเรียบให้ 0. เครื่องหมายลบเพราะด้านมืดอยู่ซ้าย.">[0, −150, −150, 0]</button>
+<button class="opt" data-correct="false" data-note="ผิด. ผลลัพธ์ = ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา. หน้าต่างที่คร่อมขอบมีซ้ายเป็น 0 ขวาเป็น 50: 0 − 3(50) = −150. บริเวณเรียบให้ 0. เครื่องหมายลบเพราะด้านมืดอยู่ซ้าย.">[0, 150, 150, 0]</button>
+<button class="opt" data-correct="false" data-note="ผิด. ผลลัพธ์ = ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา. หน้าต่างที่คร่อมขอบมีซ้ายเป็น 0 ขวาเป็น 50: 0 − 3(50) = −150. บริเวณเรียบให้ 0. เครื่องหมายลบเพราะด้านมืดอยู่ซ้าย.">[−150, 0, 0, −150]</button>
+<button class="opt" data-correct="false" data-note="ผิด. ผลลัพธ์ = ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา. หน้าต่างที่คร่อมขอบมีซ้ายเป็น 0 ขวาเป็น 50: 0 − 3(50) = −150. บริเวณเรียบให้ 0. เครื่องหมายลบเพราะด้านมืดอยู่ซ้าย.">[0, −50, −50, 0]</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>Output size</span></div>
+<div class="qtext">Input ขนาด 28×28 ผ่าน convolution ที่ใช้ filter 5×5, padding 2, stride 1 ขนาด output (กว้าง×สูง) คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. (28 + 2·2 − 5)/1 + 1 = 28. padding 2 กับ filter 5 คือกรณี SAME เพราะ p = (f−1)/2. 24×24 คือไม่คิด padding, 26×26 คือคิด padding ด้านเดียว.">24×24</button>
+<button class="opt" data-correct="false" data-note="ผิด. (28 + 2·2 − 5)/1 + 1 = 28. padding 2 กับ filter 5 คือกรณี SAME เพราะ p = (f−1)/2. 24×24 คือไม่คิด padding, 26×26 คือคิด padding ด้านเดียว.">26×26</button>
+<button class="opt" data-correct="false" data-note="ผิด. (28 + 2·2 − 5)/1 + 1 = 28. padding 2 กับ filter 5 คือกรณี SAME เพราะ p = (f−1)/2. 24×24 คือไม่คิด padding, 26×26 คือคิด padding ด้านเดียว.">30×30</button>
+<button class="opt" data-correct="true" data-note="ถูก. (28 + 2·2 − 5)/1 + 1 = 28. padding 2 กับ filter 5 คือกรณี SAME เพราะ p = (f−1)/2. 24×24 คือไม่คิด padding, 26×26 คือคิด padding ด้านเดียว.">28×28</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>Output size</span></div>
+<div class="qtext">Input ขนาด 64×64 ผ่าน convolution ที่ใช้ filter 7×7, padding 0, stride 2 ขนาด output (กว้าง×สูง) คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. (64 − 7)/2 + 1 = 28.5 + 1 = 29.5 ปัดลงเป็น 29. 58×58 คือลืมหารด้วย stride, 28×28 คือปัดลงแล้วลืมบวก 1.">30×30</button>
+<button class="opt" data-correct="true" data-note="ถูก. (64 − 7)/2 + 1 = 28.5 + 1 = 29.5 ปัดลงเป็น 29. 58×58 คือลืมหารด้วย stride, 28×28 คือปัดลงแล้วลืมบวก 1.">29×29</button>
+<button class="opt" data-correct="false" data-note="ผิด. (64 − 7)/2 + 1 = 28.5 + 1 = 29.5 ปัดลงเป็น 29. 58×58 คือลืมหารด้วย stride, 28×28 คือปัดลงแล้วลืมบวก 1.">28×28</button>
+<button class="opt" data-correct="false" data-note="ผิด. (64 − 7)/2 + 1 = 28.5 + 1 = 29.5 ปัดลงเป็น 29. 58×58 คือลืมหารด้วย stride, 28×28 คือปัดลงแล้วลืมบวก 1.">58×58</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>Parameters</span></div>
+<div class="qtext">Convolution layer มี 16 filter ขนาด 3×3 รับ input ขนาด 14×14×8 และใช้ padding แบบ same จำนวน parameter ที่เรียนได้ของ layer นี้คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. (3·3·8 + 1)·16 = 73·16 = 1,168. ค่า 1,152 คือลืม bias 16 ตัว, 160 คือลืมคูณ channel ของ input, 3,136 = 14·14·16 คือขนาด output ไม่ใช่ parameter.">1,152</button>
+<button class="opt" data-correct="true" data-note="ถูก. (3·3·8 + 1)·16 = 73·16 = 1,168. ค่า 1,152 คือลืม bias 16 ตัว, 160 คือลืมคูณ channel ของ input, 3,136 = 14·14·16 คือขนาด output ไม่ใช่ parameter.">1,168</button>
+<button class="opt" data-correct="false" data-note="ผิด. (3·3·8 + 1)·16 = 73·16 = 1,168. ค่า 1,152 คือลืม bias 16 ตัว, 160 คือลืมคูณ channel ของ input, 3,136 = 14·14·16 คือขนาด output ไม่ใช่ parameter.">160</button>
+<button class="opt" data-correct="false" data-note="ผิด. (3·3·8 + 1)·16 = 73·16 = 1,168. ค่า 1,152 คือลืม bias 16 ตัว, 160 คือลืมคูณ channel ของ input, 3,136 = 14·14·16 คือขนาด output ไม่ใช่ parameter.">3,136</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>Output shape</span></div>
+<div class="qtext">Input ขนาด 32×32×3 ผ่าน convolution layer ที่มี 8 filter ขนาด 5×5, padding 0, stride 1 shape ของ output คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. กว้าง/สูง = 32 − 5 + 1 = 28. จำนวน channel ของ output เท่ากับจำนวน filter คือ 8 เพราะ filter แต่ละตัวรวมทุก channel ของ input เป็นค่าเดียว.">28×28×3</button>
+<button class="opt" data-correct="false" data-note="ผิด. กว้าง/สูง = 32 − 5 + 1 = 28. จำนวน channel ของ output เท่ากับจำนวน filter คือ 8 เพราะ filter แต่ละตัวรวมทุก channel ของ input เป็นค่าเดียว.">28×28×24</button>
+<button class="opt" data-correct="false" data-note="ผิด. กว้าง/สูง = 32 − 5 + 1 = 28. จำนวน channel ของ output เท่ากับจำนวน filter คือ 8 เพราะ filter แต่ละตัวรวมทุก channel ของ input เป็นค่าเดียว.">32×32×8</button>
+<button class="opt" data-correct="true" data-note="ถูก. กว้าง/สูง = 32 − 5 + 1 = 28. จำนวน channel ของ output เท่ากับจำนวน filter คือ 8 เพราะ filter แต่ละตัวรวมทุก channel ของ input เป็นค่าเดียว.">28×28×8</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>Pooling</span></div>
+<div class="qtext">Feature map ขนาด 4×4 มีแถว [1,3,2,0], [4,2,1,5], [0,1,7,2], [3,6,1,4] ผ่าน max pooling ที่ใช้ pool size 2 และ stride 2 ผลลัพธ์คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. บล็อกซ้ายบน {1,3,4,2} max 4; ขวาบน {2,0,1,5} max 5; ซ้ายล่าง {0,1,3,6} max 6; ขวาล่าง {7,2,1,4} max 7. ตัวเลือกที่มีทศนิยมคือ average pooling.">[[4,2],[3,7]]</button>
+<button class="opt" data-correct="false" data-note="ผิด. บล็อกซ้ายบน {1,3,4,2} max 4; ขวาบน {2,0,1,5} max 5; ซ้ายล่าง {0,1,3,6} max 6; ขวาล่าง {7,2,1,4} max 7. ตัวเลือกที่มีทศนิยมคือ average pooling.">[[3,2],[6,7]]</button>
+<button class="opt" data-correct="true" data-note="ถูก. บล็อกซ้ายบน {1,3,4,2} max 4; ขวาบน {2,0,1,5} max 5; ซ้ายล่าง {0,1,3,6} max 6; ขวาล่าง {7,2,1,4} max 7. ตัวเลือกที่มีทศนิยมคือ average pooling.">[[4,5],[6,7]]</button>
+<button class="opt" data-correct="false" data-note="ผิด. บล็อกซ้ายบน {1,3,4,2} max 4; ขวาบน {2,0,1,5} max 5; ซ้ายล่าง {0,1,3,6} max 6; ขวาล่าง {7,2,1,4} max 7. ตัวเลือกที่มีทศนิยมคือ average pooling.">[[2.5,2],[2.5,3.5]]</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>Pooling</span></div>
+<div class="qtext">Feature map ขนาด 15×15×20 ผ่าน max pooling ที่ใช้ pool size 2 และ stride 2 shape ของ output และจำนวน parameter ที่เรียนได้ของ layer นี้คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. (15 − 2)/2 + 1 = 7.5 ปัดลงเป็น 7. Pooling ไม่เปลี่ยนจำนวน channel (ยังเป็น 20) และไม่มี weight ให้เรียน มีแต่ hyperparameter คือ pool size กับ stride.">7×7×20 และ 0 parameter</button>
+<button class="opt" data-correct="false" data-note="ผิด. (15 − 2)/2 + 1 = 7.5 ปัดลงเป็น 7. Pooling ไม่เปลี่ยนจำนวน channel (ยังเป็น 20) และไม่มี weight ให้เรียน มีแต่ hyperparameter คือ pool size กับ stride.">8×8×20 และ 0 parameter</button>
+<button class="opt" data-correct="false" data-note="ผิด. (15 − 2)/2 + 1 = 7.5 ปัดลงเป็น 7. Pooling ไม่เปลี่ยนจำนวน channel (ยังเป็น 20) และไม่มี weight ให้เรียน มีแต่ hyperparameter คือ pool size กับ stride.">7×7×10 และ 0 parameter</button>
+<button class="opt" data-correct="false" data-note="ผิด. (15 − 2)/2 + 1 = 7.5 ปัดลงเป็น 7. Pooling ไม่เปลี่ยนจำนวน channel (ยังเป็น 20) และไม่มี weight ให้เรียน มีแต่ hyperparameter คือ pool size กับ stride.">7×7×20 และ 80 parameter</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>Parameter table</span></div>
+<div class="qtext">ภาพ 28×28×1 ผ่าน Conv (6 filter, f=5, p=0, s=1) → MaxPool (f=2, s=2) → Conv (16 filter, f=5, p=0, s=1) → MaxPool (f=2, s=2) → Flatten จำนวนค่าใน vector หลัง flatten คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 28 → 24 (conv) → 12 (pool) → 8 (conv) → 4 (pool). Flatten = 4·4·16 = 256. ค่า 400 = 5·5·16 เกิดจากเริ่มที่ภาพ 32×32, ค่า 64 = 4·4·4 คือใช้จำนวน channel ผิด.">400</button>
+<button class="opt" data-correct="true" data-note="ถูก. 28 → 24 (conv) → 12 (pool) → 8 (conv) → 4 (pool). Flatten = 4·4·16 = 256. ค่า 400 = 5·5·16 เกิดจากเริ่มที่ภาพ 32×32, ค่า 64 = 4·4·4 คือใช้จำนวน channel ผิด.">256</button>
+<button class="opt" data-correct="false" data-note="ผิด. 28 → 24 (conv) → 12 (pool) → 8 (conv) → 4 (pool). Flatten = 4·4·16 = 256. ค่า 400 = 5·5·16 เกิดจากเริ่มที่ภาพ 32×32, ค่า 64 = 4·4·4 คือใช้จำนวน channel ผิด.">1,024</button>
+<button class="opt" data-correct="false" data-note="ผิด. 28 → 24 (conv) → 12 (pool) → 8 (conv) → 4 (pool). Flatten = 4·4·16 = 256. ค่า 400 = 5·5·16 เกิดจากเริ่มที่ภาพ 32×32, ค่า 64 = 4·4·4 คือใช้จำนวน channel ผิด.">64</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>Parameter table</span></div>
+<div class="qtext">จาก network เดียวกัน (ภาพ 28×28×1 → Conv 6 filter f=5 → MaxPool → Conv 16 filter f=5 → MaxPool) convolution layer ชั้นที่สองมี parameter ที่เรียนได้กี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. input ของชั้นที่สองมี 6 channel (จำนวน filter ของชั้นแรก): (5·5·6 + 1)·16 = 151·16 = 2,416. ค่า 2,400 คือลืม bias, ค่า 416 คือใช้ channel ของภาพต้นฉบับ (1).">416</button>
+<button class="opt" data-correct="false" data-note="ผิด. input ของชั้นที่สองมี 6 channel (จำนวน filter ของชั้นแรก): (5·5·6 + 1)·16 = 151·16 = 2,416. ค่า 2,400 คือลืม bias, ค่า 416 คือใช้ channel ของภาพต้นฉบับ (1).">2,400</button>
+<button class="opt" data-correct="false" data-note="ผิด. input ของชั้นที่สองมี 6 channel (จำนวน filter ของชั้นแรก): (5·5·6 + 1)·16 = 151·16 = 2,416. ค่า 2,400 คือลืม bias, ค่า 416 คือใช้ channel ของภาพต้นฉบับ (1).">6,416</button>
+<button class="opt" data-correct="true" data-note="ถูก. input ของชั้นที่สองมี 6 channel (จำนวน filter ของชั้นแรก): (5·5·6 + 1)·16 = 151·16 = 2,416. ค่า 2,400 คือลืม bias, ค่า 416 คือใช้ channel ของภาพต้นฉบับ (1).">2,416</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>Design pattern</span></div>
+<div class="qtext">ข้อใดอธิบายการเปลี่ยนแปลงของ feature map เมื่อเดินลึกเข้าไปใน CNN แบบ classical ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Pooling และ stride ทำให้กว้างกับสูงลดลงเรื่อยๆ ขณะที่จำนวน filter (channel) มักเพิ่มเป็นสองเท่าตามความลึก เช่น 32 → 64 → 128.">กว้างและสูงเพิ่มขึ้น ส่วนจำนวน channel ลดลง</button>
+<button class="opt" data-correct="false" data-note="ผิด. Pooling และ stride ทำให้กว้างกับสูงลดลงเรื่อยๆ ขณะที่จำนวน filter (channel) มักเพิ่มเป็นสองเท่าตามความลึก เช่น 32 → 64 → 128.">กว้างและสูงลดลง และจำนวน channel ลดลงด้วย</button>
+<button class="opt" data-correct="true" data-note="ถูก. Pooling และ stride ทำให้กว้างกับสูงลดลงเรื่อยๆ ขณะที่จำนวน filter (channel) มักเพิ่มเป็นสองเท่าตามความลึก เช่น 32 → 64 → 128.">กว้างและสูงลดลง ส่วนจำนวน channel เพิ่มขึ้น</button>
+<button class="opt" data-correct="false" data-note="ผิด. Pooling และ stride ทำให้กว้างกับสูงลดลงเรื่อยๆ ขณะที่จำนวน filter (channel) มักเพิ่มเป็นสองเท่าตามความลึก เช่น 32 → 64 → 128.">กว้างและสูงคงเดิม ส่วนจำนวน channel เพิ่มขึ้น</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>Design pattern</span></div>
+<div class="qtext">Feature map สุดท้ายของ CNN มีขนาด 5×5×256 ถ้าเปลี่ยนจาก Flatten เป็น Global Average Pooling ก่อน dense layer จำนวน input ของ dense layer จะเปลี่ยนจากเท่าใดเป็นเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Flatten ให้ 5·5·256 = 6,400 ค่า. Global Average Pooling เฉลี่ย 25 ค่าของแต่ละ channel เหลือ 1 ค่าต่อ channel จึงได้ 256 ค่า.">จาก 6,400 เป็น 256</button>
+<button class="opt" data-correct="false" data-note="ผิด. Flatten ให้ 5·5·256 = 6,400 ค่า. Global Average Pooling เฉลี่ย 25 ค่าของแต่ละ channel เหลือ 1 ค่าต่อ channel จึงได้ 256 ค่า.">จาก 6,400 เป็น 25</button>
+<button class="opt" data-correct="false" data-note="ผิด. Flatten ให้ 5·5·256 = 6,400 ค่า. Global Average Pooling เฉลี่ย 25 ค่าของแต่ละ channel เหลือ 1 ค่าต่อ channel จึงได้ 256 ค่า.">จาก 1,280 เป็น 256</button>
+<button class="opt" data-correct="false" data-note="ผิด. Flatten ให้ 5·5·256 = 6,400 ค่า. Global Average Pooling เฉลี่ย 25 ค่าของแต่ละ channel เหลือ 1 ค่าต่อ channel จึงได้ 256 ค่า.">จาก 6,400 เป็น 1,280</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>Keras code</span></div>
+<div class="qtext">โค้ด <code>Conv2D(64, kernel_size=3, activation='relu')</code> รับ input ขนาด (None, 20, 20, 32) โดยไม่ระบุ <code>padding</code> และ <code>strides</code> output shape คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. ค่า default ของ Keras คือ padding=&#x27;valid&#x27; และ strides=1: 20 − 3 + 1 = 18. channel ของ output = filters = 64. (None, 20, 20, 64) คือกรณี padding=&#x27;same&#x27;.">(None, 18, 18, 64)</button>
+<button class="opt" data-correct="false" data-note="ผิด. ค่า default ของ Keras คือ padding=&#x27;valid&#x27; และ strides=1: 20 − 3 + 1 = 18. channel ของ output = filters = 64. (None, 20, 20, 64) คือกรณี padding=&#x27;same&#x27;.">(None, 20, 20, 64)</button>
+<button class="opt" data-correct="false" data-note="ผิด. ค่า default ของ Keras คือ padding=&#x27;valid&#x27; และ strides=1: 20 − 3 + 1 = 18. channel ของ output = filters = 64. (None, 20, 20, 64) คือกรณี padding=&#x27;same&#x27;.">(None, 18, 18, 32)</button>
+<button class="opt" data-correct="false" data-note="ผิด. ค่า default ของ Keras คือ padding=&#x27;valid&#x27; และ strides=1: 20 − 3 + 1 = 18. channel ของ output = filters = 64. (None, 20, 20, 64) คือกรณี padding=&#x27;same&#x27;.">(None, 10, 10, 64)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>Keras code</span></div>
+<div class="qtext">ต้องการเติมโค้ดให้ layer ย่อ feature map จาก 14×14×32 เป็น 7×7×32 โดยไม่มี parameter ที่เรียนได้ ข้อใดถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. MaxPooling2D ที่ pool_size 2 (strides เท่ากับ pool_size โดย default) ให้ (14−2)/2+1 = 7 คง channel 32 และไม่มี parameter. Conv2D stride 2 ให้ขนาดเดียวกันแต่มี parameter 4,128 ตัว.">Conv2D(32, 2, strides=2)</button>
+<button class="opt" data-correct="false" data-note="ผิด. MaxPooling2D ที่ pool_size 2 (strides เท่ากับ pool_size โดย default) ให้ (14−2)/2+1 = 7 คง channel 32 และไม่มี parameter. Conv2D stride 2 ให้ขนาดเดียวกันแต่มี parameter 4,128 ตัว.">Dense(7, activation='relu')</button>
+<button class="opt" data-correct="true" data-note="ถูก. MaxPooling2D ที่ pool_size 2 (strides เท่ากับ pool_size โดย default) ให้ (14−2)/2+1 = 7 คง channel 32 และไม่มี parameter. Conv2D stride 2 ให้ขนาดเดียวกันแต่มี parameter 4,128 ตัว.">MaxPooling2D(pool_size=(2, 2))</button>
+<button class="opt" data-correct="false" data-note="ผิด. MaxPooling2D ที่ pool_size 2 (strides เท่ากับ pool_size โดย default) ให้ (14−2)/2+1 = 7 คง channel 32 และไม่มี parameter. Conv2D stride 2 ให้ขนาดเดียวกันแต่มี parameter 4,128 ตัว.">UpSampling2D(size=(2, 2))</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>Data augmentation</span></div>
+<div class="qtext">ข้อใดอธิบายการทำงานของ data augmentation ด้วย preprocessing layers ของ Keras ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. การแปลงเกิด on the fly ขณะประมวลผลแต่ละ training batch ไม่มีการสร้างและเก็บ dataset ใหม่อย่างถาวร และ layer กลุ่มนี้ไม่ทำงานตอน inference.">สร้างภาพใหม่ทั้งหมดเก็บลงดิสก์ก่อนเริ่มเทรน ทำให้ dataset ใหญ่ขึ้นถาวร</button>
+<button class="opt" data-correct="true" data-note="ถูก. การแปลงเกิด on the fly ขณะประมวลผลแต่ละ training batch ไม่มีการสร้างและเก็บ dataset ใหม่อย่างถาวร และ layer กลุ่มนี้ไม่ทำงานตอน inference.">แปลงภาพแบบสุ่มทีละ batch ระหว่างเทรน โดยไม่เก็บ dataset ใหม่ลงดิสก์</button>
+<button class="opt" data-correct="false" data-note="ผิด. การแปลงเกิด on the fly ขณะประมวลผลแต่ละ training batch ไม่มีการสร้างและเก็บ dataset ใหม่อย่างถาวร และ layer กลุ่มนี้ไม่ทำงานตอน inference.">แปลงภาพแบบสุ่มทั้งตอนเทรนและตอนทำนาย เพื่อให้ผลทำนายหลากหลายขึ้น</button>
+<button class="opt" data-correct="false" data-note="ผิด. การแปลงเกิด on the fly ขณะประมวลผลแต่ละ training batch ไม่มีการสร้างและเก็บ dataset ใหม่อย่างถาวร และ layer กลุ่มนี้ไม่ทำงานตอน inference.">แปลงภาพแบบสุ่มครั้งเดียวตอนโหลดข้อมูล แล้วใช้ภาพชุดนั้นซ้ำทุก epoch</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 16</span><span>Data augmentation</span></div>
+<div class="qtext"><code>keras.layers.RandomRotation(0.05)</code> หมุนภาพแบบสุ่มได้มากที่สุดกี่องศาในแต่ละทิศ?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ค่า factor เป็นสัดส่วนของรอบเต็ม 360°: 0.05 × 360 = 18 องศา (เช่นเดียวกับ 0.1 ที่ให้ ±36°). ค่า 9 คือคิดจาก 180°, ค่า 5 คืออ่านเป็นร้อยละขององศา.">5 องศา</button>
+<button class="opt" data-correct="false" data-note="ผิด. ค่า factor เป็นสัดส่วนของรอบเต็ม 360°: 0.05 × 360 = 18 องศา (เช่นเดียวกับ 0.1 ที่ให้ ±36°). ค่า 9 คือคิดจาก 180°, ค่า 5 คืออ่านเป็นร้อยละขององศา.">9 องศา</button>
+<button class="opt" data-correct="false" data-note="ผิด. ค่า factor เป็นสัดส่วนของรอบเต็ม 360°: 0.05 × 360 = 18 องศา (เช่นเดียวกับ 0.1 ที่ให้ ±36°). ค่า 9 คือคิดจาก 180°, ค่า 5 คืออ่านเป็นร้อยละขององศา.">0.05 องศา</button>
+<button class="opt" data-correct="true" data-note="ถูก. ค่า factor เป็นสัดส่วนของรอบเต็ม 360°: 0.05 × 360 = 18 องศา (เช่นเดียวกับ 0.1 ที่ให้ ±36°). ค่า 9 คือคิดจาก 180°, ค่า 5 คืออ่านเป็นร้อยละขององศา.">18 องศา</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 17</span><span>shape และ parameter ทั้ง network</span></div>
+<div class="qtext">ภาพ 32×32×3 → Conv2D(16, 3, padding="same") → MaxPooling2D(2) → Conv2D(32, 3) → MaxPooling2D(2) → Flatten → Dense(10) เขียน output shape และจำนวน parameter ทุกชั้นพร้อมผลรวม</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>Conv1 same: 32×32×16, (3·3·3 + 1)·16 = 448 · Pool: 16×16×16, 0</p>
+<p>Conv2 valid: 16 − 3 + 1 = 14 จึง 14×14×32, (3·3·16 + 1)·32 = 4,640 · Pool: 7×7×32, 0</p>
+<p>Flatten: 7·7·32 = 1,568 · Dense(10): 1,568·10 + 10 = 15,690 · รวม 448 + 4,640 + 15,690 = 20,778</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 18</span><span>pooling กับ parameter</span></div>
+<div class="qtext">อธิบายว่าทำไม pooling layer มี parameter 0 แต่กลับช่วยลดจำนวน parameter ของโมเดล ยกตัวอย่างตัวเลขจากตาราง parameters summary</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>pooling แค่เลือกค่าสูงสุดหรือเฉลี่ยในหน้าต่าง ไม่มี weight ให้เรียน จึงมี parameter 0 (pool size และ stride เป็น hyperparameter)</p>
+<p>แต่มันลดกว้างและสูงของ feature map ทำให้ vector หลัง flatten สั้นลง dense layer แรกจึงมี weight น้อยลง: ไม่มี pooling flatten ได้ 3,380 → 338,100 parameter · มี pooling flatten ได้ 180 → 18,100 ลดลงราว 18.7 เท่า</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 19</span><span>channel ของ filter</span></div>
+<div class="qtext">ทำไม filter ที่ใช้กับภาพ RGB ต้องมีขนาด f×f×3 และทำไม output ของ filter หนึ่งตัวจึงมีแค่ 1 channel</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>หนึ่งตำแหน่งต้องคูณกับทุก channel ของ input filter จึงต้องมีชั้นละหนึ่ง channel เท่ากับ input (n_C = 3)</p>
+<p>ผลคูณของทุกช่องทุก channel ถูกบวกรวมเป็นตัวเลขเดียวต่อตำแหน่ง filter หนึ่งตัวจึงให้ feature map แผ่นเดียว ถ้าต้องการ output หลาย channel ต้องใช้หลาย filter (channel ของ output = จำนวน filter)</p>
+</div>
+</div>
+
+</body>
+</html>

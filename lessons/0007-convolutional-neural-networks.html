@@ -9,780 +9,482 @@
 <script defer src="../assets/katex/katex.min.js"></script>
 <script defer src="../assets/katex/auto-render.min.js"></script>
 <script defer src="../assets/math.js"></script>
+<script defer src="../assets/reader.js"></script>
 </head>
-<body>
+<body class="reader">
 
 <nav class="lesson-nav">
-  <span><a href="0006-callbacks-and-hyperparameter-tuning.html">← Lesson 6: Callbacks &amp; Tuning</a></span>
-  <span>Lesson 7 / 12 · CNN</span>
-  <span><a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8: CNN Architectures &amp; Transfer Learning →</a></span>
+  <span><a href="0006-callbacks-and-hyperparameter-tuning.html">← Lesson 6</a> · Lesson 7</span>
+  <span><a href="0007-convolutional-neural-networks-exercises.html">แบบฝึก</a> · <a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8 →</a></span>
 </nav>
 
-<p class="kicker">Lecture7 (deep_learning_part3_1.pdf, 30 หน้า) · 2603520 Deep Learning</p>
-<h1>Convolutional Neural Networks: Convolution, Padding, Stride, Pooling และการนับ Parameter</h1>
+<p class="kicker">Lecture 7 — Part 3.1 Convolutional Neural Network</p>
+<h1>Convolutional Neural Networks (CNN)</h1>
+<p class="readmeta">อ่านประมาณ 25 นาที · ข้อความ<mark class="src" title="highlighted slide text">ไฮไลต์</mark>คือคำแปลของถ้อยคำที่อาจารย์ทำสีบนสไลด์ (ชี้เมาส์หรือแตะค้างเพื่อดูภาษาอังกฤษต้นฉบับ) · รูปสไลด์กดเพื่อขยาย</p>
 
-<p>Lesson 1–6 ใช้ network แบบ dense (fully connected) ทั้งหมด: ทุก node ต่อกับทุก node ของ layer ก่อนหน้า. บทนี้เปลี่ยนชนิดของ layer สำหรับข้อมูลภาพ. ส่วนที่ต้องคำนวณมือได้มีสามเรื่อง:</p>
-<ol>
-<li><strong>ค่าใน feature map</strong> จากการเลื่อน filter ทับภาพ (หน้า 7–9)</li>
-<li><strong>ขนาด output</strong> ของ convolution/pooling จากสูตร \(\lfloor (n+2p-f)/s \rfloor + 1\) (หน้า 12–20)</li>
-<li><strong>จำนวน parameter</strong> ของแต่ละ layer ในตารางหน้า 21</li>
-</ol>
+<p>Lesson 1–6 ใช้ dense layer ทั้งหมด คือทุก node ต่อกับทุก node ของ layer ก่อนหน้า บทนี้เปลี่ยนชนิดของ layer สำหรับข้อมูลภาพ ข้อสอบในบทนี้เน้นการคำนวณสามแบบที่ต้องทำด้วยมือได้: ค่าใน feature map จากการเลื่อน filter ทับภาพ, ขนาด output จากสูตร \(\lfloor (n+2p-f)/s \rfloor + 1\) และจำนวน parameter ของแต่ละ layer</p>
 
-<div class="box source">
-<div class="label">อ่านเพิ่มก่อนเริ่ม (แนะนำ)</div>
-<a href="https://cs231n.github.io/convolutional-networks/" target="_blank" rel="noopener">CS231n — Convolutional Neural Networks</a> (สูตรขนาด output และการนับ parameter แบบเดียวกับสไลด์) · <a href="https://keras.io/api/layers/convolution_layers/convolution2d/" target="_blank" rel="noopener">Keras — Conv2D</a> และ <a href="https://keras.io/api/layers/pooling_layers/max_pooling2d/" target="_blank" rel="noopener">MaxPooling2D</a> (สไลด์หน้า 28 อ้างถึง) · Géron, <em>Hands-On Machine Learning</em> บทที่ 14 (ที่มาของรูปหน้า 5, 10, 19, 25).
-</div>
-
-<div class="box beginner">
-<div class="label">สัญลักษณ์ที่ใช้ทั้งบท</div>
-<ul>
-<li>\(n\) = ความกว้าง/สูงของ input (ภาพหรือ feature map), เขียนแยกเป็น \(n_W, n_H\) เมื่อไม่เท่ากัน</li>
-<li>\(n_C\) = จำนวน channel ของ input (ภาพ grayscale = 1, ภาพสี RGB = 3)</li>
-<li>\(f\) = ขนาด filter (filter \(f \times f\)), \(p\) = จำนวนขอบที่ pad เพิ่มแต่ละด้าน, \(s\) = stride</li>
-<li>\(n_C'\) = จำนวน filter ของ layer = จำนวน channel ของ output</li>
-<li>\(\lfloor x \rfloor\) = ปัดลง (floor)</li>
-</ul>
-</div>
-
-<div class="box prereq">
-<div class="label">ต้องรู้ก่อน — ภาพคือ matrix ของตัวเลข</div>
-<p>ภาพ grayscale ขนาด 28×28 คือ matrix 28 แถว 28 คอลัมน์ แต่ละช่องเก็บความสว่างของ pixel (0 = ดำ, 255 = ขาว). ภาพสีเก็บ 3 matrix ซ้อนกัน (Red, Green, Blue) จึงมี shape (สูง, กว้าง, 3). มิติที่สามเรียกว่า <strong>channel</strong> หรือ depth.</p>
-<p>Dense layer ของ <a href="0005-vanishing-gradients-and-initialization.html">Lesson 5</a> รับได้เฉพาะ vector จึงต้อง flatten ภาพ 28×28 เป็น vector ยาว 784 ก่อน. CNN รับ matrix เข้าไปตรงๆ โดยไม่ flatten.</p>
-</div>
-
-<h2 id="s1">1. Computer Vision และเหตุผลที่ Dense Network ไม่เหมาะกับภาพ</h2>
-
-<figure>
-<img src="../assets/slides/dl7-p02-computer-vision-area.png" alt="Slide: The Area of Computer Vision. Computer vision deals with how to give machines the ability to understand visual input such as images and videos as humans understand. Applications: image classification, image captioning, object detection, semantic segmentation, autonomous systems, creating new things such as art works. Diagram comparing human vision system (eye, brain) with computer vision system (sensing device, interpreting device)">
-<figcaption>Slide: The Area of Computer Vision — นิยามและงานประยุกต์ (Lecture7, p.2)</figcaption>
-</figure>
-
-<p><mark class="src" data-p="2">Computer vision</mark> คือสาขาที่ทำให้เครื่องมีความสามารถ <mark class="src" data-p="2">understand visual input</mark> เช่นภาพและวิดีโอ ในแบบที่มนุษย์เข้าใจ. ระบบของมนุษย์มีตา (sensing device) ส่งสัญญาณให้สมอง (interpreting device). ระบบของคอมพิวเตอร์มีกล้องเป็น sensing device และโมเดลเป็น interpreting device ซึ่งให้ output เดียวกัน เช่น "bowl, oranges, bananas, lemons, peaches".</p>
-<p><mark class="src" data-p="2">Applications of Computer Vision</mark> ที่สไลด์ระบุมี 4 กลุ่ม:</p>
-<ul>
-<li>Image Classification, Image captioning</li>
-<li>Object Detection, Semantic Segmentation (<a href="0009-functional-api-and-object-detection.html">Lesson 9</a>)</li>
-<li>Autonomous systems (e.g., cars, robots)</li>
-<li>Create new things such as art works</li>
-</ul>
-
-<figure>
-<img src="../assets/slides/dl7-p03-dl-for-vision-dense.png" alt="Slide: Deep Learning for Computer Vision. A large motorcycle image is fed to a densely connected network that outputs h(x), labelled Motorcycle?. Right side shows a grey scale image as a grid of pixel values and a color image split into red, green and blue channels, with pixel (11, 102, 35) producing forest green">
-<figcaption>Slide: Deep Learning for Computer Vision — จำแนกภาพด้วย dense network (Lecture7, p.3)</figcaption>
-</figure>
-
-<p><mark class="src" data-p="3">Deep learning has been applied in various fields of computer vision</mark>. ตัวอย่างในสไลด์คือการจำแนกว่าภาพเป็น <mark class="src" data-p="3">Motorcycle</mark> หรือไม่ (binary classification, output เดียวผ่าน sigmoid). วิธีแรกที่ทำได้ด้วยความรู้เดิมคือ <mark class="src" data-p="3">Image Classification using Densely Connected Neural Networks</mark>: flatten ภาพเป็น vector แล้วป้อนเข้า dense layer.</p>
-<p>คอมพิวเตอร์เห็นภาพ grayscale เป็นตารางตัวเลข 1 ชั้น. ภาพสีเป็นตาราง 3 ชั้น: pixel ที่มีค่า (R, G, B) = (11, 102, 35) คือสี forest green. จำนวน input feature จึงเท่ากับ สูง × กว้าง × จำนวน channel.</p>
-
-<figure>
-<img src="../assets/slides/dl7-p04-why-not-dense.png" alt="Slide: Why not Densely Connected Neural Networks? Two problems: computational complexity and not scale; loss of spatial information of images. Three 4 by 4 grids each contain a small square drawn at a different location; the first flattens to the input vector 1,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0. The network will have no idea that these are the shapes of squares">
-<figcaption>Slide: Why not Densely Connected Neural Networks? — สองปัญหา (Lecture7, p.4)</figcaption>
-</figure>
-
-<p>สไลด์ให้เหตุผลสองข้อที่ dense network ใช้กับภาพไม่ดี.</p>
-<p><strong>ข้อ 1: <mark class="src" data-p="4">Computational Complexity &amp; Not Scale</mark>.</strong> จำนวน weight ของ dense layer แรก = (จำนวน input) × (จำนวน node) และจำนวน input โตตามพื้นที่ภาพ.</p>
-
-<div class="calc">
-<div class="calc-title">คำนวณ: จำนวน parameter ของ dense layer แรก เมื่อภาพใหญ่ขึ้น</div>
-<div class="given">ให้ dense layer แรกมี 1,000 node (แต่ละ node มี bias 1 ตัว). สูตรจาก Lesson 5: \(\#\text{param} = n_{in} \times n_{out} + n_{out}\)</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — ภาพสี 32×32</div>
-$$\begin{gathered}n_{in} = 32 \times 32 \times 3 = 3{,}072 \\[0.35em] \Rightarrow\; 3{,}072 \times 1{,}000 + 1{,}000 = 3{,}073{,}000\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 2 — ภาพสี 1000×1000</div>
-$$\begin{gathered}n_{in} = 1000 \times 1000 \times 3 = 3{,}000{,}000 \\[0.35em] \Rightarrow\; 3{,}000{,}000 \times 1{,}000 + 1{,}000 = 3{,}000{,}001{,}000\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 3 — เทียบกับ convolution layer ที่มี 10 filter ขนาด 3×3 บนภาพสี (สูตรใน §5)</div>
-$$(3 \times 3 \times 3 + 1) \times 10 = 280 \quad\text{(เท่ากันทุกขนาดภาพ)}$$</li>
-</ol>
-<div class="answer"><p>ด้านยาวขึ้นราว 31 เท่า parameter ของ dense layer แรกเพิ่มจาก 3 ล้านเป็น 3 พันล้าน. จำนวน parameter ของ convolution layer ไม่ขึ้นกับขนาดภาพ ขึ้นกับขนาด filter, จำนวน channel และจำนวน filter เท่านั้น.</p></div>
-</div>
-
-<p><strong>ข้อ 2: <mark class="src" data-p="4">Loss Spatial Information of Images</mark>.</strong> การ flatten ทำลายข้อมูลว่า pixel ไหนอยู่ติดกัน. ตารางแรกในสไลด์เป็นภาพ 4×4 ที่มีสี่เหลี่ยมอยู่มุมซ้ายบน (pixel ค่า 1 ที่ตำแหน่ง (1,1), (1,2), (2,1), (2,2)). เมื่อ flatten ทีละแถวได้</p>
-$$\text{Input vector} = [1, 1, 0, 0,\; 1, 1, 0, 0,\; 0, 0, 0, 0,\; 0, 0, 0, 0]$$
-<p>ค่า 1 สองตัวของแถวบน (ตำแหน่ง 1–2) กับสองตัวของแถวล่าง (ตำแหน่ง 5–6) ซึ่งติดกันในภาพ ถูกแยกห่างกัน 4 ตำแหน่งใน vector. Dense network เรียน weight แยกต่อตำแหน่ง จึงเรียนได้แค่ว่า "ตำแหน่ง 1, 2, 5, 6 เป็น 1". ถ้าสี่เหลี่ยมเดียวกันย้ายไปมุมขวาล่าง ค่า 1 จะไปอยู่ตำแหน่ง 11, 12, 15, 16 ซึ่งใช้ weight คนละชุดที่ไม่เคยถูกเทรน. สไลด์สรุปว่า network จะ <mark class="src" data-p="4">no idea</mark> ว่ารูปเหล่านี้คือสี่เหลี่ยม เพราะไม่ได้เรียนรูปทรงสี่เหลี่ยมเป็น feature.</p>
-
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li><mark class="src" data-p="2">Computer vision</mark> = ให้เครื่อง <mark class="src" data-p="2">understand visual input</mark> (ภาพ, วิดีโอ) แบบที่มนุษย์เข้าใจ. กับดัก: ตัวเลือกที่นิยามว่าเป็นการ "สร้างภาพ" หรือ "บีบอัดภาพ"</li>
-<li>เหตุผลที่ไม่ใช้ dense กับภาพมีสองข้อ: <mark class="src" data-p="4">Computational Complexity &amp; Not Scale</mark> (parameter โตตามขนาดภาพ) และ <mark class="src" data-p="4">Loss Spatial Information of Images</mark> (flatten แล้วความสัมพันธ์เชิงตำแหน่งหาย)</li>
-<li>วัตถุเดิมย้ายตำแหน่ง ⇒ dense network <mark class="src" data-p="4">no idea</mark> เพราะ weight ผูกกับตำแหน่ง pixel</li>
-</ul>
-</div>
-
-<h2 id="s2">2. CNN: ที่มาและโครงสร้างระดับบน</h2>
-
-<figure>
-<img src="../assets/slides/dl7-p05-cnn-visual-cortex.png" alt="Slide: Convolutional Neural Networks (CNNs). CNNs, aka ConvNets (1980s), emerged from the study of the brain&#x27;s visual cortex. Many neurons in visual cortex have a small local receptive field (Hubel and Wiesel, 1968). Higher-level neurons are based on neighboring lower-level neurons&#x27; outputs. Diagrams of the cat experiment and local receptive fields of five neurons">
-<figcaption>Slide: Convolutional Neural Networks (CNNs) — ที่มาจาก visual cortex (Lecture7, p.5)</figcaption>
-</figure>
-
-<p>CNN (อีกชื่อคือ <mark class="src" data-p="5">ConvNets</mark>) เกิดในทศวรรษ 1980 จากการศึกษา <mark class="src" data-p="5">visual cortex</mark> ของสมอง. ข้อค้นพบของ Hubel &amp; Wiesel (1968) ที่สไลด์อ้างมีสองข้อ และทั้งสองข้อกลายเป็นหลักออกแบบ CNN:</p>
-<ol>
-<li>neuron จำนวนมากใน visual cortex มี <mark class="src" data-p="5">receptive field</mark> ขนาดเล็กเฉพาะที่ คือตอบสนองต่อสิ่งเร้าในบริเวณจำกัดของลานสายตาเท่านั้น ⇒ ใน CNN neuron หนึ่งตัวต่อกับ pixel กลุ่มเล็ก ไม่ต่อทั้งภาพ</li>
-<li>neuron ระดับสูงทำงานจาก output ของ neuron ระดับล่างที่อยู่ใกล้กัน ⇒ ใน CNN layer ลึกรวม feature ง่าย (เส้น, ขอบ) เป็น feature ซับซ้อน (รูปทรง, วัตถุ)</li>
-</ol>
-
-<figure>
-<img src="../assets/slides/dl7-p06-cnn-architecture.png" alt="Slide: CNNs Architecture consists of input layer (raw image matrix without flattening), convolutional layers (extract features from images, generating feature maps, later flattened; neurons connected only to pixels in their receptive fields), fully connected layers (classification task), output layers (prediction task). Diagram: digit 3 image, convolutional layers producing feature maps, flatten, fully connected layers, prediction. Below: low-level, mid-level and high-level features">
-<figcaption>Slide: CNNs Architecture — สี่ส่วนของ CNN (Lecture7, p.6)</figcaption>
-</figure>
-
-<p><mark class="src" data-p="6">CNNs Architecture</mark> ประกอบด้วยสี่ส่วนเรียงกัน:</p>
-<table class="compact">
-<tr><th>ส่วน</th><th>ข้อความในสไลด์</th><th>หน้าที่</th></tr>
-<tr><td><mark class="src" data-p="6">Input layer</mark></td><td>Raw image matrix as an input (without flatten the image)</td><td>รับภาพเป็น matrix เช่น (28, 28, 1)</td></tr>
-<tr><td><mark class="src" data-p="6">Convolutional layers</mark></td><td><mark class="src" data-p="6">extract features</mark> จากภาพ ได้ภาพที่ถูกแปลงเรียกว่า <mark class="src" data-p="6">feature maps</mark> ซึ่งภายหลังถูก flatten เป็น vector ของ feature ที่เรียนได้</td><td>feature extraction</td></tr>
-<tr><td><mark class="src" data-p="6">Fully connected layers</mark></td><td>Classification task</td><td>รับ vector ของ feature มาจำแนก</td></tr>
-<tr><td><mark class="src" data-p="6">Output layers</mark></td><td>Prediction task</td><td>ให้ความน่าจะเป็นของแต่ละ class</td></tr>
+<table class="map">
+<tr><th>คำถาม</th><th>คำตอบสั้น</th><th>อ่านที่</th></tr>
+<tr><td>ทำไมไม่ใช้ dense กับภาพ</td><td>parameter โตตามขนาดภาพ และ flatten แล้วตำแหน่งหาย</td><td><a href="#s1">ตอน 1</a></td></tr>
+<tr><td>convolution คำนวณอย่างไร</td><td>เลื่อน filter แล้วคูณทีละช่องบวกกัน</td><td><a href="#s2">ตอน 2</a></td></tr>
+<tr><td>output ขนาดเท่าไร</td><td>\(\lfloor (n+2p-f)/s \rfloor + 1\)</td><td><a href="#s3">ตอน 3</a></td></tr>
+<tr><td>parameter เท่าไร</td><td>\((f \cdot f \cdot n_C + 1) \cdot n_C'\) · pooling = 0</td><td><a href="#s4">ตอน 4</a>, <a href="#s5">ตอน 5</a></td></tr>
+<tr><td>เขียนใน Keras อย่างไร</td><td>Conv2D, MaxPooling2D, Flatten, Dense และ data augmentation</td><td><a href="#s6">ตอน 6</a></td></tr>
 </table>
-<p>หมายเหตุในสไลด์: neuron ใน convolutional layer ต่อเฉพาะกับ pixel ใน <mark class="src" data-p="6">receptive fields.</mark> ของตัวเอง ต่างจาก dense layer ที่ต่อกับ input ทุกตัว. รูปล่างของสไลด์แสดงลำดับชั้นของ feature: layer ต้นเรียน low-level feature (ขอบ, เส้น), layer กลางเรียนชิ้นส่วน (ตา, จมูก), layer ลึกเรียน high-level feature (ใบหน้าทั้งหน้า).</p>
 
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li>CNN = <mark class="src" data-p="5">ConvNets</mark> มาจากการศึกษา <mark class="src" data-p="5">visual cortex</mark>; แนวคิดหลักคือ <mark class="src" data-p="5">receptive field</mark> เฉพาะที่</li>
-<li>ลำดับ 4 ส่วน: <mark class="src" data-p="6">Input layer</mark> → <mark class="src" data-p="6">Convolutional layers</mark> → <mark class="src" data-p="6">Fully connected layers</mark> → <mark class="src" data-p="6">Output layers</mark>. Input ของ CNN <strong>ไม่ flatten</strong>; flatten เกิดหลัง convolutional layers</li>
-<li>Convolutional layers <mark class="src" data-p="6">extract features</mark> และให้ผลเป็น <mark class="src" data-p="6">feature maps</mark>. กับดัก: ตัวเลือกที่บอกว่า convolutional layer ทำ classification (นั่นคือ fully connected layers)</li>
-</ul>
-</div>
+<table class="sym">
+<tr><td>\(n\)</td><td>ความกว้าง/สูงของ input (ภาพหรือ feature map) เขียนแยก \(n_W, n_H\) เมื่อไม่เท่ากัน</td></tr>
+<tr><td>\(n_C\)</td><td>จำนวน channel ของ input (grayscale = 1, RGB = 3)</td></tr>
+<tr><td>\(f,\ p,\ s\)</td><td>ขนาด filter (\(f \times f\)), จำนวนขอบที่ pad แต่ละด้าน, stride</td></tr>
+<tr><td>\(n_C'\)</td><td>จำนวน filter ของ layer = จำนวน channel ของ output</td></tr>
+<tr><td>\(\lfloor x \rfloor\)</td><td>ปัดลง (floor)</td></tr>
+</table>
 
-<h2 id="s3">3. Convolution Operation และ Filter</h2>
+<!-- ===================================================== -->
+<h2 id="s1">1. ภาพ และเหตุผลที่ dense network ไม่เหมาะ</h2>
 
+<h3 id="s1-cv">1.1 Computer vision และภาพในสายตาคอมพิวเตอร์</h3>
+
+<p class="pic">คนดูรูปผลไม้แล้วบอกได้ทันทีว่ามีชาม ส้ม กล้วย มะนาว ตาเป็นตัวรับภาพ สมองเป็นตัวตีความ คอมพิวเตอร์ทำแบบเดียวกันโดยใช้กล้องแทนตา และใช้โมเดลแทนสมอง</p>
+
+<p><mark class="src" data-p="2" title="Computer vision">Computer vision</mark> คือสาขาที่ทำให้เครื่อง <mark class="src" data-p="2" title="understand visual input">เข้าใจข้อมูลภาพ</mark> เช่นภาพและวิดีโอ แบบที่มนุษย์เข้าใจ สไลด์เทียบ <mark class="src" data-p="2" title="Human Vision and Computer Vision System">ระบบการมองของมนุษย์กับของคอมพิวเตอร์</mark> ซึ่งให้ผลเดียวกัน คือ "bowl, oranges, bananas, lemons, peaches" <mark class="src" data-p="2" title="Applications of Computer Vision">งานประยุกต์ของ computer vision</mark> ได้แก่ image classification และ image captioning, object detection และ semantic segmentation (<a href="0009-functional-api-and-object-detection.html">Lesson 9</a>), ระบบอัตโนมัติ (รถ หุ่นยนต์) และการสร้างงานศิลปะใหม่</p>
+
+<p>ภาพ grayscale ขนาด 28×28 คือ matrix 28 แถว 28 คอลัมน์ แต่ละช่องเก็บความสว่าง (0 = ดำ, 255 = ขาว) ภาพสีเก็บ 3 matrix ซ้อนกัน (R, G, B) จึงมี shape (สูง, กว้าง, 3) มิติที่สามเรียกว่า channel หรือ depth pixel ที่มีค่า (R, G, B) = (11, 102, 35) คือสี forest green สไลด์แสดง <mark class="src" data-p="3" title="Color Image Grey Scale Image">ภาพสีกับภาพ grayscale</mark> ในรูปตารางตัวเลขแบบนี้</p>
+
+<p><mark class="src" data-p="3" title="Deep learning has been applied in various fields of computer vision">Deep learning ถูกใช้ในงาน computer vision หลายด้าน</mark> วิธีแรกที่ทำได้ด้วยความรู้เดิมคือ <mark class="src" data-p="3" title="Image Classification using Densely Connected Neural Networks">จำแนกภาพด้วย dense network</mark>: flatten ภาพเป็น vector แล้วป้อนเข้า dense layer เช่นจำแนกว่าภาพเป็น <mark class="src" data-p="3" title="Motorcycle">มอเตอร์ไซค์</mark>หรือไม่ (output เดียวผ่าน sigmoid) จำนวน input feature = สูง × กว้าง × channel</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 2–3)</summary><div class="gallery">
 <figure>
-<img src="../assets/slides/dl7-p07-convolution-operation.png" alt="Slide: Convolution Operation in Convolution Layers. A 6 by 6 input image is convolved with a 3 by 3 filter with columns 1, 0, -1. The first output is (1x2)+(0x3)+(-1x1)+(1x5)+(0x4)+(-1x3)+(1x6)+(0x4)+(-1x4)=5. Feature map dimension is (n-f+1) by (n-f+1)">
-<figcaption>Slide: Convolution Operation in Convolution Layers — ตัวอย่าง 6×6 กับ filter 3×3 (Lecture7, p.7)</figcaption>
+<img src="../assets/slides/dl7-p02.png" alt="Lecture7 หน้า 2: The Area of Computer Vision" loading="lazy">
+<figcaption>Lecture7 หน้า 2 — The Area of Computer Vision</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl7-p03.png" alt="Lecture7 หน้า 3: Deep Learning for Computer Vision: จำแนกภาพด้วย dense network" loading="lazy">
+<figcaption>Lecture7 หน้า 3 — Deep Learning for Computer Vision: จำแนกภาพด้วย dense network</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s1-dense">1.2 สองปัญหาของ dense network กับภาพ</h3>
+
+<p>ข้อ 1 <mark class="src" data-p="4" title="Computational Complexity &amp; Not Scale">คำนวณหนักและขยายตามขนาดภาพไม่ได้</mark> จำนวน weight ของ dense layer แรก = จำนวน input × จำนวน node และจำนวน input โตตามพื้นที่ภาพ</p>
+
+<p class="num">dense layer แรกมี 1,000 node · ภาพสี 32×32 มี input 32 × 32 × 3 = 3,072 จึงมี 3,072 × 1,000 + 1,000 = 3,073,000 parameter · ภาพสี 1000×1000 มี input 3,000,000 จึงมี 3,000,001,000 parameter (ด้านยาวขึ้นราว 31 เท่า parameter จาก 3 ล้านเป็น 3 พันล้าน) · convolution layer ที่มี 10 filter ขนาด 3×3 บนภาพสีมี (3 × 3 × 3 + 1) × 10 = 280 parameter เท่ากันทุกขนาดภาพ</p>
+
+<p>ข้อ 2 <mark class="src" data-p="4" title="Loss Spatial Information of Images">ข้อมูลเชิงตำแหน่งของภาพหายไป</mark> ภาพ 4×4 ที่มีสี่เหลี่ยมมุมซ้ายบน เมื่อ flatten ทีละแถวได้ [1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] ค่า 1 ของแถวบน (ตำแหน่ง 1–2) กับแถวล่าง (ตำแหน่ง 5–6) ซึ่งติดกันในภาพถูกแยกห่างกัน 4 ตำแหน่ง dense network เรียน weight แยกต่อตำแหน่ง จึงเรียนได้แค่ว่า "ตำแหน่ง 1, 2, 5, 6 เป็น 1" ถ้าสี่เหลี่ยมย้ายไปมุมขวาล่าง ค่า 1 จะอยู่ตำแหน่ง 11, 12, 15, 16 ซึ่งใช้ weight ชุดที่ไม่เคยถูกเทรน network จึง <mark class="src" data-p="4" title="no idea">ไม่รู้เลย</mark>ว่าเป็นสี่เหลี่ยมเหมือนกัน</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p04.png" alt="Lecture7 หน้า 4: Why not Densely Connected Neural Networks? สองปัญหา" loading="lazy">
+<figcaption>Lecture7 หน้า 4 — Why not Densely Connected Neural Networks? สองปัญหา</figcaption>
 </figure>
 
-<p>Convolution layer ใช้ <mark class="src" data-p="7">convolution kernels</mark> (อีกชื่อคือ <mark class="src" data-p="7">filters</mark>) สกัด feature จากภาพ. ตัวอย่างในสไลด์คือ <mark class="src" data-p="7">edge detection</mark>. วิธีคำนวณ: filter เลื่อนไปบนภาพทีละตำแหน่ง ที่แต่ละตำแหน่งคูณค่าที่ซ้อนกันทีละคู่ (element-wise multiplication) แล้วบวกทั้งหมด ได้ตัวเลข 1 ตัว. ตัวเลขทั้งหมดเรียงกันเป็น <strong>feature map</strong> (หรือ activation map).</p>
+<p>สามตารางบนสไลด์คือสี่เหลี่ยมเดียวกันที่ย้ายไปสามตำแหน่ง สำหรับ dense network ทั้งสามเป็น input คนละแบบโดยสิ้นเชิง เพราะ pixel ที่เป็น 1 ตกคนละตำแหน่งใน vector</p>
 
-<div class="calc">
-<div class="calc-title">คำนวณตามสไลด์: feature map แถวแรก (input 6×6, filter 3×3, ไม่มี padding, stride 1)</div>
-<div class="given">ให้ input สามแถวแรก: \([2,3,1,2,2,3]\), \([5,4,3,9,8,5]\), \([6,4,4,3,5,8]\) และ filter ทุกแถวเป็น \([1, 0, -1]\)</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — ลดรูป filter</div>
-<p>คอลัมน์ซ้ายของ filter คูณ 1, คอลัมน์กลางคูณ 0, คอลัมน์ขวาคูณ −1. ผลลัพธ์จึงเท่ากับ</p>
-$$\text{output} = \textstyle\sum \text{คอลัมน์ซ้าย} - \sum \text{คอลัมน์ขวา}$$</li>
-<li><div class="st-title">ขั้นที่ 2 — ตำแหน่ง (1,1): หน้าต่างคลุมคอลัมน์ 1–3</div>
-$$\begin{aligned}&(1{\times}2)+(0{\times}3)+(-1{\times}1)\\ +\,&(1{\times}5)+(0{\times}4)+(-1{\times}3)\\ +\,&(1{\times}6)+(0{\times}4)+(-1{\times}4) = 13 - 8 = 5\end{aligned}$$</li>
-<li><div class="st-title">ขั้นที่ 3 — เลื่อนขวา 1 ช่อง: คอลัมน์ 2–4</div>
-$$(3+4+4) - (2+9+3) = 11 - 14 = -3$$</li>
-<li><div class="st-title">ขั้นที่ 4 — คอลัมน์ 3–5 และ 4–6</div>
-$$\begin{gathered}(1+3+4) - (2+8+5) = 8 - 15 = -7\\ (2+9+3) - (3+5+8) = 14 - 16 = -2\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 5 — ขนาด feature map</div>
-$$n - f + 1 = 6 - 3 + 1 = 4 \quad\Rightarrow\quad 4 \times 4$$</li>
-</ol>
-<div class="answer"><p>แถวแรกของ feature map คือ \([5, -3, -7, -2]\). ทำซ้ำอีก 3 แถวได้ feature map เต็ม (ตรงกับที่สไลด์หน้า 12 และ 23 พิมพ์ไว้):</p>
-$$\begin{bmatrix} 5 & -3 & -7 & -2\\ 4 & -6 & -5 & -1\\ 0 & -2 & 5 & 1\\ 2 & -5 & 0 & 9 \end{bmatrix}$$</div>
-</div>
+<p class="trap">computer vision คือ "เข้าใจ" ภาพ ไม่ใช่สร้างหรือบีบอัดภาพ และเหตุผลที่ไม่ใช้ dense กับภาพมีสองข้อเท่านั้น: parameter โตตามขนาดภาพ และ flatten แล้วความสัมพันธ์เชิงตำแหน่งหาย</p>
 
-<figure>
-<img src="../assets/slides/dl7-p08-vertical-edge-detection.png" alt="Slide: Why is This Doing Edge Detection? Vertical edge detection. A 6 by 6 image whose left three columns are 80 and right three columns are 0, convolved with the filter with columns 1, 0, -1, gives a 4 by 4 feature map whose columns are 0, 240, 240, 0">
-<figcaption>Slide: Why is This Doing Edge Detection? — vertical edge (Lecture7, p.8)</figcaption>
+<h3 id="s1-cnn">1.3 CNN มาจาก visual cortex</h3>
+
+<p>CNN (อีกชื่อ <mark class="src" data-p="5" title="ConvNets">ConvNets</mark>) เกิดในทศวรรษ 1980 จากการศึกษา <mark class="src" data-p="5" title="visual cortex">visual cortex</mark> ของสมอง ข้อค้นพบของ Hubel &amp; Wiesel (1968) สองข้อกลายเป็นหลักออกแบบ CNN</p>
+
+<table>
+<tr><th>ข้อค้นพบในสมอง</th><th>ใน CNN</th></tr>
+<tr><td>neuron จำนวนมากมี <mark class="src" data-p="5" title="receptive field">receptive field</mark> ขนาดเล็กเฉพาะที่ ตอบสนองต่อบริเวณจำกัดของลานสายตา</td><td>neuron หนึ่งตัวต่อกับ pixel กลุ่มเล็ก ไม่ต่อทั้งภาพ</td></tr>
+<tr><td>neuron ระดับสูงทำงานจาก output ของ neuron ระดับล่างที่อยู่ใกล้กัน</td><td>layer ลึกรวม feature ง่าย (เส้น ขอบ) เป็น feature ซับซ้อน (รูปทรง วัตถุ)</td></tr>
+</table>
+
+<p><mark class="src" data-p="6" title="CNNs Architecture">สถาปัตยกรรมของ CNN</mark> มีสี่ส่วนเรียงกัน</p>
+
+<table>
+<tr><th>ส่วน</th><th>ทำอะไร</th></tr>
+<tr><td><mark class="src" data-p="6" title="Input layer">Input layer</mark></td><td>รับภาพเป็น matrix โดยไม่ flatten เช่น (28, 28, 1)</td></tr>
+<tr><td><mark class="src" data-p="6" title="Convolutional layers">Convolutional layers</mark></td><td><mark class="src" data-p="6" title="extract features">สกัด feature</mark> ได้ภาพที่ถูกแปลงเรียกว่า <mark class="src" data-p="6" title="feature maps">feature map</mark> แล้วภายหลังถูก flatten เป็น vector · neuron ต่อเฉพาะกับ pixel ใน <mark class="src" data-p="6" title="receptive fields.">receptive field</mark> ของตัวเอง</td></tr>
+<tr><td><mark class="src" data-p="6" title="Fully connected layers">Fully connected layers</mark></td><td>classification</td></tr>
+<tr><td><mark class="src" data-p="6" title="Output layers">Output layers</mark></td><td>prediction ให้ความน่าจะเป็นของแต่ละ class</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p06.png" alt="Lecture7 หน้า 6: CNNs Architecture: สี่ส่วน และลำดับชั้นของ feature" loading="lazy">
+<figcaption>Lecture7 หน้า 6 — CNNs Architecture: สี่ส่วน และลำดับชั้นของ feature</figcaption>
 </figure>
 
-<p>ภาพหน้า 8 ถูกทำให้ง่าย: ครึ่งซ้ายสว่าง (80) ครึ่งขวาดำ (0) จึงมีขอบแนวตั้งหนึ่งเส้นตรงกลาง. ใช้กฎ "คอลัมน์ซ้าย − คอลัมน์ขวา" ของ filter เดิม:</p>
-<ul>
-<li>หน้าต่างคอลัมน์ 1–3 (80 ทั้งหมด): \(3(80) - 3(80) = 0\)</li>
-<li>หน้าต่างคอลัมน์ 2–4 (ซ้าย 80, ขวา 0): \(3(80) - 3(0) = 240\)</li>
-<li>หน้าต่างคอลัมน์ 3–5 (ซ้าย 80, ขวา 0): \(240\)</li>
-<li>หน้าต่างคอลัมน์ 4–6 (0 ทั้งหมด): \(0 - 0 = 0\)</li>
-</ul>
-<p>Feature map จึงเป็น \([0, 240, 240, 0]\) ทุกแถว. บริเวณสีเรียบให้ 0 ไม่ว่าจะสว่างหรือมืด. ค่าสูงเกิดเฉพาะตำแหน่งที่หน้าต่างคร่อมขอบ. filter นี้จึงเป็นตัวตรวจ vertical edge และ feature map "amplifying the edges".</p>
+<p>ภาพล่างของสไลด์คือ <mark class="src" data-p="6" title="The high level architecture of CNNs Layers learn patterns from each other">สถาปัตยกรรมระดับบนของ CNN ที่แต่ละ layer เรียนรูปแบบต่อจากกัน</mark>: layer ต้นเรียนขอบและเส้น layer กลางเรียนชิ้นส่วน (ตา จมูก) layer ลึกเรียนทั้งใบหน้า</p>
 
+<p class="trap">convolutional layer สกัด feature ไม่ได้ทำ classification (นั่นคือหน้าที่ของ fully connected layers) และ input ของ CNN ไม่ flatten · flatten เกิดหลัง convolutional layers</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 5)</summary><div class="gallery">
 <figure>
-<img src="../assets/slides/dl7-p09-horizontal-edge-detection.png" alt="Slide: Why is This Doing Edge Detection? (2) Horizontal edge detection. A 6 by 6 image with 80 in the top-left and bottom-right quadrants and 0 elsewhere, convolved with a filter whose rows are 1,1,1 / 0,0,0 / -1,-1,-1, gives rows 0,0,0,0 / 240,80,-80,-240 / 240,80,-80,-240 / 0,0,0,0. Other filters can be applied to detect different types of features">
-<figcaption>Slide: Why is This Doing Edge Detection? (2) — horizontal edge (Lecture7, p.9)</figcaption>
+<img src="../assets/slides/dl7-p05.png" alt="Lecture7 หน้า 5: Convolutional Neural Networks: ที่มาจาก visual cortex" loading="lazy">
+<figcaption>Lecture7 หน้า 5 — Convolutional Neural Networks: ที่มาจาก visual cortex</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s2">2. Convolution และ filter</h2>
+
+<h3 id="s2-op">2.1 การคำนวณ convolution</h3>
+
+<p class="pic">ถือแว่นขยายขนาด 3×3 ช่องเลื่อนไปบนภาพ ทุกตำแหน่งที่วาง จดตัวเลขหนึ่งตัวที่บอกว่าบริเวณใต้แว่นมีลักษณะที่ตามหาอยู่มากแค่ไหน ตัวเลขทั้งหมดที่จดได้ต่อกันเป็นภาพใหม่</p>
+
+<p>Convolution layer ใช้ <mark class="src" data-p="7" title="convolution kernels filters">convolution kernel (อีกชื่อ filter)</mark> สกัด feature จากภาพ ตัวอย่างคือ <mark class="src" data-p="7" title="edge detection">การตรวจหาขอบ</mark> filter เลื่อนไปบนภาพ ที่แต่ละตำแหน่งคูณค่าที่ซ้อนกันทีละคู่ (element-wise) แล้วบวกทั้งหมดได้ 1 ตัวเลข ตัวเลขทั้งหมดเรียงกันเป็น feature map (หรือ activation map) สไลด์ชี้ภาพเคลื่อนไหวที่ช่วยให้เห็นภาพ (<mark class="src" data-p="7" title="here">ที่นี่</mark>)</p>
+
+<figure class="viz"><img src="../assets/viz/l7-conv-step.svg" alt="filter 3x3 บนภาพ 6x6 ได้ feature map 4x4"></figure>
+<p>filter มีคอลัมน์ซ้ายเป็น 1 คอลัมน์กลางเป็น 0 คอลัมน์ขวาเป็น −1 ผลจึงเท่ากับ "ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา" ของหน้าต่าง ตำแหน่งซ้ายบนได้ (2 + 5 + 6) − (1 + 3 + 4) = 13 − 8 = 5</p>
+
+<p class="num">แถวแรกของ feature map: คอลัมน์ 1–3 ได้ 5 · คอลัมน์ 2–4 ได้ (3 + 4 + 4) − (2 + 9 + 3) = 11 − 14 = −3 · คอลัมน์ 3–5 ได้ (1 + 3 + 4) − (2 + 8 + 5) = −7 · คอลัมน์ 4–6 ได้ (2 + 9 + 3) − (3 + 5 + 8) = −2 ทำครบทุกแถวได้ \(\begin{bmatrix} 5 & -3 & -7 & -2\\ 4 & -6 & -5 & -1\\ 0 & -2 & 5 & 1\\ 2 & -5 & 0 & 9 \end{bmatrix}\) (ตรวจด้วย numpy แล้ว ตรงกับที่สไลด์หน้า 12 และ 23 พิมพ์ไว้)</p>
+
+<div class="eq">\[\text{ขนาด feature map} = (n-f+1)\times(n-f+1)\]</div>
+<p class="say">ไม่มี padding และเลื่อนทีละ 1 ช่อง: ภาพ 6×6 กับ filter 3×3 วางได้ 6 − 3 + 1 = 4 ตำแหน่งต่อแถว</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p07.png" alt="Lecture7 หน้า 7: Convolution Operation: ภาพ 6×6 ∗ filter 3×3 ได้ 5 ที่มุมซ้ายบน" loading="lazy">
+<figcaption>Lecture7 หน้า 7 — Convolution Operation: ภาพ 6×6 ∗ filter 3×3 ได้ 5 ที่มุมซ้ายบน</figcaption>
 </figure>
 
-<p>หมุน filter 90° ให้แถวบนเป็น 1, แถวกลางเป็น 0, แถวล่างเป็น −1 จะได้ output = (ผลรวมแถวบน) − (ผลรวมแถวล่าง) ซึ่งตรวจ horizontal edge. ภาพหน้า 9 มีมุมซ้ายบนและขวาล่างสว่าง (80).</p>
+<p>บนสไลด์เติมไว้แค่ช่องแรกคือ 5 พร้อมเขียนการคูณ 9 คู่ไว้ครบ ช่องอื่นของ feature map ปล่อยว่างให้คำนวณเอง</p>
 
-<div class="calc">
-<div class="calc-title">คำนวณตามสไลด์: แถวที่ 2 ของ feature map หน้า 9</div>
-<div class="given">ให้ หน้าต่างคลุมแถว 2–4 ของภาพ. แถว 2 = \([80,80,80,0,0,0]\) (แถวบนของหน้าต่าง), แถว 4 = \([0,0,0,80,80,80]\) (แถวล่างของหน้าต่าง)</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — คอลัมน์ 1–3</div>
-$$(80+80+80) - (0+0+0) = 240$$</li>
-<li><div class="st-title">ขั้นที่ 2 — คอลัมน์ 2–4</div>
-$$(80+80+0) - (0+0+80) = 160 - 80 = 80$$</li>
-<li><div class="st-title">ขั้นที่ 3 — คอลัมน์ 3–5</div>
-$$(80+0+0) - (0+80+80) = 80 - 160 = -80$$</li>
-<li><div class="st-title">ขั้นที่ 4 — คอลัมน์ 4–6</div>
-$$(0+0+0) - (80+80+80) = -240$$</li>
-</ol>
-<div class="answer"><p>แถวที่ 2 (และแถวที่ 3) = \([240, 80, -80, -240]\). แถวที่ 1 และ 4 เป็น 0 เพราะหน้าต่างคลุมแถวบนและแถวล่างที่เหมือนกัน. เครื่องหมายบอกทิศของขอบ: บวก = สว่างอยู่บน มืดอยู่ล่าง; ลบ = มืดอยู่บน สว่างอยู่ล่าง. ค่า 80 และ −80 คือช่วงเปลี่ยนผ่านตรงกลางภาพที่ขอบทั้งสองทิศปนกัน.</p></div>
-</div>
+<h3 id="s2-edge">2.2 ทำไม filter นี้ตรวจขอบ</h3>
 
-<p>สไลด์ปิดหน้า 9 ว่า filter แบบอื่นใช้ตรวจ feature ชนิดอื่นได้ (blur, sharpen, ขอบแนวทแยง).</p>
+<p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> บริเวณสีเรียบให้ค่า 0 และค่าสูงเกิดเฉพาะตรงที่หน้าต่างคร่อมขอบ</p>
 
-<figure>
-<img src="../assets/slides/dl7-p10-filters-weights.png" alt="Slide: Filters. Filter element: each element in a filter is a weight; they are randomly initialized and trainable to be learned from backpropagation. Filter size: smaller filters capture fine image details, larger capture broader image details. Example: a vertical 7 by 7 filter and a horizontal 7 by 7 filter applied to a building image produce two different feature maps">
-<figcaption>Slide: Filters — แต่ละช่องคือ weight ที่เรียนได้ (Lecture7, p.10)</figcaption>
+<table>
+<tr><th>ภาพ</th><th>filter</th><th>ผลหนึ่งแถว</th><th>อ่านว่า</th></tr>
+<tr><td>หน้า 8: ครึ่งซ้ายสว่าง (80) ครึ่งขวาดำ (0)</td><td>คอลัมน์ [1, 0, −1] (vertical)</td><td>[0, 240, 240, 0]</td><td>หน้าต่างที่สีเดียวทั้งหมดได้ 0 หน้าต่างที่คร่อมขอบได้ 3(80) − 3(0) = 240</td></tr>
+<tr><td>หน้า 9: มุมซ้ายบนและขวาล่างสว่าง (80)</td><td>แถว [1, 0, −1] หมุน 90° (horizontal)</td><td>แถว 2 และ 3 = [240, 80, −80, −240] · แถว 1 และ 4 = 0</td><td>บวก = สว่างบน มืดล่าง · ลบ = มืดบน สว่างล่าง · 80 และ −80 คือช่วงที่ขอบสองทิศปนกัน</td></tr>
+</table>
+
+<p class="num">หน้า 9 แถวที่ 2: คอลัมน์ 1–3 ได้ (80 + 80 + 80) − (0 + 0 + 0) = 240 · คอลัมน์ 2–4 ได้ (80 + 80 + 0) − (0 + 0 + 80) = 80 · คอลัมน์ 3–5 ได้ (80 + 0 + 0) − (0 + 80 + 80) = −80 · คอลัมน์ 4–6 ได้ 0 − 240 = −240</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p08.png" alt="Lecture7 หน้า 8: Why is This Doing Edge Detection? vertical edge: feature map 0, 240, 240, 0" loading="lazy">
+<figcaption>Lecture7 หน้า 8 — Why is This Doing Edge Detection? vertical edge: feature map 0, 240, 240, 0</figcaption>
 </figure>
 
-<p>ค่า 1, 0, −1 ที่ใช้มาเป็นค่าที่คนตั้งเองเพื่ออธิบาย. ใน CNN จริง:</p>
-<ul>
-<li><mark class="src" data-p="10">Filter Element</mark>: <mark class="src" data-p="10">each element in a filter</mark> คือ <mark class="src" data-p="10">weight</mark> หนึ่งตัว. ค่าเหล่านี้ <mark class="src" data-p="10">randomly initialized and trainable</mark> คือเริ่มจากค่าสุ่มแล้วเรียนด้วย backpropagation เหมือน \(\theta\) ของ dense layer (<a href="0003-cost-function-and-backpropagation.html">Lesson 3</a>). network จึงเลือกเองว่าควรตรวจ feature ชนิดใด</li>
-<li><mark class="src" data-p="10">Filter Size</mark>: filter เล็กจับรายละเอียดละเอียดของภาพ (fine details), filter ใหญ่จับรายละเอียดกว้าง (broader details)</li>
-</ul>
-<p>ตัวอย่างในสไลด์ใช้ filter 7×7 สองตัวกับภาพอาคาร. (1) Vertical filter: เป็น 0 ทั้งหมดยกเว้นคอลัมน์กลางเป็น 1 ⇒ Feature Map 1 เส้นแนวตั้งชัดขึ้น ส่วนอื่นเบลอ. (2) Horizontal filter: เป็น 0 ทั้งหมดยกเว้นแถวกลางเป็น 1 ⇒ Feature Map 2 เส้นแนวนอนชัดขึ้น. input เดียวกัน filter ต่างกันให้ feature map ต่างกัน.</p>
+<p>feature map "ขยายขอบ" ให้เด่น: แถบ 240 ตรงกลางคือเส้นแนวตั้งที่แยกฝั่งสว่างกับฝั่งมืด</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 1</span><span>Convolution</span></div>
-  <div class="qtext">ภาพ 4×4 มีแถว [1,2,0,1], [3,1,1,0], [0,2,4,1], [2,0,1,3] ทำ convolution กับ filter 3×3 ที่ทุกแถวเป็น [1,0,−1] (ไม่มี padding, stride 1) ค่าที่ตำแหน่งซ้ายบนของ feature map คือเท่าใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. หน้าต่างคลุมแถว 1–3 คอลัมน์ 1–3: คอลัมน์ซ้าย 1+3+0 = 4, คอลัมน์ขวา 0+1+4 = 5, ผลลัพธ์ 4 − 5 = −1. ค่า 9 คือบวกทั้งสองคอลัมน์, 4 คือลืมลบคอลัมน์ขวา.">9</button>
-    <button class="opt" data-correct="false" data-note="ผิด. หน้าต่างคลุมแถว 1–3 คอลัมน์ 1–3: คอลัมน์ซ้าย 1+3+0 = 4, คอลัมน์ขวา 0+1+4 = 5, ผลลัพธ์ 4 − 5 = −1. ค่า 9 คือบวกทั้งสองคอลัมน์, 4 คือลืมลบคอลัมน์ขวา.">4</button>
-    <button class="opt" data-correct="true" data-note="ถูก. หน้าต่างคลุมแถว 1–3 คอลัมน์ 1–3: คอลัมน์ซ้าย 1+3+0 = 4, คอลัมน์ขวา 0+1+4 = 5, ผลลัพธ์ 4 − 5 = −1. ค่า 9 คือบวกทั้งสองคอลัมน์, 4 คือลืมลบคอลัมน์ขวา.">−1</button>
-    <button class="opt" data-correct="false" data-note="ผิด. หน้าต่างคลุมแถว 1–3 คอลัมน์ 1–3: คอลัมน์ซ้าย 1+3+0 = 4, คอลัมน์ขวา 0+1+4 = 5, ผลลัพธ์ 4 − 5 = −1. ค่า 9 คือบวกทั้งสองคอลัมน์, 4 คือลืมลบคอลัมน์ขวา.">−5</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<p>filter แบบอื่นใช้ตรวจ feature ชนิดอื่นได้ เช่น blur, sharpen หรือขอบแนวทแยง (สไลด์อ้างตาราง kernel ใน Wikipedia)</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 2</span><span>Edge detection</span></div>
-  <div class="qtext">ภาพ 6×6 มี 3 คอลัมน์ซ้ายเป็น 0 และ 3 คอลัมน์ขวาเป็น 50 ทำ convolution กับ filter 3×3 ที่ทุกแถวเป็น [1,0,−1] (ไม่มี padding, stride 1) แต่ละแถวของ feature map คือข้อใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="true" data-note="ถูก. ผลลัพธ์ = ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา. หน้าต่างที่คร่อมขอบมีซ้ายเป็น 0 ขวาเป็น 50: 0 − 3(50) = −150. บริเวณเรียบให้ 0. เครื่องหมายลบเพราะด้านมืดอยู่ซ้าย.">[0, −150, −150, 0]</button>
-    <button class="opt" data-correct="false" data-note="ผิด. ผลลัพธ์ = ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา. หน้าต่างที่คร่อมขอบมีซ้ายเป็น 0 ขวาเป็น 50: 0 − 3(50) = −150. บริเวณเรียบให้ 0. เครื่องหมายลบเพราะด้านมืดอยู่ซ้าย.">[0, 150, 150, 0]</button>
-    <button class="opt" data-correct="false" data-note="ผิด. ผลลัพธ์ = ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา. หน้าต่างที่คร่อมขอบมีซ้ายเป็น 0 ขวาเป็น 50: 0 − 3(50) = −150. บริเวณเรียบให้ 0. เครื่องหมายลบเพราะด้านมืดอยู่ซ้าย.">[−150, 0, 0, −150]</button>
-    <button class="opt" data-correct="false" data-note="ผิด. ผลลัพธ์ = ผลรวมคอลัมน์ซ้าย − ผลรวมคอลัมน์ขวา. หน้าต่างที่คร่อมขอบมีซ้ายเป็น 0 ขวาเป็น 50: 0 − 3(50) = −150. บริเวณเรียบให้ 0. เครื่องหมายลบเพราะด้านมืดอยู่ซ้าย.">[0, −50, −50, 0]</button>
-  </div>
-  <div class="feedback"></div>
-</div>
-
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li><mark class="src" data-p="7">convolution kernels</mark> = <mark class="src" data-p="7">filters</mark> (สองคำนี้คือสิ่งเดียวกัน). ตัวอย่างการใช้งานคือ <mark class="src" data-p="7">edge detection</mark></li>
-<li>ขนาด feature map เมื่อไม่มี padding, stride 1: \((n-f+1) \times (n-f+1)\)</li>
-<li><mark class="src" data-p="10">each element in a filter</mark> คือ <mark class="src" data-p="10">weight</mark> ที่ <mark class="src" data-p="10">randomly initialized and trainable</mark>. กับดัก: ตัวเลือกที่บอกว่า filter ถูกกำหนดค่าตายตัวโดยผู้ออกแบบ</li>
-<li><mark class="src" data-p="10">Filter Size</mark>: เล็ก = fine details, ใหญ่ = broader details</li>
-</ul>
-</div>
-
-<h2 id="s4">4. Padding และ Stride</h2>
-
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 9)</summary><div class="gallery">
 <figure>
-<img src="../assets/slides/dl7-p11-convolution-problems.png" alt="Slide: Convolution Operator Problems. Two downsides of basic convolution: image shrinks down every time detecting edge (in deep networks the image gets really small, nothing left for feature extraction), and throws away a lot of information from the edge (pixels on the corners or edges are used much less in the output). A 5 by 5 input with a 3 by 3 window produces a 3 by 3 output">
-<figcaption>Slide: Convolution Operator Problems — สองข้อเสีย (Lecture7, p.11)</figcaption>
+<img src="../assets/slides/dl7-p09.png" alt="Lecture7 หน้า 9: Why is This Doing Edge Detection? (2) horizontal edge" loading="lazy">
+<figcaption>Lecture7 หน้า 9 — Why is This Doing Edge Detection? (2) horizontal edge</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s2-filter">2.3 filter คือ weight ที่เรียนได้</h3>
+
+<p>ค่า 1, 0, −1 เป็นค่าที่คนตั้งเพื่ออธิบาย ใน CNN จริง</p>
+
+<table>
+<tr><th>ประเด็น</th><th>ความหมาย</th></tr>
+<tr><td><mark class="src" data-p="10" title="Filter Element">Filter element</mark></td><td><mark class="src" data-p="10" title="each element in a filter">แต่ละช่องใน filter</mark> คือ <mark class="src" data-p="10" title="weight">weight</mark> หนึ่งตัว ซึ่ง <mark class="src" data-p="10" title="randomly initialized and trainable">เริ่มจากค่าสุ่มและเรียนได้</mark> ด้วย backpropagation เหมือน θ ของ dense layer (<a href="0003-cost-function-and-backpropagation.html">Lesson 3</a>) network จึงเลือกเองว่าจะตรวจ feature อะไร</td></tr>
+<tr><td><mark class="src" data-p="10" title="Filter Size">Filter size</mark></td><td>filter เล็กจับรายละเอียดเล็ก (fine details) filter ใหญ่จับรายละเอียดกว้าง (broader details)</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p10.png" alt="Lecture7 หน้า 10: Filters: filter 7×7 แนวตั้งและแนวนอนกับภาพอาคาร" loading="lazy">
+<figcaption>Lecture7 หน้า 10 — Filters: filter 7×7 แนวตั้งและแนวนอนกับภาพอาคาร</figcaption>
 </figure>
 
-<p><mark class="src" data-p="11">Two downside of basic convolutional</mark>:</p>
-<ol>
-<li><mark class="src" data-p="11">Image shrink down</mark> ทุกครั้งที่ทำ convolution. ภาพ 5×5 กับ filter 3×3 ในสไลด์ให้ output \(5-3+1 = 3\) คือ 3×3. network ลึกจะทำให้ภาพเล็กลงจนไม่เหลือให้สกัด feature: ภาพ 32×32 ผ่าน filter 3×3 แต่ละครั้งด้านลดลง 2 จึงเหลือ 2×2 หลัง 15 layer</li>
-<li><mark class="src" data-p="11">Throw away a lot of information from edge</mark>. pixel มุมถูกหน้าต่างคลุมเพียง 1 ครั้ง ส่วน pixel กลางภาพ 5×5 ถูกคลุม 9 ครั้ง ข้อมูลที่ขอบจึงมีน้ำหนักใน output น้อยกว่ามาก</li>
-</ol>
+<p>filter 7×7 สองตัวกับภาพอาคารเดียวกัน: vertical filter (ศูนย์ทั้งหมดยกเว้นคอลัมน์กลางเป็น 1) ทำให้เส้นแนวตั้งชัด ส่วน horizontal filter (ยกเว้นแถวกลางเป็น 1) ทำให้เส้นแนวนอนชัด input เดียวกัน filter ต่างกันให้ feature map ต่างกัน</p>
 
+<p class="trap">ค่าใน filter ไม่ได้ถูกกำหนดตายตัวโดยผู้ออกแบบ ผู้ออกแบบกำหนดแค่ขนาดและจำนวน filter ส่วนค่าใน filter เรียนจากข้อมูล</p>
+
+<!-- ===================================================== -->
+<h2 id="s3">3. Padding, stride และขนาด output</h2>
+
+<h3 id="s3-problem">3.1 ปัญหาของ convolution พื้นฐาน</h3>
+
+<p><mark class="src" data-p="11" title="Two downside of basic convolutional">ข้อเสียสองข้อของ convolution พื้นฐาน</mark></p>
+<table>
+<tr><th>ข้อเสีย</th><th>ตัวอย่าง</th></tr>
+<tr><td><mark class="src" data-p="11" title="Image shrink down">ภาพหดทุกครั้ง</mark></td><td>ภาพ 5×5 กับ filter 3×3 ได้ 3×3 · ภาพ 32×32 ผ่าน filter 3×3 ซ้ำ ด้านลดครั้งละ 2 เหลือ 2×2 หลัง 15 layer</td></tr>
+<tr><td><mark class="src" data-p="11" title="Throw away a lot of information from edge">ทิ้งข้อมูลที่ขอบไปมาก</mark></td><td>pixel มุมถูกหน้าต่างคลุม 1 ครั้ง pixel กลางภาพ 5×5 ถูกคลุม 9 ครั้ง</td></tr>
+</table>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 11)</summary><div class="gallery">
 <figure>
-<img src="../assets/slides/dl7-p12-padding.png" alt="Slide: Padding pads the image with additional border (often zeros). SAME uses zero padding so the output has the same dimension as the input; VALID means no padding (default in Keras). The 6 by 6 image with a zero border is convolved with the 3 by 3 filter; the top-left output is (1x0)+(0x0)+(-1x0)+(1x0)+(0x2)+(-1x3)+(1x0)+(0x5)+(-1x4) = -7. New dimension = (n+2p-f+1) by (n+2p-f+1)">
-<figcaption>Slide: Padding — เติมขอบด้วยศูนย์ (Lecture7, p.12)</figcaption>
+<img src="../assets/slides/dl7-p11.png" alt="Lecture7 หน้า 11: Convolution Operator Problems" loading="lazy">
+<figcaption>Lecture7 หน้า 11 — Convolution Operator Problems</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s3-pad">3.2 Padding</h3>
+
+<p class="pic">ติดกรอบกระดาษขาวรอบรูปก่อนเลื่อนแว่นขยาย มุมของรูปจึงอยู่กลางแว่นได้ และจำนวนตำแหน่งที่วางแว่นได้เท่ากับขนาดรูปเดิม</p>
+
+<p><mark class="src" data-p="12" title="Padding">Padding</mark> คือการเติม <mark class="src" data-p="12" title="additional border">ขอบเพิ่ม</mark> รอบภาพ ส่วนใหญ่เป็น <mark class="src" data-p="12" title="zeros">ศูนย์</mark> เพื่อรักษาขนาด Keras มีสองค่า: <mark class="src" data-p="12" title="&quot;SAME&quot;">"SAME"</mark> เติมศูนย์เท่าที่จำเป็นให้ output เท่า input และ <mark class="src" data-p="12" title="&quot;VALID&quot;">"VALID"</mark> ไม่เติม ซึ่งเป็นค่า default ของ Keras</p>
+
+<div class="eq">\[n + 2p - f + 1 = n \quad\Rightarrow\quad p = \frac{f-1}{2}\]</div>
+<p class="say">เติมขอบข้างละ p ทำให้ด้านยาวขึ้น 2p ก่อนเข้าสูตรเดิม ถ้าต้องการให้ขนาดคงเดิม (stride 1): f = 3 ใช้ p = 1, f = 5 ใช้ p = 2, f = 7 ใช้ p = 3 filter จึงนิยมขนาดคี่</p>
+
+<p class="num">ภาพ 6×6 เติม p = 1 กับ filter 3×3 ได้ 6 + 2 − 3 + 1 = 6 คือ 6×6 เท่าเดิม ส่วน 4×4 ตรงกลางคือ feature map เดิม (5, −3, −7, −2, …) และมุมซ้ายบนใหม่คลุมศูนย์ 1 แถว 1 คอลัมน์กับ pixel 2, 3 / 5, 4 ได้ (0 + 0 + 0) − (0 + 3 + 4) = −7</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p12.png" alt="Lecture7 หน้า 12: Padding: เติมศูนย์ 1 ชั้นรอบภาพ 6×6" loading="lazy">
+<figcaption>Lecture7 หน้า 12 — Padding: เติมศูนย์ 1 ชั้นรอบภาพ 6×6</figcaption>
 </figure>
 
-<p><mark class="src" data-p="12">Padding</mark> คือการเติม <mark class="src" data-p="12">additional border</mark> รอบภาพ (ส่วนใหญ่เติม <mark class="src" data-p="12">zeros</mark>) เพื่อรักษาขนาดเชิงพื้นที่ ให้ความกว้างและสูงของ output เท่ากับ input. Keras มีสองค่า:</p>
-<ul>
-<li><mark class="src" data-p="12">"SAME"</mark>: ใช้ zero padding เท่าที่จำเป็นเพื่อให้ output มีขนาดเท่า input</li>
-<li><mark class="src" data-p="12">"VALID"</mark>: ไม่ใช้ padding (no padding) และเป็น<strong>ค่า default ของ Keras</strong></li>
-</ul>
-$$\text{New dimension} = (n + 2p - f + 1) \times (n + 2p - f + 1)$$
-<p class="plain-thai">เติมขอบข้างละ p ทำให้ด้านยาวขึ้น 2p ก่อนเข้าสูตรเดิม n − f + 1</p>
+<p>หลัง pad ภาพ 6×6 กลายเป็น 8×8 ที่ขอบเป็นศูนย์ pixel มุมของภาพเดิมจึงถูกหลายหน้าต่างคลุม ข้อเสียทั้งสองข้อของหน้า 11 ลดลง</p>
 
-<div class="calc">
-<div class="calc-title">คำนวณตามสไลด์: padding 1 ชั้นกับภาพ 6×6 และ filter 3×3</div>
-<div class="given">ให้ \(n = 6,\ f = 3,\ p = 1\), stride 1, ภาพและ filter ชุดเดิมจากหน้า 7</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — ขนาด output</div>
-$$\begin{gathered}n + 2p - f + 1 = 6 + 2(1) - 3 + 1 = 6 \\[0.35em] \Rightarrow\; 6 \times 6 \text{ (เท่า input)}\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 2 — ค่าที่มุมซ้ายบน: หน้าต่างคลุมขอบศูนย์ 1 แถว 1 คอลัมน์ กับ pixel 2,3 / 5,4</div>
-$$\begin{aligned}&(1{\times}0)+(0{\times}0)+(-1{\times}0)\\ +\,&(1{\times}0)+(0{\times}2)+(-1{\times}3)\\ +\,&(1{\times}0)+(0{\times}5)+(-1{\times}4) = -7\end{aligned}$$</li>
-<li><div class="st-title">ขั้นที่ 3 — หาค่า p ที่ทำให้ขนาดคงเดิม (SAME, stride 1)</div>
-$$n + 2p - f + 1 = n \quad\Rightarrow\quad p = \frac{f-1}{2}$$
-<p>\(f=3 \Rightarrow p=1\); \(f=5 \Rightarrow p=2\); \(f=7 \Rightarrow p=3\). filter จึงนิยมใช้ขนาดคี่</p></li>
-</ol>
-<div class="answer"><p>Output เป็น 6×6. ส่วน 4×4 ตรงกลางคือ feature map เดิมของหน้า 7 (\(5, -3, -7, -2, \ldots\)) และมีขอบใหม่รอบนอก 1 ชั้นซึ่งมุมซ้ายบนเท่ากับ −7. pixel มุมของภาพถูกใช้ในหลายหน้าต่างขึ้น ข้อเสียทั้งสองข้อของหน้า 11 จึงลดลง.</p></div>
-</div>
+<h3 id="s3-stride">3.3 Stride และสูตรขนาด output</h3>
 
-<figure>
-<img src="../assets/slides/dl7-p13-stride.png" alt="Slide: Stride is the step size of the filter as it moves over an image. Larger stride may skip valuable regions, leading to lesser overlap and smaller output; larger strides increase speed, lesser computation and memory; reduced resolution can have a regularizing side. A 7 by 7 input with stride 2 and the 3 by 3 filter gives a 3 by 3 feature map 5,-7,2 / 0,5,-5 / 0,-5,6. New dimension = (n+2p-f)/s+1, floor if not an integer">
-<figcaption>Slide: Stride Convolution — ก้าวทีละ s ช่อง (Lecture7, p.13)</figcaption>
+<p><mark class="src" data-p="13" title="Stride">Stride</mark> คือ <mark class="src" data-p="13" title="step size">ขนาดก้าว</mark> ของ filter stride 2 ข้ามทีละ 2 ช่องทั้งแนวนอนและแนวตั้ง</p>
+
+<table>
+<tr><th>stride ใหญ่ขึ้น</th><th>ผล</th></tr>
+<tr><td>ข้อเสีย</td><td>อาจข้ามบริเวณสำคัญของภาพ หน้าต่างซ้อนกันน้อยลง output เล็กลง</td></tr>
+<tr><td>ข้อดี</td><td>เร็วขึ้น คำนวณและใช้ memory น้อยลง ความละเอียดที่ลดลงมีผลแบบ regularization ช่วยลด overfitting</td></tr>
+</table>
+
+<div class="eq">\[\left\lfloor \frac{n + 2p - f}{s} \right\rfloor + 1\]</div>
+<p class="say">นับว่าหน้าต่างวางได้กี่ตำแหน่ง ถ้าหารไม่ลงตัวให้ปัดลง เพราะตำแหน่งที่หน้าต่างล้นนอกภาพ (รวม padding) ไม่ถูกคำนวณ สูตรเดียวใช้ได้ทั้ง convolution และ pooling</p>
+
+<figure class="viz"><img src="../assets/viz/l7-out-size.svg" alt="หน้าต่างขนาด 3 วางบนแถว 7 ช่องด้วย stride 2 ได้ 3 ตำแหน่ง"></figure>
+<p>แถว 7 ช่อง หน้าต่าง 3 ช่อง ก้าวทีละ 2 วางได้ที่ช่อง 1, 3, 5 รวม 3 ตำแหน่ง = ⌊(7 − 3)/2⌋ + 1 ถ้าแถวมี 6 ช่อง หน้าต่างที่สามจะคลุมช่อง 5–7 ซึ่งล้นขอบ จึงได้ ⌊1.5⌋ + 1 = 2</p>
+
+<p class="num">ภาพ 7×7, f = 3, s = 2: ⌊(7 − 3)/2⌋ + 1 = 3 คือ 3×3 แถวแรกคือคอลัมน์ 1–3 ได้ (2 + 5 + 6) − (1 + 3 + 4) = 5, คอลัมน์ 3–5 ได้ 8 − 15 = −7, คอลัมน์ 5–7 ได้ 15 − 13 = 2 feature map เต็มคือ [5, −7, 2], [0, 5, −5], [0, −5, 6] · stride 1 จะได้ 5×5 = 25 ค่า stride 2 ได้ 9 ค่า</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p13.png" alt="Lecture7 หน้า 13: Stride Convolution: ภาพ 7×7 stride 2 ได้ 3×3" loading="lazy">
+<figcaption>Lecture7 หน้า 13 — Stride Convolution: ภาพ 7×7 stride 2 ได้ 3×3</figcaption>
 </figure>
 
-<p><mark class="src" data-p="13">Stride</mark> คือ <mark class="src" data-p="13">step size</mark> ของ filter ขณะเลื่อนไปบนภาพ. stride 1 เลื่อนทีละ 1 ช่อง; stride 2 ข้ามทีละ 2 ช่องทั้งแนวนอนและแนวตั้ง. ผลของ stride ที่ใหญ่ขึ้นตามสไลด์:</p>
-<ul>
-<li>อาจ <strong>skip valuable regions in the image</strong> ทำให้ <strong>lesser overlap</strong> และ <strong>smaller output</strong> volume</li>
-<li><strong>increase speed, lesser computation and memory</strong> ที่ต้องใช้กับ output</li>
-<li>ความละเอียดที่ลดลงมีผลเชิง regularization ช่วยลด overfitting</li>
-</ul>
-$$\text{New dimension} = \left\lfloor \frac{n + 2p - f}{s} \right\rfloor + 1$$
-<p class="plain-thai">ถ้าหารไม่ลงตัวให้ปัดลง: ตำแหน่งที่หน้าต่างล้นออกนอกภาพ (รวม padding แล้ว) ไม่ถูกคำนวณ</p>
+<p>บนสไลด์หน้าต่างเริ่มที่คอลัมน์ 1, 3, 5 ข้ามทีละสองช่อง ทั้งแนวนอนและแนวตั้ง ผลจึงเหลือ 3×3</p>
 
-<div class="calc">
-<div class="calc-title">คำนวณตามสไลด์: stride 2 กับภาพ 7×7</div>
-<div class="given">ให้ \(n = 7,\ f = 3,\ p = 0,\ s = 2\). สามแถวแรกของภาพ: \([2,3,1,2,2,3,2]\), \([5,4,3,9,8,5,5]\), \([6,4,4,3,5,8,6]\)</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — ขนาด output</div>
-$$\left\lfloor \frac{7 + 0 - 3}{2} \right\rfloor + 1 = 2 + 1 = 3 \quad\Rightarrow\quad 3 \times 3$$</li>
-<li><div class="st-title">ขั้นที่ 2 — หน้าต่างเริ่มที่คอลัมน์ 1, 3, 5 (ข้ามทีละ 2)</div>
-$$\begin{aligned}
-\text{คอลัมน์ 1–3:}\quad &(2+5+6) - (1+3+4) = 13 - 8 = 5\\
-\text{คอลัมน์ 3–5:}\quad &(1+3+4) - (2+8+5) = 8 - 15 = -7\\
-\text{คอลัมน์ 5–7:}\quad &(2+8+5) - (2+5+6) = 15 - 13 = 2
-\end{aligned}$$</li>
-<li><div class="st-title">ขั้นที่ 3 — กรณีหารไม่ลงตัว: ภาพ 6×6 เดิม, \(f=3,\ s=2\)</div>
-$$\left\lfloor \frac{6-3}{2} \right\rfloor + 1 = \lfloor 1.5 \rfloor + 1 = 2$$
-<p>หน้าต่างที่สามจะต้องเริ่มที่คอลัมน์ 5 และคลุมคอลัมน์ 5–7 แต่ภาพมีแค่ 6 คอลัมน์ จึงไม่คำนวณ</p></li>
-</ol>
-<div class="answer"><p>แถวแรกของ feature map = \([5, -7, 2]\) ตรงกับสไลด์ (feature map เต็ม: \([5,-7,2]\), \([0,5,-5]\), \([0,-5,6]\)). เทียบกับ stride 1 ที่ให้ 5×5 = 25 ค่า stride 2 ให้ 3×3 = 9 ค่า.</p></div>
-</div>
+<p class="trap">ลืม floor เป็นจุดผิดบ่อยที่สุด เช่น ⌊(6 − 3)/2⌋ + 1 = 2 ไม่ใช่ 2.5 และ Keras ไม่ระบุ padding = "valid" (p = 0) ส่วน padding = "same" ที่ stride 1 ให้ขนาดเท่าเดิม</p>
 
-<div class="box mech">
-<div class="label">กลไกที่ต้องอธิบายได้</div>
-<dl>
-<dt>ทำไมต้องมี</dt>
-<dd>Padding แก้ปัญหาภาพหดและข้อมูลขอบหาย. Stride เป็นวิธีย่อขนาด feature map โดยเจตนาเพื่อลดการคำนวณ.</dd>
-<dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>เพิ่ม \(p\) ⇒ output ใหญ่ขึ้น. เพิ่ม \(s\) ⇒ output เล็กลงโดยประมาณ \(1/s\) ต่อด้าน. เพิ่ม \(f\) ⇒ output เล็กลงและ parameter เพิ่ม. <code>padding="same"</code> กับ stride 2 ให้ output \(\lceil n/2 \rceil\) ไม่ใช่ \(n\).</dd>
-<dt>เชื่อมกับ</dt>
-<dd>สูตรเดียวกันใช้กับ pooling (§6) โดยตั้ง \(p = 0\). ตารางหน้า 21 (§7) ใช้สูตรนี้ทุกแถว.</dd>
-</dl>
-</div>
+<details class="check"><summary>input 28×28 filter 5×5 padding 2 stride 1 และ input 64×64 filter 7×7 padding 0 stride 2 ได้ขนาดเท่าใด</summary>
+<p>(28 + 4 − 5)/1 + 1 = 28 คือ 28×28 · ⌊(64 − 7)/2⌋ + 1 = ⌊28.5⌋ + 1 = 29 คือ 29×29</p>
+</details>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 3</span><span>Output size</span></div>
-  <div class="qtext">Input ขนาด 28×28 ผ่าน convolution ที่ใช้ filter 5×5, padding 2, stride 1 ขนาด output (กว้าง×สูง) คือข้อใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. (28 + 2·2 − 5)/1 + 1 = 28. padding 2 กับ filter 5 คือกรณี SAME เพราะ p = (f−1)/2. 24×24 คือไม่คิด padding, 26×26 คือคิด padding ด้านเดียว.">24×24</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (28 + 2·2 − 5)/1 + 1 = 28. padding 2 กับ filter 5 คือกรณี SAME เพราะ p = (f−1)/2. 24×24 คือไม่คิด padding, 26×26 คือคิด padding ด้านเดียว.">26×26</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (28 + 2·2 − 5)/1 + 1 = 28. padding 2 กับ filter 5 คือกรณี SAME เพราะ p = (f−1)/2. 24×24 คือไม่คิด padding, 26×26 คือคิด padding ด้านเดียว.">30×30</button>
-    <button class="opt" data-correct="true" data-note="ถูก. (28 + 2·2 − 5)/1 + 1 = 28. padding 2 กับ filter 5 คือกรณี SAME เพราะ p = (f−1)/2. 24×24 คือไม่คิด padding, 26×26 คือคิด padding ด้านเดียว.">28×28</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<!-- ===================================================== -->
+<h2 id="s4">4. Convolution layer เต็มรูป และทำไมต้อง ConvNets</h2>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 4</span><span>Output size</span></div>
-  <div class="qtext">Input ขนาด 64×64 ผ่าน convolution ที่ใช้ filter 7×7, padding 0, stride 2 ขนาด output (กว้าง×สูง) คือข้อใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. (64 − 7)/2 + 1 = 28.5 + 1 = 29.5 ปัดลงเป็น 29. 58×58 คือลืมหารด้วย stride, 28×28 คือปัดลงแล้วลืมบวก 1.">30×30</button>
-    <button class="opt" data-correct="true" data-note="ถูก. (64 − 7)/2 + 1 = 28.5 + 1 = 29.5 ปัดลงเป็น 29. 58×58 คือลืมหารด้วย stride, 28×28 คือปัดลงแล้วลืมบวก 1.">29×29</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (64 − 7)/2 + 1 = 28.5 + 1 = 29.5 ปัดลงเป็น 29. 58×58 คือลืมหารด้วย stride, 28×28 คือปัดลงแล้วลืมบวก 1.">28×28</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (64 − 7)/2 + 1 = 28.5 + 1 = 29.5 ปัดลงเป็น 29. 58×58 คือลืมหารด้วย stride, 28×28 คือปัดลงแล้วลืมบวก 1.">58×58</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<h3 id="s4-volume">4.1 Convolution บน volume และหลาย filter</h3>
 
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li>ข้อเสียสองข้อของ convolution พื้นฐาน: <mark class="src" data-p="11">Image shrink down</mark> และ <mark class="src" data-p="11">Throw away a lot of information from edge</mark>. ทั้งสองแก้ด้วย padding</li>
-<li><mark class="src" data-p="12">Padding</mark> = <mark class="src" data-p="12">additional border</mark> ที่มักเป็น <mark class="src" data-p="12">zeros</mark>. <mark class="src" data-p="12">"SAME"</mark> ⇒ output เท่า input; <mark class="src" data-p="12">"VALID"</mark> ⇒ ไม่ pad และเป็น default ของ Keras</li>
-<li><mark class="src" data-p="13">Stride</mark> = <mark class="src" data-p="13">step size</mark>. stride ใหญ่ ⇒ output เล็ก, เร็วขึ้น, ใช้ memory น้อยลง, อาจข้ามบริเวณสำคัญ</li>
-<li>สูตรเดียวที่ต้องจำ: \(\lfloor (n+2p-f)/s \rfloor + 1\). กรณี convolution/pooling ที่มี stride ให้ <strong>floor</strong></li>
-</ul>
-</div>
+<p>ภาพสีมี 3 channel filter ที่ใช้กับ input หลาย channel ต้องมี <mark class="src" data-p="14" title="the same number of channels">จำนวน channel เท่ากัน</mark> กับ input (แต่ละชั้นมี weight ต่างกันได้) filter จึงมีขนาด \(f \times f \times n_C\) หนึ่งตำแหน่งคูณและบวกทุกช่องของทุก channel รวมเป็นตัวเลขเดียว ภาพ 6×6×3 กับ filter 3×3×3 คูณ 27 ครั้งต่อตำแหน่ง และได้ feature map 4×4 แผ่นเดียว ไม่ใช่ 4×4×3</p>
 
-<h2 id="s5">5. Convolution บน Volume, หลาย Filter และ Convolution Layer เต็มรูป</h2>
+<p>convolutional layer ใช้ <mark class="src" data-p="15" title="multiple trainable filters">filter ที่เรียนได้หลายตัว</mark> พร้อมกัน จึง <mark class="src" data-p="15" title="detecting multiple features anywhere">ตรวจหา feature หลายชนิดได้ทุกที่</mark> ใน input filter หนึ่งตัวให้ feature map หนึ่งแผ่น ซ้อนกันได้ output</p>
 
-<figure>
-<img src="../assets/slides/dl7-p14-convolution-on-volume.png" alt="Slide: Convolution on Volume. Given an input with certain height, width and number of channels, the applied filters have potentially different weights but the same number of channels (one for each channel). To perform convolution we sum up terms for all channels. Input nw x nh x nc, filter f x f x nc (image nc = filter nc), feature map (nw+2p-f)/s+1 by (nh+2p-f)/s+1">
-<figcaption>Slide: Convolution on Volume — filter ต้องมี channel เท่า input (Lecture7, p.14)</figcaption>
+<div class="eq">\[\left(\left\lfloor \tfrac{n+2p-f}{s} \right\rfloor + 1\right) \times \left(\left\lfloor \tfrac{n+2p-f}{s} \right\rfloor + 1\right) \times n_C'\]</div>
+<p class="say">กว้างและสูงมาจากสูตรเดิม ส่วน channel ของ output เท่ากับจำนวน filter ไม่เกี่ยวกับ channel ของ input</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p15.png" alt="Lecture7 หน้า 15: Multiple Filters: filter 2 ตัวได้ output 4×4×2" loading="lazy">
+<figcaption>Lecture7 หน้า 15 — Multiple Filters: filter 2 ตัวได้ output 4×4×2</figcaption>
 </figure>
 
-<p>ภาพสีมี 3 channel. filter ที่ใช้กับ input หลาย channel ต้องมี <mark class="src" data-p="14">the same number of channels</mark> กับ input (หนึ่งชั้นต่อหนึ่ง channel) โดยแต่ละชั้นมี weight ต่างกันได้. filter จึงมีขนาด \(f \times f \times n_C\). การคำนวณหนึ่งตำแหน่งคือคูณและบวกทุกช่องของทุก channel รวมกันเป็น<strong>ตัวเลขเดียว</strong>.</p>
-<ul>
-<li>ภาพ 6×6×3 กับ filter 3×3×3: หนึ่งตำแหน่งมีการคูณ \(3 \times 3 \times 3 = 27\) ครั้ง แล้วบวกเป็น 1 ค่า</li>
-<li>Feature map ที่ได้จาก filter หนึ่งตัวมี <strong>1 channel</strong> ขนาด \(4 \times 4\) ไม่ใช่ 4×4×3</li>
-</ul>
+<p>ภาพ 6×6×3 กับ filter 3×3×3 สองตัว (ตัวหนึ่งตรวจขอบแนวตั้ง อีกตัวตรวจแนวนอน) ได้ feature map 4×4 สองแผ่น ซ้อนเป็น 4×4×2</p>
 
+<p class="trap">ภาพ RGB ใช้ filter 3×3×1 ไม่ได้ channel ของ filter ต้องเท่ากับ channel ของ input เสมอ ใน Keras ไม่ต้องระบุเพราะ Keras ตั้งให้เองจาก input</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 14)</summary><div class="gallery">
 <figure>
-<img src="../assets/slides/dl7-p15-multiple-filters.png" alt="Slide: Multiple Filters. A convolutional layer can simultaneously apply multiple trainable filters to its inputs, making it capable of detecting multiple features anywhere in its inputs. Two filters of size f x f x nc each produce one feature map; total feature map is (nw+2p-f)/s+1 by (nh+2p-f)/s+1 by nc&#x27; (number of filters)">
-<figcaption>Slide: Multiple Filters — จำนวน filter คือจำนวน channel ของ output (Lecture7, p.15)</figcaption>
+<img src="../assets/slides/dl7-p14.png" alt="Lecture7 หน้า 14: Convolution on Volume: filter 3×3×3 กับภาพ 6×6×3" loading="lazy">
+<figcaption>Lecture7 หน้า 14 — Convolution on Volume: filter 3×3×3 กับภาพ 6×6×3</figcaption>
 </figure>
+</div></details>
 
-<p>Convolutional layer ใช้ <mark class="src" data-p="15">multiple trainable filters</mark> พร้อมกันได้ จึง <mark class="src" data-p="15">detecting multiple features anywhere</mark> ใน input. filter แต่ละตัวให้ feature map 1 แผ่น. เมื่อนำมาซ้อนกันจะได้ output</p>
-$$\begin{gathered}\left(\left\lfloor\frac{n_W + 2p - f}{s}\right\rfloor + 1\right) \times \left(\left\lfloor\frac{n_H + 2p - f}{s}\right\rfloor + 1\right)\\ \times\; n_C'\end{gathered}$$
-<p class="plain-thai">กว้างและสูงมาจากสูตรเดิม ส่วน channel ของ output เท่ากับจำนวน filter ไม่เกี่ยวกับ channel ของ input</p>
+<h3 id="s4-layer">4.2 หนึ่ง convolution layer และจำนวน parameter</h3>
 
-<figure>
-<img src="../assets/slides/dl7-p16-a-convolution-layer.png" alt="Slide: A Convolution Layer. What is X, theta, Z, activation function, a? The input image or input feature map (nW x nH x nC) plays the role of X; each filter (f x f x nC) plays the role of theta; the convolution result plus bias theta0 plays the role of Z; ReLU is applied; the stacked feature map plays the role of a, the image to the next layer">
-<figcaption>Slide: A Convolution Layer — จับคู่กับ X, θ, Z, a ของ dense layer (Lecture7, p.16)</figcaption>
-</figure>
+<p>convolution layer มีส่วนประกอบเดียวกับ dense layer ของ <a href="0002-neural-network-basics.html">Lesson 2</a></p>
 
-<p>Convolution layer มีส่วนประกอบเดียวกับ dense layer ของ <a href="0002-neural-network-basics.html">Lesson 2</a> ทุกตัว:</p>
-<table class="compact">
+<table>
 <tr><th>บทบาท</th><th>Dense layer</th><th>Convolution layer</th></tr>
-<tr><td>\(X\) (หรือ \(a^{[l-1]}\))</td><td>vector ของ input</td><td>ภาพ หรือ feature map ของ layer ก่อนหน้า (\(n_W \times n_H \times n_C\))</td></tr>
+<tr><td>\(X\) (หรือ \(a^{[l-1]}\))</td><td>vector ของ input</td><td>ภาพหรือ feature map ชั้นก่อน (\(n_W \times n_H \times n_C\))</td></tr>
 <tr><td>\(\theta\)</td><td>weight matrix</td><td>filter แต่ละตัว (\(f \times f \times n_C\))</td></tr>
-<tr><td>\(\theta_0\)</td><td>bias 1 ตัวต่อ node</td><td>bias <strong>1 ตัวต่อ filter</strong></td></tr>
-<tr><td>\(Z\)</td><td>\(\theta X + \theta_0\)</td><td>ผล convolution + bias \(\theta_0\)</td></tr>
-<tr><td>\(a\)</td><td>\(g(Z)\)</td><td>\(\text{ReLU}(Z)\) ⇒ feature map ที่เป็น "image to the next layer"</td></tr>
+<tr><td>\(\theta_0\)</td><td>bias 1 ตัวต่อ node</td><td>bias 1 ตัวต่อ filter</td></tr>
+<tr><td>\(Z\)</td><td>\(\theta X + \theta_0\)</td><td>ผล convolution + bias</td></tr>
+<tr><td>\(a\)</td><td>\(g(Z)\)</td><td>ReLU(Z) เป็น "ภาพ" ที่ส่งให้ layer ถัดไป</td></tr>
 </table>
 
-<div class="calc">
-<div class="calc-title">คำนวณ: จำนวน parameter ของ convolution layer</div>
-<div class="given">ให้ layer มี \(n_C'\) filter ขนาด \(f \times f\) รับ input ที่มี \(n_C\) channel</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — weight ของ filter หนึ่งตัว</div>
-$$f \times f \times n_C$$</li>
-<li><div class="st-title">ขั้นที่ 2 — บวก bias 1 ตัวต่อ filter แล้วคูณจำนวน filter</div>
-$$\#\text{param} = (f \times f \times n_C + 1) \times n_C'$$</li>
-<li><div class="st-title">ขั้นที่ 3 — ตัวอย่าง: 10 filter ขนาด 3×3 บนภาพสี</div>
-$$(3 \times 3 \times 3 + 1) \times 10 = 28 \times 10 = 280$$</li>
-<li><div class="st-title">ขั้นที่ 4 — ตัวอย่าง: 20 filter ขนาด 5×5 บน input 10 channel</div>
-$$(5 \times 5 \times 10 + 1) \times 20 = 251 \times 20 = 5{,}020$$</li>
-</ol>
-<div class="answer"><p>สูตรไม่มี \(n_W, n_H, p, s\). ขนาดภาพ padding และ stride เปลี่ยนขนาด output แต่ไม่เปลี่ยนจำนวน parameter. ตัวที่ลืมบ่อยคือ \(n_C\) ของ <em>input</em> (ไม่ใช่ของภาพต้นฉบับ) และ +1 ของ bias.</p></div>
-</div>
+<div class="eq">\[\#\text{param} = (f \times f \times n_C + 1) \times n_C'\]</div>
+<p class="say">weight ของ filter หนึ่งตัว (f·f·n_C) บวก bias 1 ตัว แล้วคูณจำนวน filter</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 5</span><span>Parameters</span></div>
-  <div class="qtext">Convolution layer มี 16 filter ขนาด 3×3 รับ input ขนาด 14×14×8 และใช้ padding แบบ same จำนวน parameter ที่เรียนได้ของ layer นี้คือเท่าใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. (3·3·8 + 1)·16 = 73·16 = 1,168. ค่า 1,152 คือลืม bias 16 ตัว, 160 คือลืมคูณ channel ของ input, 3,136 = 14·14·16 คือขนาด output ไม่ใช่ parameter.">1,152</button>
-    <button class="opt" data-correct="true" data-note="ถูก. (3·3·8 + 1)·16 = 73·16 = 1,168. ค่า 1,152 คือลืม bias 16 ตัว, 160 คือลืมคูณ channel ของ input, 3,136 = 14·14·16 คือขนาด output ไม่ใช่ parameter.">1,168</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (3·3·8 + 1)·16 = 73·16 = 1,168. ค่า 1,152 คือลืม bias 16 ตัว, 160 คือลืมคูณ channel ของ input, 3,136 = 14·14·16 คือขนาด output ไม่ใช่ parameter.">160</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (3·3·8 + 1)·16 = 73·16 = 1,168. ค่า 1,152 คือลืม bias 16 ตัว, 160 คือลืมคูณ channel ของ input, 3,136 = 14·14·16 คือขนาด output ไม่ใช่ parameter.">3,136</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<figure class="viz"><img src="../assets/viz/l7-params.svg" alt="parameter ของ conv layer 10 filter ขนาด 3x3x3 เท่ากับ 280"></figure>
+<p>สูตรไม่มีขนาดภาพ padding หรือ stride สามอย่างนี้เปลี่ยนขนาด output แต่ไม่เปลี่ยนจำนวน parameter ตัวที่ลืมบ่อยคือ n_C ของ input ชั้นนั้น (ไม่ใช่ของภาพต้นฉบับ) และ +1 ของ bias</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 6</span><span>Output shape</span></div>
-  <div class="qtext">Input ขนาด 32×32×3 ผ่าน convolution layer ที่มี 8 filter ขนาด 5×5, padding 0, stride 1 shape ของ output คือข้อใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. กว้าง/สูง = 32 − 5 + 1 = 28. จำนวน channel ของ output เท่ากับจำนวน filter คือ 8 เพราะ filter แต่ละตัวรวมทุก channel ของ input เป็นค่าเดียว.">28×28×3</button>
-    <button class="opt" data-correct="false" data-note="ผิด. กว้าง/สูง = 32 − 5 + 1 = 28. จำนวน channel ของ output เท่ากับจำนวน filter คือ 8 เพราะ filter แต่ละตัวรวมทุก channel ของ input เป็นค่าเดียว.">28×28×24</button>
-    <button class="opt" data-correct="false" data-note="ผิด. กว้าง/สูง = 32 − 5 + 1 = 28. จำนวน channel ของ output เท่ากับจำนวน filter คือ 8 เพราะ filter แต่ละตัวรวมทุก channel ของ input เป็นค่าเดียว.">32×32×8</button>
-    <button class="opt" data-correct="true" data-note="ถูก. กว้าง/สูง = 32 − 5 + 1 = 28. จำนวน channel ของ output เท่ากับจำนวน filter คือ 8 เพราะ filter แต่ละตัวรวมทุก channel ของ input เป็นค่าเดียว.">28×28×8</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<p class="num">10 filter 3×3 บนภาพสี: (3 × 3 × 3 + 1) × 10 = 28 × 10 = 280 · 20 filter 5×5 บน input 10 channel: (5 × 5 × 10 + 1) × 20 = 251 × 20 = 5,020</p>
 
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li>filter ต้องมี <mark class="src" data-p="14">the same number of channels</mark> กับ input (image \(n_C\) = filter \(n_C\)). กับดัก: ตัวเลือกที่ให้ filter 3×3×1 กับภาพ RGB</li>
-<li>layer หนึ่งใช้ <mark class="src" data-p="15">multiple trainable filters</mark> ⇒ <mark class="src" data-p="15">detecting multiple features anywhere</mark>. channel ของ output = จำนวน filter (\(n_C'\))</li>
-<li>บทบาท: input = \(X\), filter = \(\theta\), ผล convolution + bias = \(Z\), ReLU(\(Z\)) = \(a\)</li>
-<li>\(\#\text{param} = (f \cdot f \cdot n_C + 1) \cdot n_C'\)</li>
-</ul>
-</div>
-
-<h2 id="s6">6. Pooling Layer และ Translation Invariance</h2>
-
-<figure>
-<img src="../assets/slides/dl7-p18-pooling-layer.png" alt="Slide: Pooling Layer. Pooling layer reduces the size of images or feature maps (not affecting channels), reduces spatial dimensions, computation and number of parameters in subsequent layers, limiting risk of overfitting. Common types: max pooling (most common, keeps most important features; hyperparameters filter size and stride, no parameters to learn) and average pooling. Example 6 by 6 input, f=3, s=3, first output 6. Output ((nW-f)/s+1) by ((nH-f)/s+1) by nC, floor">
-<figcaption>Slide: Pooling Layer — ย่อ feature map โดยไม่มี parameter (Lecture7, p.18)</figcaption>
+<figure class="thumb">
+<img src="../assets/slides/dl7-p16.png" alt="Lecture7 หน้า 16: A Convolution Layer: X, θ, θ₀, Z และ a ของ convolution layer" loading="lazy">
+<figcaption>Lecture7 หน้า 16 — A Convolution Layer: X, θ, θ₀, Z และ a ของ convolution layer</figcaption>
 </figure>
 
-<p><mark class="src" data-p="18">Pooling</mark> layer ทำหน้าที่ <mark class="src" data-p="18">reduce the size of images or feature maps</mark>:</p>
-<ul>
-<li>Downsize ภาพหรือ feature map ที่ convolutional layer ผลิต โดย<strong>ไม่กระทบจำนวน channel</strong> (not affect channels)</li>
-<li>ลด spatial dimensions จึงลด computation และ number of parameters ใน subsequent layers ซึ่งจำกัดความเสี่ยง overfitting</li>
-</ul>
-<p><mark class="src" data-p="18">Common types of polling strategy</mark> มีสองแบบ:</p>
-<ul>
-<li><mark class="src" data-p="18">Max Pooling</mark> (ใช้บ่อยที่สุด): เก็บค่าสูงสุดในหน้าต่าง = feature ที่เด่นที่สุด (most important features) ไม่ว่าอยู่ตรงไหนในหน้าต่าง. มีเฉพาะ hyperparameter (filter size, stride) และ <strong>no parameters to learn</strong></li>
-<li><mark class="src" data-p="18">Average Pooling</mark>: เฉลี่ยค่าในหน้าต่าง</li>
-</ul>
-$$\begin{gathered}\text{Output} = \left(\left\lfloor\frac{n_W - f}{s}\right\rfloor + 1\right) \times \left(\left\lfloor\frac{n_H - f}{s}\right\rfloor + 1\right)\\ \times\; n_C\end{gathered}$$
+<p>ภาพ 6×6×3 ผ่าน filter สองตัว แต่ละตัวบวก bias แล้วผ่าน ReLU ได้ 4×4 สองแผ่น ซ้อนเป็น 4×4×2 ซึ่งเป็น input ของ layer ถัดไป</p>
 
-<div class="calc">
-<div class="calc-title">คำนวณตามสไลด์: max pooling และ average pooling (f = 3, s = 3) บนภาพ 6×6</div>
-<div class="given">ให้ ภาพ 6×6 ชุดเดิม แบ่งเป็น 4 บล็อก 3×3 ที่ไม่ซ้อนกัน. บล็อกซ้ายบน \(\{2,3,1,5,4,3,6,4,4\}\), ขวาบน \(\{2,2,3,9,8,5,3,5,8\}\), ซ้ายล่าง \(\{6,3,6,7,8,9,7,4,3\}\), ขวาล่าง \(\{5,5,5,9,4,3,6,9,3\}\)</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — ขนาด output</div>
-$$\left\lfloor \frac{6-3}{3} \right\rfloor + 1 = 2 \quad\Rightarrow\quad 2 \times 2$$</li>
-<li><div class="st-title">ขั้นที่ 2 — Max pooling: เลือกค่ามากสุดของแต่ละบล็อก</div>
-$$\begin{bmatrix} \max = 6 & \max = 9\\ \max = 9 & \max = 9 \end{bmatrix}$$</li>
-<li><div class="st-title">ขั้นที่ 3 — Average pooling: ผลรวมของแต่ละบล็อกหาร 9</div>
-$$\begin{bmatrix} 32/9 & 45/9\\ 53/9 & 49/9 \end{bmatrix} \approx \begin{bmatrix} 3.56 & 5.00\\ 5.89 & 5.44 \end{bmatrix}$$</li>
-</ol>
-<div class="answer"><p>สไลด์เติมไว้ช่องเดียวคือ 6 (ซ้ายบน). สามช่องที่เหลือของ max pooling เป็น 9 ทั้งหมด. ข้อมูล 36 ค่าเหลือ 4 ค่า และไม่มี weight ให้เรียนเลย.</p></div>
-</div>
+<details class="check"><summary>conv layer 16 filter ขนาด 3×3 รับ input 14×14×8 padding same มี parameter เท่าใด</summary>
+<p>(3 × 3 × 8 + 1) × 16 = 73 × 16 = 1,168 ขนาด 14×14 และ padding ไม่มีผล</p>
+</details>
 
-<figure>
-<img src="../assets/slides/dl7-p19-max-pooling-translation-invariance.png" alt="Slide: Max Pooling Introduces Translation Invariance. Shifting an image a few pixels should result in similar features (invariance to small translations). Images A, B, C pass through max pooling with a 2 by 2 kernel and stride 2; B and C are A shifted right by one and two pixels. Outputs for A and B are identical; C&#x27;s output is shifted by one pixel (still 75% invariance)">
-<figcaption>Slide: Max Pooling Introduce Translation Invariant — ภาพ A, B, C (Lecture7, p.19)</figcaption>
+<h3 id="s4-why">4.3 ทำไมต้อง ConvNets</h3>
+
+<p><mark class="src" data-p="22" title="CNNs can learn">CNN เรียนรู้</mark> <mark class="src" data-p="22" title="spatial features">feature เชิงตำแหน่ง</mark> <mark class="src" data-p="22" title="of images">ของภาพ</mark>ได้ คือมองภาพเป็นกลุ่ม pixel ที่อยู่ใกล้กันและสัมพันธ์กัน โดยไม่ขึ้นกับตำแหน่งในภาพ filter ตัวเดียวที่ตรวจมุมของสี่เหลี่ยมถูกเลื่อนทั่วภาพ จึงพบสี่เหลี่ยมได้ทั้งมุมซ้ายบน กลางภาพ และมุมขวาล่าง ปัญหาข้อ 2 ของ dense network จึงหมดไป</p>
+
+<p>CNN ประกอบด้วย locally connected layer ซึ่งใช้ <mark class="src" data-p="23" title="fewer parameters">parameter น้อยกว่า</mark> fully connected จึงคำนวณน้อยกว่าและ overfit ยากกว่า มีสองกลไก</p>
+
+<table>
+<tr><th>กลไก</th><th>ความหมาย</th></tr>
+<tr><td>Local connectivity (sparse connection)</td><td>ค่า 5 ที่มุมซ้ายบนของ feature map ขึ้นกับ input แค่ 9 ช่องในกรอบ 3×3 อีก 27 ช่องไม่มีผล</td></tr>
+<tr><td>Weight sharing</td><td>ทุกตำแหน่งใน feature map เดียวกันใช้ filter ชุดเดียว 16 ค่าของ feature map 4×4 คำนวณจาก weight 9 ตัวและ bias 1 ตัว</td></tr>
+</table>
+
+<figure class="viz"><img src="../assets/viz/l7-sharing.svg" alt="parameter ลดจาก 592 เป็น 160 เป็น 10"></figure>
+<p>ต้องการ output 16 ค่าจากภาพ 6×6: dense 16 node ใช้ 36 × 16 + 16 = 592 · ต่อเฉพาะที่แต่ไม่แชร์ weight ใช้ 16 × (9 + 1) = 160 · convolution ที่แชร์ filter ใช้ 3 × 3 + 1 = 10 รวมลดลง 59 เท่า</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p23.png" alt="Lecture7 หน้า 23: Why ConvNets? (2): locally connected และ fewer parameters" loading="lazy">
+<figcaption>Lecture7 หน้า 23 — Why ConvNets? (2): locally connected และ fewer parameters</figcaption>
 </figure>
 
-<p>ภาพที่เลื่อนไปไม่กี่ pixel ควรให้ feature ใกล้เคียงเดิม เรียกว่า <mark class="src" data-p="19">invariance to small translations</mark>. ตัวอย่างในสไลด์: ภาพ A, B, C ผ่าน max pooling ที่ใช้ kernel 2×2 stride 2. B คือ A เลื่อนขวา 1 pixel, C คือ A เลื่อนขวา 2 pixel.</p>
-<ul>
-<li>Output ของ A และ B <strong>เหมือนกันทุกช่อง</strong>. การเลื่อน 1 pixel ยังอยู่ในหน้าต่าง 2×2 เดิม ค่าสูงสุดของหน้าต่างจึงไม่เปลี่ยน. นี่คือความหมายของ translation invariance</li>
-<li>Output ของ C ต่างออกไป: เลื่อนขวา 1 ช่อง. การเลื่อน 2 pixel ข้ามไปอยู่หน้าต่างถัดไป. สไลด์ระบุว่ายังมี invariance 75%</li>
-</ul>
-<p>ข้อสรุปของสไลด์: ใส่ max pooling ทุกสองสาม layer ทำให้ได้ translation invariance ระดับหนึ่งในสเกลที่ใหญ่ขึ้น. invariance นี้มีประโยชน์กับงานที่คำตอบไม่ควรขึ้นกับตำแหน่งละเอียด เช่น classification.</p>
+<p>ค่า 5 ที่มุมซ้ายบนของ feature map มาจาก 9 ช่องในกรอบเท่านั้น และทุกช่องของ feature map ใช้ filter ตัวเดียวกัน</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 7</span><span>Pooling</span></div>
-  <div class="qtext">Feature map ขนาด 4×4 มีแถว [1,3,2,0], [4,2,1,5], [0,1,7,2], [3,6,1,4] ผ่าน max pooling ที่ใช้ pool size 2 และ stride 2 ผลลัพธ์คือข้อใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. บล็อกซ้ายบน {1,3,4,2} max 4; ขวาบน {2,0,1,5} max 5; ซ้ายล่าง {0,1,3,6} max 6; ขวาล่าง {7,2,1,4} max 7. ตัวเลือกที่มีทศนิยมคือ average pooling.">[[4,2],[3,7]]</button>
-    <button class="opt" data-correct="false" data-note="ผิด. บล็อกซ้ายบน {1,3,4,2} max 4; ขวาบน {2,0,1,5} max 5; ซ้ายล่าง {0,1,3,6} max 6; ขวาล่าง {7,2,1,4} max 7. ตัวเลือกที่มีทศนิยมคือ average pooling.">[[3,2],[6,7]]</button>
-    <button class="opt" data-correct="true" data-note="ถูก. บล็อกซ้ายบน {1,3,4,2} max 4; ขวาบน {2,0,1,5} max 5; ซ้ายล่าง {0,1,3,6} max 6; ขวาล่าง {7,2,1,4} max 7. ตัวเลือกที่มีทศนิยมคือ average pooling.">[[4,5],[6,7]]</button>
-    <button class="opt" data-correct="false" data-note="ผิด. บล็อกซ้ายบน {1,3,4,2} max 4; ขวาบน {2,0,1,5} max 5; ซ้ายล่าง {0,1,3,6} max 6; ขวาล่าง {7,2,1,4} max 7. ตัวเลือกที่มีทศนิยมคือ average pooling.">[[2.5,2],[2.5,3.5]]</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<p class="trap">แยกสองคำให้ออก: locally connected = output แต่ละค่าขึ้นกับ input บริเวณเล็ก · weight sharing = ทุกตำแหน่งใช้ filter ชุดเดียว ทั้งสองทำให้ parameter น้อย แต่ลดคนละส่วน</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 8</span><span>Pooling</span></div>
-  <div class="qtext">Feature map ขนาด 15×15×20 ผ่าน max pooling ที่ใช้ pool size 2 และ stride 2 shape ของ output และจำนวน parameter ที่เรียนได้ของ layer นี้คือข้อใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="true" data-note="ถูก. (15 − 2)/2 + 1 = 7.5 ปัดลงเป็น 7. Pooling ไม่เปลี่ยนจำนวน channel (ยังเป็น 20) และไม่มี weight ให้เรียน มีแต่ hyperparameter คือ pool size กับ stride.">7×7×20 และ 0 parameter</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (15 − 2)/2 + 1 = 7.5 ปัดลงเป็น 7. Pooling ไม่เปลี่ยนจำนวน channel (ยังเป็น 20) และไม่มี weight ให้เรียน มีแต่ hyperparameter คือ pool size กับ stride.">8×8×20 และ 0 parameter</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (15 − 2)/2 + 1 = 7.5 ปัดลงเป็น 7. Pooling ไม่เปลี่ยนจำนวน channel (ยังเป็น 20) และไม่มี weight ให้เรียน มีแต่ hyperparameter คือ pool size กับ stride.">7×7×10 และ 0 parameter</button>
-    <button class="opt" data-correct="false" data-note="ผิด. (15 − 2)/2 + 1 = 7.5 ปัดลงเป็น 7. Pooling ไม่เปลี่ยนจำนวน channel (ยังเป็น 20) และไม่มี weight ให้เรียน มีแต่ hyperparameter คือ pool size กับ stride.">7×7×20 และ 80 parameter</button>
-  </div>
-  <div class="feedback"></div>
-</div>
-
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li><mark class="src" data-p="18">Pooling</mark> ⇒ <mark class="src" data-p="18">reduce the size of images or feature maps</mark>. ลดเฉพาะกว้างกับสูง <strong>ไม่ลด channel</strong></li>
-<li><mark class="src" data-p="18">Common types of polling strategy</mark>: <mark class="src" data-p="18">Max Pooling</mark> (most common, เก็บ most important features) และ <mark class="src" data-p="18">Average Pooling</mark></li>
-<li>Pooling มี hyperparameter (filter size, stride) แต่ <strong>ไม่มี parameter ให้เรียน</strong> ⇒ #Parameters = 0 เสมอ</li>
-<li>Max pooling ให้ <mark class="src" data-p="19">invariance to small translations</mark>: เลื่อน 1 pixel output เท่าเดิม, เลื่อน 2 pixel output เลื่อน 1 ช่อง (kernel 2×2, stride 2)</li>
-</ul>
-</div>
-
-<h2 id="s7">7. ประกอบเป็น CNN และตาราง Parameters Summary</h2>
-
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 22)</summary><div class="gallery">
 <figure>
-<img src="../assets/slides/dl7-p17-conv-plus-dense.png" alt="Slide: Put Together: Convolution and Densely Connected Layer. A 32x32x3 dog image passes through a convolution with f=3, 10 filters, p=0, s=1 and a second convolution with f=5, 20 filters, p=0, s=2, then into fully connected layers ending in h(x). Formula dim = (n+2p-f)/s + 1">
-<figcaption>Slide: Put Together: Convolution &amp; Densely Connected Layer — ยังไม่มี pooling (Lecture7, p.17)</figcaption>
+<img src="../assets/slides/dl7-p22.png" alt="Lecture7 หน้า 22: Why ConvNets? spatial features" loading="lazy">
+<figcaption>Lecture7 หน้า 22 — Why ConvNets? spatial features</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s5">5. Pooling และ CNN ทั้งตัว</h2>
+
+<h3 id="s5-pool">5.1 Pooling layer</h3>
+
+<p class="pic">ย่อรูปถ่ายให้เล็กลงโดยเก็บเฉพาะจุดที่เด่นที่สุดของแต่ละบริเวณ รายละเอียดเล็กๆ หายไปบ้าง แต่ยังดูออกว่าเป็นรูปอะไร และไม่ต้องเรียนอะไรเพิ่ม</p>
+
+<p><mark class="src" data-p="18" title="Pooling">Pooling</mark> layer <mark class="src" data-p="18" title="reduce the size of images or feature maps">ลดขนาดของภาพหรือ feature map</mark>: ย่อ feature map ที่ convolutional layer ผลิตโดยไม่กระทบจำนวน channel และลดมิติเชิงพื้นที่ จึงลดการคำนวณและจำนวน parameter ใน layer ถัดไป ซึ่งช่วยจำกัดความเสี่ยง overfitting</p>
+
+<p><mark class="src" data-p="18" title="Common types of polling strategy">กลยุทธ์ pooling ที่ใช้บ่อย</mark> มีสองแบบ</p>
+<table>
+<tr><th>แบบ</th><th>ทำอะไร</th></tr>
+<tr><td><mark class="src" data-p="18" title="Max Pooling">Max Pooling</mark> (ใช้บ่อยที่สุด)</td><td>เก็บค่าสูงสุดในหน้าต่าง คือ feature ที่เด่นที่สุด (most important features) มีแค่ hyperparameter (filter size, stride) ไม่มี parameter ให้เรียน</td></tr>
+<tr><td><mark class="src" data-p="18" title="Average Pooling">Average Pooling</mark></td><td>เฉลี่ยค่าในหน้าต่าง</td></tr>
+</table>
+
+<p class="num">ภาพ 6×6 ของหน้า 7 ผ่าน pooling f = 3, s = 3: ⌊(6 − 3)/3⌋ + 1 = 2 คือ 2×2 · max pooling ได้ [[6, 9], [9, 9]] (สไลด์เติมไว้ช่องเดียวคือ 6) · average pooling ได้ผลรวม 32, 45, 53, 49 หาร 9 ≈ [[3.56, 5.00], [5.89, 5.44]] · 36 ค่าเหลือ 4 ค่า และไม่มี weight เลย</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p18.png" alt="Lecture7 หน้า 18: Pooling Layer: max pooling f = 3, s = 3 บนภาพ 6×6" loading="lazy">
+<figcaption>Lecture7 หน้า 18 — Pooling Layer: max pooling f = 3, s = 3 บนภาพ 6×6</figcaption>
 </figure>
 
-<p>หน้า 17 ต่อ convolution สองชั้นเข้ากับ dense layer โดยยังไม่มี pooling. ภาพ 32×32×3 ผ่านชั้นแรก (f = 3, 10 filter, p = 0, s = 1) ได้ \(32 - 3 + 1 = 30\) คือ 30×30×10. ชั้นที่สอง (f = 5, 20 filter, p = 0, s = 2) ได้ \(\lfloor (30-5)/2 \rfloor + 1 = \lfloor 12.5 \rfloor + 1 = 13\) คือ 13×13×20. เมื่อ flatten จะได้ vector ยาว \(13 \times 13 \times 20 = 3{,}380\).</p>
+<p>สี่บล็อกสี 3×3 บนสไลด์คือสี่หน้าต่างของ pooling ค่าสูงสุดของบล็อกซ้ายบนคือ 6 และของอีกสามบล็อกคือ 9 สูตรขนาด output ใต้ภาพคือสูตรเดียวกับ convolution และให้ floor เมื่อหารไม่ลงตัว</p>
 
-<figure>
-<img src="../assets/slides/dl7-p20-cnn-with-pooling.png" alt="Slide: Convolution Neural Network. The 32x32x3 image passes through Layer 1 (convolution f=3, 10 filters, p=0, s=1, then pooling f=2, s=2) and Layer 2 (convolution f=5, 20 filters, p=0, s=2, then pooling f=2, s=2), then fully connected Layer 3, Layer 4 up to Layer L and output h(x)">
-<figcaption>Slide: Convolution Neural Network — เพิ่ม pooling หลัง convolution แต่ละชั้น (Lecture7, p.20)</figcaption>
+<p class="trap">pooling ลดเฉพาะกว้างกับสูง ไม่ลด channel และ parameter ของ pooling = 0 เสมอ แม้ข้อสอบจะให้ pool size และ stride มา (สองค่านั้นเป็น hyperparameter)</p>
+
+<h3 id="s5-inv">5.2 Max pooling กับ translation invariance</h3>
+
+<p>ภาพที่เลื่อนไปไม่กี่ pixel ควรให้ feature ใกล้เคียงเดิม เรียกว่า <mark class="src" data-p="19" title="invariance to small translations">ไม่เปลี่ยนเมื่อเลื่อนเล็กน้อย</mark></p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p19.png" alt="Lecture7 หน้า 19: Max Pooling Introduce Translation Invariant: ภาพ A, B, C ผ่าน max pooling 2×2 stride 2" loading="lazy">
+<figcaption>Lecture7 หน้า 19 — Max Pooling Introduce Translation Invariant: ภาพ A, B, C ผ่าน max pooling 2×2 stride 2</figcaption>
 </figure>
 
-<p>หน้า 20 เพิ่ม max pooling (f = 2, s = 2) หลัง convolution แต่ละชั้น. สไลด์นับ convolution + pooling คู่หนึ่งเป็น <strong>1 layer</strong> (Layer 1, Layer 2) เพราะ pooling ไม่มี parameter. dense layer จึงเริ่มที่ Layer 3.</p>
+<p>B คือ A เลื่อนขวา 1 pixel และ C คือ A เลื่อนขวา 2 pixel ผ่าน max pooling 2×2 stride 2 output ของ A กับ B เหมือนกันทุกช่อง เพราะการเลื่อน 1 pixel ยังอยู่ในหน้าต่างเดิม ส่วน C เลื่อนข้ามไปหน้าต่างถัดไป output จึงเลื่อนขวา 1 ช่อง สไลด์ระบุว่ายังมี invariance 75% ใส่ max pooling ทุกสองสาม layer จึงได้ invariance ในสเกลที่ใหญ่ขึ้น ซึ่งมีประโยชน์กับงานอย่าง classification ที่คำตอบไม่ขึ้นกับตำแหน่งละเอียด</p>
 
-<figure>
-<img src="../assets/slides/dl7-p21-parameters-summary.png" alt="Slide: Parameters Summary table. Input 32,32,3 size 3,072 params 0. Layer 1 Conv (f=3, 10 filters, s=1) 30,30,10 size 9,000 params 280. Layer 1 Pooling (f=2, s=2) 15,15,10 size 2,250 params 0. Layer 2 Conv (f=5, 20 filters, s=2) 6,6,20 size 720 params 5020. Layer 2 Pooling 3,3,20 size 180 params 0. Layer 3 fully connected 100 nodes params 18,100. Layer 4 fully connected 100 nodes params 10,100. Sigmoid 1 node params 101. As the CNN goes deeper the height and width decrease whereas the number of channels increase">
-<figcaption>Slide: Parameters Summary — ตารางที่ต้องคำนวณได้ทุกช่อง (Lecture7, p.21)</figcaption>
+<h3 id="s5-summary">5.3 ประกอบเป็น CNN: ตาราง parameter</h3>
+
+<p>หน้า 17 ต่อ convolution สองชั้นเข้ากับ dense layer โดยยังไม่มี pooling ภาพ 32×32×3 ผ่าน f = 3, 10 filter ได้ 30×30×10 แล้วผ่าน f = 5, 20 filter, s = 2 ได้ ⌊(30 − 5)/2⌋ + 1 = ⌊12.5⌋ + 1 = 13 คือ 13×13×20 flatten ได้ 3,380 ค่า หน้า 20 เพิ่ม max pooling (f = 2, s = 2) หลัง convolution แต่ละชั้น และนับ convolution + pooling เป็น 1 layer (Layer 1, Layer 2) เพราะ pooling ไม่มี parameter dense layer จึงเริ่มที่ Layer 3</p>
+
+<figure class="viz"><img src="../assets/viz/l7-shapes.svg" alt="ขนาดและ parameter ทุกชั้นของตารางหน้า 21"></figure>
+<p>ไล่ทีละแถว: ขนาดจาก ⌊(n + 2p − f)/s⌋ + 1 → channel = จำนวน filter (pooling คง channel) → parameter ของ conv = (f·f·n_C + 1)·n_C', ของ pooling = 0, ของ dense = n_in·n_out + n_out</p>
+
+<table>
+<tr><th>ชั้น</th><th>shape</th><th>ขนาด</th><th>parameter</th></tr>
+<tr><td>Input</td><td>32×32×3</td><td>3,072</td><td>0</td></tr>
+<tr><td>Layer 1 Conv (f = 3, 10 filter, s = 1)</td><td>30×30×10</td><td>9,000</td><td>(3·3·3 + 1)·10 = 280</td></tr>
+<tr><td>Layer 1 Pool (f = 2, s = 2)</td><td>15×15×10</td><td>2,250</td><td>0</td></tr>
+<tr><td>Layer 2 Conv (f = 5, 20 filter, s = 2)</td><td>6×6×20</td><td>720</td><td>(5·5·10 + 1)·20 = 5,020</td></tr>
+<tr><td>Layer 2 Pool (f = 2, s = 2)</td><td>3×3×20</td><td>180</td><td>0</td></tr>
+<tr><td>Layer 3 FC 100</td><td>100</td><td>100</td><td>180·100 + 100 = 18,100</td></tr>
+<tr><td>Layer 4 FC 100</td><td>100</td><td>100</td><td>100·100 + 100 = 10,100</td></tr>
+<tr><td>Output sigmoid</td><td>1</td><td>1</td><td>100 + 1 = 101</td></tr>
+<tr><td colspan="3">รวม</td><td>33,601</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p21.png" alt="Lecture7 หน้า 21: Parameters Summary: ตารางที่ต้องคำนวณได้ทุกช่อง" loading="lazy">
+<figcaption>Lecture7 หน้า 21 — Parameters Summary: ตารางที่ต้องคำนวณได้ทุกช่อง</figcaption>
 </figure>
 
-<div class="calc">
-<div class="calc-title">คำนวณตามสไลด์: ทุกแถวของตาราง Parameters Summary</div>
-<div class="given">ให้ input 32×32×3 และ network ตามหน้า 20. Activation size = ผลคูณของ activation shape</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — Input</div>
-$$32 \times 32 \times 3 = 3{,}072 \text{ ค่า},\quad 0 \text{ parameter}$$</li>
-<li><div class="st-title">ขั้นที่ 2 — Layer 1 Conv (f = 3, 10 filter, p = 0, s = 1)</div>
-$$\begin{gathered}\frac{32 + 0 - 3}{1} + 1 = 30 \;\Rightarrow\; 30 \times 30 \times 10 = 9{,}000 \\[0.35em] \#\text{param} = (3 \cdot 3 \cdot 3 + 1) \cdot 10 = 280\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 3 — Layer 1 Pooling (f = 2, s = 2)</div>
-$$\begin{gathered}\frac{30 - 2}{2} + 1 = 15 \;\Rightarrow\; 15 \times 15 \times 10 = 2{,}250 \\[0.35em] \#\text{param} = 0\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 4 — Layer 2 Conv (f = 5, 20 filter, p = 0, s = 2): input มี 10 channel</div>
-$$\begin{gathered}\frac{15 - 5}{2} + 1 = 6 \;\Rightarrow\; 6 \times 6 \times 20 = 720 \\[0.35em] \#\text{param} = (5 \cdot 5 \cdot 10 + 1) \cdot 20 = 5{,}020\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 5 — Layer 2 Pooling (f = 2, s = 2)</div>
-$$\frac{6 - 2}{2} + 1 = 3 \;\Rightarrow\; 3 \times 3 \times 20 = 180 \qquad \#\text{param} = 0$$</li>
-<li><div class="st-title">ขั้นที่ 6 — Flatten แล้วเข้า Layer 3 (Fully Connected 100 node)</div>
-$$180 \times 100 + 100 = 18{,}100$$</li>
-<li><div class="st-title">ขั้นที่ 7 — Layer 4 (Fully Connected 100 node) และ output sigmoid 1 node</div>
-$$100 \times 100 + 100 = 10{,}100 \qquad 100 \times 1 + 1 = 101$$</li>
-<li><div class="st-title">ขั้นที่ 8 — รวม</div>
-$$280 + 0 + 5{,}020 + 0 + 18{,}100 + 10{,}100 + 101 = 33{,}601$$</li>
-</ol>
-<div class="answer"><p>ทุกค่าตรงกับตารางในสไลด์ และผลรวม 33,601 ตรงกับ <code>Total params</code> ของ <code>model.summary()</code> หน้า 27. ชั้น convolution ทั้งสองมี parameter รวม 5,300 ตัว (16%) ส่วน dense layer มี 28,301 ตัว (84%).</p></div>
-</div>
+<p>ทุกค่าตรงกับตารางบนสไลด์ และ 33,601 ตรงกับ Total params ของ model.summary() หน้า 27 conv สองชั้นมี parameter รวม 5,300 (16%) ส่วน dense มี 28,301 (84%) หมายเหตุใต้ตาราง: CNN ลึกขึ้น <mark class="src" data-p="21" title="height and width">ความสูงและความกว้าง</mark> <mark class="src" data-p="21" title="decrease">ลดลง</mark> ส่วน <mark class="src" data-p="21" title="number of channels">จำนวน channel</mark> <mark class="src" data-p="21" title="increase">เพิ่มขึ้น</mark> (32 → 30 → 15 → 6 → 3 และ 3 → 10 → 20)</p>
 
-<p>หมายเหตุใต้ตาราง: เมื่อ CNN ลึกขึ้น <mark class="src" data-p="21">height and width</mark> จะ <mark class="src" data-p="21">decrease</mark> ส่วน <mark class="src" data-p="21">number of channels</mark> จะ <mark class="src" data-p="21">increase</mark>. ในตารางนี้ด้านกว้างเดินเป็น 32 → 30 → 15 → 6 → 3 และ channel เดินเป็น 3 → 10 → 20.</p>
+<p class="num">pooling ไม่มี parameter ของตัวเอง แต่ลด parameter ของ layer ถัดไป: ไม่มี pooling (หน้า 17) flatten ได้ 3,380 จึง 3,380 × 100 + 100 = 338,100 · มี pooling (หน้า 20) flatten ได้ 180 จึง 18,100 · ลดลง 338,100 / 18,100 ≈ 18.7 เท่า ตรงกับหน้า 18 ที่ว่า pooling ลด "number of parameters in subsequent layers"</p>
 
-<div class="calc">
-<div class="calc-title">คำนวณ: pooling ลด parameter ของ dense layer ได้เท่าไร (หน้า 17 เทียบหน้า 20)</div>
-<div class="given">ให้ network สองแบบ ต่างกันเฉพาะการมี pooling. Dense layer แรกมี 100 node</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — ไม่มี pooling (หน้า 17): flatten ได้ 13×13×20 = 3,380</div>
-$$3{,}380 \times 100 + 100 = 338{,}100$$</li>
-<li><div class="st-title">ขั้นที่ 2 — มี pooling (หน้า 20): flatten ได้ 3×3×20 = 180</div>
-$$180 \times 100 + 100 = 18{,}100$$</li>
-<li><div class="st-title">ขั้นที่ 3 — อัตราส่วน</div>
-$$\frac{338{,}100}{18{,}100} \approx 18.7$$</li>
-</ol>
-<div class="answer"><p>Pooling ไม่มี parameter ของตัวเอง แต่ลด parameter ของ layer ถัดไปราว 18.7 เท่า ตรงกับข้อความหน้า 18 ที่ว่า pooling ลด "number of parameters in subsequent layers".</p></div>
-</div>
+<p class="trap">n_C ของ conv ชั้นถัดไป = จำนวน filter ของ conv ชั้นก่อน (pooling ไม่เปลี่ยน) และ n_in ของ dense แรก = ผลคูณ shape หลัง pooling ชั้นสุดท้าย</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 9</span><span>Parameter table</span></div>
-  <div class="qtext">ภาพ 28×28×1 ผ่าน Conv (6 filter, f=5, p=0, s=1) → MaxPool (f=2, s=2) → Conv (16 filter, f=5, p=0, s=1) → MaxPool (f=2, s=2) → Flatten จำนวนค่าใน vector หลัง flatten คือเท่าใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. 28 → 24 (conv) → 12 (pool) → 8 (conv) → 4 (pool). Flatten = 4·4·16 = 256. ค่า 400 = 5·5·16 เกิดจากเริ่มที่ภาพ 32×32, ค่า 64 = 4·4·4 คือใช้จำนวน channel ผิด.">400</button>
-    <button class="opt" data-correct="false" data-note="ผิด. 28 → 24 (conv) → 12 (pool) → 8 (conv) → 4 (pool). Flatten = 4·4·16 = 256. ค่า 400 = 5·5·16 เกิดจากเริ่มที่ภาพ 32×32, ค่า 64 = 4·4·4 คือใช้จำนวน channel ผิด.">1,024</button>
-    <button class="opt" data-correct="true" data-note="ถูก. 28 → 24 (conv) → 12 (pool) → 8 (conv) → 4 (pool). Flatten = 4·4·16 = 256. ค่า 400 = 5·5·16 เกิดจากเริ่มที่ภาพ 32×32, ค่า 64 = 4·4·4 คือใช้จำนวน channel ผิด.">256</button>
-    <button class="opt" data-correct="false" data-note="ผิด. 28 → 24 (conv) → 12 (pool) → 8 (conv) → 4 (pool). Flatten = 4·4·16 = 256. ค่า 400 = 5·5·16 เกิดจากเริ่มที่ภาพ 32×32, ค่า 64 = 4·4·4 คือใช้จำนวน channel ผิด.">64</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<details class="check"><summary>ภาพ 28×28×1 → Conv 6 filter f=5 → MaxPool 2 → Conv 16 filter f=5 → MaxPool 2 → Flatten ได้กี่ค่า และ conv ชั้นที่สองมี parameter เท่าใด</summary>
+<p>28 → 24 → 12 → 8 → 4 จึง flatten ได้ 4 × 4 × 16 = 256 · conv ชั้นสองมี (5 · 5 · 6 + 1) × 16 = 151 × 16 = 2,416</p>
+</details>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 10</span><span>Parameter table</span></div>
-  <div class="qtext">จาก network เดียวกัน (ภาพ 28×28×1 → Conv 6 filter f=5 → MaxPool → Conv 16 filter f=5 → MaxPool) convolution layer ชั้นที่สองมี parameter ที่เรียนได้กี่ตัว?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. input ของชั้นที่สองมี 6 channel (จำนวน filter ของชั้นแรก): (5·5·6 + 1)·16 = 151·16 = 2,416. ค่า 2,400 คือลืม bias, ค่า 416 คือใช้ channel ของภาพต้นฉบับ (1).">416</button>
-    <button class="opt" data-correct="false" data-note="ผิด. input ของชั้นที่สองมี 6 channel (จำนวน filter ของชั้นแรก): (5·5·6 + 1)·16 = 151·16 = 2,416. ค่า 2,400 คือลืม bias, ค่า 416 คือใช้ channel ของภาพต้นฉบับ (1).">2,400</button>
-    <button class="opt" data-correct="false" data-note="ผิด. input ของชั้นที่สองมี 6 channel (จำนวน filter ของชั้นแรก): (5·5·6 + 1)·16 = 151·16 = 2,416. ค่า 2,400 คือลืม bias, ค่า 416 คือใช้ channel ของภาพต้นฉบับ (1).">6,416</button>
-    <button class="opt" data-correct="true" data-note="ถูก. input ของชั้นที่สองมี 6 channel (จำนวน filter ของชั้นแรก): (5·5·6 + 1)·16 = 151·16 = 2,416. ค่า 2,400 คือลืม bias, ค่า 416 คือใช้ channel ของภาพต้นฉบับ (1).">2,416</button>
-  </div>
-  <div class="feedback"></div>
-</div>
-
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li>ลึกขึ้น ⇒ <mark class="src" data-p="21">height and width</mark> <mark class="src" data-p="21">decrease</mark>, <mark class="src" data-p="21">number of channels</mark> <mark class="src" data-p="21">increase</mark></li>
-<li>ลำดับคิดทุกแถว: (1) ขนาดจาก \(\lfloor (n+2p-f)/s \rfloor + 1\) (2) channel = จำนวน filter (pooling คง channel เดิม) (3) parameter ของ conv = \((f \cdot f \cdot n_C + 1) \cdot n_C'\), ของ pooling = 0, ของ dense = \(n_{in} \cdot n_{out} + n_{out}\)</li>
-<li>\(n_C\) ของ conv ชั้นถัดไป = จำนวน filter ของ conv ชั้นก่อนหน้า (pooling ไม่เปลี่ยน)</li>
-<li>\(n_{in}\) ของ dense layer แรก = ผลคูณ shape หลัง pooling ชั้นสุดท้าย (flatten)</li>
-</ul>
-</div>
-
-<h2 id="s8">8. ทำไมต้อง ConvNets</h2>
-
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 17, 20)</summary><div class="gallery">
 <figure>
-<img src="../assets/slides/dl7-p22-why-convnets-spatial.png" alt="Slide: Why ConvNets? CNNs can learn spatial features of images. The network looks at the image as a set of pixels that when close to each other are heavily related, independently from the location in the image itself. Three 4 by 4 grids show the same square shape at three locations; a cat diagram shows local features combining into a cat">
-<figcaption>Slide: Why ConvNets? — เรียน spatial features (Lecture7, p.22)</figcaption>
+<img src="../assets/slides/dl7-p17.png" alt="Lecture7 หน้า 17: Put Together: Convolution &amp; Densely Connected Layer (ยังไม่มี pooling)" loading="lazy">
+<figcaption>Lecture7 หน้า 17 — Put Together: Convolution &amp; Densely Connected Layer (ยังไม่มี pooling)</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl7-p20.png" alt="Lecture7 หน้า 20: Convolution Neural Network: เพิ่ม pooling หลัง conv แต่ละชั้น" loading="lazy">
+<figcaption>Lecture7 หน้า 20 — Convolution Neural Network: เพิ่ม pooling หลัง conv แต่ละชั้น</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s6">6. ออกแบบ เขียนด้วย Keras และ data augmentation</h2>
+
+<h3 id="s6-design">6.1 Design patterns</h3>
+
+<p>convnet แบบ classical มีสองส่วน คือ <mark class="src" data-p="24" title="feature extraction">feature extraction</mark> (ซ้อน conv สองสามชั้นที่ตามด้วย ReLU แล้ว pooling ซ้ำๆ นิยม conv 1–3 ชั้นต่อ pooling 1 ชั้น) และ <mark class="src" data-p="24" title="classification">classification</mark> (fully connected ไม่กี่ชั้น และชั้นสุดท้ายให้ผลทำนาย) ระหว่างทาง <mark class="src" data-p="24" title="image">ภาพ</mark> <mark class="src" data-p="24" title="gets smaller and smaller deeper and deeper">เล็กลงเรื่อยๆ แต่ลึกขึ้นเรื่อยๆ</mark> (feature map มากขึ้น) จำนวน filter มักเพิ่มเป็นสองเท่า เช่น 32 → 64 → 128</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p24.png" alt="Lecture7 หน้า 24: Classical Design Patterns: input 28×28 → conv 5×5 → pool → conv 5×5 → pool → FC → softmax" loading="lazy">
+<figcaption>Lecture7 หน้า 24 — Classical Design Patterns: input 28×28 → conv 5×5 → pool → conv 5×5 → pool → FC → softmax</figcaption>
 </figure>
 
-<p><mark class="src" data-p="22">CNNs can learn</mark> <mark class="src" data-p="22">spatial features</mark> <mark class="src" data-p="22">of images</mark>. network มองภาพเป็นกลุ่ม pixel ที่ถ้าอยู่ใกล้กันจะสัมพันธ์กันมาก <strong>โดยไม่ขึ้นกับตำแหน่งในภาพ</strong>. ตารางสามรูปเดิมจากหน้า 4 กลับมาอีกครั้ง: filter ตัวเดียวที่ตรวจมุมของสี่เหลี่ยมถูกเลื่อนไปทั่วภาพ จึงพบสี่เหลี่ยมได้ทั้งมุมซ้ายบน กลางภาพ และมุมขวาล่าง. ปัญหาข้อ 2 ของ dense network (§1) จึงหมดไป.</p>
+<p><mark class="src" data-p="24" title="Example of CNN Architecture (source: Deep Learning for Vision Systems Book)">ตัวอย่างสถาปัตยกรรม CNN</mark> บนสไลด์ตรวจด้วยสูตรได้ทั้งหมด: 28 − 5 + 1 = 24 → pool เหลือ 12 → 12 − 5 + 1 = 8 → pool เหลือ 4 แล้ว flatten เข้า fully connected และ softmax 10 class</p>
 
-<figure>
-<img src="../assets/slides/dl7-p23-why-convnets-fewer-parameters.png" alt="Slide: Why ConvNets? (2) CNNs are composed of locally connected layers called convolutional layers, which use fewer parameters to be trained compared to a fully connected layer, thus less computation and less prone to overfitting. All neurons in a feature map share the same parameters (weight sharing). In the 6 by 6 example the parameter count is only 3x3+1 = 10 per filter, and the value 5 depends only on the green 3 by 3 area">
-<figcaption>Slide: Why ConvNets? (2) — locally connected และ weight sharing (Lecture7, p.23)</figcaption>
-</figure>
-
-<p>CNN ประกอบด้วย locally connected layers ซึ่งใช้ <mark class="src" data-p="23">fewer parameters</mark> เมื่อเทียบกับ fully connected layer จึงคำนวณน้อยกว่าและ overfit ยากกว่า. มีสองกลไกที่ทำให้ parameter น้อย:</p>
-<ul>
-<li><strong>Local connectivity (sparse connection):</strong> ค่า 5 ที่มุมซ้ายบนของ feature map ขึ้นกับ input เพียง 9 ช่องในกรอบ 3×3 เท่านั้น pixel อื่นอีก 27 ช่องไม่มีผลต่อค่านี้</li>
-<li><strong>Weight sharing:</strong> neuron ทุกตัวใน feature map เดียวกันใช้ parameter ชุดเดียวกัน. feature map 4×4 มี 16 ค่า แต่ทั้ง 16 ค่าคำนวณจาก weight 9 ตัวและ bias 1 ตัวชุดเดียว: \(3 \times 3 + 1 = 10\) parameter ต่อ filter</li>
-</ul>
-
-<div class="calc">
-<div class="calc-title">คำนวณ: dense เทียบกับ convolution สำหรับ output 16 ค่าจากภาพ 6×6</div>
-<div class="given">ให้ input 6×6 = 36 ค่า ต้องการ output 16 ค่า (เท่ากับ feature map 4×4)</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — Dense layer 16 node</div>
-$$36 \times 16 + 16 = 592$$</li>
-<li><div class="st-title">ขั้นที่ 2 — Locally connected แต่ไม่แชร์ weight (16 node, node ละ 9 weight + 1 bias)</div>
-$$16 \times (9 + 1) = 160$$</li>
-<li><div class="st-title">ขั้นที่ 3 — Convolution (แชร์ weight): filter 3×3 หนึ่งตัว</div>
-$$3 \times 3 + 1 = 10$$</li>
-</ol>
-<div class="answer"><p>592 → 160 จาก local connectivity และ 160 → 10 จาก weight sharing. รวมแล้วลดลง 59 เท่าในตัวอย่างเล็กนี้.</p></div>
-</div>
-
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li><mark class="src" data-p="22">CNNs can learn</mark> <mark class="src" data-p="22">spatial features</mark> <mark class="src" data-p="22">of images</mark>: pixel ใกล้กันสัมพันธ์กัน ไม่ขึ้นกับตำแหน่งในภาพ</li>
-<li>Convolutional layer ใช้ <mark class="src" data-p="23">fewer parameters</mark> กว่า fully connected ⇒ less computation, less prone to overfitting</li>
-<li>สองคำที่ต้องแยก: locally connected (แต่ละ output ขึ้นกับ input บริเวณเล็ก) และ weight sharing (ทุกตำแหน่งใช้ filter ชุดเดียว)</li>
-</ul>
-</div>
-
-<h2 id="s9">9. Design Patterns และ Hyperparameter ของ CNN</h2>
-
-<figure>
-<img src="../assets/slides/dl7-p24-classical-design-patterns.png" alt="Slide: Classical Design Patterns in CNN Architectures. Convnets are composed of a feature extraction part (stack a few convolutional layers each followed by ReLU, then a pooling layer, repeated; often one to three conv layers per pooling layer) and a classification part (a few fully-connected layers with ReLU, final layer outputs prediction). The image gets smaller and smaller but deeper and deeper; the number of filters grows, usually doubling. Example: 28x28 input, convolution 24x24, pooling 12x12, convolution 8x8, pooling 4x4, flatten, fully connected, softmax">
-<figcaption>Slide: Classical Design Patterns in CNN Architectures (Lecture7, p.24)</figcaption>
-</figure>
-
-<p>Convnet แบบ classical มีสองส่วน:</p>
-<ol>
-<li>ส่วน <mark class="src" data-p="24">feature extraction</mark>: ซ้อน convolutional layer สองสามชั้น (แต่ละชั้นตามด้วย ReLU) แล้ว pooling layer แล้ว convolutional layer อีกชุด แล้ว pooling อีก. นิยมจัดกลุ่ม convolutional layer 1–3 ชั้นต่อ pooling 1 ชั้น</li>
-<li>ส่วน <mark class="src" data-p="24">classification</mark>: fully-connected layer จำนวนไม่มาก (+ReLU) และ layer สุดท้ายให้ผลทำนาย</li>
-</ol>
-<p>ระหว่างเดินผ่าน network <mark class="src" data-p="24">image</mark> <mark class="src" data-p="24">gets smaller and smaller</mark> แต่ <mark class="src" data-p="24">deeper and deeper</mark> (มี feature map มากขึ้น). จำนวน filter โตตามความลึก และมัก<strong>เพิ่มเป็นสองเท่า</strong> (เช่น 32 → 64 → 128).</p>
-<p>ตัวอย่างในรูปของสไลด์ตรวจด้วยสูตรได้ทั้งหมด: input 28×28 ผ่าน convolution kernel 5×5 ได้ \(28-5+1 = 24\); max pooling 2×2 ได้ 12; convolution 5×5 ได้ \(12-5+1 = 8\); max pooling 2×2 ได้ 4; จากนั้น flatten เข้า fully connected และ softmax 10 class.</p>
-
-<figure>
-<img src="../assets/slides/dl7-p25-modern-design-patterns.png" alt="Slide: Modern Design Patterns in CNN Architectures. Classical CNN: Conv/Pool then Flatten then Dense. Modern CNN: often Conv blocks then Global Average Pooling then classifier. Diagram of ResNet-34 with a residual unit (two 3x3 convolutions with batch norm and ReLU plus a skip connection), global average pool, fully connected 1000 units and softmax. Note: most recent CNN architectures use pooling minimally or not at all">
-<figcaption>Slide: Modern Design Patterns in CNN Architectures — ResNet-34 (Lecture7, p.25)</figcaption>
-</figure>
-
-<table class="compact">
-<tr><th>รุ่น</th><th>ลำดับตามสไลด์</th></tr>
+<table>
+<tr><th>รุ่น</th><th>ลำดับ</th></tr>
 <tr><td>Classical CNN</td><td>Conv/Pool → Flatten → Dense</td></tr>
-<tr><td>Modern CNN</td><td>มักเป็น Conv blocks → Global Average Pooling → classifier</td></tr>
-</table>
-<p>รูป ResNet-34 ในสไลด์เริ่มด้วย convolution 7×7 (64 filter, stride 2) และ max pool 3×3 (stride 2) หนึ่งครั้ง จากนั้นเป็น convolution 3×3 ต่อกันยาว. จุดที่จำนวน filter เพิ่มจาก 64 เป็น 128 ใช้ convolution stride 2 ย่อขนาดแทน pooling. ท้าย network คือ global average pool → fully connected 1000 units → softmax. หมายเหตุของสไลด์: CNN รุ่นใหม่ (เช่น ResNets) <strong>use pooling minimally or not at all</strong>. รายละเอียด residual unit อยู่ใน <a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8</a>.</p>
-
-<div class="calc">
-<div class="calc-title">คำนวณ: Flatten เทียบกับ Global Average Pooling</div>
-<div class="given">ให้ feature map สุดท้ายขนาด 7×7×512 ต่อกับ dense layer 1,000 node</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — Flatten: ทุกค่ากลายเป็น input</div>
-$$\begin{gathered}7 \times 7 \times 512 = 25{,}088 \\[0.35em] \Rightarrow\; 25{,}088 \times 1{,}000 + 1{,}000 = 25{,}089{,}000\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 2 — Global Average Pooling: เฉลี่ย 49 ค่าของแต่ละ channel เหลือ 1 ค่า</div>
-$$512 \quad\Rightarrow\quad 512 \times 1{,}000 + 1{,}000 = 513{,}000$$</li>
-</ol>
-<div class="answer"><p>Global Average Pooling ลด parameter ของ classifier ลง 49 เท่า (เท่ากับ 7×7) และตัว GAP เองไม่มี parameter.</p></div>
-</div>
-
-<figure>
-<img src="../assets/slides/dl7-p26-cnn-hyperparameters.png" alt="Slide: CNNs HyperParameter. The CONV layer attributes: filters = number of kernel filters in each layer (depth of the hidden layer); kernel_size = size of the filter, commonly 3x3; stride commonly 1, use 2 when downsampling; padding = add zeros around the border, same or valid; activation = ReLU is a common baseline. Dropout layer: dropout rate 0.3 to 0.5 is a good start, increase if overfitting, commonly used in the classification part">
-<figcaption>Slide: CNNs HyperParameter — อาร์กิวเมนต์ของ Conv2D และ Dropout (Lecture7, p.26)</figcaption>
-</figure>
-
-<p>นอกจาก hyperparameter ทั่วไปของ neural network (<a href="0006-callbacks-and-hyperparameter-tuning.html">Lesson 6</a>) CNN มีของตัวเอง:</p>
-<table class="compact">
-<tr><th>Hyperparameter</th><th>ความหมายตามสไลด์</th><th>ค่าที่ใช้บ่อย</th></tr>
-<tr><td><code>filters</code></td><td>จำนวน kernel filter ของ layer (= depth ของ hidden layer)</td><td>32, 64, 128 (เพิ่มสองเท่าตามความลึก)</td></tr>
-<tr><td><code>kernel_size</code></td><td>ขนาดของ filter</td><td>3×3</td></tr>
-<tr><td><code>strides</code></td><td>ก้าวของ filter</td><td>1; ใช้ 2 เมื่อต้องการ downsampling</td></tr>
-<tr><td><code>padding</code></td><td>เติมแถวและคอลัมน์ศูนย์รอบขอบเพื่อรักษาขนาดภาพใน layer ถัดไป</td><td><code>"same"</code> หรือ <code>"valid"</code></td></tr>
-<tr><td><code>activation</code></td><td>activation หลัง convolution</td><td>ReLU เป็น baseline</td></tr>
-<tr><td>Dropout rate</td><td>สัดส่วน neuron ที่ถูกสุ่มปิด</td><td>เริ่มที่ <u>0.3 ถึง 0.5</u>; ถ้าเห็น overfitting ให้เพิ่ม. นิยมใช้ในส่วน classification</td></tr>
+<tr><td>Modern CNN</td><td>Conv blocks → Global Average Pooling → classifier · <mark class="src" data-p="25" title="Note: most recent CNN architectures (such as Residual Networks, or “ResNets”) use pooling minimally or not at all (today).">CNN รุ่นใหม่อย่าง ResNet ใช้ pooling น้อยมากหรือไม่ใช้เลย</mark></td></tr>
 </table>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 11</span><span>Design pattern</span></div>
-  <div class="qtext">ข้อใดอธิบายการเปลี่ยนแปลงของ feature map เมื่อเดินลึกเข้าไปใน CNN แบบ classical ได้ถูกต้อง?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. Pooling และ stride ทำให้กว้างกับสูงลดลงเรื่อยๆ ขณะที่จำนวน filter (channel) มักเพิ่มเป็นสองเท่าตามความลึก เช่น 32 → 64 → 128.">กว้างและสูงเพิ่มขึ้น ส่วนจำนวน channel ลดลง</button>
-    <button class="opt" data-correct="true" data-note="ถูก. Pooling และ stride ทำให้กว้างกับสูงลดลงเรื่อยๆ ขณะที่จำนวน filter (channel) มักเพิ่มเป็นสองเท่าตามความลึก เช่น 32 → 64 → 128.">กว้างและสูงลดลง ส่วนจำนวน channel เพิ่มขึ้น</button>
-    <button class="opt" data-correct="false" data-note="ผิด. Pooling และ stride ทำให้กว้างกับสูงลดลงเรื่อยๆ ขณะที่จำนวน filter (channel) มักเพิ่มเป็นสองเท่าตามความลึก เช่น 32 → 64 → 128.">กว้างและสูงลดลง และจำนวน channel ลดลงด้วย</button>
-    <button class="opt" data-correct="false" data-note="ผิด. Pooling และ stride ทำให้กว้างกับสูงลดลงเรื่อยๆ ขณะที่จำนวน filter (channel) มักเพิ่มเป็นสองเท่าตามความลึก เช่น 32 → 64 → 128.">กว้างและสูงคงเดิม ส่วนจำนวน channel เพิ่มขึ้น</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<p class="num">feature map สุดท้าย 7×7×512 ต่อ dense 1,000 node · Flatten: 25,088 input จึง 25,088 × 1,000 + 1,000 = 25,089,000 parameter · Global Average Pooling เฉลี่ย 49 ค่าของแต่ละ channel เหลือ 512 จึง 512 × 1,000 + 1,000 = 513,000 · ลดลง 49 เท่า (= 7 × 7) และ GAP เองไม่มี parameter</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 12</span><span>Design pattern</span></div>
-  <div class="qtext">Feature map สุดท้ายของ CNN มีขนาด 5×5×256 ถ้าเปลี่ยนจาก Flatten เป็น Global Average Pooling ก่อน dense layer จำนวน input ของ dense layer จะเปลี่ยนจากเท่าใดเป็นเท่าใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. Flatten ให้ 5·5·256 = 6,400 ค่า. Global Average Pooling เฉลี่ย 25 ค่าของแต่ละ channel เหลือ 1 ค่าต่อ channel จึงได้ 256 ค่า.">จาก 6,400 เป็น 25</button>
-    <button class="opt" data-correct="false" data-note="ผิด. Flatten ให้ 5·5·256 = 6,400 ค่า. Global Average Pooling เฉลี่ย 25 ค่าของแต่ละ channel เหลือ 1 ค่าต่อ channel จึงได้ 256 ค่า.">จาก 1,280 เป็น 256</button>
-    <button class="opt" data-correct="false" data-note="ผิด. Flatten ให้ 5·5·256 = 6,400 ค่า. Global Average Pooling เฉลี่ย 25 ค่าของแต่ละ channel เหลือ 1 ค่าต่อ channel จึงได้ 256 ค่า.">จาก 6,400 เป็น 1,280</button>
-    <button class="opt" data-correct="true" data-note="ถูก. Flatten ให้ 5·5·256 = 6,400 ค่า. Global Average Pooling เฉลี่ย 25 ค่าของแต่ละ channel เหลือ 1 ค่าต่อ channel จึงได้ 256 ค่า.">จาก 6,400 เป็น 256</button>
-  </div>
-  <div class="feedback"></div>
-</div>
-
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li>CNN สองส่วน: <mark class="src" data-p="24">feature extraction</mark> (Conv+ReLU, Pooling ซ้ำๆ) และ <mark class="src" data-p="24">classification</mark> (fully connected ไม่กี่ชั้น)</li>
-<li><mark class="src" data-p="24">image</mark> <mark class="src" data-p="24">gets smaller and smaller</mark> แต่ <mark class="src" data-p="24">deeper and deeper</mark>; จำนวน filter มักเพิ่มสองเท่า</li>
-<li>Classical: Conv/Pool → Flatten → Dense. Modern: Conv blocks → Global Average Pooling → classifier และใช้ pooling น้อยมากหรือไม่ใช้เลย</li>
-<li>ค่าที่ใช้บ่อย: <code>kernel_size</code> 3×3, stride 1 (2 เมื่อ downsampling), activation ReLU, dropout 0.3–0.5 ในส่วน classification</li>
-</ul>
-</div>
-
-<h2 id="s10">10. เขียน CNN ด้วย Keras</h2>
-
-<figure>
-<img src="../assets/slides/dl7-p27-keras-cnn-example.png" alt="Slide: Example with Keras API. Code builds a Sequential model with Conv2D(filters=10, kernel_size=3, activation=&#x27;relu&#x27;, input_shape=(32,32,3)), MaxPooling2D(pool_size=2, strides=2), Conv2D(filters=20, kernel_size=5, strides=2, activation=&#x27;relu&#x27;), MaxPooling2D(pool_size=2, strides=2), Flatten, Dense(100, relu), Dense(100, relu), Dense(1, sigmoid) and model.summary showing params 280, 0, 5020, 0, 0, 18100, 10100, 101, total 33,601">
-<figcaption>Slide: Example with Keras API — โค้ดของ network ในตารางหน้า 21 (Lecture7, p.27)</figcaption>
+<figure class="thumb">
+<img src="../assets/slides/dl7-p25.png" alt="Lecture7 หน้า 25: Modern Design Patterns: ResNet-34" loading="lazy">
+<figcaption>Lecture7 หน้า 25 — Modern Design Patterns: ResNet-34</figcaption>
 </figure>
 
-<p>โค้ดหน้า 27 คือ network ของหน้า 20–21 ทุกชั้น. <code>model.summary()</code> ให้ตัวเลขชุดเดียวกับที่คำนวณมือใน §7.</p>
+<p>ResNet-34 (<mark class="src" data-p="25" title="(source: Hands-on ML)">จากหนังสือ Hands-on ML</mark>) เริ่มด้วย conv 7×7 (64 filter, stride 2) และ max pool 3×3 (stride 2) ครั้งเดียว แล้วเป็น conv 3×3 ต่อกันยาว จุดที่ filter เพิ่มจาก 64 เป็น 128 ใช้ conv stride 2 ย่อขนาดแทน pooling ท้าย network คือ global average pool → fully connected 1000 → softmax รายละเอียด residual unit อยู่ใน <a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8</a></p>
 
-<pre data-p="27"><code>model = models.Sequential()
+<h3 id="s6-hp">6.2 Hyperparameter ของ CNN</h3>
+
+<table>
+<tr><th>Hyperparameter</th><th>ความหมาย</th><th>ค่าที่ใช้บ่อย</th></tr>
+<tr><td>filters</td><td>จำนวน filter ของ layer (= depth)</td><td>32, 64, 128 เพิ่มสองเท่าตามความลึก</td></tr>
+<tr><td>kernel_size</td><td>ขนาด filter</td><td>3×3</td></tr>
+<tr><td>strides</td><td>ก้าวของ filter</td><td>1 · ใช้ 2 เมื่อต้องการ downsampling</td></tr>
+<tr><td>padding</td><td>เติมศูนย์รอบขอบเพื่อรักษาขนาด</td><td>"same" หรือ "valid"</td></tr>
+<tr><td>activation</td><td>หลัง convolution</td><td>ReLU เป็น baseline</td></tr>
+<tr><td>Dropout rate</td><td>สัดส่วน neuron ที่ถูกสุ่มปิด</td><td>เริ่ม 0.3–0.5 เพิ่มถ้า overfit นิยมใช้ในส่วน classification</td></tr>
+</table>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 26)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl7-p26.png" alt="Lecture7 หน้า 26: CNNs HyperParameter" loading="lazy">
+<figcaption>Lecture7 หน้า 26 — CNNs HyperParameter</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s6-keras">6.3 เขียน CNN ด้วย Keras</h3>
+
+<p>โค้ดหน้า 27 คือ network ของตารางหน้า 21 ทุกชั้น model.summary() ให้ตัวเลขชุดเดียวกับที่คำนวณมือ</p>
+
+<pre><code>model = models.Sequential()
 model.add(Conv2D(filters=10,kernel_size=3,activation='relu',input_shape=(32,32,3)))
 model.add(MaxPooling2D(pool_size=2,strides=2))
 model.add(Conv2D(filters=20,kernel_size=5,strides=2, activation='relu'))
@@ -792,27 +494,28 @@ model.add(Dense(100, activation='relu'))
 model.add(Dense(100, activation='relu'))
 model.add(Dense(1, activation='sigmoid'))
 model.summary()</code></pre>
+
 <table class="codeexp compact">
-<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
-<tr><td>Conv2D(filters=10, kernel_size=3, activation='relu', input_shape=(32,32,3))</td><td>10 filter ขนาด 3×3. ไม่ระบุ <code>strides</code> ⇒ 1; ไม่ระบุ <code>padding</code> ⇒ <code>'valid'</code>. <code>input_shape</code> คือ (สูง, กว้าง, channel) ไม่รวม batch. Output (None, 30, 30, 10), 280 parameter</td></tr>
-<tr><td>MaxPooling2D(pool_size=2, strides=2)</td><td>หน้าต่าง 2×2 ก้าวทีละ 2. Output (None, 15, 15, 10), 0 parameter. ถ้าไม่ระบุ <code>strides</code> Keras ใช้ค่าเท่ากับ <code>pool_size</code></td></tr>
-<tr><td>Conv2D(filters=20, kernel_size=5, strides=2, activation='relu')</td><td>20 filter ขนาด 5×5 stride 2. Output (None, 6, 6, 20), 5,020 parameter</td></tr>
-<tr><td>MaxPooling2D(pool_size=2, strides=2)</td><td>Output (None, 3, 3, 20), 0 parameter</td></tr>
-<tr><td>Flatten()</td><td>แปลง 3×3×20 เป็น vector 180 ค่า. Output (None, 180), 0 parameter</td></tr>
-<tr><td>Dense(100, activation='relu')</td><td>180·100 + 100 = 18,100 parameter</td></tr>
-<tr><td>Dense(100, activation='relu')</td><td>100·100 + 100 = 10,100 parameter</td></tr>
-<tr><td>Dense(1, activation='sigmoid')</td><td>output สำหรับ binary classification, 101 parameter</td></tr>
-<tr><td>model.summary()</td><td>พิมพ์ Output Shape และ Param # ของทุกชั้น. <code>None</code> ตัวแรกคือ batch size ที่ยังไม่กำหนด. Total params: 33,601</td></tr>
+<tr><td><code>Conv2D(filters=10, kernel_size=3, ..., input_shape=(32,32,3))</code></td><td>ไม่ระบุ strides = 1 ไม่ระบุ padding = 'valid' · input_shape คือ (สูง, กว้าง, channel) ไม่รวม batch · output (None, 30, 30, 10), 280 parameter</td></tr>
+<tr><td><code>MaxPooling2D(pool_size=2, strides=2)</code></td><td>(None, 15, 15, 10), 0 parameter · ไม่ระบุ strides Keras ใช้ค่าเท่ากับ pool_size</td></tr>
+<tr><td><code>Conv2D(filters=20, kernel_size=5, strides=2, ...)</code></td><td>(None, 6, 6, 20), 5,020 parameter</td></tr>
+<tr><td><code>MaxPooling2D</code> · <code>Flatten()</code></td><td>(None, 3, 3, 20) แล้ว (None, 180) · 0 parameter</td></tr>
+<tr><td><code>Dense(100)</code> · <code>Dense(100)</code> · <code>Dense(1, 'sigmoid')</code></td><td>18,100 · 10,100 · 101 (binary classification)</td></tr>
+<tr><td><code>model.summary()</code></td><td>Output Shape และ Param # ทุกชั้น None ตัวแรกคือ batch size · Total params: 33,601</td></tr>
 </table>
 
-<figure>
-<img src="../assets/slides/dl7-p28-exercise-mnist.png" alt="Slide: Exercise: MNIST Dataset. Build a CNN with 3 CONV + 3 POOL + 1 FC (output layer): CONV1 32 filters, f=3, padding same, relu; POOL1 pool_size 2; CONV2 64 filters, f=3, padding same, relu; POOL2 pool_size 2; CONV3 128 filters, f=3, padding same, relu; POOL pool_size 2; FC 10 nodes softmax">
-<figcaption>Slide: Exercise: MNIST Dataset — 3 CONV + 3 POOL + 1 FC (Lecture7, p.28)</figcaption>
+<figure class="thumb">
+<img src="../assets/slides/dl7-p27.png" alt="Lecture7 หน้า 27: Example with Keras API: โค้ดและ model.summary() ของตารางหน้า 21" loading="lazy">
+<figcaption>Lecture7 หน้า 27 — Example with Keras API: โค้ดและ model.summary() ของตารางหน้า 21</figcaption>
 </figure>
 
-<p>แบบฝึกหัดหน้า 28 กำหนดสถาปัตยกรรม 3 CONV + 3 POOL + 1 FC สำหรับ MNIST (ภาพ 28×28×1, 10 class). ทุก CONV ใช้ f = 3, padding = same, ReLU และจำนวน filter เพิ่มสองเท่า 32 → 64 → 128. (สไลด์พิมพ์ POOL ตัวที่สามว่า "POOL2" ซึ่งหมายถึง POOL3.) โค้ดที่ตรงกับ spec:</p>
+<p>summary บนสไลด์แสดง (None, 30, 30, 10) 280 → (None, 15, 15, 10) 0 → (None, 6, 6, 20) 5,020 → (None, 3, 3, 20) 0 → (None, 180) → 18,100 → 10,100 → 101 ตรงกับตารางทุกบรรทัด</p>
 
-<pre data-p="28"><code>model = models.Sequential()
+<h3 id="s6-mnist">6.4 แบบฝึกหัด MNIST</h3>
+
+<p>หน้า 28 กำหนดสถาปัตยกรรม 3 CONV + 3 POOL + 1 FC สำหรับ MNIST (28×28×1, 10 class) ทุก CONV ใช้ f = 3, padding same, ReLU และจำนวน filter เพิ่มสองเท่า 32 → 64 → 128 (สไลด์พิมพ์ POOL ตัวที่สามว่า "POOL2" ซึ่งหมายถึง POOL3)</p>
+
+<pre><code>model = models.Sequential()
 model.add(Conv2D(32, kernel_size=3, activation='relu', padding='SAME', input_shape=(28, 28, 1)))
 model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Conv2D(64, kernel_size=3, activation='relu', padding='SAME'))
@@ -822,205 +525,93 @@ model.add(MaxPooling2D(pool_size=(2, 2)))
 model.add(Flatten())
 model.add(Dense(10, activation='softmax'))
 model.summary()</code></pre>
+
 <table class="codeexp compact">
-<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
-<tr><td>X = X.reshape(60000, 28, 28, 1)</td><td>(ขั้นเตรียมข้อมูลก่อนสร้างโมเดล) CNN ต้องการ input 4 มิติ (batch, สูง, กว้าง, channel). MNIST โหลดมาเป็น (60000, 28, 28) จึงต้องเพิ่มมิติ channel = 1. ต่างจาก Lesson 5 ที่ reshape เป็น (60000, 784)</td></tr>
-<tr><td>Conv2D(32, kernel_size=3, activation='relu', padding='SAME', input_shape=(28, 28, 1))</td><td>อาร์กิวเมนต์ตัวแรกคือ <code>filters</code>. padding same ⇒ ขนาดคงเดิม 28×28×32</td></tr>
-<tr><td>MaxPooling2D(pool_size=(2, 2))</td><td>ไม่ระบุ <code>strides</code> ⇒ เท่ากับ <code>pool_size</code> = 2. ขนาดลดครึ่ง</td></tr>
-<tr><td>Flatten()</td><td>แปลง feature map สุดท้ายเป็น vector ก่อนเข้า dense</td></tr>
-<tr><td>Dense(10, activation='softmax')</td><td>10 class ⇒ 10 node + softmax. ใช้คู่กับ loss <code>sparse_categorical_crossentropy</code> เมื่อ label เป็นจำนวนเต็ม 0–9</td></tr>
+<tr><td><code>X = X.reshape(60000, 28, 28, 1)</code></td><td>(ก่อนสร้างโมเดล) CNN ต้องการ input 4 มิติ (batch, สูง, กว้าง, channel) MNIST โหลดมาเป็น (60000, 28, 28) จึงเพิ่ม channel = 1 ต่างจาก Lesson 5 ที่ reshape เป็น (60000, 784)</td></tr>
+<tr><td><code>Conv2D(32, kernel_size=3, ..., padding='SAME', input_shape=(28, 28, 1))</code></td><td>อาร์กิวเมนต์ตัวแรกคือ filters · padding same ขนาดคงเดิม 28×28×32</td></tr>
+<tr><td><code>MaxPooling2D(pool_size=(2, 2))</code></td><td>ไม่ระบุ strides = pool_size = 2 ขนาดลดครึ่ง</td></tr>
+<tr><td><code>Dense(10, activation='softmax')</code></td><td>10 class ใช้คู่กับ sparse_categorical_crossentropy เมื่อ label เป็นจำนวนเต็ม 0–9</td></tr>
 </table>
 
-<div class="calc">
-<div class="calc-title">คำนวณ: shape และ parameter ของ CNN ในแบบฝึกหัด MNIST</div>
-<div class="given">ให้ input 28×28×1. CONV ทุกชั้น f = 3, padding same, stride 1. POOL ทุกชั้น pool size 2, stride 2</div>
-<ol class="steps">
-<li><div class="st-title">ขั้นที่ 1 — CONV1 (32 filter) และ POOL1</div>
-$$\begin{gathered}28 \times 28 \times 32,\quad (3 \cdot 3 \cdot 1 + 1) \cdot 32 = 320 \\[0.35em] \Rightarrow\; \lfloor (28-2)/2 \rfloor + 1 = 14 \;\Rightarrow\; 14 \times 14 \times 32\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 2 — CONV2 (64 filter) และ POOL2</div>
-$$\begin{gathered}14 \times 14 \times 64,\quad (3 \cdot 3 \cdot 32 + 1) \cdot 64 = 18{,}496 \\[0.35em] \Rightarrow\; 7 \times 7 \times 64\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 3 — CONV3 (128 filter) และ POOL3</div>
-$$\begin{gathered}7 \times 7 \times 128,\quad (3 \cdot 3 \cdot 64 + 1) \cdot 128 = 73{,}856 \\[0.35em] \Rightarrow\; \lfloor (7-2)/2 \rfloor + 1 = 3 \;\Rightarrow\; 3 \times 3 \times 128\end{gathered}$$</li>
-<li><div class="st-title">ขั้นที่ 4 — Flatten และ FC 10 node</div>
-$$3 \times 3 \times 128 = 1{,}152 \qquad 1{,}152 \times 10 + 10 = 11{,}530$$</li>
-<li><div class="st-title">ขั้นที่ 5 — รวม</div>
-$$320 + 18{,}496 + 73{,}856 + 11{,}530 = 104{,}202$$</li>
-</ol>
-<div class="answer"><p>Total params = 104,202 ตรงกับ <code>model.summary()</code> ของโมเดลนี้. จุดที่ต้องระวังคือ POOL3: \((7-2)/2 = 2.5\) ปัดลงเป็น 2 แล้วบวก 1 ได้ 3 ไม่ใช่ 3.5 หรือ 4. เทียบกับ dense network 784 → 16 → 16 → 10 ของ Lesson 5 ที่มี 13,002 parameter โมเดลนี้ใหญ่กว่า 8 เท่า และให้ test accuracy ราว 0.99.</p></div>
-</div>
+<p class="num">CONV1: 28×28×32, (3·3·1 + 1)·32 = 320 → POOL1 14×14×32 · CONV2: 14×14×64, (3·3·32 + 1)·64 = 18,496 → POOL2 7×7×64 · CONV3: 7×7×128, (3·3·64 + 1)·128 = 73,856 → POOL3 ⌊(7 − 2)/2⌋ + 1 = 3 คือ 3×3×128 · Flatten 1,152 → FC 1,152 × 10 + 10 = 11,530 · รวม 104,202</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 13</span><span>Keras code</span></div>
-  <div class="qtext">โค้ด <code>Conv2D(64, kernel_size=3, activation='relu')</code> รับ input ขนาด (None, 20, 20, 32) โดยไม่ระบุ <code>padding</code> และ <code>strides</code> output shape คือข้อใด?</div>
-  <div class="options">
-    <button class="opt" data-correct="true" data-note="ถูก. ค่า default ของ Keras คือ padding=&#x27;valid&#x27; และ strides=1: 20 − 3 + 1 = 18. channel ของ output = filters = 64. (None, 20, 20, 64) คือกรณี padding=&#x27;same&#x27;.">(None, 18, 18, 64)</button>
-    <button class="opt" data-correct="false" data-note="ผิด. ค่า default ของ Keras คือ padding=&#x27;valid&#x27; และ strides=1: 20 − 3 + 1 = 18. channel ของ output = filters = 64. (None, 20, 20, 64) คือกรณี padding=&#x27;same&#x27;.">(None, 20, 20, 64)</button>
-    <button class="opt" data-correct="false" data-note="ผิด. ค่า default ของ Keras คือ padding=&#x27;valid&#x27; และ strides=1: 20 − 3 + 1 = 18. channel ของ output = filters = 64. (None, 20, 20, 64) คือกรณี padding=&#x27;same&#x27;.">(None, 18, 18, 32)</button>
-    <button class="opt" data-correct="false" data-note="ผิด. ค่า default ของ Keras คือ padding=&#x27;valid&#x27; และ strides=1: 20 − 3 + 1 = 18. channel ของ output = filters = 64. (None, 20, 20, 64) คือกรณี padding=&#x27;same&#x27;.">(None, 10, 10, 64)</button>
-  </div>
-  <div class="feedback"></div>
-</div>
-
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 14</span><span>Keras code</span></div>
-  <div class="qtext">ต้องการเติมโค้ดให้ layer ย่อ feature map จาก 14×14×32 เป็น 7×7×32 โดยไม่มี parameter ที่เรียนได้ ข้อใดถูกต้อง?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. MaxPooling2D ที่ pool_size 2 (strides เท่ากับ pool_size โดย default) ให้ (14−2)/2+1 = 7 คง channel 32 และไม่มี parameter. Conv2D stride 2 ให้ขนาดเดียวกันแต่มี parameter 4,128 ตัว.">Conv2D(32, 2, strides=2)</button>
-    <button class="opt" data-correct="false" data-note="ผิด. MaxPooling2D ที่ pool_size 2 (strides เท่ากับ pool_size โดย default) ให้ (14−2)/2+1 = 7 คง channel 32 และไม่มี parameter. Conv2D stride 2 ให้ขนาดเดียวกันแต่มี parameter 4,128 ตัว.">Dense(7, activation='relu')</button>
-    <button class="opt" data-correct="true" data-note="ถูก. MaxPooling2D ที่ pool_size 2 (strides เท่ากับ pool_size โดย default) ให้ (14−2)/2+1 = 7 คง channel 32 และไม่มี parameter. Conv2D stride 2 ให้ขนาดเดียวกันแต่มี parameter 4,128 ตัว.">MaxPooling2D(pool_size=(2, 2))</button>
-    <button class="opt" data-correct="false" data-note="ผิด. MaxPooling2D ที่ pool_size 2 (strides เท่ากับ pool_size โดย default) ให้ (14−2)/2+1 = 7 คง channel 32 และไม่มี parameter. Conv2D stride 2 ให้ขนาดเดียวกันแต่มี parameter 4,128 ตัว.">UpSampling2D(size=(2, 2))</button>
-  </div>
-  <div class="feedback"></div>
-</div>
-
-<h2 id="s11">11. Data Augmentation</h2>
-
-<figure>
-<img src="../assets/slides/dl7-p29-data-augmentation.png" alt="Slide: Data Augmentation generates more training data from existing training examples by augmenting the examples via a number of random transformations. It does not permanently create and store a new dataset; it usually generates transformations on the fly as training batches are processed. The images are still heavily intercorrelated with original images, so data augmentation alone cannot completely get rid of overfitting. It does not always increase accuracy but frequently does, especially with small datasets">
-<figcaption>Slide: Data Augmentation — นิยามและข้อจำกัด (Lecture7, p.29)</figcaption>
+<figure class="thumb">
+<img src="../assets/slides/dl7-p28.png" alt="Lecture7 หน้า 28: Exercise: MNIST Dataset 3 CONV + 3 POOL + 1 FC" loading="lazy">
+<figcaption>Lecture7 หน้า 28 — Exercise: MNIST Dataset 3 CONV + 3 POOL + 1 FC</figcaption>
 </figure>
 
-<p>Data augmentation สร้าง training data เพิ่มจากตัวอย่างที่มีอยู่ด้วยการ <mark class="src" data-p="29">augmenting the examples via a number of random transformations</mark> (หมุน, เลื่อน, ซูม, กลับด้าน). แนวคิดนี้ปรากฏครั้งแรกใน <a href="0004-deep-networks-and-optimizers.html">Lesson 4</a> ในฐานะวิธีลด overfitting. สไลด์ระบุสามข้อ:</p>
-<ol>
-<li>มัน <strong>not permanently create and store a new dataset</strong>. การแปลงเกิด <strong>on the fly</strong> ขณะประมวลผลแต่ละ training batch. ภาพเดิมจึงถูกแปลงต่างกันทุก epoch และขนาด dataset บนดิสก์ไม่เปลี่ยน</li>
-<li>ภาพที่โมเดลเห็นยัง <u>still heavily intercorrelated with original images</u> เพราะมาจากภาพต้นฉบับชุดเดิม. data augmentation อย่างเดียวจึง <u>cannot completely get rid of overfitting</u></li>
-<li>ไม่ได้เพิ่ม accuracy ของ CNN เสมอไป แต่เพิ่มบ่อย โดยเฉพาะกับ dataset ขนาดเล็ก</li>
-</ol>
+<p>เทียบกับ dense network 784 → 16 → 16 → 10 ของ Lesson 5 ที่มี 13,002 parameter โมเดลนี้ใหญ่กว่า 8 เท่า และให้ test accuracy ราว 0.99</p>
 
-<figure>
-<img src="../assets/slides/dl7-p30-data-augmentation-keras.png" alt="Slide: Data Augmentation in Keras. Keras performs data augmentation using preprocessing layers. Code creates data_augmentation = keras.Sequential with RandomRotation(0.1), RandomTranslation(0.2, 0.2), RandomZoom(0.2), RandomFlip(&#x27;horizontal&#x27;), then a model with keras.Input(shape=(32,32,3)), data_augmentation, Conv2D(32, 3, padding=&#x27;same&#x27;, activation=&#x27;relu&#x27;). Four augmented dog images are shown">
-<figcaption>Slide: Data Augmentation in Keras — preprocessing layers (Lecture7, p.30)</figcaption>
+<p class="trap">POOL3: (7 − 2)/2 = 2.5 ปัดลงเป็น 2 แล้วบวก 1 ได้ 3 ไม่ใช่ 3.5 หรือ 4 และ Conv2D(64, kernel_size=3) ที่ไม่ระบุ padding กับ input (None, 20, 20, 32) ได้ (None, 18, 18, 64) เพราะ default คือ valid</p>
+
+<h3 id="s6-aug">6.5 Data augmentation</h3>
+
+<p class="pic">ให้นักเรียนฝึกจำหน้าเพื่อนจากรูปเดียว แต่หมุน เลื่อน ซูม และกลับซ้ายขวาให้ดูทุกครั้ง นักเรียนจะจำหน้าได้ดีขึ้น แต่ก็ยังเป็นรูปจากต้นฉบับเดิม</p>
+
+<p>Data augmentation สร้าง training data เพิ่มด้วยการ <mark class="src" data-p="29" title="augmenting the examples via a number of random transformations">ดัดแปลงตัวอย่างด้วยการแปลงแบบสุ่มหลายแบบ</mark> (หมุน เลื่อน ซูม กลับด้าน) แนวคิดนี้ปรากฏใน Lesson 4 ในฐานะวิธีลด overfitting</p>
+
+<table>
+<tr><th>ข้อความบนสไลด์</th><th>ความหมาย</th></tr>
+<tr><td>not permanently create and store a new dataset</td><td>ไม่ได้สร้างและเก็บ dataset ใหม่ถาวร การแปลงเกิด on the fly ขณะประมวลผลแต่ละ batch ภาพเดิมถูกแปลงต่างกันทุก epoch ขนาดบนดิสก์ไม่เปลี่ยน</td></tr>
+<tr><td>still heavily intercorrelated with original images</td><td>ภาพยังสัมพันธ์กับต้นฉบับมาก data augmentation อย่างเดียวจึง cannot completely get rid of overfitting</td></tr>
+<tr><td>(ไม่เสมอไป)</td><td>ไม่ได้เพิ่ม accuracy ทุกครั้ง แต่เพิ่มบ่อย โดยเฉพาะกับ dataset เล็ก</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p30.png" alt="Lecture7 หน้า 30: Data Augmentation in Keras: preprocessing layers และภาพสุนัขสี่แบบ" loading="lazy">
+<figcaption>Lecture7 หน้า 30 — Data Augmentation in Keras: preprocessing layers และภาพสุนัขสี่แบบ</figcaption>
 </figure>
 
-<p>Keras ทำ data augmentation ด้วย <strong>preprocessing layers</strong> ซึ่งวางเป็น layer แรกของโมเดล. ภาพสุนัขสี่ภาพในสไลด์คือภาพต้นฉบับภาพเดียวที่ผ่าน pipeline สี่ครั้ง ได้การหมุน เลื่อน และซูมต่างกันทุกครั้ง.</p>
+<p>Keras ทำ data augmentation ด้วย preprocessing layer วางเป็นชั้นแรกของโมเดล ภาพสุนัขสี่ภาพบนสไลด์คือภาพเดียวที่ผ่าน pipeline สี่ครั้ง ได้การหมุน เลื่อน ซูมต่างกันทุกครั้ง</p>
 
-<pre data-p="30"><code># Create a data augmentation pipeline
-data_augmentation = keras.Sequential([
-    # Randomly rotate images by up to ±10% of 360° (±36°)
-    keras.layers.RandomRotation(0.1),
-    # Randomly shift images vertically and horizontally by up to ±20%
-    keras.layers.RandomTranslation(0.2, 0.2),
-    # Randomly zoom images by up to ±20%
-    keras.layers.RandomZoom(0.2),
-    # Randomly flip images horizontally
+<pre><code>data_augmentation = keras.Sequential([
+    keras.layers.RandomRotation(0.1),         # ±10% of 360° (±36°)
+    keras.layers.RandomTranslation(0.2, 0.2), # shift up to ±20%
+    keras.layers.RandomZoom(0.2),             # zoom up to ±20%
     keras.layers.RandomFlip("horizontal")
 ])
-
 model = keras.Sequential([
     keras.Input(shape=(32, 32, 3)),
     data_augmentation,
     keras.layers.Conv2D(32, 3, padding="same", activation="relu"),
     ...
 ])</code></pre>
+
 <table class="codeexp compact">
-<tr><th>โค้ด</th><th>ทำอะไร</th></tr>
-<tr><td>data_augmentation = keras.Sequential([...])</td><td>รวม preprocessing layer หลายตัวเป็น pipeline เดียวที่ใช้เหมือน layer หนึ่งชั้น</td></tr>
-<tr><td>keras.layers.RandomRotation(0.1)</td><td>หมุนแบบสุ่มไม่เกิน ±10% ของ 360° = ±36°. ค่าเป็นสัดส่วนของรอบเต็ม ไม่ใช่องศา</td></tr>
-<tr><td>keras.layers.RandomTranslation(0.2, 0.2)</td><td>เลื่อนแนวตั้งและแนวนอนแบบสุ่มไม่เกิน ±20% ของความสูงและความกว้าง. ภาพ 32×32 เลื่อนได้ไม่เกิน 0.2 × 32 = 6.4 pixel</td></tr>
-<tr><td>keras.layers.RandomZoom(0.2)</td><td>ซูมเข้าหรือออกแบบสุ่มไม่เกิน ±20%</td></tr>
-<tr><td>keras.layers.RandomFlip("horizontal")</td><td>สุ่มกลับภาพซ้าย-ขวา</td></tr>
-<tr><td>keras.Input(shape=(32, 32, 3))</td><td>ประกาศ shape ของ input (แบบที่ Keras 3 แนะนำแทน <code>input_shape=</code> ใน layer แรก)</td></tr>
-<tr><td>data_augmentation,</td><td>วาง pipeline ก่อน Conv2D ชั้นแรก. layer กลุ่มนี้ทำงานเฉพาะตอน training; ตอน <code>evaluate</code>/<code>predict</code> ภาพผ่านไปโดยไม่ถูกแปลง</td></tr>
-<tr><td>keras.layers.Conv2D(32, 3, padding="same", activation="relu")</td><td>ส่วน CNN ตามปกติ: 32 filter, kernel 3×3. Output 32×32×32, parameter (3·3·3+1)·32 = 896</td></tr>
+<tr><td><code>RandomRotation(0.1)</code></td><td>หมุนสุ่มไม่เกิน ±10% ของ 360° = ±36° ค่าเป็นสัดส่วนของรอบ ไม่ใช่องศา</td></tr>
+<tr><td><code>RandomTranslation(0.2, 0.2)</code></td><td>เลื่อนแนวตั้งและแนวนอนไม่เกิน ±20% ภาพ 32×32 เลื่อนได้ไม่เกิน 0.2 × 32 = 6.4 pixel</td></tr>
+<tr><td><code>RandomZoom(0.2)</code> · <code>RandomFlip("horizontal")</code></td><td>ซูมสุ่มไม่เกิน ±20% · สุ่มกลับซ้าย-ขวา</td></tr>
+<tr><td><code>keras.Input(shape=(32, 32, 3))</code></td><td>ประกาศ shape ของ input (แบบที่ Keras 3 แนะนำแทน input_shape=)</td></tr>
+<tr><td><code>data_augmentation,</code></td><td>วางก่อน Conv2D ชั้นแรก ทำงานเฉพาะตอน training ตอน evaluate/predict ภาพผ่านไปโดยไม่ถูกแปลง</td></tr>
+<tr><td><code>Conv2D(32, 3, padding="same")</code></td><td>output 32×32×32, (3·3·3 + 1)·32 = 896 parameter</td></tr>
 </table>
 
-<div class="box mech">
-<div class="label">กลไกที่ต้องอธิบายได้</div>
-<dl>
-<dt>ทำไมต้องมี</dt>
-<dd>โมเดล overfit เมื่อเห็นตัวอย่างเดิมซ้ำทุก epoch จนจำได้. การแปลงแบบสุ่มทำให้ไม่มี epoch ใดเห็นภาพเดิมทุก pixel และสอนให้โมเดลทนต่อการหมุน/เลื่อน/ซูม.</dd>
-<dt>เปลี่ยนแล้วเกิดอะไร</dt>
-<dd>เพิ่มค่า factor ⇒ ภาพหลากหลายขึ้นแต่ถ้ามากเกินวัตถุอาจหลุดเฟรมหรือความหมายเปลี่ยน (กลับเลข 6 แนวตั้งกลายเป็นคล้าย 9). จำนวนตัวอย่างต่อ epoch <strong>ไม่เพิ่ม</strong>: dataset 2,000 ภาพยังคง 2,000 ภาพต่อ epoch.</dd>
-<dt>เชื่อมกับ</dt>
-<dd>Dropout และ L2 (Lesson 4) เป็น regularization ที่ตัวโมเดล; data augmentation เป็น regularization ที่ตัวข้อมูล. ใช้ร่วมกันได้ และใช้ร่วมกับ transfer learning ใน <a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8</a>.</dd>
-</dl>
-</div>
+<p class="trap">data augmentation ไม่ได้ "กำจัด overfitting ได้สมบูรณ์" และไม่ได้ "เพิ่ม accuracy เสมอ" · RandomRotation(0.05) หมุนได้สูงสุด 0.05 × 360° = 18° ในแต่ละทิศ</p>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 15</span><span>Data augmentation</span></div>
-  <div class="qtext">ข้อใดอธิบายการทำงานของ data augmentation ด้วย preprocessing layers ของ Keras ได้ถูกต้อง?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. การแปลงเกิด on the fly ขณะประมวลผลแต่ละ training batch ไม่มีการสร้างและเก็บ dataset ใหม่อย่างถาวร และ layer กลุ่มนี้ไม่ทำงานตอน inference.">สร้างภาพใหม่ทั้งหมดเก็บลงดิสก์ก่อนเริ่มเทรน ทำให้ dataset ใหญ่ขึ้นถาวร</button>
-    <button class="opt" data-correct="false" data-note="ผิด. การแปลงเกิด on the fly ขณะประมวลผลแต่ละ training batch ไม่มีการสร้างและเก็บ dataset ใหม่อย่างถาวร และ layer กลุ่มนี้ไม่ทำงานตอน inference.">แปลงภาพแบบสุ่มทั้งตอนเทรนและตอนทำนาย เพื่อให้ผลทำนายหลากหลายขึ้น</button>
-    <button class="opt" data-correct="true" data-note="ถูก. การแปลงเกิด on the fly ขณะประมวลผลแต่ละ training batch ไม่มีการสร้างและเก็บ dataset ใหม่อย่างถาวร และ layer กลุ่มนี้ไม่ทำงานตอน inference.">แปลงภาพแบบสุ่มทีละ batch ระหว่างเทรน โดยไม่เก็บ dataset ใหม่ลงดิสก์</button>
-    <button class="opt" data-correct="false" data-note="ผิด. การแปลงเกิด on the fly ขณะประมวลผลแต่ละ training batch ไม่มีการสร้างและเก็บ dataset ใหม่อย่างถาวร และ layer กลุ่มนี้ไม่ทำงานตอน inference.">แปลงภาพแบบสุ่มครั้งเดียวตอนโหลดข้อมูล แล้วใช้ภาพชุดนั้นซ้ำทุก epoch</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 29)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl7-p29.png" alt="Lecture7 หน้า 29: Data Augmentation: นิยามและข้อจำกัด" loading="lazy">
+<figcaption>Lecture7 หน้า 29 — Data Augmentation: นิยามและข้อจำกัด</figcaption>
+</figure>
+</div></details>
 
-<div class="quiz">
-  <div class="qhead"><span>คำถาม 16</span><span>Data augmentation</span></div>
-  <div class="qtext"><code>keras.layers.RandomRotation(0.05)</code> หมุนภาพแบบสุ่มได้มากที่สุดกี่องศาในแต่ละทิศ?</div>
-  <div class="options">
-    <button class="opt" data-correct="false" data-note="ผิด. ค่า factor เป็นสัดส่วนของรอบเต็ม 360°: 0.05 × 360 = 18 องศา (เช่นเดียวกับ 0.1 ที่ให้ ±36°). ค่า 9 คือคิดจาก 180°, ค่า 5 คืออ่านเป็นร้อยละขององศา.">5 องศา</button>
-    <button class="opt" data-correct="false" data-note="ผิด. ค่า factor เป็นสัดส่วนของรอบเต็ม 360°: 0.05 × 360 = 18 องศา (เช่นเดียวกับ 0.1 ที่ให้ ±36°). ค่า 9 คือคิดจาก 180°, ค่า 5 คืออ่านเป็นร้อยละขององศา.">9 องศา</button>
-    <button class="opt" data-correct="false" data-note="ผิด. ค่า factor เป็นสัดส่วนของรอบเต็ม 360°: 0.05 × 360 = 18 องศา (เช่นเดียวกับ 0.1 ที่ให้ ±36°). ค่า 9 คือคิดจาก 180°, ค่า 5 คืออ่านเป็นร้อยละขององศา.">0.05 องศา</button>
-    <button class="opt" data-correct="true" data-note="ถูก. ค่า factor เป็นสัดส่วนของรอบเต็ม 360°: 0.05 × 360 = 18 องศา (เช่นเดียวกับ 0.1 ที่ให้ ±36°). ค่า 9 คือคิดจาก 180°, ค่า 5 คืออ่านเป็นร้อยละขององศา.">18 องศา</button>
-  </div>
-  <div class="feedback"></div>
-</div>
+<p class="nextpage">ลองฝึกต่อใน<a href="0007-convolutional-neural-networks-exercises.html">แบบฝึก Lesson 7</a> หรืออ่านต่อ <a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8 — CNN Architectures และ Transfer Learning</a></p>
 
-<div class="box exam">
-<div class="label">ออกสอบสูง — ข้อความที่อาจารย์ทำสี</div>
-<ul>
-<li>นิยาม: <mark class="src" data-p="29">augmenting the examples via a number of random transformations</mark></li>
-<li>ตัวหนา/ขีดเส้นใต้ในหน้า 29: <strong>not permanently create and store a new dataset</strong>; <strong>on the fly</strong>; <u>still heavily intercorrelated with original images</u>; <u>cannot completely get rid of overfitting</u>. กับดัก: ตัวเลือกที่บอกว่า augmentation "กำจัด overfitting ได้สมบูรณ์" หรือ "เพิ่ม accuracy เสมอ"</li>
-<li>Keras ใช้ <strong>preprocessing layers</strong>: <code>RandomRotation</code>, <code>RandomTranslation</code>, <code>RandomZoom</code>, <code>RandomFlip</code> รวมใน <code>keras.Sequential</code> แล้ววางหลัง <code>keras.Input</code> ก่อน <code>Conv2D</code></li>
-<li><code>RandomRotation(0.1)</code> = ±10% ของ 360° = ±36°</li>
-</ul>
-</div>
-
-<p class="quiz-score"></p>
-
-<hr>
-
-<div class="box win">
-<div class="label">ชัยชนะของบทเรียนนี้</div>
-คุณควร (1) คำนวณค่าใน feature map จาก input และ filter ที่กำหนด และอธิบายว่าทำไม filter [1, 0, −1] ตรวจ vertical edge; (2) ใช้สูตร \(\lfloor (n+2p-f)/s \rfloor + 1\) หาขนาด output ของ convolution และ pooling รวมกรณีปัดลง; (3) นับ parameter ของ convolution layer ด้วย \((f \cdot f \cdot n_C + 1) \cdot n_C'\) และสร้างตาราง Parameters Summary ได้ทั้งตาราง (280 / 5,020 / 18,100 / 10,100 / 101 = 33,601); (4) คำนวณ max/average pooling และอธิบาย translation invariance; (5) อธิบาย local connectivity กับ weight sharing ด้วยตัวเลข (592 → 160 → 10); (6) เขียนโค้ด Keras ของ CNN (<code>Conv2D</code>, <code>MaxPooling2D</code>, <code>Flatten</code>, <code>Dense</code>) และ pipeline ของ data augmentation ได้.
-</div>
-
-<h2>ภาคผนวก: Slide ทั้งหมดใน deep_learning_part3_1.pdf (30 หน้า) — เช็คว่าอ่านครบ</h2>
+<!--REFS-->
+<details class="fold" id="appendix"><summary>ภาคผนวก: ทุกหน้าของสไลด์ Lecture 7 อยู่ตรงไหน</summary>
 <table>
-<tr><th>หน้า</th><th>เนื้อหา</th><th>สถานะ</th></tr>
-<tr><td>1</td><td>ปก Part 3 — Convolutional Neural Network &amp; Transfer Learning</td><td>etc — สไลด์ปก (ชื่อวิชา, ภาคเรียน, เวลาเรียน) ไม่มีเนื้อหาวิชา</td></tr>
-<tr><td>2</td><td>The Area of Computer Vision</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + นิยาม + applications)</td></tr>
-<tr><td>3</td><td>Deep Learning for Computer Vision</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + ภาพเป็นตัวเลข)</td></tr>
-<tr><td>4</td><td>Why not Densely Connected Neural Networks?</td><td>✓ <a href="#s1">หัวข้อ 1</a> (รูป + คำนวณ parameter + input vector)</td></tr>
-<tr><td>5</td><td>Convolutional Neural Networks (CNNs)</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + receptive field)</td></tr>
-<tr><td>6</td><td>CNNs Architecture</td><td>✓ <a href="#s2">หัวข้อ 2</a> (รูป + ตาราง 4 ส่วน)</td></tr>
-<tr><td>7</td><td>Convolution Operation in Convolution Layers</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + คำนวณ feature map)</td></tr>
-<tr><td>8</td><td>Why is This Doing Edge Detection? — vertical</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + คำนวณ 0/240)</td></tr>
-<tr><td>9</td><td>Why is This Doing Edge Detection? (2) — horizontal</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + คำนวณ 240/80/−80/−240)</td></tr>
-<tr><td>10</td><td>Filters</td><td>✓ <a href="#s3">หัวข้อ 3</a> (รูป + filter element/size)</td></tr>
-<tr><td>11</td><td>Convolution Operator Problems</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + สองข้อเสีย)</td></tr>
-<tr><td>12</td><td>Padding</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + คำนวณ −7 และ p = (f−1)/2)</td></tr>
-<tr><td>13</td><td>Stride Convolution</td><td>✓ <a href="#s4">หัวข้อ 4</a> (รูป + คำนวณ stride 2)</td></tr>
-<tr><td>14</td><td>Convolution on Volume</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + channel ของ filter)</td></tr>
-<tr><td>15</td><td>Multiple Filters</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + สูตร output volume)</td></tr>
-<tr><td>16</td><td>A Convolution Layer</td><td>✓ <a href="#s5">หัวข้อ 5</a> (รูป + ตารางบทบาท + สูตร parameter)</td></tr>
-<tr><td>17</td><td>Put Together: Convolution &amp; Densely Connected Layer</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + คำนวณ 30/13/3,380)</td></tr>
-<tr><td>18</td><td>Pooling Layer</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + คำนวณ max/average)</td></tr>
-<tr><td>19</td><td>Max Pooling Introduce Translation Invariant</td><td>✓ <a href="#s6">หัวข้อ 6</a> (รูป + ภาพ A/B/C)</td></tr>
-<tr><td>20</td><td>Convolution Neural Network</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + การนับ layer)</td></tr>
-<tr><td>21</td><td>Parameters Summary</td><td>✓ <a href="#s7">หัวข้อ 7</a> (รูป + คำนวณทุกแถว)</td></tr>
-<tr><td>22</td><td>Why ConvNets?</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + spatial features)</td></tr>
-<tr><td>23</td><td>Why ConvNets? (2)</td><td>✓ <a href="#s8">หัวข้อ 8</a> (รูป + คำนวณ 592/160/10)</td></tr>
-<tr><td>24</td><td>Classical Design Patterns in CNN Architectures</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + ตรวจ 28→24→12→8→4)</td></tr>
-<tr><td>25</td><td>Modern Design Patterns in CNN Architectures</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + คำนวณ GAP)</td></tr>
-<tr><td>26</td><td>CNNs HyperParameter</td><td>✓ <a href="#s9">หัวข้อ 9</a> (รูป + ตาราง hyperparameter)</td></tr>
-<tr><td>27</td><td>Example with Keras API</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + โค้ด + summary)</td></tr>
-<tr><td>28</td><td>Exercise: MNIST Dataset</td><td>✓ <a href="#s10">หัวข้อ 10</a> (รูป + โค้ด + คำนวณ 104,202)</td></tr>
-<tr><td>29</td><td>Data Augmentation</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + สามข้อจำกัด)</td></tr>
-<tr><td>30</td><td>Data Augmentation in Keras</td><td>✓ <a href="#s11">หัวข้อ 11</a> (รูป + โค้ด)</td></tr>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>อยู่ในตอน</th></tr>
+<tr data-pages="1" class="etc"><td>1</td><td>ปก Part 3</td><td>etc — ปก</td></tr>
+<tr data-pages="2-6"><td>2–6</td><td>Computer vision, dense network, สองปัญหา, CNN จาก visual cortex, CNNs Architecture</td><td><a href="#s1">ตอน 1</a></td></tr>
+<tr data-pages="7-10"><td>7–10</td><td>Convolution operation, edge detection, filters</td><td><a href="#s2">ตอน 2</a></td></tr>
+<tr data-pages="11-13"><td>11–13</td><td>Convolution problems, padding, stride</td><td><a href="#s3">ตอน 3</a></td></tr>
+<tr data-pages="14-16"><td>14–16</td><td>Convolution on volume, multiple filters, a convolution layer</td><td><a href="#s4">ตอน 4</a></td></tr>
+<tr data-pages="17-21"><td>17–21</td><td>Put together, pooling, translation invariance, CNN, parameters summary</td><td><a href="#s5">ตอน 5</a></td></tr>
+<tr data-pages="22-23"><td>22–23</td><td>Why ConvNets?</td><td><a href="#s4-why">ตอน 4.3</a></td></tr>
+<tr data-pages="24-30"><td>24–30</td><td>Design patterns, hyperparameter, Keras, MNIST exercise, data augmentation</td><td><a href="#s6">ตอน 6</a></td></tr>
 </table>
+<p>ตัวเลข feature map, pooling และ parameter ทุกตัวคำนวณซ้ำด้วย numpy แล้วตรงกับสไลด์</p>
+</details>
 
-<p>สงสัยตรงไหน ถามได้เลยในแชท — ผมเป็นผู้สอนของคุณ ถามซ้ำได้ ถามลึกได้ ไม่ต้องเกรงใจ.</p>
-
-<nav class="lesson-nav">
-  <span><a href="0006-callbacks-and-hyperparameter-tuning.html">← Lesson 6: Callbacks &amp; Tuning</a></span>
-  <span><a href="0008-cnn-architectures-and-transfer-learning.html">Lesson 8: CNN Architectures &amp; Transfer Learning →</a></span>
-</nav>
-
-<script src="../assets/quiz.js"></script>
 </body>
 </html>
