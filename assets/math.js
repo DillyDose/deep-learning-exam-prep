@@ -9,5 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ],
     ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
     throwOnError: false,
+    // colour code (study-card lessons): random noise = blue, what the network outputs/learns = orange
+    macros: { "\\rnd": "\\textcolor{##1d6fb8}{#1}", "\\net": "\\textcolor{##c25e00}{#1}" },
   });
 });

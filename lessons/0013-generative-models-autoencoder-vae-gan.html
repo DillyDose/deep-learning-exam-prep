@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 13: Generative Models — Autoencoder, VAE และ GAN</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/reader.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="0012-transformers-for-nlp-and-transfer-learning.html">← Lesson 12</a> · Lesson 13</span>
+  <span><a href="0013-generative-models-autoencoder-vae-gan-exercises.html">แบบฝึก</a> · <a href="../index.html">หน้าแรก</a></span>
+</nav>
+
+<p class="kicker">Lecture 13 — Part 5.1 Generative Models</p>
+<h1>Generative Models: Autoencoder, VAE และ GAN</h1>
+<p class="readmeta">อ่านประมาณ 30 นาที · ข้อความ<mark class="src" title="highlighted slide text">ไฮไลต์</mark>คือคำแปลของถ้อยคำที่อาจารย์ทำสีบนสไลด์ (ชี้เมาส์หรือแตะค้างเพื่อดูภาษาอังกฤษต้นฉบับ) · รูปสไลด์กดเพื่อขยาย</p>
+
+<p>ทุกบทก่อนหน้านี้สอนโมเดลที่ <em>ตอบคำถาม</em> เช่น รูปนี้เป็นแมวไหม ประโยคนี้บวกหรือลบ บทนี้กลับด้าน คือสอนโมเดลที่ <em>สร้างของใหม่</em> เช่น รูปเสื้อที่ไม่เคยมีใน dataset หรือหน้าคนที่ไม่มีตัวตนจริง เครื่องมือทั้งสามแบบในบทนี้ใช้ CNN จาก Lesson 7 ทั้งหมด ของใหม่มีแค่สองอย่าง คือ layer ที่ขยายรูปกลับ (Conv2DTranspose) และวิธีตั้ง loss ให้โมเดลยอมสร้างของที่ไม่มีคำตอบตายตัว</p>
+
+<table class="map">
+<tr><th></th><th>Autoencoder</th><th>VAE</th><th>GAN</th></tr>
+<tr><td>ภาพในหัว</td><td>ย่อรูปเหลือ 2 ตัวเลข แล้วขยายกลับ</td><td>ย่อเป็น "ก้อน" μ, σ แทนจุด แล้วสุ่มจุดในก้อน</td><td>ช่างปลอมแบงก์ แข่งกับตำรวจตรวจแบงก์</td></tr>
+<tr><td>loss</td><td>reconstruction</td><td>reconstruction + KL</td><td>binary cross-entropy สองจังหวะ</td></tr>
+<tr><td>สร้างรูปใหม่ได้ดีไหม</td><td>ไม่ดี latent space มีช่องโหว่</td><td>ได้ latent ต่อเนื่อง แต่รูปเบลอกว่า</td><td>รูปคมสมจริง แต่ฝึกยาก</td></tr>
+<tr><td>อ่านที่</td><td><a href="#s2">ตอน 2</a></td><td><a href="#s3">ตอน 3</a></td><td><a href="#s4">ตอน 4</a>, <a href="#s5">ตอน 5</a></td></tr>
+</table>
+
+<!-- ===================================================== -->
+<h2 id="s1">1. Generative model คืออะไร</h2>
+
+<h3 id="s1-def">1.1 สร้างของที่ยังไม่เคยมี</h3>
+
+<p class="pic">เด็กดูรูปม้ามาหลายร้อยรูป แล้ววาดม้าตัวใหม่ได้ ม้าตัวนั้นไม่ตรงกับรูปไหนเลย แต่ใครเห็นก็รู้ว่าเป็นม้า และถ้าให้วาดอีกรอบก็จะได้ม้าอีกตัวที่ไม่ซ้ำเดิม</p>
+
+<p><mark class="src" data-p="3" title="Generative models">Generative model</mark> คือ neural network ที่ <mark class="src" data-p="3" title="generate data points">สร้างข้อมูลออกมาได้</mark> ข้อมูลนั้นคล้าย training data แต่ <mark class="src" data-p="3" title="hasn’t been created before">ยังไม่เคยมีมาก่อน</mark> และโมเดลต้องเป็นแบบ <mark class="src" data-p="3" title="probabilistic">ความน่าจะเป็น</mark> ไม่ใช่แบบกำหนดแน่นอน (deterministic) เพราะถ้าป้อนเหมือนเดิมแล้วได้รูปเดิมทุกครั้ง ก็เป็นแค่เครื่องจำรูป ไม่ใช่เครื่องสร้าง วิธีที่ทุกโมเดลในบทนี้ใช้ทำให้ผลไม่ซ้ำคือ ป้อน random noise เข้าไปพร้อมกับสิ่งที่เรียนรู้มา noise คนละค่าจึงได้รูปคนละรูป</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p03.png" alt="Lecture13 หน้า 3: The generative modeling process: training → generative model + random noise → sampling" loading="lazy">
+<figcaption>Lecture13 หน้า 3 — The generative modeling process: training → generative model + random noise → sampling</figcaption>
+</figure>
+
+<p>กระบวนการมีสองขั้น ขั้น training โมเดลดูรูปม้าจริงจำนวนมาก รูปหนึ่งรูปคือ observation หนึ่งตัว และแต่ละพิกเซลคือค่า RGB เช่น (136, 141, 78) ขั้น sampling โมเดลรับ random noise แล้วสร้างรูปม้ารูปใหม่ ขั้นที่สองนี้เองที่ทำให้โมเดลต้องเป็นแบบความน่าจะเป็น</p>
+
+<p class="trap">"generative" ไม่ได้แปลว่าโมเดลใหญ่หรือเป็นภาษา โมเดลจะเป็น generative ได้ต้องมีสองข้อ คือผลออกมาเป็นข้อมูลชนิดเดียวกับ training data (รูป ข้อความ) และสุ่มได้หลายแบบ โมเดลจำแนกรูปที่ให้ผล "แมว 0.9" ทุกครั้งไม่ใช่ generative</p>
+
+<h3 id="s1-latent">1.2 Latent space: เก็บแค่ส่วนที่สำคัญ</h3>
+
+<p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> ข้อมูลที่มีแบบแผนย่อเหลือไม่กี่ตัวเลขได้ และตัวเลขไม่กี่ตัวนั้นคือสิ่งที่ generative model เรียนรู้</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p05.png" alt="Lecture13 หน้า 5: Image Generation: ลำดับตัวเลขสองชุด และ latent space → decoder → รูปใหม่" loading="lazy">
+<figcaption>Lecture13 หน้า 5 — Image Generation: ลำดับตัวเลขสองชุด และ latent space → decoder → รูปใหม่</figcaption>
+</figure>
+
+<p>ลำดับแรก 40, 27, 25, 36, 81, … มี 10 ตัวที่ไม่มีแบบแผน ต้องจำทั้ง 10 ตัว ลำดับที่สอง 50, 48, 46, …, 14 ยาวกว่า (19 ตัว) แต่จำง่ายกว่า เพราะจำแค่ "เริ่ม 50 ลดทีละ 2 จนถึง 14" คือจำสามตัวเลขก็สร้างกลับได้ครบ สามตัวเลขนี้คือ <em>latent representation</em> ของลำดับ โมเดลในบทนี้ทำแบบเดียวกันกับรูป: VAE และ GAN เรียนรู้ <mark class="src" data-p="5" title="a low-dimensional latent spaces of representations">latent space ที่มีมิติต่ำ</mark> แล้วสุ่มจุดจากในนั้นมาสร้างเป็นรูปใหม่</p>
+
+<table>
+<tr><th>เทคนิคสร้างรูป</th><th>เรียนที่</th></tr>
+<tr><td>Variational autoencoder (VAE)</td><td>บทนี้ ตอน 3</td></tr>
+<tr><td>Generative adversarial network (GAN)</td><td>บทนี้ ตอน 4–5</td></tr>
+<tr><td>Diffusion model</td><td>Lesson 14</td></tr>
+</table>
+
+<details class="check"><summary>รูปขนาด 28×28 ถูกย่อเป็น latent vector 2 มิติ ย่อลงกี่เท่า</summary>
+<p>รูปมี 28 × 28 = 784 ค่า latent มี 2 ค่า ย่อลง 392 เท่า ที่ทำได้เพราะรูปเสื้อผ้ามีแบบแผน (เสื้อ กางเกง รองเท้า) ไม่ใช่พิกเซลสุ่ม</p>
+</details>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 2, 4, 19)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl13-p02.png" alt="Lecture13 หน้า 2: Agenda: Autoencoder, VAE, GANs, DCGANs" loading="lazy">
+<figcaption>Lecture13 หน้า 2 — Agenda: Autoencoder, VAE, GANs, DCGANs</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl13-p04.png" alt="Lecture13 หน้า 4: More Examples: Text Generation และ Deep Dream" loading="lazy">
+<figcaption>Lecture13 หน้า 4 — More Examples: Text Generation และ Deep Dream</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl13-p19.png" alt="Lecture13 หน้า 19: Agenda (ครึ่งหลัง: GANs, DCGANs)" loading="lazy">
+<figcaption>Lecture13 หน้า 19 — Agenda (ครึ่งหลัง: GANs, DCGANs)</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s2">2. Autoencoder: ย่อแล้วขยายกลับ</h2>
+
+<h3 id="s2-idea">2.1 Encoder, latent และ decoder</h3>
+
+<p class="pic">นักหมากรุกมืออาชีพดูกระดานที่มาจากเกมจริงแค่ 5 วินาทีแล้วจัดหมากคืนได้ครบ เพราะเขาไม่ได้จำตำแหน่งหมากทีละตัว เขาจำเป็นรูปแบบที่คุ้นเคย แต่ถ้าวางหมากแบบสุ่ม เขาจำได้ไม่ดีกว่าคนทั่วไป</p>
+
+<p><mark class="src" data-p="6" title="Autoencoders">Autoencoder</mark> คือ network ที่ <mark class="src" data-p="6" title="learning dense representations">เรียนรู้ representation แบบอัดแน่น</mark> หรือ <mark class="src" data-p="6" title="latent representations">latent representation</mark> ของข้อมูลโดยไม่ต้องมี label มีสองส่วน</p>
+
+<table>
+<tr><th>ส่วน</th><th>หน้าที่</th></tr>
+<tr><td><mark class="src" data-p="6" title="Encoder">Encoder</mark></td><td>อ่าน input แล้วบีบเป็น latent representation</td></tr>
+<tr><td><mark class="src" data-p="6" title="Decoder">Decoder</mark></td><td>อ่าน latent representation แล้วสร้าง output ที่ใกล้เคียง input</td></tr>
+</table>
+
+<p>สิ่งที่บังคับให้โมเดลเก็บเฉพาะส่วนสำคัญคือ "คอขวด" จำนวน unit ตรงกลางน้อยกว่า input และ output มาก โมเดลจึงลอกพิกเซลตรงๆ ไม่ได้ ต้องเรียนรู้ feature ที่สำคัญที่สุดแทน ส่วนเรื่องไม่ต้องมี label นั้น autoencoder เป็นตัวอย่างของ <mark class="src" data-p="6" title="self-supervised learning">self-supervised learning</mark> เพราะใช้ input ของตัวเองเป็น target คือ <code>fit(x, x)</code></p>
+
+<figure class="viz"><img src="../assets/viz/l13-ae-shapes.svg" alt="ขนาดข้อมูลในแต่ละ layer ของ autoencoder Fashion MNIST"></figure>
+<p>แท่งแต่ละแท่งคือข้อมูลหลังผ่าน layer หนึ่ง ความสูงคือจำนวนค่าในสเกล log ฝั่ง encoder ลดขนาดกว้างยาวทีละครึ่งด้วย stride 2 จนเหลือ 2 ตัวเลข ฝั่ง decoder ทำย้อนกลับจนได้ 28×28×1 เท่าเดิม loss วัดว่ารูปที่ได้กลับมาต่างจากรูปเดิมแค่ไหน</p>
+
+<p class="trap">output ของ autoencoder "ใกล้เคียง" input ไม่ใช่เท่ากันทุกพิกเซล ถ้าคอขวดใหญ่เท่า input โมเดลจะลอกพิกเซลตรงๆ ได้ loss ต่ำ แต่ไม่ได้เรียนรู้ feature อะไรเลย</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p06.png" alt="Lecture13 หน้า 6: Autoencoders: chess memory experiment และ autoencoder อย่างง่าย" loading="lazy">
+<figcaption>Lecture13 หน้า 6 — Autoencoders: chess memory experiment และ autoencoder อย่างง่าย</figcaption>
+</figure>
+
+<p>autoencoder อย่างง่ายบนสไลด์มี input 3 ตัว (x₁, x₂, x₃) hidden layer 2 unit เป็นคอขวด และ output 3 ตัวที่พยายามให้เท่ากับ input ใช้หลักเดียวกับรูปขนาดใหญ่ แค่จำนวนน้อยกว่า</p>
+
+<h3 id="s2-enc">2.2 Encoder ในโค้ด Fashion MNIST</h3>
+
+<p>Fashion MNIST มีรูปขาวดำ 60,000 รูปสำหรับ train และ 10,000 รูปสำหรับ test ขนาด 28×28 แบ่งเป็น 10 ประเภท (label 0 T-shirt/top ถึง 9 Ankle boot) encoder ย่อรูปเป็น latent 2 มิติ เพื่อให้วาดเป็นจุดบนกราฟได้</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p08.png" alt="Lecture13 หน้า 8: Encoder: โค้ดและ encoder.summary()" loading="lazy">
+<figcaption>Lecture13 หน้า 8 — Encoder: โค้ดและ encoder.summary()</figcaption>
+</figure>
+
+<p>ลองไล่ shape กับจำนวน parameter ด้วยมือ ซึ่งเป็นแบบที่ข้อสอบชอบถาม Conv2D ที่ <code>strides=2, padding="same"</code> ทำให้กว้างยาวลดลงครึ่ง ส่วน parameter ของ Conv2D คือ (kernel × kernel × channel เข้า + 1) × filter</p>
+
+<table>
+<tr><th>Layer</th><th>Output shape</th><th>Parameter</th></tr>
+<tr><td>Input</td><td>(28, 28, 1)</td><td>0</td></tr>
+<tr><td>Conv2D(32, 3, strides=2)</td><td>(14, 14, 32)</td><td>(3·3·1 + 1)·32 = 320</td></tr>
+<tr><td>Conv2D(64, 3, strides=2)</td><td>(7, 7, 64)</td><td>(3·3·32 + 1)·64 = 18,496</td></tr>
+<tr><td>Flatten</td><td>(3136)</td><td>0 (7·7·64 = 3136)</td></tr>
+<tr><td>Dense(2)</td><td>(2)</td><td>3136·2 + 2 = 6,274</td></tr>
+<tr><td colspan="2">รวม</td><td>25,090</td></tr>
+</table>
+
+<p class="num">รูปกางเกงหนึ่งรูปเข้า encoder ได้ latent = [6.3, −0.9] คือจุดหนึ่งบนระนาบสองมิติ decoder นำจุดนี้ไปสร้างรูปกางเกงกลับมาได้คล้ายเดิม ตัวเลขสองตัวนี้ไม่ได้มีความหมายที่ตั้งชื่อได้ (ไม่ใช่ "ความยาว" หรือ "สี") โมเดลเลือกเองว่าจะใช้แกนแต่ละแกนเก็บอะไร</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p07.png" alt="Lecture13 หน้า 7: Example of Fashion MNIST: encoding และ decoding ใน latent space 2 มิติ" loading="lazy">
+<figcaption>Lecture13 หน้า 7 — Example of Fashion MNIST: encoding และ decoding ใน latent space 2 มิติ</figcaption>
+</figure>
+
+<p>จุดดำแต่ละจุดคือรูป test หนึ่งรูปหลังผ่าน encoder กางเกงที่ encode ได้ [6.3, −0.9] เมื่อ decode กลับได้รูปกางเกงที่ขอบเบลอกว่าต้นฉบับเล็กน้อย เพราะข้อมูล 784 ค่าถูกบีบผ่าน 2 ค่า รายละเอียดเล็กๆ จึงหายไป</p>
+
+<h3 id="s2-dec">2.3 Decoder และ Conv2DTranspose</h3>
+
+<p class="pic">encoder คือการพับกระดาษให้เล็กลง decoder คือการคลี่กลับ ต้องคลี่ตามลำดับย้อนกลับ Flatten ย้อนด้วย Reshape และ Conv2D ที่ย่อขนาดย้อนด้วย Conv2DTranspose ที่ขยายขนาด</p>
+
+<p>Conv2DTranspose ขยายรูปด้วยการแทรกศูนย์ระหว่างพิกเซลเดิม (จำนวนช่องศูนย์ที่แทรก = stride − 1) แล้วจึงทำ convolution ตามปกติ เมื่อใช้ <code>padding="same"</code> ขนาดใหม่จึงเท่ากับขนาดเดิมคูณ stride ส่วนจำนวน parameter คิดสูตรเดียวกับ Conv2D</p>
+
+<figure class="viz"><img src="../assets/viz/l13-convt.svg" alt="Conv2DTranspose แทรกศูนย์แล้วทำ convolution ได้ขนาดเดิมคูณ stride"></figure>
+<p>รูป 3×3 ถูกแทรกศูนย์หนึ่งช่องระหว่างทุกพิกเซลจนเป็นตาราง 6×6 แล้ว filter 3×3 เลื่อนผ่านจนได้ output 6×6 ทุกช่องมีค่า กฎ "ใหม่ = เดิม × strides" ใช้ได้กับทุก Conv2DTranspose ในบทนี้ เพราะทุกตัวใช้ padding="same"</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p35.png" alt="Lecture13 หน้า 35: Convolutional Transpose Layers: filter 3×3 กับรูป 3×3 strides = 2 ได้ 6×6" loading="lazy">
+<figcaption>Lecture13 หน้า 35 — Convolutional Transpose Layers: filter 3×3 กับรูป 3×3 strides = 2 ได้ 6×6</figcaption>
+</figure>
+
+<p>บนสไลด์ filter 3×3×1 เลื่อนผ่านรูป 3×3×1 ที่ stride 2 ได้ output 6×6×1 ซ้อน Conv2DTranspose หลายชั้นก็ขยายทีละสองเท่าจนกลับไปเท่ารูปต้นฉบับ</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p09.png" alt="Lecture13 หน้า 9: Decoder: โค้ดและ decoder.summary()" loading="lazy">
+<figcaption>Lecture13 หน้า 9 — Decoder: โค้ดและ decoder.summary()</figcaption>
+</figure>
+
+<table>
+<tr><th>Layer</th><th>Output shape</th><th>Parameter</th></tr>
+<tr><td>Input (latent)</td><td>(2)</td><td>0</td></tr>
+<tr><td>Dense(7·7·64)</td><td>(3136)</td><td>2·3136 + 3136 = 9,408</td></tr>
+<tr><td>Reshape((7, 7, 64))</td><td>(7, 7, 64)</td><td>0</td></tr>
+<tr><td>Conv2DTranspose(64, 3, strides=2)</td><td>(14, 14, 64)</td><td>(3·3·64 + 1)·64 = 36,928</td></tr>
+<tr><td>Conv2DTranspose(32, 3, strides=2)</td><td>(28, 28, 32)</td><td>(3·3·64 + 1)·32 = 18,464</td></tr>
+<tr><td>Conv2D(1, 3, sigmoid)</td><td>(28, 28, 1)</td><td>(3·3·32 + 1)·1 = 289</td></tr>
+<tr><td colspan="2">รวม</td><td>65,089</td></tr>
+</table>
+
+<p class="trap">Dense ตัวแรกของ decoder ต้องมี 7 × 7 × 64 = 3136 unit เท่ากับขนาดหลัง Flatten ของ encoder เพื่อ Reshape กลับเป็น (7, 7, 64) ได้ ถ้าเลขไม่ตรงกัน Reshape จะ error ส่วน layer สุดท้ายใช้ sigmoid เพราะพิกเซลถูกปรับให้อยู่ระหว่าง 0–1 และ loss เป็น binary cross-entropy layer สุดท้ายใช้ stride 1 (ค่า default) ขนาดจึงคงเป็น 28×28</p>
+
+<details class="check"><summary>Conv2DTranspose(16, 3, strides=2, padding="same") รับ input (10, 10, 8) จะได้ shape และ parameter เท่าใด</summary>
+<p>shape (20, 20, 16) เพราะ 10 × 2 = 20 และ channel เท่ากับจำนวน filter parameter = (3·3·8 + 1)·16 = 73·16 = 1,168</p>
+</details>
+
+<h3 id="s2-space">2.4 latent space ที่ได้</h3>
+
+<p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> autoencoder จัดกลุ่มเสื้อผ้าได้เองทั้งที่ไม่เคยเห็น label แต่วิธีจัดนั้นยังไม่เหมาะกับการสร้างรูปใหม่</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p10.png" alt="Lecture13 หน้า 10: Analysis of Fashion MNIST: จุดใน latent space ระบายสีตาม label และรูปที่ decode จากแต่ละตำแหน่ง" loading="lazy">
+<figcaption>Lecture13 หน้า 10 — Analysis of Fashion MNIST: จุดใน latent space ระบายสีตาม label และรูปที่ decode จากแต่ละตำแหน่ง</figcaption>
+</figure>
+
+<p>เมื่อระบายสีจุดตาม label ทีหลัง จะเห็นว่าของที่หน้าตาคล้ายกันอยู่ใกล้กัน เช่น รองเท้าแตะ รองเท้าผ้าใบ และบูทอยู่ด้วยกัน เสื้อหลายแบบอยู่อีกกลุ่ม ทั้งที่ label ไม่เคยถูกใช้ตอน train แต่ช่วงของแกนก็ไม่สมมาตร แกนนอนยืดจากประมาณ −10 ถึง 7.5 กลุ่มหนึ่งกระจายกว้างมาก อีกกลุ่มอัดอยู่ในพื้นที่เล็ก และมีช่องว่างระหว่างกลุ่ม</p>
+
+<h3 id="s2-problem">2.5 ปัญหา: สุ่มจุดแล้วไม่ได้รูป</h3>
+
+<p class="pic">แผนที่เมืองที่บ้านเรือนกระจุกอยู่ไม่กี่ย่าน ระหว่างย่านเป็นทุ่งโล่ง ถ้าปักหมุดสุ่มบนแผนที่ โอกาสสูงที่หมุดจะตกกลางทุ่งซึ่งไม่มีบ้าน</p>
+
+<figure class="viz"><img src="../assets/viz/l13-latent.svg" alt="latent space ของ autoencoder มีช่องว่าง ส่วนของ VAE เป็นก้อนซ้อนกันรอบจุดศูนย์กลาง"></figure>
+<p>ฝั่งซ้าย autoencoder วางรูปหนึ่งรูปเป็นจุดเดียว กลุ่มอยู่ห่างกันและไม่ได้อยู่รอบ (0, 0) จุดที่สุ่มในช่องว่างจึง decode ออกมาไม่เป็นเสื้อผ้า ฝั่งขวาคือสิ่งที่ VAE ในตอน 3 แก้ไว้ คือแต่ละรูปเป็นก้อนที่ซ้อนกันอยู่ในวง N(0, I)</p>
+
+<p>สไลด์สรุปปัญหาไว้เป็นข้อๆ จัดเป็นตารางได้ดังนี้</p>
+
+<table>
+<tr><th>อาการ</th><th>สาเหตุ</th></tr>
+<tr><td>สุ่มจุดใน latent space แล้วอาจได้ <mark class="src" data-p="11" title="same type of item">ของประเภทเดิม</mark> ซ้ำๆ</td><td>บางประเภทครองพื้นที่กว้างมาก บางประเภทกินพื้นที่เล็ก</td></tr>
+<tr><td>รับประกันไม่ได้ว่าจุดที่ decode จะเป็น <mark class="src" data-p="11" title="recognizable clothing items">เสื้อผ้าที่ดูออกว่าเป็นอะไร</mark></td><td>มีช่องว่างขนาดใหญ่ที่แทบไม่มีจุด และยิ่งแย่ลงเมื่อ latent มีมิติสูงขึ้น</td></tr>
+<tr><td>ไม่ชัดว่าจะเลือก <mark class="src" data-p="11" title="random point in the latent space">จุดสุ่มใน latent space</mark> อย่างไร</td><td>การแจกแจงของจุดไม่ได้นิยามไว้ ไม่สมมาตรรอบ (0, 0) และไม่มีขอบเขต</td></tr>
+</table>
+
+<p>รากของทุกข้อคือ autoencoder <mark class="src" data-p="11" title="is not forced to ensure that the space is continuous">ไม่ได้ถูกบังคับให้ latent space ต่อเนื่อง</mark> loss ของมันสนใจแค่ว่าสร้างรูปเดิมกลับได้ไหม ไม่สนว่าพื้นที่ระหว่างจุดเป็นอย่างไร</p>
+
+<p class="trap">autoencoder train ได้ดีและ reconstruct ได้ชัด แต่ "reconstruct ได้" กับ "สร้างของใหม่ได้" เป็นคนละเรื่อง ข้อสอบมักให้เลือกว่าปัญหาของ autoencoder คืออะไร คำตอบคือ latent space ไม่ต่อเนื่องและไม่มีการแจกแจงที่นิยามไว้ ไม่ใช่ reconstruct ไม่ได้</p>
+
+<!-- ===================================================== -->
+<h2 id="s3">3. Variational Autoencoder (VAE)</h2>
+
+<p class="legend">สีในสมการของตอนนี้: <span class="k-w">สีฟ้า</span> คือค่าสุ่ม (ε) · <span class="k-p">สีส้ม</span> คือค่าที่ encoder คำนวณออกมา (μ, log σ²)</p>
+
+<h3 id="s3-dist">3.1 encode เป็นการแจกแจง ไม่ใช่จุด</h3>
+
+<p class="pic">แทนที่จะปักหมุดบ้านเป็นจุดเดียว ให้ระบายสีเป็นวงรอบบ้าน วงของบ้านข้างๆ ซ้อนทับกัน ทุกตารางนิ้วบนแผนที่จึงอยู่ในวงของบ้านสักหลัง ปักหมุดตรงไหนก็เจอบ้าน</p>
+
+<p>encoder ของ VAE (Kingma และคณะ, 2013) ไม่ได้ส่งออก latent เป็นจุด แต่แปลงรูปเป็นพารามิเตอร์ของ <mark class="src" data-p="12" title="probability distribution">การแจกแจงความน่าจะเป็น</mark> คือ mean μ และ variance σ² แล้วจึงสุ่มจุด z จากการแจกแจงนั้น output จึงขึ้นกับความบังเอิญส่วนหนึ่ง และรูปที่สร้าง <mark class="src" data-p="12" title="look like they were sampled from a training set">ดูเหมือนสุ่มมาจาก training set</mark></p>
+
+<div class="eq">\[z=\net{\mu}+\net{\sigma}\,\rnd{\varepsilon},\qquad \rnd{\varepsilon}\sim N(0,1)\]</div>
+<p class="say">จุด z = จุดกลางของก้อน + (ความกว้างของก้อน × ตัวเลขสุ่มมาตรฐาน) ε ทำหน้าที่เป็น noise บอกว่าจะเลื่อนออกจากจุดกลางไปกี่เท่าของ σ</p>
+
+<table class="sym">
+<tr><td>\(\net{\mu}\)</td><td>จุดกลางของก้อน encoder คำนวณจากรูป (ใน code คือ <code>z_mean</code>)</td></tr>
+<tr><td>\(\net{\sigma}\)</td><td>standard deviation ความกว้างของก้อน ได้จาก <code>z_log_var</code> = log σ²</td></tr>
+<tr><td>\(\rnd{\varepsilon}\)</td><td>ตัวเลขสุ่มจาก normal distribution มาตรฐาน (mean 0, sd 1) สุ่มใหม่ทุกครั้ง</td></tr>
+</table>
+
+<p class="num">มิติหนึ่งของ latent encoder ให้ μ = 0.5 และ σ² = 0.04 จึงได้ σ = 0.2 ถ้าสุ่มได้ ε = −1.5 จะได้ z = 0.5 + 0.2 × (−1.5) = 0.5 − 0.3 = 0.2 รอบถัดไปสุ่ม ε ใหม่ได้ +1.0 ก็จะได้ z = 0.7 รูปเดิมจึงได้ z ต่างกันทุกครั้ง แต่ส่วนใหญ่อยู่ในช่วง μ ± 2σ = 0.1 ถึง 0.9</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p12.png" alt="Lecture13 หน้า 12: Variational Autoencoder: encoder ของ autoencoder ให้จุด ส่วนของ VAE ให้การแจกแจง" loading="lazy">
+<figcaption>Lecture13 หน้า 12 — Variational Autoencoder: encoder ของ autoencoder ให้จุด ส่วนของ VAE ให้การแจกแจง</figcaption>
+</figure>
+
+<p>ใน network ของ VAE หลัง hidden layer มีสองหัวคือ codings μ และ codings σ แล้วนำ σ คูณกับ Gaussian noise บวกกับ μ ก่อนส่งต่อให้ decoder ทุกรูปจึงไม่ได้ตกที่จุดเดียว แต่อาจตกที่ใดก็ได้ในวงรอบ μ</p>
+
+<p class="trap">สไลด์เขียนว่า encoder ให้ "mean μ และ variance σ²" แต่สูตร z ใช้ σ (standard deviation) ไม่ใช่ σ² ถ้าโจทย์ให้ variance 0.04 ต้องถอดรากเป็น 0.2 ก่อนคูณ ε</p>
+
+<h3 id="s3-sampling">3.2 Sampling layer และ log variance</h3>
+
+<p>VAE สมมติว่ามิติต่างๆ ของ latent ไม่สัมพันธ์กัน covariance matrix จึงเป็นเมทริกซ์ทแยง encoder จึง <mark class="src" data-p="13" title="map each input to a mean vector and a variance vector">แปลง input แต่ละตัวเป็น mean vector และ variance vector</mark> เท่านั้น ไม่ต้องคำนวณ covariance ระหว่างมิติ ถ้า latent มี 2 มิติ encoder ก็ให้ตัวเลข 2 + 2 = 4 ตัว</p>
+
+<p>แต่ encoder ไม่ได้ให้ variance ตรงๆ มันให้ <mark class="src" data-p="13" title="the logarithm of the variance">ลอการิทึมของ variance</mark> เหตุผลอยู่ในตารางนี้</p>
+
+<table>
+<tr><th>ถ้าให้ encoder ส่งออก</th><th>ช่วงค่าที่ต้องได้</th><th>ปัญหา</th></tr>
+<tr><td>σ² ตรงๆ</td><td>มากกว่า 0 เท่านั้น</td><td>Dense ไม่มี activation ให้ค่าติดลบได้ ซึ่งไม่ใช่ variance</td></tr>
+<tr><td>log σ²</td><td>(−∞, ∞)</td><td>ไม่มีปัญหา ตรงกับช่วง output ของ neuron ทั่วไป และ gradient เปลี่ยนอย่างนุ่มนวลกว่า</td></tr>
+</table>
+
+<div class="eq">\[\net{\sigma}=e^{\frac{1}{2}\net{\log\sigma^2}}\]</div>
+<p class="say">ครึ่งหนึ่งของ log σ² คือ log σ ใส่ exp แล้วได้ σ คืนมา ค่า exp เป็นบวกเสมอ σ จึงไม่มีทางติดลบ</p>
+
+<p class="num">ถ้า z_log_var = 0 จะได้ σ = e⁰ = 1 ถ้า z_log_var = 2 จะได้ σ = e¹ ≈ 2.72 ถ้า z_log_var = −2 จะได้ σ = e⁻¹ ≈ 0.37 ค่า z_log_var ติดลบก็ยังได้ σ เป็นบวก</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p13.png" alt="Lecture13 หน้า 13: Sampling Layer: คลาส Sampling ที่คืนค่า z_mean + exp(0.5 · z_log_var) · epsilon" loading="lazy">
+<figcaption>Lecture13 หน้า 13 — Sampling Layer: คลาส Sampling ที่คืนค่า z_mean + exp(0.5 · z_log_var) · epsilon</figcaption>
+</figure>
+
+<pre><code>class Sampling(layers.Layer):
+    def call(self, inputs):
+        z_mean, z_log_var = inputs
+        batch = ops.shape(z_mean)[0]
+        dim = ops.shape(z_mean)[1]
+        epsilon = keras.random.normal(shape=(batch, dim), seed=self.seed_generator)
+        return z_mean + ops.exp(0.5 * z_log_var) * epsilon</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>z_mean, z_log_var = inputs</code></td><td>รับ output สองหัวของ encoder แต่ละตัวมี shape (batch, latent_dim)</td></tr>
+<tr><td><code>batch</code>, <code>dim</code></td><td>อ่านขนาด batch และจำนวนมิติ เพื่อสุ่ม ε ให้ shape เท่ากับ z_mean</td></tr>
+<tr><td><code>keras.random.normal(...)</code></td><td>สุ่ม ε จาก N(0, 1) ทุกตัวในทุกมิติ</td></tr>
+<tr><td><code>ops.exp(0.5 * z_log_var)</code></td><td>แปลง log σ² เป็น σ ก่อนคูณ ε</td></tr>
+</table>
+
+<figure class="viz"><img src="../assets/viz/l13-reparam.svg" alt="z = mu + sigma * epsilon โดย gradient ไหลผ่าน mu และ sigma"></figure>
+<p>การสุ่มอยู่ที่ ε ซึ่งมาจากนอกโมเดล ส่วน μ และ σ ยังเป็นสูตรคูณและบวกธรรมดา backpropagation จึงหา gradient ของ loss เทียบกับ μ และ σ ได้ แล้วส่งกลับไปปรับ weight ของ encoder ถ้าสุ่ม z จาก N(μ, σ²) ตรงๆ การสุ่มจะขวางทาง gradient การแยกความสุ่มออกเป็น ε แบบนี้เรียกว่า reparameterization trick</p>
+
+<p class="trap">โค้ดใช้ <code>exp(0.5 * z_log_var)</code> ไม่ใช่ <code>exp(z_log_var)</code> ถ้าลืม 0.5 จะได้ σ² แทน σ และ Sampling layer ไม่มี weight ที่เรียนได้ parameter ใน summary จึงเป็น 0</p>
+
+<h3 id="s3-model">3.3 VAE ในโค้ด</h3>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p14.png" alt="Lecture13 หน้า 14: VAE Model: encoder ที่มี z_mean, z_log_var, Sampling และ decoder พร้อม summary" loading="lazy">
+<figcaption>Lecture13 หน้า 14 — VAE Model: encoder ที่มี z_mean, z_log_var, Sampling และ decoder พร้อม summary</figcaption>
+</figure>
+
+<p>โค้ดแบ่งเป็นส่วน <mark class="src" data-p="14" title="Encoder">Encoder</mark> และ <mark class="src" data-p="14" title="Decoder">Decoder</mark> encoder ของ VAE เหมือน autoencoder จนถึง Flatten แล้วเพิ่ม Dense(16) หนึ่งชั้น ก่อนแยกเป็นสองหัว (z_mean และ z_log_var) และส่งเข้า Sampling encoder จึงคืนค่าสามตัว <code>[z_mean, z_log_var, z]</code></p>
+
+<table>
+<tr><th>Layer</th><th>Output shape</th><th>Parameter</th></tr>
+<tr><td>Conv2D(32) และ Conv2D(64)</td><td>(14,14,32) → (7,7,64)</td><td>320 + 18,496</td></tr>
+<tr><td>Flatten → Dense(16, relu)</td><td>(3136) → (16)</td><td>3136·16 + 16 = 50,192</td></tr>
+<tr><td>z_mean = Dense(2)</td><td>(2)</td><td>16·2 + 2 = 34</td></tr>
+<tr><td>z_log_var = Dense(2)</td><td>(2)</td><td>16·2 + 2 = 34</td></tr>
+<tr><td>Sampling</td><td>(2)</td><td>0</td></tr>
+<tr><td colspan="2">รวม encoder</td><td>69,076</td></tr>
+</table>
+
+<p>decoder เหมือนของ autoencoder ต่างเพียงชั้นสุดท้ายใช้ Conv2DTranspose(1, 3, sigmoid) ที่ stride 1 แทน Conv2D parameter ยังเป็น 289 และรวมเป็น 65,089 เท่าเดิม</p>
+
+<p class="trap">z_mean และ z_log_var เป็น Dense สองตัวแยกกันที่รับ input จาก layer เดียวกัน parameter จึงเท่ากัน (34 และ 34) ไม่ใช่ Dense(4) ตัวเดียว และ z_log_var ไม่มี activation เพราะต้องให้ค่าติดลบได้</p>
+
+<h3 id="s3-loss">3.4 Loss: reconstruction + KL divergence</h3>
+
+<p class="pic">ครูให้คะแนนการบ้านสองส่วน ส่วนแรกคือคำตอบถูกไหม ส่วนที่สองคือเขียนตามแบบฟอร์มที่กำหนดไหม ถ้าให้แต่คะแนนคำตอบ นักเรียนแต่ละคนจะเขียนแบบของตัวเองจนอ่านรวมกันไม่ได้</p>
+
+<p><mark class="src" data-p="15" title="Cost (or loss)">Cost (หรือ loss)</mark> ของ VAE มีสองส่วน</p>
+
+<table>
+<tr><th>ส่วน</th><th>ดันให้ encoder ทำอะไร</th><th>ในโค้ด</th></tr>
+<tr><td><mark class="src" data-p="15" title="reconstruction loss">Reconstruction loss</mark></td><td>สร้างรูปเดิมกลับให้ได้ (ตัวอย่างนี้ใช้ cross-entropy)</td><td>binary cross-entropy รวมทุกพิกเซล</td></tr>
+<tr><td><mark class="src" data-p="15" title="latent loss">Latent loss</mark></td><td>ให้ latent ดูเหมือนสุ่มมาจาก Gaussian มาตรฐาน N(0, 1) วัดด้วย <mark class="src" data-p="15" title="KL divergence">KL divergence</mark> ระหว่าง N(0, 1) กับการแจกแจงจริงของ latent</td><td>kl_loss</td></tr>
+</table>
+
+<div class="eq">\[L=-\frac{1}{2}\sum_{i=1}^{n}\Big[1+\log\net{\sigma_i}^2-\net{\sigma_i}^2-\net{\mu_i}^2\Big]\]</div>
+<p class="say">ทุกมิติ i ของ latent ถูกลงโทษเมื่อ μ ห่างจาก 0 หรือเมื่อ σ ห่างจาก 1 แล้วนำค่าทุกมิติมารวมกัน</p>
+
+<table class="sym">
+<tr><td>L</td><td>latent loss</td></tr>
+<tr><td>n</td><td>จำนวนมิติของ latent representation</td></tr>
+<tr><td>\(\net{\mu_i}, \net{\sigma_i}\)</td><td>mean และ standard deviation ของมิติที่ i</td></tr>
+</table>
+
+<p class="num">ต่อหนึ่งมิติ L = ½(σ² + μ² − 1 − log σ²) ถ้า μ = 0, σ = 1 ได้ ½(1 + 0 − 1 − 0) = 0 ซึ่งเป็นค่าต่ำสุด ถ้า μ = 2, σ = 1 ได้ ½(1 + 4 − 1 − 0) = 2 ถ้า μ = 0, σ = 0.5 ได้ ½(0.25 − 1 − log 0.25) = ½(−0.75 + 1.386) ≈ 0.32 ก้อนที่หดเล็กก็ถูกลงโทษ ไม่ใช่แค่ก้อนที่อยู่ไกล</p>
+
+<figure class="viz"><img src="../assets/viz/l13-kl.svg" alt="KL ต่อมิติเทียบกับ mu และ sigma มีค่าต่ำสุดที่ mu = 0 และ sigma = 1"></figure>
+<p>เส้นซ้ายคือ KL เมื่อตรึง σ = 1 แล้วเลื่อน μ ได้พาราโบลา μ²/2 เส้นขวาคือ KL เมื่อตรึง μ = 0 แล้วเปลี่ยน σ จุดต่ำสุดอยู่ที่ σ = 1 ทั้งสองเส้นจึงดึงทุกก้อนเข้ามาอยู่รอบ (0, 0) ด้วยความกว้างประมาณ 1 ก้อนจึงซ้อนกันและไม่มีช่องว่าง</p>
+
+<p>เมื่อ minimize latent loss แล้ว latent จะมี <mark class="src" data-p="15" title="well-defined distribution">การแจกแจงที่นิยามไว้ชัด</mark> คือ normal มาตรฐาน ตอนสร้างรูปใหม่จึงสุ่มจุดจาก N(0, 1) ได้เลย และจุดที่ได้มักอยู่ในบริเวณที่ VAE เคยเห็นตอน train</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p16.png" alt="Lecture13 หน้า 16: Build the Overall VAE Model: train_step ที่คำนวณ reconstruction_loss, kl_loss และ total_loss" loading="lazy">
+<figcaption>Lecture13 หน้า 16 — Build the Overall VAE Model: train_step ที่คำนวณ reconstruction_loss, kl_loss และ total_loss</figcaption>
+</figure>
+
+<pre><code>reconstruction_loss = ops.mean(ops.sum(
+    keras.losses.binary_crossentropy(data, reconstruction), axis=(1, 2)))
+kl_loss = -0.5 * (1 + z_log_var - ops.square(z_mean) - ops.exp(z_log_var))
+kl_loss = ops.mean(ops.sum(kl_loss, axis=1))
+total_loss = reconstruction_loss + kl_loss</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>sum(..., axis=(1, 2))</code></td><td>รวม cross-entropy ของทุกพิกเซลในรูป (แกนสูงและกว้าง) ได้ค่าเดียวต่อรูป แล้ว mean ข้าม batch</td></tr>
+<tr><td><code>-0.5 * (1 + z_log_var - square(z_mean) - exp(z_log_var))</code></td><td>สูตร L ตรงตัว: z_log_var คือ log σ² และ exp(z_log_var) คือ σ²</td></tr>
+<tr><td><code>sum(kl_loss, axis=1)</code></td><td>รวมทุกมิติของ latent (Σ ในสูตร) แล้ว mean ข้าม batch</td></tr>
+<tr><td><code>tape.gradient(total_loss, self.trainable_weights)</code></td><td>หา gradient ของ loss รวมเทียบ weight ทั้ง encoder และ decoder แล้วให้ optimizer อัปเดต</td></tr>
+</table>
+
+<p>การ train เขียนเป็นคลาส <mark class="src" data-p="16" title="Custom VAE Model">VAE ที่ override train_step</mark> เพราะ loss ไม่ได้เทียบ output กับ label ตามปกติ ขั้น <mark class="src" data-p="16" title="Train">train</mark> ใช้ MNIST ทั้ง train และ test รวมกัน 70,000 รูป หาร 255 ให้พิกเซลอยู่ใน 0–1 แล้ว <code>vae.fit(mnist_digits, epochs=30, batch_size=128)</code> ไม่มี label เพราะ VAE ก็เป็น self-supervised</p>
+
+<p class="trap">KL ต่ำสุดที่ σ = 1 ไม่ใช่ σ = 0 ข้อสอบอาจถามว่า latent loss ดัน σ ให้เป็นเท่าใด ถ้าตอบ 0 คือเข้าใจว่า KL ทำให้ทุกอย่างหดเป็นจุด ซึ่งตรงข้ามกับความจริง σ = 0 จะทำให้ VAE กลับไปเป็น autoencoder ธรรมดา และ −log σ² จะพุ่งเป็นอนันต์</p>
+
+<details class="check"><summary>latent 2 มิติ มิติแรก μ = 1, σ = 1 มิติที่สอง μ = 0, σ = 1 latent loss รวมเท่าใด</summary>
+<p>มิติแรก ½(1 + 1 − 1 − 0) = 0.5 มิติที่สอง ½(1 + 0 − 1 − 0) = 0 รวม 0.5</p>
+</details>
+
+<h3 id="s3-beta">3.5 β-VAE: ชั่งน้ำหนักสอง loss</h3>
+
+<p>VAE ต้นฉบับบวกสอง loss ตรงๆ ส่วน <mark class="src" data-p="15" title="β-VAE">β-VAE</mark> คูณ KL ด้วยน้ำหนัก β เพื่อปรับสมดุล ต้องจูน β ให้ดี</p>
+
+<table>
+<tr><th>ถ้า</th><th>ผล</th></tr>
+<tr><td>ให้น้ำหนัก reconstruction มากเกินไป</td><td>KL แทบไม่มีผล latent กลับไปมีปัญหาแบบ autoencoder ธรรมดา</td></tr>
+<tr><td>ให้น้ำหนัก KL มากเกินไป</td><td>รูปที่ reconstruct ได้คุณภาพแย่</td></tr>
+</table>
+
+<p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> น้ำหนักของสอง loss เปลี่ยนหน้าตาของรูปที่สร้างได้ทั้งตาราง</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p17.png" alt="Lecture13 หน้า 17: Results: total_loss = 0.9·reconstruction + 0.1·kl เทียบกับ 0.1·reconstruction + 0.9·kl" loading="lazy">
+<figcaption>Lecture13 หน้า 17 — Results: total_loss = 0.9·reconstruction + 0.1·kl เทียบกับ 0.1·reconstruction + 0.9·kl</figcaption>
+</figure>
+
+<p>ทั้งสองตารางคือตัวเลขที่ decoder สร้างจากจุดที่เรียงเป็นตารางใน latent space ฝั่ง 0.9·reconstruction + 0.1·kl ตัวเลขคมกว่าและมีหลายแบบ (9, 4, 7, 8, 3, 5, 2, 6, 0) ฝั่ง 0.1·reconstruction + 0.9·kl ตัวเลขเบลอกว่าและหลายแถวกลายเป็นแบบเดียวกัน ตรงกับตาราง β ข้างบน</p>
+
+<h3 id="s3-compare">3.6 Autoencoder เทียบ VAE</h3>
+
+<p>เมื่อสุ่มจุดจาก normal มาตรฐานแล้ว decode รูปที่ได้ไม่เอียงไปหาประเภทใดประเภทหนึ่ง และ latent space ต่อเนื่องเฉพาะที่ (locally continuous) คือเลื่อนจุดนิดเดียว รูปก็เปลี่ยนนิดเดียว</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p18.png" alt="Lecture13 หน้า 18: Autoencoder vs VAE in Fashion MNIST: ตารางรูปที่ decode จาก latent space" loading="lazy">
+<figcaption>Lecture13 หน้า 18 — Autoencoder vs VAE in Fashion MNIST: ตารางรูปที่ decode จาก latent space</figcaption>
+</figure>
+
+<p>ตารางของ autoencoder เกือบทั้งตารางเป็นเสื้อกับกระเป๋า ประเภทอื่นแทบไม่โผล่ เพราะบางประเภทครองพื้นที่ latent กว้างกว่า ตารางของ VAE มีเสื้อยืด เสื้อแขนยาว กระเป๋า และรองเท้า และเปลี่ยนจากประเภทหนึ่งไปอีกประเภทหนึ่งทีละน้อย</p>
+
+<table>
+<tr><th></th><th>Autoencoder</th><th>VAE</th></tr>
+<tr><td>encoder ส่งออก</td><td>จุด z</td><td>μ และ log σ² แล้วสุ่ม z = μ + σε</td></tr>
+<tr><td>loss</td><td>reconstruction</td><td>reconstruction + KL</td></tr>
+<tr><td>latent space</td><td>มีช่องว่าง ไม่สมมาตร ไม่มีขอบเขต</td><td>ต่อเนื่อง อยู่รอบ (0, 0) ตาม N(0, 1)</td></tr>
+<tr><td>สร้างรูปใหม่</td><td>สุ่มจุดแล้วอาจได้รูปพัง</td><td>สุ่มจาก N(0, 1) แล้ว decode ได้</td></tr>
+<tr><td>รูปที่ได้</td><td>คมเมื่อ reconstruct</td><td>เบลอกว่า</td></tr>
+</table>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 11, 15)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl13-p11.png" alt="Lecture13 หน้า 11: The Problems of Autoencoder" loading="lazy">
+<figcaption>Lecture13 หน้า 11 — The Problems of Autoencoder</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl13-p15.png" alt="Lecture13 หน้า 15: Cost Function: reconstruction loss, latent loss (KL), β-VAE" loading="lazy">
+<figcaption>Lecture13 หน้า 15 — Cost Function: reconstruction loss, latent loss (KL), β-VAE</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s4">4. GAN: ช่างปลอมแข่งกับคนตรวจ</h2>
+
+<h3 id="s4-idea">4.1 สอง network ที่แข่งกัน</h3>
+
+<p class="pic">ช่างปลอมแบงก์มือใหม่ทำแบงก์ปลอมแย่มาก ตำรวจจับได้ทันที ช่างปลอมเลยปรับวิธี ตำรวจก็เรียนรู้จุดสังเกตใหม่ วนไปเรื่อยๆ จนแบงก์ปลอมแทบแยกไม่ออกจากของจริง</p>
+
+<p><mark class="src" data-p="20" title="GANs">GAN</mark> (Goodfellow และคณะ, 2014) ทำให้ <mark class="src" data-p="20" title="generation">สร้าง</mark> <mark class="src" data-p="20" title="realistic synthetic images">รูปสังเคราะห์ที่ดูสมจริง</mark> ได้ โดยบังคับให้รูปที่สร้างแทบแยกไม่ออกจากรูปจริงในทางสถิติ ประกอบด้วยสอง network ที่แข่งกันตอน train แต่ละตัวถูกฝึกให้ชนะอีกตัว จนสุดท้ายเก่งทั้งคู่</p>
+
+<table>
+<tr><th>Network</th><th>เป้าหมาย</th><th>รับ → ให้</th></tr>
+<tr><td><mark class="src" data-p="20" title="Generator">Generator</mark> (ช่างปลอม)</td><td><mark class="src" data-p="20" title="Goal: Fool the discriminator">หลอก discriminator ให้ได้</mark></td><td>random latent vector → รูป</td></tr>
+<tr><td><mark class="src" data-p="20" title="Discriminator">Discriminator</mark> (ตำรวจ)</td><td><mark class="src" data-p="20" title="Goal: Tell fake from real">แยกรูปปลอมออกจากรูปจริง</mark></td><td>รูป → ความน่าจะเป็นว่าเป็นรูปจริง</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p20.png" alt="Lecture13 หน้า 20: GANs: generator (decoder) กับ discriminator และ training feedback" loading="lazy">
+<figcaption>Lecture13 หน้า 20 — GANs: generator (decoder) กับ discriminator และ training feedback</figcaption>
+</figure>
+
+<p>generator รับ latent vector แบบสุ่มแล้วสร้างรูป รูปปลอมผสมกับรูปจริงแล้วส่งให้ discriminator ตัดสินว่า "Real" หรือ "Fake" ผลการตัดสินย้อนกลับไปเป็น feedback ให้ generator ปรับตัว generator ทำหน้าที่เดียวกับ decoder ของ VAE คือแปลง latent เป็นรูป</p>
+
+<h3 id="s4-dcgan">4.2 DCGAN และการฝึกสองจังหวะ</h3>
+
+<p>DCGAN (Alec Radford และคณะ, 2016) ใช้ <mark class="src" data-p="21" title="convolutional layers">convolutional layer</mark> เป็นหลักในการสร้างทั้ง generator (G) และ discriminator (D) ต้องสร้างและฝึกสองโมเดล คือ <mark class="src" data-p="21" title="(1) one for the discriminator alone">(1) discriminator ตัวเดียว</mark> และ <mark class="src" data-p="21" title="(2) the other one is for generator">(2) อีกตัวสำหรับ generator</mark></p>
+
+<figure class="viz"><img src="../assets/viz/l13-gan.svg" alt="สองจังหวะของการฝึก GAN: ฝึก discriminator แล้วฝึก generator ผ่าน discriminator ที่ freeze"></figure>
+<p>จังหวะ ① ฝึกเฉพาะ D ด้วยรูปปลอม (label 0) ผสมรูปจริง (label 1) จังหวะ ② ฝึก G โดยส่งรูปปลอมผ่าน D ที่ถูก freeze แล้วบอกว่า label คือ 1 gradient ต้องไหลผ่าน D จึงไปถึง G แต่ weight ของ D ไม่ถูกแตะ</p>
+
+<table>
+<tr><th>ฝึก</th><th>ความยาก</th><th>เพราะอะไร</th></tr>
+<tr><td><mark class="src" data-p="21" title="discriminator">Discriminator</mark></td><td><mark class="src" data-p="21" title="(straightforward)">ตรงไปตรงมา</mark></td><td>เป็น binary classification ธรรมดา จำแนกรูปจริงกับปลอม output เป็น sigmoid</td></tr>
+<tr><td><mark class="src" data-p="21" title="generator">Generator</mark></td><td><mark class="src" data-p="21" title="(little tricky)">ยุ่งยากกว่าเล็กน้อย</mark></td><td>ฝึกตัวเดียวแบบ D ไม่ได้ เพราะไม่มี label ของตัวเอง ต้องให้ D บอกว่าปลอมได้ดีหรือยัง</td></tr>
+</table>
+
+<p>สอง network <mark class="src" data-p="21" title="iteratively">สลับกัน</mark> <mark class="src" data-p="21" title="refine their skills">ขัดเกลาฝีมือ</mark> เมื่อ generator เก่งขึ้น discriminator ก็ปรับตาม ความก้าวหน้าเกิดต่อเนื่องจนจบการ train แล้วจึงนำ generator ไปใช้ แผนภาพการฝึกบนสไลด์ <mark class="src" data-p="21" title="Modified">ดัดแปลง</mark>มาจากหนังสือ Deep Learning for Vision Systems</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p21.png" alt="Lecture13 หน้า 21: Deep Convolutional GANs: แผนภาพ discriminator training และ generator training" loading="lazy">
+<figcaption>Lecture13 หน้า 21 — Deep Convolutional GANs: แผนภาพ discriminator training และ generator training</figcaption>
+</figure>
+
+<p>ฝั่ง discriminator training ข้อมูลปลอมจาก generator และข้อมูลจริงเข้า discriminator แล้ว update model จากผล binary classification ฝั่ง generator training input vector เข้า generator ได้รูปปลอม ส่งเข้า discriminator ที่ freeze training แล้วนำผลไป update weight ของ generator</p>
+
+<h3 id="s4-d">4.3 Discriminator</h3>
+
+<p><mark class="src" data-p="22" title="Discriminator">Discriminator</mark> ถูกฝึกให้แยกรูปปลอมจาก generator ออกจากรูปจริงใน training set เป้าหมายคือทำนายว่ารูปจริงหรือปลอม (binary classification) ยิ่งนานไป discriminator ยิ่งจับของปลอมเก่ง generator จึงต้องเก่งขึ้นตามไปด้วย</p>
+
+<p>ชุดข้อมูลที่ใช้ฝึกประกอบด้วยรูปจริงที่สุ่มมาจาก training set และรูปปลอมจาก generator ให้ label 1 กับรูปจริงและ label 0 กับรูปปลอม แล้วใช้ binary cross-entropy เป็น loss</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p23.png" alt="Lecture13 หน้า 23: Training the Discriminator: batch ปลอม label 0 และ batch จริง label 1" loading="lazy">
+<figcaption>Lecture13 หน้า 23 — Training the Discriminator: batch ปลอม label 0 และ batch จริง label 1</figcaption>
+</figure>
+
+<p class="num">batch ปลอม discriminator ทำนาย 0.2, 0.1, 0.3, 0.6 ทั้งหมดมี label 0 ค่าที่ห่างจาก 0 มากที่สุดคือ 0.6 จึงถูกลงโทษมากที่สุด (−log(1 − 0.6) = −log 0.4 ≈ 0.92 เทียบกับ −log 0.8 ≈ 0.22 ของค่า 0.2) batch จริงทำนาย 0.8, 0.9, 0.4, 0.7 มี label 1 ค่า 0.4 ถูกลงโทษมากที่สุด</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p24.png" alt="Lecture13 หน้า 24: Discriminator: โค้ด keras.Sequential และ summary (input 64×64×3)" loading="lazy">
+<figcaption>Lecture13 หน้า 24 — Discriminator: โค้ด keras.Sequential และ summary (input 64×64×3)</figcaption>
+</figure>
+
+<table>
+<tr><th>Layer</th><th>Output shape</th><th>Parameter</th></tr>
+<tr><td>Conv2D(64, 4, strides=2)</td><td>(32, 32, 64)</td><td>(4·4·3 + 1)·64 = 3,136</td></tr>
+<tr><td>Conv2D(128, 4, strides=2)</td><td>(16, 16, 128)</td><td>(4·4·64 + 1)·128 = 131,200</td></tr>
+<tr><td>Conv2D(128, 4, strides=2)</td><td>(8, 8, 128)</td><td>(4·4·128 + 1)·128 = 262,272</td></tr>
+<tr><td>Flatten → Dropout(0.2)</td><td>(8192)</td><td>0</td></tr>
+<tr><td>Dense(1, sigmoid)</td><td>(1)</td><td>8192 + 1 = 8,193</td></tr>
+<tr><td colspan="2">รวม</td><td>404,801</td></tr>
+</table>
+
+<p class="trap">LeakyReLU(negative_slope=0.2) และ Dropout ไม่มี parameter ที่เรียนได้ และ discriminator ลดขนาดด้วย strides=2 ไม่ได้ใช้ MaxPooling (64 → 32 → 16 → 8) output เป็น Dense(1, sigmoid) ค่าเดียวคือความน่าจะเป็นว่าเป็นรูปจริง</p>
+
+<h3 id="s4-g">4.4 Generator</h3>
+
+<p><mark class="src" data-p="25" title="Generator">Generator</mark> รับข้อมูลสุ่มแล้วพยายามเลียนแบบ training set เพื่อสร้างรูปปลอม เป้าหมายคือหลอก discriminator ด้วยรูปที่เหมือนรูปใน training set ที่สุด ฝึกไปทุกรอบก็เก่งขึ้น generator <em>ไม่เคยเห็นรูปจาก training set โดยตรง</em> สิ่งที่มันรู้เกี่ยวกับรูปจริงมาจาก discriminator ทั้งหมด และ generator (หรือ decoder) คือ ConvNet กลับหัว จาก vector ที่มี noise ไปเป็นรูป</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p25.png" alt="Lecture13 หน้า 25: Generator Architecture: random noise → reshape 7×7×128 → upsampling → 28×28×1" loading="lazy">
+<figcaption>Lecture13 หน้า 25 — Generator Architecture: random noise → reshape 7×7×128 → upsampling → 28×28×1</figcaption>
+</figure>
+
+<p>แผนภาพนี้เป็น generator สำหรับ <mark class="src" data-p="25" title="MNSIT image">รูป MNIST</mark> (สไลด์พิมพ์ว่า MNSIT) ไม่ใช่สำหรับรูปดารา shape เปลี่ยนจาก 7×7×128 → 14×14×128 → 28×28×64 → 28×28×1</p>
+
+<p>วิธีฝึก generator คือ สร้าง network รวม ที่มีทั้ง G และ D อยู่ด้วยกัน ส่ง batch รูปปลอมผ่าน D เพื่อเอาคะแนนแต่ละรูป แล้ว <mark class="src" data-p="26" title="Freeze the weights of the discriminator">freeze weight ของ discriminator</mark> เพราะจังหวะนี้ฝึกเฉพาะ generator loss ของ generator คือ binary cross-entropy ระหว่าง <mark class="src" data-p="26" title="these probabilities and a vector of ones">ความน่าจะเป็นเหล่านี้กับเวกเตอร์ที่เป็น 1 ทั้งหมด</mark> เพราะต้องการให้ generator สร้างรูปที่ discriminator คิดว่าเป็นของจริง</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p26.png" alt="Lecture13 หน้า 26: Training the Generator: generator → batch ปลอม → discriminator (weights are frozen) → loss กับ label 1" loading="lazy">
+<figcaption>Lecture13 หน้า 26 — Training the Generator: generator → batch ปลอม → discriminator (weights are frozen) → loss กับ label 1</figcaption>
+</figure>
+
+<p class="num">D ให้คะแนนรูปปลอม 0.4, 0.5, 0.6, 0.2 label ทั้งหมดเป็น 1 รูปที่ได้ 0.2 ถูกลงโทษมากที่สุด (−log 0.2 ≈ 1.61) gradient จึงดัน G ให้แก้รูปแบบนี้มากที่สุด ถ้า D ให้ 0.9 ทุกรูป loss ของ G จะต่ำ แปลว่า G หลอก D ได้แล้ว</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p27.png" alt="Lecture13 หน้า 27: Generator: โค้ด keras.Sequential (latent_dim = 128) และ summary" loading="lazy">
+<figcaption>Lecture13 หน้า 27 — Generator: โค้ด keras.Sequential (latent_dim = 128) และ summary</figcaption>
+</figure>
+
+<table>
+<tr><th>Layer</th><th>Output shape</th><th>Parameter</th></tr>
+<tr><td>Dense(8·8·128)</td><td>(8192)</td><td>128·8192 + 8192 = 1,056,768</td></tr>
+<tr><td>Reshape</td><td>(8, 8, 128)</td><td>0</td></tr>
+<tr><td>Conv2DTranspose(128, 4, strides=2)</td><td>(16, 16, 128)</td><td>(4·4·128 + 1)·128 = 262,272</td></tr>
+<tr><td>Conv2DTranspose(256, 4, strides=2)</td><td>(32, 32, 256)</td><td>(4·4·128 + 1)·256 = 524,544</td></tr>
+<tr><td>Conv2DTranspose(512, 4, strides=2)</td><td>(64, 64, 512)</td><td>(4·4·256 + 1)·512 = 2,097,664</td></tr>
+<tr><td>Conv2D(3, 5, sigmoid)</td><td>(64, 64, 3)</td><td>(5·5·512 + 1)·3 = 38,403</td></tr>
+<tr><td colspan="2">รวม</td><td>3,979,651</td></tr>
+</table>
+
+<p class="trap">generator ใหญ่กว่า discriminator เกือบ 10 เท่า (3,979,651 เทียบกับ 404,801) ส่วนใหญ่มาจาก Conv2DTranspose(512) และ generator ขยายด้วย strides=2 (8 → 16 → 32 → 64) ชั้นสุดท้ายเป็น Conv2D(3) เพื่อให้ได้ 3 channel RGB และใช้ sigmoid เพราะพิกเซลอยู่ใน 0–1</p>
+
+<h3 id="s4-loop">4.5 วงจรฝึกทั้งหมด</h3>
+
+<p>เมื่อเข้าใจสองโมเดลแยกกันแล้ว นำมารวมเป็น <mark class="src" data-p="28" title="end-to-end GANs">GAN แบบ end-to-end</mark> แต่ละรอบทำ 6 ขั้น</p>
+
+<table>
+<tr><th>ขั้น</th><th>ทำอะไร</th><th>ฝึกใคร</th></tr>
+<tr><td>1</td><td>สุ่มจุดใน latent space (random noise)</td><td rowspan="4">D</td></tr>
+<tr><td>2</td><td>ให้ generator สร้างรูปจาก noise นี้</td></tr>
+<tr><td>3</td><td>ผสมรูปที่สร้างกับรูปจริง</td></tr>
+<tr><td>4</td><td>ฝึก discriminator ด้วยรูปผสม target คือ "real" สำหรับรูปจริง และ "fake" สำหรับรูปที่สร้าง</td></tr>
+<tr><td>5</td><td>สุ่มจุดใหม่ใน latent space</td><td rowspan="2">G</td></tr>
+<tr><td>6</td><td>ฝึก generator ด้วย vector สุ่มเหล่านี้ target ทั้งหมดบอกว่า "นี่คือรูปจริง" weight ของ generator จึงขยับไปทางที่ทำให้ discriminator ทายว่ารูปปลอมเป็นรูปจริง</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p28.png" alt="Lecture13 หน้า 28: End-to-End Adversarial Network: 6 ขั้นต่อ epoch (Deep Learning Illustrated)" loading="lazy">
+<figcaption>Lecture13 หน้า 28 — End-to-End Adversarial Network: 6 ขั้นต่อ epoch (Deep Learning Illustrated)</figcaption>
+</figure>
+
+<p>ขั้น 1–4 คือจังหวะ ① และขั้น 5–6 คือจังหวะ ② ในรูปสองจังหวะข้างบน ขั้น 5 สุ่ม noise ชุดใหม่ ไม่ใช้ชุดเดิมจากขั้น 1</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p29.png" alt="Lecture13 หน้า 29: คลาส GAN: compile ที่รับสอง optimizer และ train_step" loading="lazy">
+<figcaption>Lecture13 หน้า 29 — คลาส GAN: compile ที่รับสอง optimizer และ train_step</figcaption>
+</figure>
+
+<pre><code>generated_images = self.generator(random_latent_vectors)
+combined_images = ops.concatenate([generated_images, real_images], axis=0)
+labels = ops.concatenate([ops.ones((batch_size, 1)), ops.zeros((batch_size, 1))], axis=0)
+labels += 0.05 * tf.random.uniform(tf.shape(labels))      # important trick
+# train D: grads only for self.discriminator.trainable_weights
+misleading_labels = ops.zeros((batch_size, 1))             # "all real images" (a lie)
+predictions = self.discriminator(self.generator(random_latent_vectors))
+g_loss = self.loss_fn(misleading_labels, predictions)
+grads = tape.gradient(g_loss, self.generator.trainable_weights)</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>compile(d_optimizer, g_optimizer, loss_fn)</code></td><td>GAN มีสอง optimizer แยกกัน หนึ่งตัวต่อหนึ่ง network และใช้ loss_fn ตัวเดียวกัน (binary cross-entropy)</td></tr>
+<tr><td><code>labels = concat([ones, zeros])</code></td><td>รูปที่สร้าง (มาก่อนใน concat) ได้ 1 รูปจริงได้ 0 กลับด้านจากสไลด์หน้า 23</td></tr>
+<tr><td><code>labels += 0.05 * uniform</code></td><td>บวก noise เล็กน้อยกับ label เป็นทริกที่ทำให้ D ไม่มั่นใจเกินไป การฝึกจึงนิ่งขึ้น</td></tr>
+<tr><td><code>tape.gradient(d_loss, discriminator.trainable_weights)</code></td><td>ขั้นฝึก D หา gradient เฉพาะ weight ของ D</td></tr>
+<tr><td><code>misleading_labels = zeros</code></td><td>ในโค้ดนี้ 0 แปลว่า "จริง" label ศูนย์ทั้งหมดจึงคือคำโกหกว่ารูปปลอมเป็นรูปจริง</td></tr>
+<tr><td><code>tape.gradient(g_loss, generator.trainable_weights)</code></td><td>ขั้นฝึก G หา gradient เฉพาะ weight ของ G นี่คือการ "freeze" D ในโค้ด: D อยู่ในเส้นทางคำนวณแต่ไม่ถูกอัปเดต</td></tr>
+</table>
+
+<p class="trap">ในโค้ดนี้ label กลับด้านจากสไลด์ทฤษฎี: <mark class="src" data-p="29" title="Note that in this celeb dataset, we use Keras API - dataset flow from directory API which has one directory and then labeled with ‘0’ for real images.">dataset ดาราโหลดด้วย Keras API แบบ flow from directory ที่มีโฟลเดอร์เดียว จึงติด label ‘0’ ให้รูปจริง</mark> ถ้าข้อสอบถามว่า misleading_labels เป็นศูนย์ทั้งหมดเพราะอะไร คำตอบคือ 0 หมายถึง "จริง" ในโค้ดนี้ หลักการไม่เปลี่ยน: label ของ G คือ label เดียวกับรูปจริงเสมอ</p>
+
+<details class="check"><summary>ถ้าแก้โค้ดให้รูปจริงได้ label 1 และรูปที่สร้างได้ 0 ตามสไลด์หน้า 23 ต้องแก้ misleading_labels อย่างไร</summary>
+<p>เปลี่ยนเป็น <code>ops.ones((batch_size, 1))</code> เพราะ generator ต้องการให้ D ตอบว่า "จริง" ซึ่งตอนนี้คือ 1</p>
+</details>
+
+<h3 id="s4-celeba">4.6 ตัวอย่าง DCGAN กับหน้าดารา</h3>
+
+<p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> GAN ค่อยๆ สร้างหน้าคนที่ดูออกได้ ต้องใช้หลาย epoch</p>
+
+<p>dataset CelebA มีหน้าดารา 200,000 รูป ย่อเป็น 64 × 64 เพื่อให้ train เร็วขึ้น discriminator แปลงรูป (64, 64, 3) เป็นคะแนนว่าจริงแค่ไหน ฝึกด้วยรูปจริงและปลอมพร้อม label เหมือน image classification ทั่วไป generator แปลง vector shape (latent_dim,) เป็นรูป (64, 64, 3) และฝึกด้วย gradient ของ weight generator เทียบกับ loss ของโมเดล gan ทั้งตัว</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p31.png" alt="Lecture13 หน้า 31: Result: รูปจาก GAN หลัง 1 epoch และหลัง 30 epoch" loading="lazy">
+<figcaption>Lecture13 หน้า 31 — Result: รูปจาก GAN หลัง 1 epoch และหลัง 30 epoch</figcaption>
+</figure>
+
+<p>หลัง 1 epoch รูปเป็นเพียงก้อนสีเบลอที่พอเห็นตำแหน่งหน้า หลัง 30 epoch เห็นตา จมูก ปาก และทรงผมชัด แต่บางรูปยังมีส่วนบิดเบี้ยว</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 22, 30)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl13-p22.png" alt="Lecture13 หน้า 22: Discriminator Architecture" loading="lazy">
+<figcaption>Lecture13 หน้า 22 — Discriminator Architecture</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl13-p30.png" alt="Lecture13 หน้า 30: Example on DCGAN: CelebA 64×64" loading="lazy">
+<figcaption>Lecture13 หน้า 30 — Example on DCGAN: CelebA 64×64</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s5">5. ความยากของ GAN การวัดผล และ VAE เทียบ GAN</h2>
+
+<h3 id="s5-challenge">5.1 ทำไม GAN ฝึกยาก</h3>
+
+<p>GAN <mark class="src" data-p="32" title="difficult to train">ฝึกยาก</mark>อย่างขึ้นชื่อ ต้องจูนทั้งสถาปัตยกรรมและค่าการฝึกอย่างละเอียด ปัญหามีสี่แบบ</p>
+
+<table>
+<tr><th>ปัญหา</th><th>เกิดอะไรขึ้น</th></tr>
+<tr><td><mark class="src" data-p="32" title="Discriminator overpowers the generator">Discriminator เก่งเกิน generator</mark></td><td>D แยกได้ง่ายเกินไป สัญญาณจาก loss อ่อนเกินจะช่วยให้ G พัฒนา</td></tr>
+<tr><td><mark class="src" data-p="32" title="Generator overpowers the discriminator">Generator เก่งเกิน discriminator</mark></td><td>D อ่อนเกินไป G หลอกได้ด้วยรูปไม่กี่แบบที่เกือบเหมือนกัน เรียกว่า mode collapse (รูปที่สร้างหลากหลายน้อยลงเรื่อยๆ)</td></tr>
+<tr><td><mark class="src" data-p="32" title="Uninformative Loss">Loss ไม่บอกอะไร</mark></td><td>G ถูกวัดเทียบกับ D ปัจจุบันซึ่งเก่งขึ้นตลอด loss ต่างเวลาจึงเทียบกันไม่ได้</td></tr>
+<tr><td><mark class="src" data-p="32" title="Hyperparameters">Hyperparameter</mark></td><td>ไวต่อการเปลี่ยนค่าเพียงเล็กน้อย หาค่าที่ใช้ได้ด้วยการลองผิดลองถูกอย่างมีหลัก ไม่มีแนวทางสำเร็จรูป</td></tr>
+</table>
+
+<p>ช่วงหลังมี GAN อีกหลายแบบที่ปรับโครงสร้าง GAN ต้นฉบับเพื่อแก้ปัญหาเหล่านี้</p>
+
+<p class="trap">mode collapse เกิดตอน <em>generator</em> ชนะ ไม่ใช่ discriminator ชนะ ถ้า discriminator ชนะ ผลคือ generator ไม่พัฒนาเพราะ gradient อ่อน</p>
+
+<h3 id="s5-eval">5.2 วัดผล GAN อย่างไร</h3>
+
+<p>G และ D ถูกฝึกพร้อมกันเพื่อรักษาสมดุล จึงไม่มี objective loss ที่ใช้วัดคุณภาพของ generator ได้ ดูจาก loss อย่างเดียวไม่รู้ทั้งความก้าวหน้าและคุณภาพของโมเดล วิธีที่ใช้คือดู <mark class="src" data-p="33" title="quality of the generated synthetic images">คุณภาพของรูปสังเคราะห์ที่สร้างได้</mark> ด้วยตาคน หรือใช้ตัวชี้วัดคุณภาพและความหลากหลายของรูป</p>
+
+<table>
+<tr><th>ตัวชี้วัด</th><th>ดีเมื่อ</th></tr>
+<tr><td><mark class="src" data-p="33" title="inception score">Inception score</mark></td><td>ยิ่งสูงยิ่งดี</td></tr>
+<tr><td><mark class="src" data-p="33" title="Fréchet inception distance (FID)">Fréchet inception distance (FID)</mark></td><td>ยิ่งต่ำยิ่งดี (เป็นระยะห่างจากรูปจริง)</td></tr>
+</table>
+
+<p>ยังไม่มีข้อตกลงว่าวิธีวัด GAN ที่ถูกต้องคืออะไร และยังเป็นหัวข้อวิจัยอยู่</p>
+
+<p class="trap">จำทิศของสองตัวชี้วัดให้แม่น FID เป็น "distance" จึงยิ่งน้อยยิ่งใกล้รูปจริง ส่วน inception score เป็น "score" จึงยิ่งมากยิ่งดี</p>
+
+<h3 id="s5-vs">5.3 VAE เทียบ GAN</h3>
+
+<figure class="thumb">
+<img src="../assets/slides/dl13-p34.png" alt="Lecture13 หน้า 34: VAEs and GANs: image editing ใน latent space และการ morph รูป" loading="lazy">
+<figcaption>Lecture13 หน้า 34 — VAEs and GANs: image editing ใน latent space และการ morph รูป</figcaption>
+</figure>
+
+<p>VAE ให้ latent ที่มีโครงสร้างและต่อเนื่อง จึงเหมาะกับการแก้ไขรูปใน latent space เช่น บวก "เวกเตอร์ยิ้ม" ให้หน้าบึ้งกลายเป็นหน้ายิ้ม หรือเปลี่ยนหน้า A เป็นหน้า B ทีละน้อย ส่วน GAN สร้างรูปเดี่ยวที่สมจริงกว่า แต่ latent อาจไม่มีโครงสร้างและไม่ต่อเนื่อง</p>
+
+<table>
+<tr><th></th><th>VAE</th><th>GAN</th></tr>
+<tr><td>latent space</td><td>มีโครงสร้าง ต่อเนื่องสูง</td><td>อาจไม่มีโครงสร้างที่ชัด ความต่อเนื่องต่ำกว่า</td></tr>
+<tr><td>เก่งเรื่อง</td><td>แก้ไขรูปใน latent space (สลับหน้า ทำหน้าบึ้งให้ยิ้ม) และทำแอนิเมชันที่รูปค่อยๆ เปลี่ยน</td><td>สร้างรูปเดี่ยวที่สมจริง</td></tr>
+<tr><td>loss</td><td>reconstruction + KL</td><td>binary cross-entropy แบบแข่งกัน</td></tr>
+<tr><td>ฝึก</td><td>เสถียร loss ลดลงชัดเจน</td><td>ยาก loss บอกความก้าวหน้าไม่ได้</td></tr>
+</table>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 32–33)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl13-p32.png" alt="Lecture13 หน้า 32: Challenges" loading="lazy">
+<figcaption>Lecture13 หน้า 32 — Challenges</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl13-p33.png" alt="Lecture13 หน้า 33: Evaluate GANs" loading="lazy">
+<figcaption>Lecture13 หน้า 33 — Evaluate GANs</figcaption>
+</figure>
+</div></details>
+
+<p class="nextpage">ลองฝึกต่อใน<a href="0013-generative-models-autoencoder-vae-gan-exercises.html">แบบฝึก Lesson 13</a></p>
+
+<!--REFS-->
+<details class="fold" id="appendix"><summary>ภาคผนวก: ทุกหน้าของสไลด์ Lecture 13 อยู่ตรงไหน</summary>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>อยู่ในตอน</th></tr>
+<tr data-pages="1" class="etc"><td>1</td><td>ปก part5: Generative Models</td><td>etc — ปก</td></tr>
+<tr data-pages="2"><td>2</td><td>Agenda</td><td><a href="#s1">ตอน 1</a> (แกลเลอรี)</td></tr>
+<tr data-pages="3-5"><td>3–5</td><td>Generative Models, More Examples, Image Generation</td><td><a href="#s1">ตอน 1</a></td></tr>
+<tr data-pages="6-11"><td>6–11</td><td>Autoencoders, Fashion MNIST, Encoder, Decoder, Analysis, Problems of Autoencoder</td><td><a href="#s2">ตอน 2</a></td></tr>
+<tr data-pages="12-18"><td>12–18</td><td>VAE, Sampling Layer, VAE Model, Cost Function, Build VAE, Results, AE vs VAE</td><td><a href="#s3">ตอน 3</a></td></tr>
+<tr data-pages="19"><td>19</td><td>Agenda (ครึ่งหลัง)</td><td><a href="#s1">ตอน 1</a> (แกลเลอรี)</td></tr>
+<tr data-pages="20-31"><td>20–31</td><td>GANs, DCGANs, Discriminator, Generator, End-to-End, โค้ด GAN, CelebA, Result</td><td><a href="#s4">ตอน 4</a></td></tr>
+<tr data-pages="32-34"><td>32–34</td><td>Challenges, Evaluate GANs, VAEs and GANs</td><td><a href="#s5">ตอน 5</a></td></tr>
+<tr data-pages="35"><td>35</td><td>Convolutional Transpose Layers</td><td><a href="#s2-dec">ตอน 2.3</a></td></tr>
+</table>
+<p>แหล่งอื่นที่ใช้: ไม่มี เนื้อหาทั้งหมดมาจากสไลด์ Lecture 13 (deep_learning_part5_1.pdf) ตัวเลข parameter ทุกตัวคิดซ้ำด้วยมือและตรงกับ summary บนสไลด์</p>
+</details>
+
+</body>
+</html>

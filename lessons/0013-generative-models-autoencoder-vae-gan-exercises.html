@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 13: Autoencoder, VAE และ GAN</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 13</span>
+  <span><a href="0013-generative-models-autoencoder-vae-gan.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 13: Autoencoder, VAE และ GAN</h1>
+<p>ข้อเลือกตอบ 15 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>Conv2D shape</span></div>
+<div class="qtext">Encoder รับรูป (28, 28, 1) แล้วผ่าน <code>Conv2D(32, 3, strides=2, padding="same")</code> output shape และจำนวน parameter คือข้อใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. padding=&quot;same&quot; กับ strides=2 ให้ 28/2 = 14 ส่วน parameter = (3·3·1 + 1)·32 = 320 ตัวเลข 13 มาจากสูตร padding=&quot;valid&quot;, 288 คือลืม bias 32 ตัว, 28 คือลืม stride">(13, 13, 32) และ 320</button>
+<button class="opt" data-correct="false" data-note="ผิด. padding=&quot;same&quot; กับ strides=2 ให้ 28/2 = 14 ส่วน parameter = (3·3·1 + 1)·32 = 320 ตัวเลข 13 มาจากสูตร padding=&quot;valid&quot;, 288 คือลืม bias 32 ตัว, 28 คือลืม stride">(14, 14, 32) และ 288</button>
+<button class="opt" data-correct="true" data-note="ถูก. padding=&quot;same&quot; กับ strides=2 ให้ 28/2 = 14 ส่วน parameter = (3·3·1 + 1)·32 = 320 ตัวเลข 13 มาจากสูตร padding=&quot;valid&quot;, 288 คือลืม bias 32 ตัว, 28 คือลืม stride">(14, 14, 32) และ 320</button>
+<button class="opt" data-correct="false" data-note="ผิด. padding=&quot;same&quot; กับ strides=2 ให้ 28/2 = 14 ส่วน parameter = (3·3·1 + 1)·32 = 320 ตัวเลข 13 มาจากสูตร padding=&quot;valid&quot;, 288 คือลืม bias 32 ตัว, 28 คือลืม stride">(28, 28, 32) และ 320</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>Dense ใน encoder</span></div>
+<div class="qtext">หลัง Flatten ได้ vector ยาว 3136 แล้วต่อ <code>Dense(latent_dim)</code> โดย latent_dim = 2 layer นี้มี parameter กี่ตัว</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. 3136·2 + 2 = 6,274 ค่า 6,272 คือลืม bias, 3,138 คือ 3136 + 2 (บวกแทนคูณ), 9,408 คือ Dense(3136) ฝั่ง decoder ที่รับ input 2 ค่า (2·3136 + 3136)">6,274</button>
+<button class="opt" data-correct="false" data-note="ผิด. 3136·2 + 2 = 6,274 ค่า 6,272 คือลืม bias, 3,138 คือ 3136 + 2 (บวกแทนคูณ), 9,408 คือ Dense(3136) ฝั่ง decoder ที่รับ input 2 ค่า (2·3136 + 3136)">6,272</button>
+<button class="opt" data-correct="false" data-note="ผิด. 3136·2 + 2 = 6,274 ค่า 6,272 คือลืม bias, 3,138 คือ 3136 + 2 (บวกแทนคูณ), 9,408 คือ Dense(3136) ฝั่ง decoder ที่รับ input 2 ค่า (2·3136 + 3136)">3,138</button>
+<button class="opt" data-correct="false" data-note="ผิด. 3136·2 + 2 = 6,274 ค่า 6,272 คือลืม bias, 3,138 คือ 3136 + 2 (บวกแทนคูณ), 9,408 คือ Dense(3136) ฝั่ง decoder ที่รับ input 2 ค่า (2·3136 + 3136)">9,408</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>Conv2DTranspose</span></div>
+<div class="qtext"><code>Conv2DTranspose(64, 3, strides=2, padding="same")</code> รับ input (7, 7, 64) output shape และ parameter คือข้อใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. padding=&quot;same&quot; ทำให้ขนาดใหม่ = 7 × 2 = 14 parameter คิดแบบ Conv2D = (3·3·64 + 1)·64 = 36,928 ค่า 36,864 ลืม bias, 15 มาจากสูตร (7 − 1)·2 + 3 ของ padding=&quot;valid&quot;, (7, 7) คือลืมว่า stride 2 ขยายขนาด">(14, 14, 64) และ 36,864</button>
+<button class="opt" data-correct="false" data-note="ผิด. padding=&quot;same&quot; ทำให้ขนาดใหม่ = 7 × 2 = 14 parameter คิดแบบ Conv2D = (3·3·64 + 1)·64 = 36,928 ค่า 36,864 ลืม bias, 15 มาจากสูตร (7 − 1)·2 + 3 ของ padding=&quot;valid&quot;, (7, 7) คือลืมว่า stride 2 ขยายขนาด">(15, 15, 64) และ 36,928</button>
+<button class="opt" data-correct="false" data-note="ผิด. padding=&quot;same&quot; ทำให้ขนาดใหม่ = 7 × 2 = 14 parameter คิดแบบ Conv2D = (3·3·64 + 1)·64 = 36,928 ค่า 36,864 ลืม bias, 15 มาจากสูตร (7 − 1)·2 + 3 ของ padding=&quot;valid&quot;, (7, 7) คือลืมว่า stride 2 ขยายขนาด">(7, 7, 64) และ 36,928</button>
+<button class="opt" data-correct="true" data-note="ถูก. padding=&quot;same&quot; ทำให้ขนาดใหม่ = 7 × 2 = 14 parameter คิดแบบ Conv2D = (3·3·64 + 1)·64 = 36,928 ค่า 36,864 ลืม bias, 15 มาจากสูตร (7 − 1)·2 + 3 ของ padding=&quot;valid&quot;, (7, 7) คือลืมว่า stride 2 ขยายขนาด">(14, 14, 64) และ 36,928</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>ปัญหาของ autoencoder</span></div>
+<div class="qtext">ทำไม autoencoder ธรรมดาที่ reconstruct รูปได้ดีจึงยังไม่เหมาะจะใช้สร้างรูปใหม่ด้วยการสุ่มจุดใน latent space</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. loss ของ autoencoder สนใจแค่ reconstruct จึงไม่มีอะไรบังคับพื้นที่ระหว่างจุด เกิดช่องว่าง กระจายไม่สมมาตร และไม่มีขอบเขต autoencoder ไม่ใช้ label (self-supervised), คอขวดต้องเล็กกว่า input, และ KL เป็นของ VAE ไม่ใช่ autoencoder">decoder ต้องใช้ label ของรูปจึงจะสร้างรูปออกมาได้</button>
+<button class="opt" data-correct="true" data-note="ถูก. loss ของ autoencoder สนใจแค่ reconstruct จึงไม่มีอะไรบังคับพื้นที่ระหว่างจุด เกิดช่องว่าง กระจายไม่สมมาตร และไม่มีขอบเขต autoencoder ไม่ใช้ label (self-supervised), คอขวดต้องเล็กกว่า input, และ KL เป็นของ VAE ไม่ใช่ autoencoder">latent space ไม่ถูกบังคับให้ต่อเนื่องและไม่มีการแจกแจงที่นิยามไว้</button>
+<button class="opt" data-correct="false" data-note="ผิด. loss ของ autoencoder สนใจแค่ reconstruct จึงไม่มีอะไรบังคับพื้นที่ระหว่างจุด เกิดช่องว่าง กระจายไม่สมมาตร และไม่มีขอบเขต autoencoder ไม่ใช้ label (self-supervised), คอขวดต้องเล็กกว่า input, และ KL เป็นของ VAE ไม่ใช่ autoencoder">encoder ย่อรูปไม่ได้ถ้าไม่มี Dense ที่ใหญ่กว่า input</button>
+<button class="opt" data-correct="false" data-note="ผิด. loss ของ autoencoder สนใจแค่ reconstruct จึงไม่มีอะไรบังคับพื้นที่ระหว่างจุด เกิดช่องว่าง กระจายไม่สมมาตร และไม่มีขอบเขต autoencoder ไม่ใช้ label (self-supervised), คอขวดต้องเล็กกว่า input, และ KL เป็นของ VAE ไม่ใช่ autoencoder">loss ของ autoencoder ใช้ KL divergence ซึ่งทำให้รูปเบลอ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>Sampling z</span></div>
+<div class="qtext">Encoder ของ VAE ให้ค่าสำหรับมิติหนึ่งของ latent คือ z_mean = 1.0 และ z_log_var = 0 ถ้าสุ่มได้ ε = −0.5 ค่า z ที่ Sampling layer คืนออกมาคือเท่าใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. σ = exp(0.5 · 0) = 1 แล้ว z = μ + σε = 1.0 + 1 × (−0.5) = 0.5 ค่า 1.5 คือบวก ε ผิดเครื่องหมาย, −0.5 คือลืม μ, 1.0 คือคิดว่า log var = 0 แปลว่า σ = 0">1.5</button>
+<button class="opt" data-correct="false" data-note="ผิด. σ = exp(0.5 · 0) = 1 แล้ว z = μ + σε = 1.0 + 1 × (−0.5) = 0.5 ค่า 1.5 คือบวก ε ผิดเครื่องหมาย, −0.5 คือลืม μ, 1.0 คือคิดว่า log var = 0 แปลว่า σ = 0">−0.5</button>
+<button class="opt" data-correct="true" data-note="ถูก. σ = exp(0.5 · 0) = 1 แล้ว z = μ + σε = 1.0 + 1 × (−0.5) = 0.5 ค่า 1.5 คือบวก ε ผิดเครื่องหมาย, −0.5 คือลืม μ, 1.0 คือคิดว่า log var = 0 แปลว่า σ = 0">0.5</button>
+<button class="opt" data-correct="false" data-note="ผิด. σ = exp(0.5 · 0) = 1 แล้ว z = μ + σε = 1.0 + 1 × (−0.5) = 0.5 ค่า 1.5 คือบวก ε ผิดเครื่องหมาย, −0.5 คือลืม μ, 1.0 คือคิดว่า log var = 0 แปลว่า σ = 0">1.0</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>log variance</span></div>
+<div class="qtext">เหตุผลที่ encoder ของ VAE ส่งออก log σ² แทน σ² คือข้อใด</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. σ² ต้องเป็นบวก แต่ Dense ที่ไม่มี activation ให้ค่าติดลบได้ ถ้าให้ส่งออก log σ² แล้วใช้ exp แปลงกลับ σ จะเป็นบวกเสมอ จำนวน parameter ไม่เปลี่ยน (z_log_var ยังเป็น Dense(2)), KL ไม่เป็นศูนย์เอง, และ z ติดลบได้ตามปกติ">log σ² มีช่วง (−∞, ∞) ตรงกับ output ของ neuron ทั่วไป</button>
+<button class="opt" data-correct="false" data-note="ผิด. σ² ต้องเป็นบวก แต่ Dense ที่ไม่มี activation ให้ค่าติดลบได้ ถ้าให้ส่งออก log σ² แล้วใช้ exp แปลงกลับ σ จะเป็นบวกเสมอ จำนวน parameter ไม่เปลี่ยน (z_log_var ยังเป็น Dense(2)), KL ไม่เป็นศูนย์เอง, และ z ติดลบได้ตามปกติ">log σ² ทำให้ KL divergence เป็นศูนย์ตั้งแต่เริ่ม train</button>
+<button class="opt" data-correct="false" data-note="ผิด. σ² ต้องเป็นบวก แต่ Dense ที่ไม่มี activation ให้ค่าติดลบได้ ถ้าให้ส่งออก log σ² แล้วใช้ exp แปลงกลับ σ จะเป็นบวกเสมอ จำนวน parameter ไม่เปลี่ยน (z_log_var ยังเป็น Dense(2)), KL ไม่เป็นศูนย์เอง, และ z ติดลบได้ตามปกติ">log σ² ลดจำนวน parameter ของ encoder ลงครึ่งหนึ่ง</button>
+<button class="opt" data-correct="false" data-note="ผิด. σ² ต้องเป็นบวก แต่ Dense ที่ไม่มี activation ให้ค่าติดลบได้ ถ้าให้ส่งออก log σ² แล้วใช้ exp แปลงกลับ σ จะเป็นบวกเสมอ จำนวน parameter ไม่เปลี่ยน (z_log_var ยังเป็น Dense(2)), KL ไม่เป็นศูนย์เอง, และ z ติดลบได้ตามปกติ">log σ² บังคับให้ค่า z ที่สุ่มได้เป็นบวกเสมอ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>KL ต่อมิติ</span></div>
+<div class="qtext">latent loss ต่อมิติคือ ½(σ² + μ² − 1 − log σ²) ถ้ามิติหนึ่งมี μ = 2 และ σ = 1 latent loss ของมิตินี้เท่ากับเท่าใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ½(1 + 4 − 1 − log 1) = ½(4) = 2.0 ค่า 4.0 คือลืมคูณ ½, 1.0 คือใช้ μ แทน μ², 2.5 คือลืมลบ 1">4.0</button>
+<button class="opt" data-correct="false" data-note="ผิด. ½(1 + 4 − 1 − log 1) = ½(4) = 2.0 ค่า 4.0 คือลืมคูณ ½, 1.0 คือใช้ μ แทน μ², 2.5 คือลืมลบ 1">1.0</button>
+<button class="opt" data-correct="false" data-note="ผิด. ½(1 + 4 − 1 − log 1) = ½(4) = 2.0 ค่า 4.0 คือลืมคูณ ½, 1.0 คือใช้ μ แทน μ², 2.5 คือลืมลบ 1">2.5</button>
+<button class="opt" data-correct="true" data-note="ถูก. ½(1 + 4 − 1 − log 1) = ½(4) = 2.0 ค่า 4.0 คือลืมคูณ ½, 1.0 คือใช้ μ แทน μ², 2.5 คือลืมลบ 1">2.0</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>KL ดันไปทางไหน</span></div>
+<div class="qtext">ถ้าให้น้ำหนัก KL divergence มากและ reconstruction น้อย (β-VAE ที่ β ใหญ่) ผลที่คาดได้คือข้อใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. KL ดัน μ → 0 และ σ → 1 น้ำหนัก KL มากเกินจึงได้ latent เรียบร้อยแต่ reconstruct แย่ (ตัวเลขเบลอและซ้ำแบบ) การมีช่องว่างเป็นอาการของน้ำหนัก reconstruction มากเกิน, KL ต่ำสุดที่ σ = 1 ไม่ใช่ 0, และ β คูณ KL ไม่ได้ยุ่งกับ learning rate">latent มีช่องว่างแบบ autoencoder ธรรมดา แต่รูปคมขึ้น</button>
+<button class="opt" data-correct="true" data-note="ถูก. KL ดัน μ → 0 และ σ → 1 น้ำหนัก KL มากเกินจึงได้ latent เรียบร้อยแต่ reconstruct แย่ (ตัวเลขเบลอและซ้ำแบบ) การมีช่องว่างเป็นอาการของน้ำหนัก reconstruction มากเกิน, KL ต่ำสุดที่ σ = 1 ไม่ใช่ 0, และ β คูณ KL ไม่ได้ยุ่งกับ learning rate">latent ใกล้ N(0, 1) มาก แต่รูปที่ reconstruct ได้คุณภาพแย่ลง</button>
+<button class="opt" data-correct="false" data-note="ผิด. KL ดัน μ → 0 และ σ → 1 น้ำหนัก KL มากเกินจึงได้ latent เรียบร้อยแต่ reconstruct แย่ (ตัวเลขเบลอและซ้ำแบบ) การมีช่องว่างเป็นอาการของน้ำหนัก reconstruction มากเกิน, KL ต่ำสุดที่ σ = 1 ไม่ใช่ 0, และ β คูณ KL ไม่ได้ยุ่งกับ learning rate">σ ของทุกมิติถูกดันเข้าหา 0 จน latent เป็นจุด</button>
+<button class="opt" data-correct="false" data-note="ผิด. KL ดัน μ → 0 และ σ → 1 น้ำหนัก KL มากเกินจึงได้ latent เรียบร้อยแต่ reconstruct แย่ (ตัวเลขเบลอและซ้ำแบบ) การมีช่องว่างเป็นอาการของน้ำหนัก reconstruction มากเกิน, KL ต่ำสุดที่ σ = 1 ไม่ใช่ 0, และ β คูณ KL ไม่ได้ยุ่งกับ learning rate">การ train ไม่เปลี่ยนเพราะ β ปรับแค่ learning rate</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>Discriminator param</span></div>
+<div class="qtext">Discriminator รับ tensor (16, 16, 64) เข้า <code>Conv2D(128, kernel_size=4, strides=2, padding="same")</code> layer นี้มี parameter กี่ตัว</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. (4·4·64 + 1)·128 = 1025·128 = 131,200 ค่า 131,072 ลืม bias, 8,320 คือ (64 + 1)·128 ลืม kernel 4×4, 73,856 คือใช้ kernel 3×3 ((3·3·64 + 1)·128)">131,072</button>
+<button class="opt" data-correct="false" data-note="ผิด. (4·4·64 + 1)·128 = 1025·128 = 131,200 ค่า 131,072 ลืม bias, 8,320 คือ (64 + 1)·128 ลืม kernel 4×4, 73,856 คือใช้ kernel 3×3 ((3·3·64 + 1)·128)">8,320</button>
+<button class="opt" data-correct="true" data-note="ถูก. (4·4·64 + 1)·128 = 1025·128 = 131,200 ค่า 131,072 ลืม bias, 8,320 คือ (64 + 1)·128 ลืม kernel 4×4, 73,856 คือใช้ kernel 3×3 ((3·3·64 + 1)·128)">131,200</button>
+<button class="opt" data-correct="false" data-note="ผิด. (4·4·64 + 1)·128 = 1025·128 = 131,200 ค่า 131,072 ลืม bias, 8,320 คือ (64 + 1)·128 ลืม kernel 4×4, 73,856 คือใช้ kernel 3×3 ((3·3·64 + 1)·128)">73,856</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>ฝึก generator</span></div>
+<div class="qtext">ข้อใดอธิบายการฝึก generator ของ GAN ถูกต้อง</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. G ต้องการให้ D เชื่อว่ารูปปลอมเป็นของจริง จึงใช้ label &quot;จริง&quot; และ freeze D ไม่ให้ D เรียนรู้คำโกหกนี้ label &quot;ปลอม&quot; จะสอน G ให้ปลอมให้ดูปลอม, G ไม่เคยเห็นรูปจริงโดยตรง, และถ้าปรับ D ด้วย D จะเรียนผิดว่ารูปปลอมเป็นของจริง">ส่งรูปปลอมผ่าน D ที่ freeze ใช้ label "ปลอม" ทั้งหมด แล้วปรับเฉพาะ weight ของ G</button>
+<button class="opt" data-correct="false" data-note="ผิด. G ต้องการให้ D เชื่อว่ารูปปลอมเป็นของจริง จึงใช้ label &quot;จริง&quot; และ freeze D ไม่ให้ D เรียนรู้คำโกหกนี้ label &quot;ปลอม&quot; จะสอน G ให้ปลอมให้ดูปลอม, G ไม่เคยเห็นรูปจริงโดยตรง, และถ้าปรับ D ด้วย D จะเรียนผิดว่ารูปปลอมเป็นของจริง">ให้ G ดูรูปจริงจาก training set แล้วลด MSE ระหว่างรูปปลอมกับรูปจริง</button>
+<button class="opt" data-correct="false" data-note="ผิด. G ต้องการให้ D เชื่อว่ารูปปลอมเป็นของจริง จึงใช้ label &quot;จริง&quot; และ freeze D ไม่ให้ D เรียนรู้คำโกหกนี้ label &quot;ปลอม&quot; จะสอน G ให้ปลอมให้ดูปลอม, G ไม่เคยเห็นรูปจริงโดยตรง, และถ้าปรับ D ด้วย D จะเรียนผิดว่ารูปปลอมเป็นของจริง">ปรับ weight ของ G และ D พร้อมกันด้วย label "จริง" สำหรับรูปปลอม</button>
+<button class="opt" data-correct="true" data-note="ถูก. G ต้องการให้ D เชื่อว่ารูปปลอมเป็นของจริง จึงใช้ label &quot;จริง&quot; และ freeze D ไม่ให้ D เรียนรู้คำโกหกนี้ label &quot;ปลอม&quot; จะสอน G ให้ปลอมให้ดูปลอม, G ไม่เคยเห็นรูปจริงโดยตรง, และถ้าปรับ D ด้วย D จะเรียนผิดว่ารูปปลอมเป็นของจริง">ส่งรูปปลอมผ่าน D ที่ freeze ใช้ label "จริง" ทั้งหมด แล้วปรับเฉพาะ weight ของ G</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>label ในโค้ด GAN</span></div>
+<div class="qtext">ในโค้ด GAN ของคาบ รูปที่สร้างได้ label = ones และรูปจริงได้ label = zeros ขั้นฝึก generator ใช้ <code>misleading_labels = ops.zeros((batch_size, 1))</code> เพราะอะไร</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. dataset ดาราโหลดด้วย flow from directory และติด label 0 ให้รูปจริง label ที่บอกว่า &quot;จริง&quot; ในโค้ดนี้จึงเป็น 0 การ freeze D ทำผ่านการหา gradient เฉพาะ generator.trainable_weights ไม่ได้มาจาก loss เป็นศูนย์ และ BCE ใช้ label 0 หรือ 1 ก็ได้">ในโค้ดนี้ 0 หมายถึง "จริง" generator จึงต้องการให้ D ตอบ 0</button>
+<button class="opt" data-correct="false" data-note="ผิด. dataset ดาราโหลดด้วย flow from directory และติด label 0 ให้รูปจริง label ที่บอกว่า &quot;จริง&quot; ในโค้ดนี้จึงเป็น 0 การ freeze D ทำผ่านการหา gradient เฉพาะ generator.trainable_weights ไม่ได้มาจาก loss เป็นศูนย์ และ BCE ใช้ label 0 หรือ 1 ก็ได้">ในโค้ดนี้ 0 หมายถึง "ปลอม" generator จึงเรียนรู้จากความผิดของตัวเอง</button>
+<button class="opt" data-correct="false" data-note="ผิด. dataset ดาราโหลดด้วย flow from directory และติด label 0 ให้รูปจริง label ที่บอกว่า &quot;จริง&quot; ในโค้ดนี้จึงเป็น 0 การ freeze D ทำผ่านการหา gradient เฉพาะ generator.trainable_weights ไม่ได้มาจาก loss เป็นศูนย์ และ BCE ใช้ label 0 หรือ 1 ก็ได้">zeros ทำให้ loss ของ generator เป็นศูนย์ D จึงไม่ถูกอัปเดต</button>
+<button class="opt" data-correct="false" data-note="ผิด. dataset ดาราโหลดด้วย flow from directory และติด label 0 ให้รูปจริง label ที่บอกว่า &quot;จริง&quot; ในโค้ดนี้จึงเป็น 0 การ freeze D ทำผ่านการหา gradient เฉพาะ generator.trainable_weights ไม่ได้มาจาก loss เป็นศูนย์ และ BCE ใช้ label 0 หรือ 1 ก็ได้">zeros เป็นค่าเริ่มต้นที่ binary cross-entropy ต้องใช้กับ sigmoid</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>mode collapse</span></div>
+<div class="qtext">Generator สร้างรูปหน้าคนออกมาไม่กี่แบบที่เกือบเหมือนกันทุกครั้ง แต่ยังหลอก discriminator ได้ อาการนี้คืออะไรและเกิดจากอะไร</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. เมื่อ D อ่อนเกินไป G พบรูปไม่กี่แบบที่หลอกได้แล้วใช้แต่แบบนั้น ความหลากหลายจึงหายไป ถ้า D เก่งเกิน ผลคือสัญญาณ loss อ่อนจน G ไม่พัฒนา uninformative loss หมายถึง loss ต่างเวลาเทียบกันไม่ได้ ไม่ใช่รูปซ้ำ และ LeakyReLU ใช้เพื่อลด gradient ที่หาย">mode collapse เพราะ discriminator เก่งเกิน generator</button>
+<button class="opt" data-correct="true" data-note="ถูก. เมื่อ D อ่อนเกินไป G พบรูปไม่กี่แบบที่หลอกได้แล้วใช้แต่แบบนั้น ความหลากหลายจึงหายไป ถ้า D เก่งเกิน ผลคือสัญญาณ loss อ่อนจน G ไม่พัฒนา uninformative loss หมายถึง loss ต่างเวลาเทียบกันไม่ได้ ไม่ใช่รูปซ้ำ และ LeakyReLU ใช้เพื่อลด gradient ที่หาย">mode collapse เพราะ generator เก่งเกิน discriminator</button>
+<button class="opt" data-correct="false" data-note="ผิด. เมื่อ D อ่อนเกินไป G พบรูปไม่กี่แบบที่หลอกได้แล้วใช้แต่แบบนั้น ความหลากหลายจึงหายไป ถ้า D เก่งเกิน ผลคือสัญญาณ loss อ่อนจน G ไม่พัฒนา uninformative loss หมายถึง loss ต่างเวลาเทียบกันไม่ได้ ไม่ใช่รูปซ้ำ และ LeakyReLU ใช้เพื่อลด gradient ที่หาย">uninformative loss เพราะ loss ของ G ลดลงเรื่อยๆ</button>
+<button class="opt" data-correct="false" data-note="ผิด. เมื่อ D อ่อนเกินไป G พบรูปไม่กี่แบบที่หลอกได้แล้วใช้แต่แบบนั้น ความหลากหลายจึงหายไป ถ้า D เก่งเกิน ผลคือสัญญาณ loss อ่อนจน G ไม่พัฒนา uninformative loss หมายถึง loss ต่างเวลาเทียบกันไม่ได้ ไม่ใช่รูปซ้ำ และ LeakyReLU ใช้เพื่อลด gradient ที่หาย">vanishing gradient เพราะ D ใช้ LeakyReLU</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>วัดผล GAN</span></div>
+<div class="qtext">ข้อใดถูกต้องเรื่องการวัดคุณภาพรูปจาก GAN</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. FID เป็นระยะห่างจากรูปจริง จึงยิ่งต่ำยิ่งดี ส่วน inception score ยิ่งสูงยิ่งดี loss ของ G วัดเทียบกับ D ที่เปลี่ยนตลอด จึงบอกความก้าวหน้าไม่ได้ และ D ที่แม่น 100% แปลว่า G ยังหลอกไม่ได้เลย">FID ยิ่งสูงยิ่งดี และ inception score ยิ่งต่ำยิ่งดี</button>
+<button class="opt" data-correct="false" data-note="ผิด. FID เป็นระยะห่างจากรูปจริง จึงยิ่งต่ำยิ่งดี ส่วน inception score ยิ่งสูงยิ่งดี loss ของ G วัดเทียบกับ D ที่เปลี่ยนตลอด จึงบอกความก้าวหน้าไม่ได้ และ D ที่แม่น 100% แปลว่า G ยังหลอกไม่ได้เลย">loss ของ generator ที่ลดลงต่อเนื่องบอกว่ารูปดีขึ้น</button>
+<button class="opt" data-correct="true" data-note="ถูก. FID เป็นระยะห่างจากรูปจริง จึงยิ่งต่ำยิ่งดี ส่วน inception score ยิ่งสูงยิ่งดี loss ของ G วัดเทียบกับ D ที่เปลี่ยนตลอด จึงบอกความก้าวหน้าไม่ได้ และ D ที่แม่น 100% แปลว่า G ยังหลอกไม่ได้เลย">FID ยิ่งต่ำยิ่งดี และ inception score ยิ่งสูงยิ่งดี</button>
+<button class="opt" data-correct="false" data-note="ผิด. FID เป็นระยะห่างจากรูปจริง จึงยิ่งต่ำยิ่งดี ส่วน inception score ยิ่งสูงยิ่งดี loss ของ G วัดเทียบกับ D ที่เปลี่ยนตลอด จึงบอกความก้าวหน้าไม่ได้ และ D ที่แม่น 100% แปลว่า G ยังหลอกไม่ได้เลย">discriminator ที่แม่นยำ 100% บอกว่า generator ดีแล้ว</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>VAE เทียบ GAN</span></div>
+<div class="qtext">งานที่ต้องเปลี่ยนหน้าบึ้งให้ยิ้มทีละน้อยแบบต่อเนื่องในหลายเฟรม ควรเลือกโมเดลใดและเพราะอะไร</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. VAE ให้ latent ที่ต่อเนื่องเพราะ KL ดันทุกก้อนให้ซ้อนกันรอบ N(0, 1) จึงเหมาะกับการ morph และ image editing GAN ให้รูปเดี่ยวคมกว่าแต่ latent อาจไม่ต่อเนื่อง autoencoder มีช่องว่างใน latent และ D ไม่ได้ดูความต่อเนื่องระหว่างเฟรม">GAN เพราะ latent ต่อเนื่องกว่า VAE และรูปแต่ละเฟรมคมกว่า</button>
+<button class="opt" data-correct="false" data-note="ผิด. VAE ให้ latent ที่ต่อเนื่องเพราะ KL ดันทุกก้อนให้ซ้อนกันรอบ N(0, 1) จึงเหมาะกับการ morph และ image editing GAN ให้รูปเดี่ยวคมกว่าแต่ latent อาจไม่ต่อเนื่อง autoencoder มีช่องว่างใน latent และ D ไม่ได้ดูความต่อเนื่องระหว่างเฟรม">Autoencoder เพราะ reconstruct ได้คมที่สุดและ latent ไม่มีช่องว่าง</button>
+<button class="opt" data-correct="false" data-note="ผิด. VAE ให้ latent ที่ต่อเนื่องเพราะ KL ดันทุกก้อนให้ซ้อนกันรอบ N(0, 1) จึงเหมาะกับการ morph และ image editing GAN ให้รูปเดี่ยวคมกว่าแต่ latent อาจไม่ต่อเนื่อง autoencoder มีช่องว่างใน latent และ D ไม่ได้ดูความต่อเนื่องระหว่างเฟรม">GAN เพราะ discriminator ช่วยรักษาความต่อเนื่องระหว่างเฟรม</button>
+<button class="opt" data-correct="true" data-note="ถูก. VAE ให้ latent ที่ต่อเนื่องเพราะ KL ดันทุกก้อนให้ซ้อนกันรอบ N(0, 1) จึงเหมาะกับการ morph และ image editing GAN ให้รูปเดี่ยวคมกว่าแต่ latent อาจไม่ต่อเนื่อง autoencoder มีช่องว่างใน latent และ D ไม่ได้ดูความต่อเนื่องระหว่างเฟรม">VAE เพราะ latent มีโครงสร้างและต่อเนื่อง เลื่อนจุดทีละน้อยรูปก็เปลี่ยนทีละน้อย</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>Generator Dense</span></div>
+<div class="qtext">Generator รับ latent vector ขนาด 128 แล้วต่อ <code>Dense(8 * 8 * 128)</code> ก่อน Reshape เป็น (8, 8, 128) Dense นี้มี parameter กี่ตัว</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. 128·8192 + 8192 = 1,048,576 + 8,192 = 1,056,768 ค่า 1,048,576 ลืม bias, 1,048,704 บวก bias 128 แทน 8192 (bias มีเท่าจำนวน unit ไม่ใช่เท่า input), 16,512 คือ Dense(128) ธรรมดา (128·128 + 128)">1,056,768</button>
+<button class="opt" data-correct="false" data-note="ผิด. 128·8192 + 8192 = 1,048,576 + 8,192 = 1,056,768 ค่า 1,048,576 ลืม bias, 1,048,704 บวก bias 128 แทน 8192 (bias มีเท่าจำนวน unit ไม่ใช่เท่า input), 16,512 คือ Dense(128) ธรรมดา (128·128 + 128)">1,048,576</button>
+<button class="opt" data-correct="false" data-note="ผิด. 128·8192 + 8192 = 1,048,576 + 8,192 = 1,056,768 ค่า 1,048,576 ลืม bias, 1,048,704 บวก bias 128 แทน 8192 (bias มีเท่าจำนวน unit ไม่ใช่เท่า input), 16,512 คือ Dense(128) ธรรมดา (128·128 + 128)">1,048,704</button>
+<button class="opt" data-correct="false" data-note="ผิด. 128·8192 + 8192 = 1,048,576 + 8,192 = 1,056,768 ค่า 1,048,576 ลืม bias, 1,048,704 บวก bias 128 แทน 8192 (bias มีเท่าจำนวน unit ไม่ใช่เท่า input), 16,512 คือ Dense(128) ธรรมดา (128·128 + 128)">16,512</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 16</span><span>reparameterization</span></div>
+<div class="qtext">อธิบายว่าทำไม VAE ต้องเขียนการสุ่มเป็น z = μ + σε แทนที่จะสุ่ม z จาก N(μ, σ²) ตรงๆ และ ε มาจากไหน</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>การสุ่มเป็นขั้นที่หา gradient ไม่ได้ ถ้าสุ่ม z ตรงๆ backpropagation จะส่ง gradient ผ่านจุดนั้นกลับไปหา μ และ σ ไม่ได้</p>
+<p>เขียนใหม่ให้ความสุ่มอยู่ที่ ε ~ N(0, 1) ซึ่งมาจากนอกโมเดล ส่วน μ และ σ เป็นการคูณและบวกธรรมดาที่หาอนุพันธ์ได้ จึงปรับ weight ของ encoder ได้</p>
+<p>ในโค้ด ε มาจาก keras.random.normal(shape=(batch, dim)) และ σ ได้จาก exp(0.5 · z_log_var)</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 17</span><span>6 ขั้นของ GAN</span></div>
+<div class="qtext">เขียนขั้นตอนการฝึก GAN หนึ่งรอบให้ครบ และระบุว่าขั้นไหนฝึก D ขั้นไหนฝึก G</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>1 สุ่ม noise 2 generator สร้างรูป 3 ผสมกับรูปจริง 4 ฝึก D ด้วย label จริงและปลอม (ขั้น 1–4 ฝึก D)</p>
+<p>5 สุ่ม noise ชุดใหม่ 6 ฝึก G ผ่าน D ที่ freeze โดย label ทั้งหมดบอกว่าเป็นรูปจริง (ขั้น 5–6 ฝึก G)</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 18</span><span>shape decoder</span></div>
+<div class="qtext">decoder ของ autoencoder: Input(2) → Dense(7*7*64) → Reshape((7,7,64)) → Conv2DTranspose(64,3,strides=2,"same") → Conv2DTranspose(32,3,strides=2,"same") → Conv2D(1,3,"same") เขียน output shape และ parameter ทุก layer พร้อมผลรวม</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>Dense: (3136), 2·3136 + 3136 = 9,408 · Reshape: (7, 7, 64), 0</p>
+<p>Conv2DTranspose 64: (14, 14, 64), (3·3·64 + 1)·64 = 36,928</p>
+<p>Conv2DTranspose 32: (28, 28, 32), (3·3·64 + 1)·32 = 18,464</p>
+<p>Conv2D 1: (28, 28, 1), (3·3·32 + 1)·1 = 289 · รวม 65,089</p>
+</div>
+</div>
+
+</body>
+</html>

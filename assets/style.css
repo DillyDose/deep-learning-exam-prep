@@ -359,3 +359,79 @@ mark.src { background: #fff1a8; color: inherit; padding: 0 0.12em; border-radius
 .box.prereq { border-left: 4px solid #7a5cc7; background: #fff; }
 .box.prereq .label { color: #7a5cc7; }
 table.codeexp td:first-child { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.85em; white-space: pre-wrap; }
+
+
+/* ===== ported from time-series workspace 2026-11-21: reader layout + study cards ===== */
+
+/* Keep math case intact inside uppercase titles (γ must not become Γ) */
+.calc > .calc-title .katex, .box .label .katex, .kicker .katex { text-transform: none; }
+.calc > .calc-title { text-transform: none; letter-spacing: 0.02em; font-size: 0.8rem; }
+
+/* Keep math case intact inside uppercase table headers (w_t must not become W_T) */
+th .katex { text-transform: none; letter-spacing: 0; }
+
+/* footnotes: clip citations collected at the end of a lesson */
+sup.fn { font-size: 0.7em; line-height: 0; margin-left: 1px; }
+sup.fn a { text-decoration: none; color: #8a5a00; }
+ol.fnlist { font-size: 0.9em; color: #444; }
+ol.fnlist li { margin: 0.25em 0; }
+ol.fnlist li:target { background: #fff6d6; }
+a.fnback { font-size: 0.85em; margin-left: 4px; }
+
+/* ===== reader layout (lessons rewritten 2026-11-15): continuous prose, small slides, folded extras ===== */
+body.reader { line-height: 1.8; }
+body.reader p { margin: 1em 0; }
+body.reader h2 { margin-top: 2.6em; }
+.readmeta { font-size: 0.85rem; color: var(--ink-soft); margin: -0.4em 0 1.6em; }
+figure.thumb { max-width: 360px; margin: 1.2em auto; }
+figure.thumb img { cursor: zoom-in; }
+figure.thumb figcaption, .gallery figcaption { font-size: 0.78rem; }
+details.fold { border: 1px solid var(--rule); border-radius: 8px; margin: 1.4em 0; padding: 0 1em; }
+details.fold > summary { cursor: pointer; padding: 0.6em 0; font-size: 0.9rem; color: var(--ink-soft); list-style-position: outside; }
+details.fold[open] > summary { border-bottom: 1px dashed var(--rule); margin-bottom: 0.6em; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 0.4em 0 1em; }
+.gallery figure { margin: 0; }
+.gallery img { cursor: zoom-in; }
+#readbar { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--accent); z-index: 50; }
+#zoom { position: fixed; inset: 0; background: rgba(255,255,255,0.97); display: none; align-items: center; justify-content: center; z-index: 60; cursor: zoom-out; padding: 2vh 2vw; }
+#zoom.on { display: flex; }
+#zoom img { max-width: 100%; max-height: 96vh; border: 1px solid var(--rule); border-radius: 6px; }
+.nextpage { border-top: 1px solid var(--rule); margin-top: 2.5em; padding-top: 1em; }
+@media print { #readbar, #zoom { display: none !important; } details.fold { border: none; } figure.thumb { max-width: 60%; } }
+
+/* ===== study cards (Lesson 5 pilot, 2026-11-18): one concept = picture -> equation -> numbers -> trap ===== */
+body.reader h3 { margin-top: 2.2em; font-size: 1.12rem; }
+.lead { font-size: 0.95em; border-left: 3px solid var(--accent); padding-left: 0.9em; }
+.lead b:first-child { color: var(--accent); }
+p.pic, p.num, p.trap, p.say { padding: 0.5em 0.9em; border-radius: 6px; }
+p.pic::before, p.num::before, p.trap::before, p.say::before {
+  display: block; font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.03em; margin-bottom: 0.1em;
+}
+p.pic { background: #f6f3ec; }
+p.pic::before { content: "ภาพในหัว"; color: var(--ink-soft); }
+p.num { background: var(--good-bg); }
+p.num::before { content: "ลองตัวเลข"; color: var(--good); }
+p.trap { background: var(--bad-bg); }
+p.trap::before { content: "⚠ กับดักข้อสอบ"; color: var(--bad); }
+.eq { margin: 1em 0 0; padding: 0.2em 0.9em; border: 1px solid var(--rule); border-radius: 6px 6px 0 0; background: #fff; }
+p.say { margin-top: 0; border: 1px solid var(--rule); border-top: 1px dashed var(--rule); border-radius: 0 0 6px 6px; }
+p.say::before { content: "อ่านเป็นภาษาคน"; color: var(--accent); }
+table.sym { font-size: 0.88em; margin: 0.6em 0 1em; }
+table.sym td:first-child { width: 22%; white-space: nowrap; }
+.k-w { color: #1d6fb8; font-weight: 600; }
+.k-p { color: #c25e00; font-weight: 600; }
+.legend { font-size: 0.85rem; color: var(--ink-soft); }
+details.check { border: 1px dashed var(--accent); border-radius: 6px; padding: 0 0.9em; margin: 1.2em 0; }
+details.check > summary { cursor: pointer; padding: 0.5em 0; font-size: 0.95em; }
+details.check > summary::before { content: "เช็คความเข้าใจ · "; font-weight: 700; color: var(--accent); }
+details.check[open] > summary { border-bottom: 1px dashed var(--rule); }
+table.map td, table.map th { vertical-align: top; }
+body.reader th { text-transform: none; letter-spacing: 0.02em; font-size: 0.85rem; }
+
+/* highlighted slide phrase shown in Thai; English original in title (hover / tap) */
+mark.src[title] { cursor: help; }
+/* explanatory illustrations (inline SVG files in assets/viz) */
+figure.viz { margin: 1.2em 0; }
+figure.viz img { border: none; border-radius: 0; }
+

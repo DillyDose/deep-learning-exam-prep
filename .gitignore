@@ -23,3 +23,7 @@ ex*.ipynb
 lecture11/
 lecture12/
 lesson-tools/
+
+# course source material split by exam period
+midterm/
+final/
