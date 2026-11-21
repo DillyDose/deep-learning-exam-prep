@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 14: Diffusion Models และ Stable Diffusion</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 14</span>
+  <span><a href="0014-diffusion-models-and-stable-diffusion.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 14: Diffusion Models และ Stable Diffusion</h1>
+<p>ข้อเลือกตอบ 15 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>forward หนึ่งขั้น</span></div>
+<div class="qtext">forward diffusion หนึ่งขั้น \(x_t=\sqrt{1-\beta}\,x_{t-1}+\sqrt{\beta}\,\varepsilon\) ถ้า β = 0.36, พิกเซลของ \(x_{t-1}\) = 1 และ ε = −0.5 ค่าพิกเซลของ \(x_t\) คือเท่าใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. √0.64 = 0.8 และ √0.36 = 0.6 จึงได้ 0.8(1) + 0.6(−0.5) = 0.5 ค่า 0.70 ลืมคูณรูปเดิมด้วย 0.8, 0.62 คูณ ε ด้วย β แทน √β (0.8 − 0.18), 0.34 คูณรูปเดิมด้วย 1 − β แทน √(1 − β) (0.64 − 0.3)">0.70</button>
+<button class="opt" data-correct="true" data-note="ถูก. √0.64 = 0.8 และ √0.36 = 0.6 จึงได้ 0.8(1) + 0.6(−0.5) = 0.5 ค่า 0.70 ลืมคูณรูปเดิมด้วย 0.8, 0.62 คูณ ε ด้วย β แทน √β (0.8 − 0.18), 0.34 คูณรูปเดิมด้วย 1 − β แทน √(1 − β) (0.64 − 0.3)">0.50</button>
+<button class="opt" data-correct="false" data-note="ผิด. √0.64 = 0.8 และ √0.36 = 0.6 จึงได้ 0.8(1) + 0.6(−0.5) = 0.5 ค่า 0.70 ลืมคูณรูปเดิมด้วย 0.8, 0.62 คูณ ε ด้วย β แทน √β (0.8 − 0.18), 0.34 คูณรูปเดิมด้วย 1 − β แทน √(1 − β) (0.64 − 0.3)">0.62</button>
+<button class="opt" data-correct="false" data-note="ผิด. √0.64 = 0.8 และ √0.36 = 0.6 จึงได้ 0.8(1) + 0.6(−0.5) = 0.5 ค่า 0.70 ลืมคูณรูปเดิมด้วย 0.8, 0.62 คูณ ε ด้วย β แทน √β (0.8 − 0.18), 0.34 คูณรูปเดิมด้วย 1 − β แทน √(1 − β) (0.64 − 0.3)">0.34</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>ทำไมคูณ √(1−β)</span></div>
+<div class="qtext">ทำไม forward diffusion ต้องคูณรูปขั้นก่อนด้วย \(\sqrt{1-\beta_t}\) ก่อนบวก noise</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Var(x_t) = a² · 1 + β ตั้งให้เท่ากับ 1 จึงได้ a = √(1 − β) ถ้าไม่คูณ variance จะเพิ่มเป็น 1 + β ทุกขั้น noise ใหม่มี variance β ไม่ใช่ 1 − β, forward process ไม่มี parameter ที่เรียน, และน้ำหนักของรูปเดิมลดลงตามเวลา ไม่ได้เพิ่ม">ให้ noise ที่เติมแต่ละขั้นมี variance เท่ากับ 1 − β</button>
+<button class="opt" data-correct="false" data-note="ผิด. Var(x_t) = a² · 1 + β ตั้งให้เท่ากับ 1 จึงได้ a = √(1 − β) ถ้าไม่คูณ variance จะเพิ่มเป็น 1 + β ทุกขั้น noise ใหม่มี variance β ไม่ใช่ 1 − β, forward process ไม่มี parameter ที่เรียน, และน้ำหนักของรูปเดิมลดลงตามเวลา ไม่ได้เพิ่ม">ให้ forward process มี parameter ที่เรียนรู้ได้</button>
+<button class="opt" data-correct="false" data-note="ผิด. Var(x_t) = a² · 1 + β ตั้งให้เท่ากับ 1 จึงได้ a = √(1 − β) ถ้าไม่คูณ variance จะเพิ่มเป็น 1 + β ทุกขั้น noise ใหม่มี variance β ไม่ใช่ 1 − β, forward process ไม่มี parameter ที่เรียน, และน้ำหนักของรูปเดิมลดลงตามเวลา ไม่ได้เพิ่ม">ให้รูปเดิมมีน้ำหนักเพิ่มขึ้นเรื่อยๆ ตามเวลา</button>
+<button class="opt" data-correct="true" data-note="ถูก. Var(x_t) = a² · 1 + β ตั้งให้เท่ากับ 1 จึงได้ a = √(1 − β) ถ้าไม่คูณ variance จะเพิ่มเป็น 1 + β ทุกขั้น noise ใหม่มี variance β ไม่ใช่ 1 − β, forward process ไม่มี parameter ที่เรียน, และน้ำหนักของรูปเดิมลดลงตามเวลา ไม่ได้เพิ่ม">ให้ variance ของ x_t คงที่ 1 เมื่อ x_{t−1} มี variance 1</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>variance สะสม</span></div>
+<div class="qtext">ถ้าเติม noise แบบ \(x_t=x_{t-1}+\sqrt{\beta}\,\varepsilon\) โดยไม่คูณรูปเดิม ใช้ β = 0.05 ทุกขั้น และ Var(x₀) = 1 หลัง 10 ขั้น variance ของ x_t เป็นเท่าใด</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. แต่ละขั้นบวก variance β = 0.05 สิบขั้นได้ 1 + 10 × 0.05 = 1.5 ค่า 1.0 คือกรณีที่คูณ √(1 − β) แล้ว, 1.05 คือคิดแค่ขั้นเดียว, 1.25 คือนับแค่ 5 ขั้น">1.5</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละขั้นบวก variance β = 0.05 สิบขั้นได้ 1 + 10 × 0.05 = 1.5 ค่า 1.0 คือกรณีที่คูณ √(1 − β) แล้ว, 1.05 คือคิดแค่ขั้นเดียว, 1.25 คือนับแค่ 5 ขั้น">1.0</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละขั้นบวก variance β = 0.05 สิบขั้นได้ 1 + 10 × 0.05 = 1.5 ค่า 1.0 คือกรณีที่คูณ √(1 − β) แล้ว, 1.05 คือคิดแค่ขั้นเดียว, 1.25 คือนับแค่ 5 ขั้น">1.05</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละขั้นบวก variance β = 0.05 สิบขั้นได้ 1 + 10 × 0.05 = 1.5 ค่า 1.0 คือกรณีที่คูณ √(1 − β) แล้ว, 1.05 คือคิดแค่ขั้นเดียว, 1.25 คือนับแค่ 5 ขั้น">1.25</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>ᾱ</span></div>
+<div class="qtext">ถ้า α₁ = 0.9, α₂ = 0.8 และ α₃ = 0.5 ค่า \(\bar\alpha_3\) เท่าใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ᾱ₃ = α₁α₂α₃ = 0.9 × 0.8 × 0.5 = 0.36 ค่า 0.50 คือ α₃ ตัวเดียว, 0.72 คือ ᾱ₂ ที่ยังไม่คูณ α₃, 0.64 คือ 1 − 0.36 ซึ่งเป็นสัดส่วนของ noise">0.50</button>
+<button class="opt" data-correct="false" data-note="ผิด. ᾱ₃ = α₁α₂α₃ = 0.9 × 0.8 × 0.5 = 0.36 ค่า 0.50 คือ α₃ ตัวเดียว, 0.72 คือ ᾱ₂ ที่ยังไม่คูณ α₃, 0.64 คือ 1 − 0.36 ซึ่งเป็นสัดส่วนของ noise">0.72</button>
+<button class="opt" data-correct="true" data-note="ถูก. ᾱ₃ = α₁α₂α₃ = 0.9 × 0.8 × 0.5 = 0.36 ค่า 0.50 คือ α₃ ตัวเดียว, 0.72 คือ ᾱ₂ ที่ยังไม่คูณ α₃, 0.64 คือ 1 − 0.36 ซึ่งเป็นสัดส่วนของ noise">0.36</button>
+<button class="opt" data-correct="false" data-note="ผิด. ᾱ₃ = α₁α₂α₃ = 0.9 × 0.8 × 0.5 = 0.36 ค่า 0.50 คือ α₃ ตัวเดียว, 0.72 คือ ᾱ₂ ที่ยังไม่คูณ α₃, 0.64 คือ 1 − 0.36 ซึ่งเป็นสัดส่วนของ noise">0.64</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>กระโดดถึง x_t</span></div>
+<div class="qtext">ใช้ \(x_t=\sqrt{\bar\alpha_t}\,x_0+\sqrt{1-\bar\alpha_t}\,\varepsilon\) ถ้า ᾱ_t = 0.64, พิกเซลของ x₀ = 2 และ ε = 1 ค่าพิกเซลของ x_t คือเท่าใด</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. √0.64 = 0.8 และ √0.36 = 0.6 จึงได้ 0.8(2) + 0.6(1) = 2.2 ค่า 1.64 ใช้ ᾱ และ 1 − ᾱ โดยไม่ถอดราก (1.28 + 0.36), 1.96 ถอดรากแค่ตัวแรก (1.6 + 0.36), 2.6 ไม่คูณ x₀ (2 + 0.6)">2.2</button>
+<button class="opt" data-correct="false" data-note="ผิด. √0.64 = 0.8 และ √0.36 = 0.6 จึงได้ 0.8(2) + 0.6(1) = 2.2 ค่า 1.64 ใช้ ᾱ และ 1 − ᾱ โดยไม่ถอดราก (1.28 + 0.36), 1.96 ถอดรากแค่ตัวแรก (1.6 + 0.36), 2.6 ไม่คูณ x₀ (2 + 0.6)">1.64</button>
+<button class="opt" data-correct="false" data-note="ผิด. √0.64 = 0.8 และ √0.36 = 0.6 จึงได้ 0.8(2) + 0.6(1) = 2.2 ค่า 1.64 ใช้ ᾱ และ 1 − ᾱ โดยไม่ถอดราก (1.28 + 0.36), 1.96 ถอดรากแค่ตัวแรก (1.6 + 0.36), 2.6 ไม่คูณ x₀ (2 + 0.6)">1.96</button>
+<button class="opt" data-correct="false" data-note="ผิด. √0.64 = 0.8 และ √0.36 = 0.6 จึงได้ 0.8(2) + 0.6(1) = 2.2 ค่า 1.64 ใช้ ᾱ และ 1 − ᾱ โดยไม่ถอดราก (1.28 + 0.36), 1.96 ถอดรากแค่ตัวแรก (1.6 + 0.36), 2.6 ไม่คูณ x₀ (2 + 0.6)">2.6</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>schedule</span></div>
+<div class="qtext">ทำไม cosine schedule จึงทำได้ดีกว่า linear schedule</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. linear schedule ที่ T = 1000 มี ᾱ ≈ 0.08 ที่ t = 0.5 และแทบเป็นศูนย์หลัง t ≈ 0.6 ขั้นที่เหลือไม่มีข้อมูลรูปให้เรียน cosine ลดช้ากว่า (ᾱ = 0.5 ที่ครึ่งทาง) ᾱ ไม่เคยเพิ่มตามเวลา, β ของ cosine ไม่คงที่, และ schedule ทุกแบบกำหนดล่วงหน้า ไม่ได้เรียนรู้">linear ทำให้ ᾱ เพิ่มขึ้นตามเวลา รูปจึงชัดเกินไปตอนท้าย</button>
+<button class="opt" data-correct="true" data-note="ถูก. linear schedule ที่ T = 1000 มี ᾱ ≈ 0.08 ที่ t = 0.5 และแทบเป็นศูนย์หลัง t ≈ 0.6 ขั้นที่เหลือไม่มีข้อมูลรูปให้เรียน cosine ลดช้ากว่า (ᾱ = 0.5 ที่ครึ่งทาง) ᾱ ไม่เคยเพิ่มตามเวลา, β ของ cosine ไม่คงที่, และ schedule ทุกแบบกำหนดล่วงหน้า ไม่ได้เรียนรู้">linear ทำให้ ᾱ ตกเกือบศูนย์ก่อนครึ่งหลัง ขั้นท้ายจึงเป็น noise ล้วน</button>
+<button class="opt" data-correct="false" data-note="ผิด. linear schedule ที่ T = 1000 มี ᾱ ≈ 0.08 ที่ t = 0.5 และแทบเป็นศูนย์หลัง t ≈ 0.6 ขั้นที่เหลือไม่มีข้อมูลรูปให้เรียน cosine ลดช้ากว่า (ᾱ = 0.5 ที่ครึ่งทาง) ᾱ ไม่เคยเพิ่มตามเวลา, β ของ cosine ไม่คงที่, และ schedule ทุกแบบกำหนดล่วงหน้า ไม่ได้เรียนรู้">cosine ใช้ β คงที่ทุกขั้น จึงคำนวณ ᾱ ได้ง่ายกว่า</button>
+<button class="opt" data-correct="false" data-note="ผิด. linear schedule ที่ T = 1000 มี ᾱ ≈ 0.08 ที่ t = 0.5 และแทบเป็นศูนย์หลัง t ≈ 0.6 ขั้นที่เหลือไม่มีข้อมูลรูปให้เรียน cosine ลดช้ากว่า (ᾱ = 0.5 ที่ครึ่งทาง) ᾱ ไม่เคยเพิ่มตามเวลา, β ของ cosine ไม่คงที่, และ schedule ทุกแบบกำหนดล่วงหน้า ไม่ได้เรียนรู้">cosine ทำให้ forward process เรียนรู้ β ได้เองจากข้อมูล</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>network ทายอะไร</span></div>
+<div class="qtext">ระหว่าง train diffusion model ตัว U-Net รับ input อะไรและทายอะไร</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. U-Net ถูกฝึกให้ทาย noise ε ที่ใช้สร้าง x_t โดยรับทั้งรูปที่มี noise และเวลา (noise variance) loss เทียบ noise ที่ทายกับ noise จริง รูปสะอาดคำนวณย้อนจาก noise ที่ทาย, x_{t+1} คือการเติม noise ซึ่งเป็นสูตร ไม่ต้องทาย, และ β มาจาก schedule">รับ x_t กับ t แล้วทายรูปสะอาด x₀ โดยตรง</button>
+<button class="opt" data-correct="false" data-note="ผิด. U-Net ถูกฝึกให้ทาย noise ε ที่ใช้สร้าง x_t โดยรับทั้งรูปที่มี noise และเวลา (noise variance) loss เทียบ noise ที่ทายกับ noise จริง รูปสะอาดคำนวณย้อนจาก noise ที่ทาย, x_{t+1} คือการเติม noise ซึ่งเป็นสูตร ไม่ต้องทาย, และ β มาจาก schedule">รับ x₀ กับ t แล้วทาย x_{t+1} ขั้นถัดไป</button>
+<button class="opt" data-correct="false" data-note="ผิด. U-Net ถูกฝึกให้ทาย noise ε ที่ใช้สร้าง x_t โดยรับทั้งรูปที่มี noise และเวลา (noise variance) loss เทียบ noise ที่ทายกับ noise จริง รูปสะอาดคำนวณย้อนจาก noise ที่ทาย, x_{t+1} คือการเติม noise ซึ่งเป็นสูตร ไม่ต้องทาย, และ β มาจาก schedule">รับ x_t อย่างเดียว แล้วทายค่า β_t ของขั้นนั้น</button>
+<button class="opt" data-correct="true" data-note="ถูก. U-Net ถูกฝึกให้ทาย noise ε ที่ใช้สร้าง x_t โดยรับทั้งรูปที่มี noise และเวลา (noise variance) loss เทียบ noise ที่ทายกับ noise จริง รูปสะอาดคำนวณย้อนจาก noise ที่ทาย, x_{t+1} คือการเติม noise ซึ่งเป็นสูตร ไม่ต้องทาย, และ β มาจาก schedule">รับ x_t กับ t แล้วทาย noise ที่ใช้สร้าง x_t</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>ส่วนที่เรียนรู้</span></div>
+<div class="qtext">ข้อใดถูกต้องเรื่อง forward และ reverse diffusion</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. forward diffusion เป็นขั้นที่เรียนรู้ไม่ได้ เติม noise ตาม schedule ที่กำหนดไว้ ส่วน reverse diffusion ใช้ neural network ที่ train เพื่อลบ noise ทีละขั้น ต่างจาก VAE ที่ encoder ก็ต้อง train">forward เป็น network ที่ train ส่วน reverse ใช้สูตรตาม schedule</button>
+<button class="opt" data-correct="false" data-note="ผิด. forward diffusion เป็นขั้นที่เรียนรู้ไม่ได้ เติม noise ตาม schedule ที่กำหนดไว้ ส่วน reverse diffusion ใช้ neural network ที่ train เพื่อลบ noise ทีละขั้น ต่างจาก VAE ที่ encoder ก็ต้อง train">ทั้ง forward และ reverse เป็น network ที่ train ร่วมกันแบบ encoder–decoder</button>
+<button class="opt" data-correct="true" data-note="ถูก. forward diffusion เป็นขั้นที่เรียนรู้ไม่ได้ เติม noise ตาม schedule ที่กำหนดไว้ ส่วน reverse diffusion ใช้ neural network ที่ train เพื่อลบ noise ทีละขั้น ต่างจาก VAE ที่ encoder ก็ต้อง train">forward เติม noise ตาม schedule ไม่มี parameter ส่วน reverse เป็น network ที่ train</button>
+<button class="opt" data-correct="false" data-note="ผิด. forward diffusion เป็นขั้นที่เรียนรู้ไม่ได้ เติม noise ตาม schedule ที่กำหนดไว้ ส่วน reverse diffusion ใช้ neural network ที่ train เพื่อลบ noise ทีละขั้น ต่างจาก VAE ที่ encoder ก็ต้อง train">ทั้ง forward และ reverse ใช้สูตรตายตัว ไม่มี parameter ที่ต้อง train</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>ประมาณ x₀</span></div>
+<div class="qtext">ฟังก์ชัน denoise คำนวณ <code>pred_images = (noisy_images - noise_rates * pred_noises) / signal_rates</code> ถ้า noisy = 1.0, noise_rate = 0.8, signal_rate = 0.6 และ pred_noise = 0.5 ค่า pred_image คือเท่าใด</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. (1.0 − 0.8 × 0.5) / 0.6 = 0.6 / 0.6 = 1.0 ค่า 0.83 ลืมคูณ noise_rate ((1 − 0.5)/0.6), 0.60 ลืมหาร signal_rate, 2.33 บวก noise แทนการลบ ((1 + 0.4)/0.6)">1.0</button>
+<button class="opt" data-correct="false" data-note="ผิด. (1.0 − 0.8 × 0.5) / 0.6 = 0.6 / 0.6 = 1.0 ค่า 0.83 ลืมคูณ noise_rate ((1 − 0.5)/0.6), 0.60 ลืมหาร signal_rate, 2.33 บวก noise แทนการลบ ((1 + 0.4)/0.6)">0.83</button>
+<button class="opt" data-correct="false" data-note="ผิด. (1.0 − 0.8 × 0.5) / 0.6 = 0.6 / 0.6 = 1.0 ค่า 0.83 ลืมคูณ noise_rate ((1 − 0.5)/0.6), 0.60 ลืมหาร signal_rate, 2.33 บวก noise แทนการลบ ((1 + 0.4)/0.6)">0.60</button>
+<button class="opt" data-correct="false" data-note="ผิด. (1.0 − 0.8 × 0.5) / 0.6 = 0.6 / 0.6 = 1.0 ค่า 0.83 ลืมคูณ noise_rate ((1 − 0.5)/0.6), 0.60 ลืมหาร signal_rate, 2.33 บวก noise แทนการลบ ((1 + 0.4)/0.6)">2.33</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>reverse_diffusion</span></div>
+<div class="qtext">เรียก <code>reverse_diffusion(initial_noise, diffusion_steps=20)</code> ค่า step_size และ diffusion_times ของรอบแรกคือข้อใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. step_size = 1.0 / 20 = 0.05 รอบแรก step = 0 จึงได้ diffusion_times = 1 − 0 × 0.05 = 1 (noise ล้วน) ค่า 0.95 คือ next_diffusion_times ของรอบแรก, 0.02 คือ 1/50, และเวลาเริ่มที่ 1 ไม่ใช่ 0 เพราะ reverse เดินจาก noise ไปหารูป">0.05 และ 0.95</button>
+<button class="opt" data-correct="true" data-note="ถูก. step_size = 1.0 / 20 = 0.05 รอบแรก step = 0 จึงได้ diffusion_times = 1 − 0 × 0.05 = 1 (noise ล้วน) ค่า 0.95 คือ next_diffusion_times ของรอบแรก, 0.02 คือ 1/50, และเวลาเริ่มที่ 1 ไม่ใช่ 0 เพราะ reverse เดินจาก noise ไปหารูป">0.05 และ 1.00</button>
+<button class="opt" data-correct="false" data-note="ผิด. step_size = 1.0 / 20 = 0.05 รอบแรก step = 0 จึงได้ diffusion_times = 1 − 0 × 0.05 = 1 (noise ล้วน) ค่า 0.95 คือ next_diffusion_times ของรอบแรก, 0.02 คือ 1/50, และเวลาเริ่มที่ 1 ไม่ใช่ 0 เพราะ reverse เดินจาก noise ไปหารูป">0.02 และ 1.00</button>
+<button class="opt" data-correct="false" data-note="ผิด. step_size = 1.0 / 20 = 0.05 รอบแรก step = 0 จึงได้ diffusion_times = 1 − 0 × 0.05 = 1 (noise ล้วน) ค่า 0.95 คือ next_diffusion_times ของรอบแรก, 0.02 คือ 1/50, และเวลาเริ่มที่ 1 ไม่ใช่ 0 เพราะ reverse เดินจาก noise ไปหารูป">20 และ 0.00</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>U-Net</span></div>
+<div class="qtext">ทำไม diffusion model ใช้ U-Net เป็นตัวทาย noise</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. noise ที่ทายต้องมีขนาดเท่ารูป U-Net ย่อแล้วขยายกลับเป็นขนาดเดิม และ skip connection ระหว่างระดับเดียวกันพาข้อมูลลัดข้ามคอขวด U-Net มีคอขวด (8×8×128 ในตัวอย่าง), output เป็นรูปไม่ใช่ค่าเดียว, และ β มาจาก schedule">U-Net ไม่มีคอขวด จึงไม่สูญเสียข้อมูลระหว่างทางเลย</button>
+<button class="opt" data-correct="false" data-note="ผิด. noise ที่ทายต้องมีขนาดเท่ารูป U-Net ย่อแล้วขยายกลับเป็นขนาดเดิม และ skip connection ระหว่างระดับเดียวกันพาข้อมูลลัดข้ามคอขวด U-Net มีคอขวด (8×8×128 ในตัวอย่าง), output เป็นรูปไม่ใช่ค่าเดียว, และ β มาจาก schedule">U-Net ให้ output เป็นค่าเดียว เหมาะกับการทายเวลา t</button>
+<button class="opt" data-correct="true" data-note="ถูก. noise ที่ทายต้องมีขนาดเท่ารูป U-Net ย่อแล้วขยายกลับเป็นขนาดเดิม และ skip connection ระหว่างระดับเดียวกันพาข้อมูลลัดข้ามคอขวด U-Net มีคอขวด (8×8×128 ในตัวอย่าง), output เป็นรูปไม่ใช่ค่าเดียว, และ β มาจาก schedule">output ต้องมี shape เท่ารูป และ skip connection ส่งรายละเอียดข้ามฝั่งได้</button>
+<button class="opt" data-correct="false" data-note="ผิด. noise ที่ทายต้องมีขนาดเท่ารูป U-Net ย่อแล้วขยายกลับเป็นขนาดเดิม และ skip connection ระหว่างระดับเดียวกันพาข้อมูลลัดข้ามคอขวด U-Net มีคอขวด (8×8×128 ในตัวอย่าง), output เป็นรูปไม่ใช่ค่าเดียว, และ β มาจาก schedule">U-Net เรียนรู้ schedule ของ β ได้พร้อมกับการทาย noise</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>latent diffusion</span></div>
+<div class="qtext">รูป 512×512×3 ถูก VAE encoder ของ Stable Diffusion บีบเป็น latent 64×64×4 จำนวนค่าที่ U-Net ต้องประมวลผลลดลงกี่เท่า</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 512·512·3 = 786,432 และ 64·64·4 = 16,384 หารกันได้ 48 ค่า 64 คิดแค่ด้านกว้างยาว (8 × 8) ลืม channel, 16 คิดเฉพาะ 512/64 × 2, 192 คือ 64 × 3 ลืมว่า latent มี 4 channel">64 เท่า</button>
+<button class="opt" data-correct="false" data-note="ผิด. 512·512·3 = 786,432 และ 64·64·4 = 16,384 หารกันได้ 48 ค่า 64 คิดแค่ด้านกว้างยาว (8 × 8) ลืม channel, 16 คิดเฉพาะ 512/64 × 2, 192 คือ 64 × 3 ลืมว่า latent มี 4 channel">16 เท่า</button>
+<button class="opt" data-correct="false" data-note="ผิด. 512·512·3 = 786,432 และ 64·64·4 = 16,384 หารกันได้ 48 ค่า 64 คิดแค่ด้านกว้างยาว (8 × 8) ลืม channel, 16 คิดเฉพาะ 512/64 × 2, 192 คือ 64 × 3 ลืมว่า latent มี 4 channel">192 เท่า</button>
+<button class="opt" data-correct="true" data-note="ถูก. 512·512·3 = 786,432 และ 64·64·4 = 16,384 หารกันได้ 48 ค่า 64 คิดแค่ด้านกว้างยาว (8 × 8) ลืม channel, 16 คิดเฉพาะ 512/64 × 2, 192 คือ 64 × 3 ลืมว่า latent มี 4 channel">48 เท่า</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>VAE ตอน inference</span></div>
+<div class="qtext">ตอนสร้างรูปจากข้อความ (inference) Stable Diffusion ใช้ส่วนใดของ VAE</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. ตอนสร้างรูปเริ่มจาก noise ใน latent โดยตรง ไม่มีรูปจริงให้ encode encoder จึงใช้แค่ตอน train ทุกขั้นของการ denoise อยู่ใน latent และ decoder ทำงานครั้งเดียวตอนท้าย U-Net ทำงานบน 64×64×4 ไม่ใช่ 512×512">decoder อย่างเดียว เพื่อแปลง latent ที่ลบ noise แล้วกลับเป็นรูป</button>
+<button class="opt" data-correct="false" data-note="ผิด. ตอนสร้างรูปเริ่มจาก noise ใน latent โดยตรง ไม่มีรูปจริงให้ encode encoder จึงใช้แค่ตอน train ทุกขั้นของการ denoise อยู่ใน latent และ decoder ทำงานครั้งเดียวตอนท้าย U-Net ทำงานบน 64×64×4 ไม่ใช่ 512×512">encoder อย่างเดียว เพื่อแปลง noise เป็น latent</button>
+<button class="opt" data-correct="false" data-note="ผิด. ตอนสร้างรูปเริ่มจาก noise ใน latent โดยตรง ไม่มีรูปจริงให้ encode encoder จึงใช้แค่ตอน train ทุกขั้นของการ denoise อยู่ใน latent และ decoder ทำงานครั้งเดียวตอนท้าย U-Net ทำงานบน 64×64×4 ไม่ใช่ 512×512">ทั้ง encoder และ decoder ในทุกขั้นของการ denoise</button>
+<button class="opt" data-correct="false" data-note="ผิด. ตอนสร้างรูปเริ่มจาก noise ใน latent โดยตรง ไม่มีรูปจริงให้ encode encoder จึงใช้แค่ตอน train ทุกขั้นของการ denoise อยู่ใน latent และ decoder ทำงานครั้งเดียวตอนท้าย U-Net ทำงานบน 64×64×4 ไม่ใช่ 512×512">ไม่ใช้ VAE เพราะ U-Net สร้างรูปขนาด 512×512 ได้เอง</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>cross-attention</span></div>
+<div class="qtext">ใน cross-attention ของ U-Net ใน Stable Diffusion, Q, K และ V มาจากไหน</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละตำแหน่งในรูปเป็นผู้ถาม (Q) แล้วดูว่าคำไหนเกี่ยวข้อง (K) และดึงข้อมูลของคำนั้น (V) output จึงมีขนาดตามตำแหน่งในรูป สลับ Q ไปเป็นข้อความจะได้ output ตามจำนวน token, ถ้าทั้งสามมาจากข้อความเป็น self-attention ของ text encoder">Q จาก text embedding, K และ V จาก feature ของรูป</button>
+<button class="opt" data-correct="true" data-note="ถูก. แต่ละตำแหน่งในรูปเป็นผู้ถาม (Q) แล้วดูว่าคำไหนเกี่ยวข้อง (K) และดึงข้อมูลของคำนั้น (V) output จึงมีขนาดตามตำแหน่งในรูป สลับ Q ไปเป็นข้อความจะได้ output ตามจำนวน token, ถ้าทั้งสามมาจากข้อความเป็น self-attention ของ text encoder">Q จาก feature ของรูป, K และ V จาก text embedding</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละตำแหน่งในรูปเป็นผู้ถาม (Q) แล้วดูว่าคำไหนเกี่ยวข้อง (K) และดึงข้อมูลของคำนั้น (V) output จึงมีขนาดตามตำแหน่งในรูป สลับ Q ไปเป็นข้อความจะได้ output ตามจำนวน token, ถ้าทั้งสามมาจากข้อความเป็น self-attention ของ text encoder">Q, K และ V มาจาก text embedding ทั้งหมด</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละตำแหน่งในรูปเป็นผู้ถาม (Q) แล้วดูว่าคำไหนเกี่ยวข้อง (K) และดึงข้อมูลของคำนั้น (V) output จึงมีขนาดตามตำแหน่งในรูป สลับ Q ไปเป็นข้อความจะได้ output ตามจำนวน token, ถ้าทั้งสามมาจากข้อความเป็น self-attention ของ text encoder">Q และ K จาก feature ของรูป, V จาก text embedding</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>CLIP</span></div>
+<div class="qtext">CLIP ถูก train อย่างไร</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. CLIP ใช้คู่ข้อความ–รูป 400 ล้านคู่ ใน batch หนึ่งเทียบทุกคู่ด้วย cosine similarity แล้วดันคู่บนเส้นทแยงให้สูงและคู่อื่นให้ต่ำ ไม่ได้ฝึกด้วย label ImageNet (จึงทนทานกว่า), ไม่ได้สร้างรูป, และไม่ได้ฝึกแบบทายคำถัดไป">ให้ image encoder ทาย label ของ ImageNet แล้วใช้ label เป็นข้อความ</button>
+<button class="opt" data-correct="false" data-note="ผิด. CLIP ใช้คู่ข้อความ–รูป 400 ล้านคู่ ใน batch หนึ่งเทียบทุกคู่ด้วย cosine similarity แล้วดันคู่บนเส้นทแยงให้สูงและคู่อื่นให้ต่ำ ไม่ได้ฝึกด้วย label ImageNet (จึงทนทานกว่า), ไม่ได้สร้างรูป, และไม่ได้ฝึกแบบทายคำถัดไป">ให้ text encoder สร้างรูปจากข้อความแล้วเทียบ MSE กับรูปจริง</button>
+<button class="opt" data-correct="false" data-note="ผิด. CLIP ใช้คู่ข้อความ–รูป 400 ล้านคู่ ใน batch หนึ่งเทียบทุกคู่ด้วย cosine similarity แล้วดันคู่บนเส้นทแยงให้สูงและคู่อื่นให้ต่ำ ไม่ได้ฝึกด้วย label ImageNet (จึงทนทานกว่า), ไม่ได้สร้างรูป, และไม่ได้ฝึกแบบทายคำถัดไป">ให้ text encoder ทายคำถัดไปของคำบรรยายรูปจากอินเทอร์เน็ต</button>
+<button class="opt" data-correct="true" data-note="ถูก. CLIP ใช้คู่ข้อความ–รูป 400 ล้านคู่ ใน batch หนึ่งเทียบทุกคู่ด้วย cosine similarity แล้วดันคู่บนเส้นทแยงให้สูงและคู่อื่นให้ต่ำ ไม่ได้ฝึกด้วย label ImageNet (จึงทนทานกว่า), ไม่ได้สร้างรูป, และไม่ได้ฝึกแบบทายคำถัดไป">ให้ cosine similarity ของคู่ข้อความ–รูปที่ตรงกันสูง และของคู่ที่ไม่ตรงกันต่ำ</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 16</span><span>หา a</span></div>
+<div class="qtext">จาก \(x_t=a\,x_{t-1}+\sqrt{\beta_t}\,\varepsilon\) แสดงว่าทำไม \(a=\sqrt{1-\beta_t}\) และบอกว่าทำไม noise ถูกคูณด้วย \(\sqrt{\beta_t}\) ไม่ใช่ \(\beta_t\)</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>ต้องการ Var(x_t) = 1 เมื่อ Var(x_{t−1}) = 1 และ Var(ε) = 1 ใช้ Var(aX) = a²Var(X) กับ variance ของผลบวกตัวแปรอิสระ: 1 = a² · 1 + β_t · 1 จึงได้ a² = 1 − β_t และ a = √(1 − β_t)</p>
+<p>β_t คือ variance ของ noise ที่ต้องการ Var(√β_t · ε) = β_t · 1 = β_t ถ้าคูณ β_t ตรงๆ จะได้ variance β_t² ซึ่งไม่ใช่ค่าที่ตั้งใจ</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 17</span><span>วงจร train</span></div>
+<div class="qtext">อธิบายขั้นตอนการ train diffusion model หนึ่ง batch ตั้งแต่รูปจริงจนถึงการอัปเดต weight</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>1 normalize รูปให้ mean 0 variance 1 · 2 สุ่ม noise ε และเวลา t ของแต่ละรูป · 3 ดู signal rate กับ noise rate จาก schedule แล้วสร้าง x_t = signal·x₀ + noise·ε ในขั้นเดียว</p>
+<p>4 ให้ U-Net รับ x_t และ t (noise variance) แล้วทาย noise · 5 loss เทียบ noise ที่ทายกับ ε จริง (สไลด์: MSE/L2, notebook: mean absolute error) · 6 หา gradient แล้วอัปเดต weight ของ U-Net</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 18</span><span>Stable Diffusion 4 ขั้น</span></div>
+<div class="qtext">เขียนขั้นตอนที่ Stable Diffusion สร้างรูปจาก prompt ให้ครบ พร้อม shape ของข้อมูลในแต่ละขั้น</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>0 text encoder (CLIP) แปลง prompt เป็น embedding 77 × 768 · 1 สุ่ม latent noise 64×64×4</p>
+<p>2 U-Net รับ latent, เวลา และ text embedding (ผ่าน cross-attention) แล้วทาย noise 64×64×4 · 3 ลบ noise ที่ทายได้ latent ใหม่ ทำขั้น 2–3 ซ้ำ เช่น 20 ครั้ง</p>
+<p>4 VAE decoder แปลง latent เป็นรูป 512×512×3</p>
+</div>
+</div>
+
+</body>
+</html>

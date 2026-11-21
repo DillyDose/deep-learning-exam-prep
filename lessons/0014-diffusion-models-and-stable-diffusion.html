@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 14: Diffusion Models และ Stable Diffusion</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/reader.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="0013-generative-models-autoencoder-vae-gan.html">← Lesson 13</a> · Lesson 14</span>
+  <span><a href="0014-diffusion-models-and-stable-diffusion-exercises.html">แบบฝึก</a> · <a href="../index.html">หน้าแรก</a></span>
+</nav>
+
+<p class="kicker">Lecture 14 — Part 5.2 Generative Models (ต่อ)</p>
+<h1>Diffusion Models และ Stable Diffusion</h1>
+<p class="readmeta">อ่านประมาณ 25 นาที · ข้อความ<mark class="src" title="highlighted slide text">ไฮไลต์</mark>คือคำแปลของถ้อยคำที่อาจารย์ทำสีบนสไลด์ (ชี้เมาส์หรือแตะค้างเพื่อดูภาษาอังกฤษต้นฉบับ) · รูปสไลด์กดเพื่อขยาย</p>
+
+<p>Lesson 13 มีวิธีสร้างรูปสองแบบ VAE ให้รูปหลากหลายแต่เบลอ GAN ให้รูปคมแต่ฝึกยากและมักได้รูปซ้ำๆ บทนี้เป็นแบบที่สาม คือ diffusion model ซึ่งได้ทั้งรูปคมและรูปหลากหลาย แลกกับการสร้างรูปที่ช้าลง วิธีของมันคือสอนโมเดลให้ "ล้าง noise" ทีละนิด แล้วสร้างรูปโดยเริ่มจาก noise ล้วนๆ ครึ่งหลังของบทนำ diffusion ไปทำใน latent space ของ VAE และใช้ข้อความคุมผลลัพธ์ ซึ่งก็คือ Stable Diffusion</p>
+
+<table class="map">
+<tr><th>โมเดล</th><th>คุณภาพ (Quality)</th><th>ความหลากหลาย (Diversity)</th><th>ความเร็ว (Speed)</th></tr>
+<tr><td>VAE</td><td>ไม่ดี</td><td>ดี</td><td>เร็ว</td></tr>
+<tr><td>GAN</td><td>ดี</td><td>ไม่ดี</td><td>เร็ว</td></tr>
+<tr><td>Diffusion</td><td>ดี</td><td>ดี</td><td>ช้า</td></tr>
+</table>
+<p>ตารางนี้มาจากสไลด์หน้า 3 แต่ละโมเดลเด่นสองด้านและแพ้หนึ่งด้าน diffusion แพ้ด้านความเร็ว เพราะสร้างรูปหนึ่งรูปต้องรัน network ซ้ำหลายสิบรอบ ส่วน VAE และ GAN รันครั้งเดียว บทนี้อ่านตามลำดับ: ตอน 2 การเติม noise · ตอน 3 การฝึกให้ทาย noise · ตอน 4 U-Net · ตอน 5 การสร้างรูป · ตอน 6 Stable Diffusion</p>
+
+<!-- ===================================================== -->
+<h2 id="s1">1. Diffusion model คืออะไร</h2>
+
+<h3 id="s1-idea">1.1 ทำลายรูปทีละนิด แล้วสอนให้ซ่อมกลับ</h3>
+
+<p class="pic">หยดหมึกลงในแก้วน้ำ หมึกค่อยๆ กระจายจนน้ำทั้งแก้วเป็นสีเดียว ไม่เหลือรูปร่างของหยดหมึกเดิม ถ้าถ่ายวิดีโอไว้แล้วเล่นย้อนกลับ จะเห็นหมึกรวมตัวกลับเป็นหยด diffusion model เรียนรู้การ "เล่นย้อนกลับ" นี้ทีละเฟรม</p>
+
+<p><mark class="src" data-p="3" title="Diffusion models">Diffusion model</mark> เป็น generative model คือออกแบบมาสร้างข้อมูลใหม่ที่คล้ายข้อมูลที่เคยเห็นตอน train ร่วมกับ GAN มันมีอิทธิพลมากในงานสร้างรูป และในทศวรรษที่ผ่านมากลายเป็นหนึ่งใน <mark class="src" data-p="3" title="impactful techniques">เทคนิคที่ส่งผลมากที่สุด</mark> ปัจจุบันทำได้ดีกว่า GAN ที่เคยเป็น state-of-the-art ในหลาย benchmark</p>
+
+<p>Denoising Diffusion Model (DDM) มาจาก <mark class="src" data-p="4" title="paper">งานวิจัย</mark>ที่ถือเป็นจุดเปลี่ยนในปี 2020 เริ่มจากรูปใน training set โมเดล <mark class="src" data-p="4" title="gradually add noises">ค่อยๆ เติม noise</mark> จนกลายเป็นรูป noise ที่ไม่เหลือลักษณะเดิม แล้วโมเดลถูกออกแบบให้ <mark class="src" data-p="4" title="denoise images">ลบ noise ออกจากรูป</mark> ทีละขั้นเล็กๆ จนได้รูปที่เหมือน training set</p>
+
+<table>
+<tr><th>ขั้น</th><th>ทำอะไร</th><th>เรียนรู้ได้ไหม</th></tr>
+<tr><td>Forward diffusion</td><td>เติม noise ลงในข้อมูล T ขั้น</td><td>ไม่ได้ เป็นสูตรตายตัว</td></tr>
+<tr><td>Reverse diffusion</td><td>ลบ noise ทีละขั้นเพื่อกู้ข้อมูลเดิม</td><td>ได้ เป็น neural network ที่ train</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p04.png" alt="Lecture14 หน้า 4: Denoising Diffusion Models: forward diffusion และ reverse diffusion" loading="lazy">
+<figcaption>Lecture14 หน้า 4 — Denoising Diffusion Models: forward diffusion และ reverse diffusion</figcaption>
+</figure>
+
+<p>รูปแมวและหมาด้านซ้ายถูกเติม noise ไปเรื่อยๆ จนเป็นภาพจุดสีสุ่มด้านขวา reverse diffusion เดินทางกลับจากจุดสีสุ่มไปเป็นรูปสัตว์ ส่วนที่ต้องฝึกมีแค่ทางกลับ ทางไปเป็นสูตรที่คำนวณได้เลย</p>
+
+<p class="trap">ข้อสอบมักถามว่าส่วนไหนของ diffusion model มี parameter ที่เรียนรู้ คำตอบคือ reverse process เท่านั้น forward process เติม noise ตาม schedule ที่กำหนดไว้ก่อน ไม่มีอะไรให้เรียน</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 2–3, 23)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl14-p02.png" alt="Lecture14 หน้า 2: Agenda: Diffusion Models, Flowers Dataset, Multimodal, Stable Diffusion" loading="lazy">
+<figcaption>Lecture14 หน้า 2 — Agenda: Diffusion Models, Flowers Dataset, Multimodal, Stable Diffusion</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p03.png" alt="Lecture14 หน้า 3: Diffusion Models: ตาราง Quality, Diversity, Speed ของ VAE, GAN, Diffusion" loading="lazy">
+<figcaption>Lecture14 หน้า 3 — Diffusion Models: ตาราง Quality, Diversity, Speed ของ VAE, GAN, Diffusion</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p23.png" alt="Lecture14 หน้า 23: Agenda (ครึ่งหลัง)" loading="lazy">
+<figcaption>Lecture14 หน้า 23 — Agenda (ครึ่งหลัง)</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s2">2. Forward diffusion: เติม noise อย่างมีหลัก</h2>
+
+<p class="legend">สีในสมการของตอนนี้: <span class="k-w">สีฟ้า</span> คือ noise ที่สุ่ม (ε) · <span class="k-p">สีส้ม</span> คือค่าที่ตั้งไว้ใน schedule (β, α)</p>
+
+<h3 id="s2-step">2.1 สมการหนึ่งขั้น</h3>
+
+<p class="pic">ผสมสีทีละช้อน: ทุกครั้งตักสีเดิมออกนิดหนึ่ง แล้วเติมสีเทาลงไปเท่ากับที่ตักออก ปริมาณในถ้วยจึงเท่าเดิมเสมอ แต่ทำซ้ำหลายร้อยครั้ง ในถ้วยก็เหลือแต่สีเทา</p>
+
+<p>Forward diffusion คือ <mark class="src" data-p="5" title="Gradually">ค่อยๆ</mark> <mark class="src" data-p="5" title="adding noise">เติม noise</mark> ลงในรูปเป็นจำนวนขั้นมาก (T ขั้น) จนแยกไม่ออกจาก <mark class="src" data-p="5" title="standard Gaussian noise">Gaussian noise มาตรฐาน</mark> ที่มี mean 0 และ variance 1 ฟังก์ชัน q เติม Gaussian noise ที่มี variance \(\beta_t\) (ค่าระหว่าง 0 ถึง 1) ลงในรูป \(x_{t-1}\) เพื่อสร้างรูปใหม่ \(x_t\)</p>
+
+<div class="eq">\[x_t=\sqrt{1-\net{\beta_t}}\;x_{t-1}+\sqrt{\net{\beta_t}}\;\rnd{\varepsilon_{t-1}},\qquad \rnd{\varepsilon_{t-1}}\sim\mathcal N(0,I)\]</div>
+<p class="say">รูปขั้นใหม่ = รูปขั้นก่อนที่ถูกลดลงนิดหนึ่ง + noise ใหม่ก้อนเล็กๆ β คุมทั้งสองส่วน: ยิ่ง β ใหญ่ รูปเดิมเหลือน้อยและ noise ใหม่มาก</p>
+
+<table class="sym">
+<tr><td>\(x_t\)</td><td>รูปหลังเติม noise ไป t ขั้น (\(x_0\) คือรูปจริง, \(x_T\) คือ noise ล้วน)</td></tr>
+<tr><td>\(\net{\beta_t}\)</td><td>variance ของ noise ที่เติมในขั้น t กำหนดไว้ล่วงหน้าโดย schedule</td></tr>
+<tr><td>\(\rnd{\varepsilon_{t-1}}\)</td><td>noise สุ่มจาก normal มาตรฐาน ขนาดเท่ารูป</td></tr>
+</table>
+
+<p class="num">ให้ β = 0.36 จะได้ \(\sqrt{1-0.36}=0.8\) และ \(\sqrt{0.36}=0.6\) ถ้าพิกเซลหนึ่งของ \(x_{t-1}\) มีค่า 1 และสุ่มได้ ε = −0.5 จะได้ \(x_t = 0.8(1) + 0.6(-0.5) = 0.8 − 0.3 = 0.5\) (β จริงในโมเดลเล็กกว่านี้มาก เช่น 0.0001 ถึง 0.02 ตัวเลขนี้เลือกให้คิดง่าย)</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p05.png" alt="Lecture14 หน้า 5: The Forward Diffusion Process: x₀ → … → x(t−1) → x(t) → … → x(T)" loading="lazy">
+<figcaption>Lecture14 หน้า 5 — The Forward Diffusion Process: x₀ → … → x(t−1) → x(t) → … → x(T)</figcaption>
+</figure>
+
+<p>รูปดอกไม้ \(x_0\) ผ่าน q ทีละขั้น ช่วงกลาง (\(x_{t-1}\), \(x_t\)) ยังเห็นรูปดอกไม้ปนจุดสี เมื่อถึง \(x_T\) เหลือเพียงจุดสีสุ่มทั้งรูป</p>
+
+<h3 id="s2-why">2.2 ทำไมคูณ noise ด้วย √β และคูณรูปเดิมด้วย √(1−β)</h3>
+
+<p>สไลด์ไล่เหตุผลเป็นสามขั้น โดยใช้กฎของ variance สองข้อ คือ \(\mathrm{Var}(aX)=a^2\,\mathrm{Var}(X)\) และ variance ของผลบวกตัวแปรที่เป็นอิสระกันเท่ากับผลบวกของ variance</p>
+
+<table>
+<tr><th>ลองเขียน</th><th>variance ของ x_t (ถ้า Var(x_{t−1}) = 1)</th><th>ปัญหา</th></tr>
+<tr><td>\(x_t=x_{t-1}+\varepsilon\)</td><td>1 + 1 = 2</td><td>เติม noise มากเกินในขั้นเดียว คุมปริมาณไม่ได้</td></tr>
+<tr><td>\(x_t=x_{t-1}+\sqrt{\beta_t}\,\varepsilon\)</td><td>1 + β</td><td>คุมปริมาณได้ แต่ variance เพิ่มทุกขั้น ไม่เข้าใกล้ N(0, 1)</td></tr>
+<tr><td>\(x_t=a\,x_{t-1}+\sqrt{\beta_t}\,\varepsilon\)</td><td>a² + β</td><td>ตั้ง a² + β = 1 ได้ \(a=\sqrt{1-\beta_t}\) variance คงที่ 1</td></tr>
+</table>
+
+<p>ทำไมใช้ \(\sqrt{\beta_t}\) ไม่ใช่ \(\beta_t\): เพราะ \(\beta_t\) คือ variance ไม่ใช่ standard deviation ε มี variance 1 ดังนั้น \(\mathrm{Var}(\sqrt{\beta_t}\,\varepsilon)=(\sqrt{\beta_t})^2\cdot 1=\beta_t\) พอดี ถ้าคูณด้วย β ตรงๆ จะได้ variance เป็น β² ซึ่งเล็กกว่าที่ตั้งใจ</p>
+
+<figure class="viz"><img src="../assets/viz/l14-variance.svg" alt="variance ของ x_t เพิ่มขึ้นเป็นเส้นตรงถ้าไม่คูณรูปเดิมด้วย sqrt(1-beta) แต่คงที่ 1 ถ้าคูณ"></figure>
+<p>β = 0.02 ทุกขั้น ถ้าบวก noise เฉยๆ variance เพิ่มขั้นละ 0.02 หลัง 50 ขั้นจึงเป็น 1 + 50 × 0.02 = 2 ถ้าคูณรูปเดิมด้วย √0.98 ก่อน variance ที่หายไป (0.02) เท่ากับ variance ของ noise ใหม่พอดี จึงคงที่ 1 ตลอด (ตรวจด้วยการจำลองตัวเลขสุ่ม 200,000 ค่าได้ 1.000 และ 2.014)</p>
+
+<p>สมการนี้เรียกว่า variance-preserving และรองรับ เป้าหมายสองข้อที่เกี่ยวกัน ของ forward process</p>
+<table>
+<tr><th>เป้าหมาย</th><th>เพราะ</th></tr>
+<tr><td>ค่อยๆ ทำลายข้อมูลของรูปเดิม จนขั้นสุดท้ายไม่ขึ้นกับ \(x_0\) อย่างมีความหมาย</td><td>รูปเดิมถูกคูณด้วย √(1−β) ซ้ำทุกขั้นจนเหลือน้อยมาก</td></tr>
+<tr><td>ให้การแจกแจงสุดท้ายใกล้ N(0, I)</td><td>reverse process จะได้เริ่มจาก Gaussian noise ที่สุ่มได้ง่าย</td></tr>
+</table>
+
+<p class="trap">variance-preserving ไม่ได้บังคับว่ารูปทุกรูปต้องมีพิกเซล variance = 1 ทุกขั้น สไลด์หน้า 9 เน้นว่ามันนิยาม stochastic process ที่การแจกแจงค่อยๆ เข้าใกล้ Gaussian มาตรฐาน และในโค้ดรูปถูก normalize ให้ mean 0 variance 1 ก่อนเติม noise เพื่อให้สมมติฐาน "Var(x₀) = 1" ใช้ได้</p>
+
+<details class="check"><summary>ถ้า β = 0.19 รูปเดิมถูกคูณด้วยเท่าใด และ noise ใหม่ถูกคูณด้วยเท่าใด</summary>
+<p>รูปเดิมคูณ √(1 − 0.19) = √0.81 = 0.9 noise ใหม่คูณ √0.19 ≈ 0.436 ตรวจ: 0.81 + 0.19 = 1</p>
+</details>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 6–9)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl14-p06.png" alt="Lecture14 หน้า 6: Derive it step by step: ทำไมใช้ √β" loading="lazy">
+<figcaption>Lecture14 หน้า 6 — Derive it step by step: ทำไมใช้ √β</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p07.png" alt="Lecture14 หน้า 7: Derive it step by step (2): variance เพิ่มเป็น 1 + β" loading="lazy">
+<figcaption>Lecture14 หน้า 7 — Derive it step by step (2): variance เพิ่มเป็น 1 + β</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p08.png" alt="Lecture14 หน้า 8: Derive it step by step (3): หา a = √(1 − β)" loading="lazy">
+<figcaption>Lecture14 หน้า 8 — Derive it step by step (3): หา a = √(1 − β)</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p09.png" alt="Lecture14 หน้า 9: Summary: เป้าหมายสองข้อของ forward diffusion" loading="lazy">
+<figcaption>Lecture14 หน้า 9 — Summary: เป้าหมายสองข้อของ forward diffusion</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s2-jump">2.3 กระโดดจาก x₀ ไป x_t ในขั้นเดียว</h3>
+
+<p class="pic">ฝากเงินดอกเบี้ยทบต้นปีละ 5% ไม่ต้องคิดทีละปีถึงจะรู้ยอดปีที่ 10 คูณ 1.05 สิบครั้งรวดเดียวก็ได้ forward diffusion ก็เช่นกัน ส่วนของรูปเดิมที่เหลือคือผลคูณของทุกขั้น</p>
+
+<p>ถ้าต้องเติม noise ทีละขั้นจนถึงขั้นที่ t การ train จะช้ามาก reparameterization trick ทำให้ไปถึง <mark class="src" data-p="10" title="noised version">รูปที่เติม noise แล้ว</mark> ได้ <mark class="src" data-p="10" title="quickly">อย่างรวดเร็ว</mark> โดยนิยาม</p>
+
+<div class="eq">\[\net{\alpha_t}=1-\net{\beta_t},\qquad \net{\bar\alpha_t}=\prod_{i=1}^{t}\net{\alpha_i},\qquad x_t=\sqrt{\net{\bar\alpha_t}}\;x_0+\sqrt{1-\net{\bar\alpha_t}}\;\rnd{\varepsilon}\]</div>
+<p class="say">ᾱ คือสัดส่วน variance ของรูปเดิมที่ยังเหลือหลัง t ขั้น ได้จากการคูณ α ของทุกขั้น ส่วนที่เหลือ 1 − ᾱ เป็น noise ทั้งหมด</p>
+
+<p>ที่มาคือแทน \(x_{t-1}\) ลงในสมการของ \(x_t\) จะได้ noise สองก้อน คือ \(\sqrt{\alpha_t(1-\alpha_{t-1})}\,\varepsilon_{t-2}\) กับ \(\sqrt{1-\alpha_t}\,\varepsilon_{t-1}\) Gaussian สองก้อนที่เป็นอิสระกันบวกกันได้ Gaussian ก้อนเดียว variance รวมคือ \(\alpha_t(1-\alpha_{t-1})+(1-\alpha_t)=1-\alpha_t\alpha_{t-1}\) ทำซ้ำไปเรื่อยๆ จนถึง \(x_0\) ก็ได้สูตรข้างบน</p>
+
+<p class="num">α₁ = 0.9 และ α₂ = 0.8 ได้ ᾱ₂ = 0.9 × 0.8 = 0.72 noise รวมมี variance 0.8(1 − 0.9) + (1 − 0.8) = 0.08 + 0.2 = 0.28 = 1 − 0.72 ตรงกัน ถ้าพิกเซลของ \(x_0\) เป็น 2, ᾱ = 0.64 และ ε = 1 จะได้ \(x_t = 0.8(2) + 0.6(1) = 2.2\) ทันทีโดยไม่ต้องผ่านขั้นกลาง</p>
+
+<figure class="viz"><img src="../assets/viz/l14-forward.svg" alt="สัดส่วน variance ของรูปเดิมกับ noise ที่เวลา t ต่างๆ"></figure>
+<p>แท่งแต่ละแท่งสูงเท่ากัน (variance รวม 1) ส่วนสีเขียวคือ ᾱ ของรูปเดิม ส่วนสีฟ้าคือ noise เมื่อ t เพิ่ม สีเขียวหดและสีฟ้าโต ที่ t = 0.5 รูปเดิมเหลือแค่ 0.08 และที่ t = 1 เหลือเกือบ 0</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p10.png" alt="Lecture14 หน้า 10: The Reparameterization Trick: แทน x(t−1) และรวม noise สองก้อน" loading="lazy">
+<figcaption>Lecture14 หน้า 10 — The Reparameterization Trick: แทน x(t−1) และรวม noise สองก้อน</figcaption>
+</figure>
+
+<p>ผลที่ได้คือ <b>สร้างรูปที่เติม noise ณ เวลา t ใดก็ได้จากรูปต้นฉบับโดยตรง</b> ไม่ต้องคำนวณทุกขั้นกลาง ตอน train จึงสุ่ม t แล้วสร้าง \(x_t\) ได้ในบรรทัดเดียว</p>
+
+<p class="trap">reparameterization trick ในบทนี้ต่างจาก Lesson 13 ใน VAE มันแยกความสุ่มออกเป็น ε เพื่อให้ gradient ไหลผ่าน μ และ σ ได้ ใน diffusion มันใช้รวม noise หลายขั้นเป็นก้อนเดียวเพื่อกระโดดจาก x₀ ไป x_t รูปสูตรคล้ายกัน (ค่าเฉลี่ย + ส่วนเบี่ยงเบน × ε) แต่ใช้ต่างจุดประสงค์</p>
+
+<h3 id="s2-schedule">2.4 Diffusion schedule</h3>
+
+<p>Diffusion schedule กำหนดว่า \(\beta_t\) (หรือ \(\alpha_t\)) เปลี่ยนอย่างไรในแต่ละขั้น จึงคุมว่ารูปเดิมเหลือเท่าใดและ noise เพิ่มเท่าใดในแต่ละเวลา แบบแรกคือ linear schedule จากงานต้นฉบับ (Ho et al., 2020) ที่ \(\beta_t\) เพิ่มเป็นเส้นตรง</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p11.png" alt="Lecture14 หน้า 11: Diffusion Schedules: โค้ด linear_diffusion_schedule และกราฟ β กับ α" loading="lazy">
+<figcaption>Lecture14 หน้า 11 — Diffusion Schedules: โค้ด linear_diffusion_schedule และกราฟ β กับ α</figcaption>
+</figure>
+
+<pre><code>def linear_diffusion_schedule(diffusion_times):
+    min_rate = 0.0001
+    max_rate = 0.02
+    betas = min_rate + tf.convert_to_tensor(diffusion_times) * (max_rate - min_rate)
+    alphas = 1 - betas
+    alpha_bars = tf.math.cumprod(alphas)
+    signal_rates = alpha_bars
+    noise_rates = 1 - alpha_bars
+    return noise_rates, signal_rates
+
+T = 1000
+diffusion_times = [x / T for x in range(T)]</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>diffusion_times = [x / T ...]</code></td><td>เวลาถูกปรับเป็นสัดส่วน 0 ถึง 1 แบ่ง 1000 ช่องเท่ากัน</td></tr>
+<tr><td><code>betas = min_rate + t·(max_rate − min_rate)</code></td><td>β เริ่ม 0.0001 แล้วเพิ่มเป็นเส้นตรงจนเกือบ 0.02 ที่ t = 1</td></tr>
+<tr><td><code>alpha_bars = cumprod(alphas)</code></td><td>ผลคูณสะสมของ α คือ ᾱ ของทุกขั้น</td></tr>
+<tr><td><code>signal_rates = alpha_bars</code></td><td>บนสไลด์ไม่ได้ถอดราก ค่าที่คืนจึงเป็น variance (ᾱ และ 1 − ᾱ) ซึ่งเป็นค่าที่กราฟ Alpha Values แสดง</td></tr>
+</table>
+
+<p class="trap">ตัวคูณในสูตร x_t คือ √ᾱ และ √(1 − ᾱ) ไม่ใช่ ᾱ ใน notebook ของคาบ (ddim) <code>signal_rates = cos(angle)</code> และ <code>noise_rates = sin(angle)</code> จึงเป็นค่าที่ถอดรากแล้ว ยกกำลังสองรวมกันได้ 1 เสมอ และใช้ใน <code>noisy = signal_rates * images + noise_rates * noises</code> ได้ตรงๆ อ่านโค้ดให้ดูว่าตัวแปร "rate" เป็น variance หรือ standard deviation</p>
+
+<figure class="viz"><img src="../assets/viz/l14-schedules.svg" alt="ᾱ ตามเวลาของ linear, cosine และ offset cosine schedule"></figure>
+<p>linear schedule ทำให้ ᾱ ตกเร็วมาก ที่ครึ่งทาง (t = 0.5) รูปเดิมเหลือ 0.08 และหลัง t ≈ 0.6 แทบเป็นศูนย์ ขั้นที่เหลือเกือบครึ่งจึงเป็น noise ล้วนที่ไม่มีอะไรให้เรียน cosine schedule ค่อยๆ ลดตลอดช่วง ที่ครึ่งทางยังเหลือ 0.50</p>
+
+<table>
+<tr><th>Schedule</th><th>ลักษณะ</th></tr>
+<tr><td>Linear</td><td>β เพิ่มเป็นเส้นตรง (Ho et al., 2020)</td></tr>
+<tr><td>Cosine แบบไม่มี offset</td><td>ᾱ ลดตามโค้ง cos² สูตรนี้ทำได้ดีกว่า linear</td></tr>
+<tr><td>Cosine แบบมี offset และ scaling</td><td>เพิ่ม offset และ scaling เพื่อไม่ให้ขั้นเติม noise ช่วงต้นเล็กเกินไป ใน notebook ตั้ง signal rate สูงสุด 0.95 (ไม่ใช่ 1) และต่ำสุด 0.02</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p12.png" alt="Lecture14 หน้า 12: More Diffusion Schedules: Signal over Time และ Noise over Time ของ linear, cosine, offset_cosine" loading="lazy">
+<figcaption>Lecture14 หน้า 12 — More Diffusion Schedules: Signal over Time และ Noise over Time ของ linear, cosine, offset_cosine</figcaption>
+</figure>
+
+<p>เส้น offset_cosine เริ่มที่ signal rate 0.95 และ noise rate ประมาณ 0.31 (√(1 − 0.95²) ≈ 0.312) แทนที่จะเริ่มจาก 1 และ 0 ทำให้แม้ขั้นแรกสุดก็มี noise ให้โมเดลเรียนทาย</p>
+
+<!-- ===================================================== -->
+<h2 id="s3">3. Reverse diffusion: ฝึกให้ทาย noise</h2>
+
+<h3 id="s3-reverse">3.1 ทางกลับต้องเรียนรู้</h3>
+
+<p>ใน <mark class="src" data-p="13" title="reverse diffusion process">reverse diffusion process</mark> เป้าหมายคือสร้าง network p ที่ <mark class="src" data-p="13" title="undoing the noising process">ย้อนกระบวนการเติม noise ได้</mark> คือประมาณกระบวนการ q แบบย้อนกลับ ถ้าทำได้ ก็สุ่ม noise จาก normal มาตรฐานแล้วใช้ reverse process ซ้ำๆ ได้รูปใหม่ที่ไม่เคยมี</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p13.png" alt="Lecture14 หน้า 13: The Reverse Diffusion Process: q เติม noise ไปทางขวา p ลบ noise กลับทางซ้าย" loading="lazy">
+<figcaption>Lecture14 หน้า 13 — The Reverse Diffusion Process: q เติม noise ไปทางขวา p ลบ noise กลับทางซ้าย</figcaption>
+</figure>
+
+<p>reverse diffusion คล้าย decoder ของ VAE ตรงที่ใช้ neural network เปลี่ยน noise สุ่มเป็นรูปที่มีความหมาย ต่างกันที่ฝั่ง "เข้ารหัส"</p>
+
+<table>
+<tr><th></th><th>VAE</th><th>Diffusion</th></tr>
+<tr><td>ฝั่งแปลงรูปเป็น noise</td><td>encoder เรียนรู้การแปลงรูปเป็นการแจกแจงใน latent</td><td>forward process เติม noise ตาม schedule ไม่มี parameter</td></tr>
+<tr><td>ฝั่งแปลง noise เป็นรูป</td><td>decoder สร้างรูปจาก latent ในครั้งเดียว</td><td>network ที่ train แล้วลบ noise ทีละขั้นหลายรอบ</td></tr>
+</table>
+
+<h3 id="s3-train">3.2 ฝึกอย่างไร</h3>
+
+<p class="pic">ครูสอนวาดภาพด้วยการเอาภาพสวยมาแต้มจุดเลอะๆ แล้วถามนักเรียนว่า "จุดเลอะตรงไหนบ้าง" บางครั้งแต้มน้อย บางครั้งแต้มจนแทบไม่เห็นภาพ เฉลยมีอยู่แล้วเพราะครูเป็นคนแต้มเอง</p>
+
+<p>reverse diffusion ค่อยๆ เอา noise ออกจากรูป โดย train neural network ให้ <mark class="src" data-p="14" title="predict the noise present in the image">ทาย noise ที่อยู่ในรูป</mark></p>
+
+<table>
+<tr><th>ช่วง</th><th>ทำอะไร</th></tr>
+<tr><td>Training</td><td>เอารูปหนึ่งรูป สุ่มเวลา t แล้วเติม Gaussian noise ได้ \(x_t\) โมเดลรับ \(x_t\) และ t แล้วทาย noise ที่เติมไป loss (ปกติ MSE/L2) วัดความต่างระหว่าง noise ที่ทายกับ noise จริง</td></tr>
+<tr><td>หลัง train (inference)</td><td>ใช้โมเดลประมาณ noise ในรูป noise ที่สุ่มขึ้น แล้วใช้ noise ที่ประมาณได้ทำให้รูปมี noise น้อยลงนิดหนึ่ง ทำซ้ำหลายขั้นจนได้รูปชัดจาก noise ล้วน</td></tr>
+</table>
+
+<figure class="viz"><img src="../assets/viz/l14-train-sample.svg" alt="การ train ให้ทาย noise และการ sampling ที่วนลบ noise"></figure>
+<p>ตอน train ไม่ต้องไล่ทีละขั้น เพราะสูตรในตอน 2.3 สร้าง \(x_t\) ได้ทันที และ ε ที่ใช้สร้างคือเฉลย ตอน sampling ต้องวนจริงทีละขั้น เพราะไม่มีรูปเดิมให้ใช้</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p14.png" alt="Lecture14 หน้า 14: How does the Reverse Diffusion Work: forward ทีละขั้น และ reverse ที่ลบ predicted noise" loading="lazy">
+<figcaption>Lecture14 หน้า 14 — How does the Reverse Diffusion Work: forward ทีละขั้น และ reverse ที่ลบ predicted noise</figcaption>
+</figure>
+
+<p>ฝั่ง reverse ในรูป แต่ละขั้นนำรูปปัจจุบันลบด้วย predicted noise ได้รูปแมวที่ชัดขึ้นทีละขั้นจาก step 1 ถึง step 4 ส่วนฝั่ง dataset แต่ละตัวอย่างคือคู่ (รูปที่มี noise, ปริมาณ noise) เป็น input และ noise ตัวอย่างเป็น label</p>
+
+<p class="trap">network ทาย <b>noise</b> ไม่ได้ทายรูปสะอาดโดยตรง รูปสะอาดคำนวณย้อนจาก noise ที่ทายได้ (ตอน 5.1) และ input มีสองอย่างคือรูปที่มี noise กับเวลา t (ใน notebook คือ noise variance) ถ้าไม่บอก t โมเดลไม่รู้ว่าควรลบ noise มากแค่ไหน ใน notebook ของคาบใช้ loss เป็น mean absolute error ส่วนสไลด์บอกว่าปกติใช้ MSE/L2 ทั้งสองแบบวัดความต่างระหว่าง noise ที่ทายกับ noise จริงเหมือนกัน</p>
+
+<!-- ===================================================== -->
+<h2 id="s4">4. U-Net: network ที่ใช้ทาย noise</h2>
+
+<h3 id="s4-unet">4.1 ทำไมใช้ U-Net</h3>
+
+<p>U-Net ต่างจาก VAE ตรงที่มี <mark class="src" data-p="15" title="skip connections">skip connection</mark> ระหว่าง layer ที่มีขนาดเท่ากันในฝั่ง <mark class="src" data-p="15" title="upsampling">upsampling</mark> และ <mark class="src" data-p="15" title="downsampling">downsampling</mark> ข้อมูลจึงลัดข้าม network ได้ ไม่ต้องไหลเรียงต่อกันทุกชั้นแบบ VAE U-Net เหมาะเมื่อ output ต้องมี shape เท่ากับ input เช่นการทาย noise ที่ขนาดเท่ารูป จึงเป็น <mark class="src" data-p="15" title="preferred architecture">สถาปัตยกรรมที่นิยมใช้</mark></p>
+
+<figure class="viz"><img src="../assets/viz/l14-unet.svg" alt="U-Net ของตัวอย่างดอกไม้ DownBlock ย่อขนาด UpBlock ขยายกลับ และ skip connection ข้ามระหว่างระดับเดียวกัน"></figure>
+<p>ฝั่งซ้ายย่อจาก 64×64 เป็น 32, 16 และ 8 พร้อมเพิ่ม channel เป็น 32, 64, 96 และ 128 ฝั่งขวาขยายกลับ ผลจาก DownBlock แต่ละระดับถูกส่งข้ามไป concatenate กับ UpBlock ระดับเดียวกัน รายละเอียดเล็กๆ ของรูปจึงไม่หายไปกับคอขวด 8×8</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p15.png" alt="Lecture14 หน้า 15: U-Net Denoising Model: noise variance + noisy image 64×64×3 → predicted noise 64×64×3" loading="lazy">
+<figcaption>Lecture14 หน้า 15 — U-Net Denoising Model: noise variance + noisy image 64×64×3 → predicted noise 64×64×3</figcaption>
+</figure>
+
+<p>input มีสองทาง: รูปที่มี noise (64×64×3) ผ่าน Conv2D ได้ 64×64×32 และ noise variance (ค่าเดียว เช่น 0.34) ผ่าน embedding ได้ 1×1×32 แล้ว upsampling เป็น 64×64×32 นำทั้งสองมา concatenate ได้ 64×64×64 แล้วจึงเข้า DownBlock ชั้นสุดท้ายเป็น Conv2D ที่ให้ predicted noise 64×64×3 ขนาดเท่ารูปเดิม</p>
+
+<h3 id="s4-blocks">4.2 ResidualBlock, DownBlock และ UpBlock</h3>
+
+<p>ทั้ง DownBlock และ UpBlock มี ResidualBlock อยู่ข้างใน residual block <mark class="src" data-p="16" title="comprises layers with a skip connection">ประกอบด้วย layer ที่มี skip connection</mark> บวก input เข้ากับ output แบบเดียวกับ ResNet ใน Lesson 8 ทำให้สร้าง network ที่ลึกขึ้นได้ ลดปัญหา vanishing gradient และ degradation</p>
+
+<table>
+<tr><th>Block</th><th>ทำอะไร</th></tr>
+<tr><td>ResidualBlock</td><td>BatchNorm → Conv2D → Conv2D แล้วบวกกับ input ถ้าจำนวน channel ไม่เท่ากัน ให้ทางลัดผ่าน Conv2D 1×1 ก่อนบวก</td></tr>
+<tr><td>DownBlock</td><td>ResidualBlock 2 ตัว (block_depth = 2) เพิ่มจำนวน channel แล้ว AveragePooling2D ลดขนาดครึ่งหนึ่ง ผลของแต่ละ ResidualBlock ถูกเก็บไว้ใช้เป็น skip connection</td></tr>
+<tr><td>UpBlock</td><td>UpSampling2D ขยายขนาดสองเท่า แล้ว concatenate กับ skip จาก DownBlock และผ่าน ResidualBlock 2 ตัว ลดจำนวน channel</td></tr>
+</table>
+
+<p class="trap">skip connection ใน ResidualBlock ใช้ <b>บวก</b> (Add) ส่วน skip connection ข้ามฝั่งของ U-Net ใช้ <b>ต่อกัน</b> (Concatenate) ที่ UpBlock channel จึงเพิ่มชั่วคราว เช่น 16×16×128 ต่อกับ skip 16×16×96 ได้ 16×16×224 แล้ว ResidualBlock(96) ลดเหลือ 16×16×96 และ DownBlock ลดขนาดด้วย AveragePooling2D ไม่ใช่ stride</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 16–17)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl14-p16.png" alt="Lecture14 หน้า 16: Residual Blocks: BatchNorm → Conv2D → Conv2D + skip" loading="lazy">
+<figcaption>Lecture14 หน้า 16 — Residual Blocks: BatchNorm → Conv2D → Conv2D + skip</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p17.png" alt="Lecture14 หน้า 17: DownBlocks and UpBlocks" loading="lazy">
+<figcaption>Lecture14 หน้า 17 — DownBlocks and UpBlocks</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s5">5. Sampling: สร้างรูปจาก noise</h2>
+
+<h3 id="s5-step">5.1 หนึ่งขั้นของการ sampling</h3>
+
+<p>การ <mark class="src" data-p="18" title="sample images">สุ่มรูป</mark>จากโมเดลที่ train แล้วคือการรัน reverse diffusion เริ่มจาก noise สุ่ม แล้วโมเดลค่อยๆ ลบ noise จนเห็นรูปดอกไม้ แต่ละขั้นมีสองจังหวะ</p>
+
+<div class="eq">\[\hat x_0=\frac{x_t-\text{noise\_rate}\cdot\net{\hat\varepsilon}}{\text{signal\_rate}},\qquad x_{t-1}=\text{next\_signal}\cdot\hat x_0+\text{next\_noise}\cdot\net{\hat\varepsilon}\]</div>
+<p class="say">① ทาย noise แล้วถอดออกจาก x_t ได้รูปสะอาดที่ประมาณ ② ผสมรูปสะอาดกับ noise ที่ทายกลับเข้าไปใหม่ แต่ใช้สัดส่วนของเวลาที่ถอยหลังไปหนึ่งขั้น จึงได้รูปที่ noise น้อยกว่าเดิมนิดหนึ่ง</p>
+
+<p class="num">ที่เวลานี้ signal_rate = 0.6 และ noise_rate = 0.8 รูป \(x_t\) มีพิกเซลหนึ่งเป็น 1.0 โมเดลทาย ε̂ = 0.5 จะได้ \(\hat x_0 = (1.0 − 0.8 × 0.5)/0.6 = 0.6/0.6 = 1.0\) ขั้นถัดไป signal 0.8 และ noise 0.6 จะได้ \(x_{t-1} = 0.8 × 1.0 + 0.6 × 0.5 = 1.1\) สัดส่วนของรูปเพิ่มจาก 0.6 เป็น 0.8</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p18.png" alt="Lecture14 หน้า 18: One step of the sampling process: ทาย ε_t จาก x_t เพื่อประมาณ x₀ แล้วใส่ ε_t กลับเฉพาะถึงเวลา t−1" loading="lazy">
+<figcaption>Lecture14 หน้า 18 — One step of the sampling process: ทาย ε_t จาก x_t เพื่อประมาณ x₀ แล้วใส่ ε_t กลับเฉพาะถึงเวลา t−1</figcaption>
+</figure>
+
+<p>สูตร \(\hat x_0\) มาจากการย้ายข้างสูตร \(x_t=\text{signal}\cdot x_0+\text{noise}\cdot\varepsilon\) ใน notebook อยู่ในฟังก์ชัน <code>denoise</code> บรรทัด <code>pred_images = (noisy_images - noise_rates * pred_noises) / signal_rates</code></p>
+
+<p class="trap">ถึงจะได้ \(\hat x_0\) แล้วในขั้นแรก ก็ยังไม่หยุด เพราะการทายจาก noise ล้วนในขั้นเดียวยังหยาบ (ผลจากขั้นเดียวคือรูปเบลอ) จึงใส่ noise กลับบางส่วนแล้วทายใหม่ จำนวนขั้นมากขึ้น รูปละเอียดขึ้น</p>
+
+<h3 id="s5-code">5.2 reverse_diffusion ในโค้ด</h3>
+
+<p>จำนวนขั้นเลือกได้ตามสมการของ Song et al. (2020) คือ DDIM ไม่ต้องเดินครบ 1000 ขั้นแบบตอน train ใช้ 20 ขั้นก็ได้</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p19.png" alt="Lecture14 หน้า 19: Sampling from the Denoising Diffusion Model (2): ฟังก์ชัน reverse_diffusion" loading="lazy">
+<figcaption>Lecture14 หน้า 19 — Sampling from the Denoising Diffusion Model (2): ฟังก์ชัน reverse_diffusion</figcaption>
+</figure>
+
+<pre><code>def reverse_diffusion(self, initial_noise, diffusion_steps):
+    num_images = initial_noise.shape[0]
+    step_size = 1.0 / diffusion_steps
+    current_images = initial_noise
+    for step in range(diffusion_steps):
+        diffusion_times = tf.ones((num_images, 1, 1, 1)) - step * step_size
+        noise_rates, signal_rates = self.diffusion_schedule(diffusion_times)
+        pred_noises, pred_images = self.denoise(current_images, noise_rates, signal_rates, training=False)
+        next_diffusion_times = diffusion_times - step_size
+        next_noise_rates, next_signal_rates = self.diffusion_schedule(next_diffusion_times)
+        current_images = next_signal_rates * pred_images + next_noise_rates * pred_noises
+    return pred_images</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>step_size = 1.0 / diffusion_steps</code></td><td>20 ขั้น ได้ step_size = 0.05</td></tr>
+<tr><td><code>diffusion_times = 1 − step·step_size</code></td><td>เริ่มที่เวลา 1 (noise ล้วน) แล้วลดลง 1, 0.95, 0.90, …</td></tr>
+<tr><td><code>self.denoise(..., training=False)</code></td><td>U-Net ทาย noise แล้วคืนทั้ง pred_noises และ pred_images (\(\hat x_0\))</td></tr>
+<tr><td><code>current_images = next_signal·pred_images + next_noise·pred_noises</code></td><td>ผสมกลับด้วยสัดส่วนของเวลาถัดไป ได้รูปที่ noise น้อยลง</td></tr>
+<tr><td><code>return pred_images</code></td><td>หลังครบ 20 ขั้น คืน \(\hat x_0\) ตัวสุดท้าย</td></tr>
+</table>
+
+<h3 id="s5-gen">5.3 generate และ denormalize</h3>
+
+<p>การ <mark class="src" data-p="20" title="generate images">สร้างรูป</mark>จากโมเดลที่ train แล้วคือรัน reverse diffusion แล้ว denormalize output ตอนท้าย คือนำค่าพิกเซลกลับไปอยู่ในช่วง [0, 1]</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p20.png" alt="Lecture14 หน้า 20: Generating Images: generate() และ denormalize()" loading="lazy">
+<figcaption>Lecture14 หน้า 20 — Generating Images: generate() และ denormalize()</figcaption>
+</figure>
+
+<p>ใน <code>generate</code> noise เริ่มต้นมี shape (num_images, 64, 64, 3) เท่ารูปจริง และ <code>denormalize</code> คำนวณ <code>mean + images * variance ** 0.5</code> ด้วย mean และ variance ของ training data แล้ว <code>clip_by_value</code> ให้อยู่ใน 0–1 ต้องทำเพราะตอน train รูปถูก normalize ให้มี mean 0 และ variance 1 เท่ากับ noise output ของ network จึงอยู่ในสเกลนั้น</p>
+
+<h3 id="s5-result">5.4 ผลบน Oxford Flowers</h3>
+
+<p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> noise loss ที่ลดลงตรงกับรูปที่ชัดขึ้น และจำนวนขั้น sampling มีผลต่อคุณภาพ</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p21.png" alt="Lecture14 หน้า 21: Result: Oxford Flowers 102 หลัง epoch 1 และ epoch 14" loading="lazy">
+<figcaption>Lecture14 หน้า 21 — Result: Oxford Flowers 102 หลัง epoch 1 และ epoch 14</figcaption>
+</figure>
+
+<p>Oxford Flowers 102 มีรูปดอกไม้ 8,189 รูป หลัง epoch 1 n_loss (ทาย noise) = 0.2134 รูปที่สร้างยังเป็นจุดสีสุ่ม หลัง epoch 14 n_loss ลดเหลือ 0.1475 รูปเป็นดอกไม้สีต่างๆ ที่ดูออก (i_loss คือความต่างของรูปที่ประมาณได้กับรูปจริง ใช้ดูเฉยๆ ไม่ได้ใช้ train)</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p22.png" alt="Lecture14 หน้า 22: Analysis of the Diffusion Model: ผลตาม epoch และตามจำนวน diffusion steps" loading="lazy">
+<figcaption>Lecture14 หน้า 22 — Analysis of the Diffusion Model: ผลตาม epoch และตามจำนวน diffusion steps</figcaption>
+</figure>
+
+<p>ด้าน epoch รูปเริ่มจาก noise ที่ epoch 0 แล้วเริ่มมีสีของดอกไม้ราว epoch 6 และเป็นดอกไม้ชัดเมื่อเกิน epoch 12 ด้านจำนวน diffusion step การ sampling ขั้นเดียวได้แค่ก้อนสีเบลอ ส่วน 20 หรือ 100 ขั้นได้กลีบและรายละเอียดชัด</p>
+
+<!-- ===================================================== -->
+<h2 id="s6">6. Multimodal และ Stable Diffusion</h2>
+
+<h3 id="s6-multi">6.1 จากข้อความเป็นรูป</h3>
+
+<p><mark class="src" data-p="24" title="Multimodal learning">Multimodal learning</mark> ฝึก <mark class="src" data-p="24" title="generative models">generative model</mark> ให้ <mark class="src" data-p="24" title="transform">แปลง</mark>ระหว่าง <mark class="src" data-p="24" title="different types of data">ข้อมูลต่างชนิดกัน</mark> เช่นป้อนข้อความ <mark class="src" data-p="24" title="&quot;photograph of an astronaut riding a horse&quot;">"photograph of an astronaut riding a horse"</mark> แล้วได้รูปนักบินอวกาศขี่ม้า หรือ image inpainting ที่สร้างรายละเอียดใหม่เฉพาะส่วนที่เลือกตามข้อความ</p>
+
+<p><mark class="src" data-p="25" title="Text-to-Image generation">Text-to-image generation</mark> มุ่งสร้าง <mark class="src" data-p="25" title="images">รูป</mark> จาก <mark class="src" data-p="25" title="given text prompts">ข้อความ prompt ที่ให้มา</mark> ต้องทั้งเข้าใจความหมายของ prompt และสร้างรูปที่สมจริงและตรงกับเนื้อหา ความท้าทายหลักคือทำให้ข้อมูลข้อความกับรูปสอดคล้องกัน (align) โมเดลตัวอย่างคือ DALL·E 2, Imagen, Stable Diffusion และโมเดลใหม่อย่าง DALL·E 3 และ FLUX</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 24–26)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl14-p24.png" alt="Lecture14 หน้า 24: Multimodal Learning: text-to-image และ image inpainting" loading="lazy">
+<figcaption>Lecture14 หน้า 24 — Multimodal Learning: text-to-image และ image inpainting</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p25.png" alt="Lecture14 หน้า 25: Text-to-Image Generation: timeline ของโมเดล" loading="lazy">
+<figcaption>Lecture14 หน้า 25 — Text-to-Image Generation: timeline ของโมเดล</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p26.png" alt="Lecture14 หน้า 26: Stable Diffusion: ตัวอย่างรูปจาก Stable Diffusion 2.1" loading="lazy">
+<figcaption>Lecture14 หน้า 26 — Stable Diffusion: ตัวอย่างรูปจาก Stable Diffusion 2.1</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s6-sd">6.2 Stable Diffusion และ latent diffusion</h3>
+
+<p>Stable Diffusion เป็นโมเดล text-to-image ที่ปล่อยครั้งแรกในเดือนสิงหาคม 2022 โดย Stability AI ร่วมกับกลุ่ม CompVis ของ LMU Munich และ Runway จุดสำคัญคือ <b>เปิด source code และ weight ของโมเดลที่ train แล้ว</b> ให้ทุกคนใช้และปรับแต่งได้ และสร้างบน Latent Diffusion Model (LDM) จาก <mark class="src" data-p="26" title="paper">งานวิจัย</mark>หนึ่ง</p>
+
+<p class="pic">ร่างภาพบนกระดาษโน้ตแผ่นเล็กก่อน แก้จนพอใจแล้วค่อยขยายลงผ้าใบใหญ่ เร็วกว่าการลบแก้บนผ้าใบใหญ่ตั้งแต่แรก</p>
+
+<p>diffusion แบบเดิมทำงานบน pixel โดยตรง ซึ่งแพงมากเมื่อรูปความละเอียดสูง Latent Diffusion Model ทำ diffusion ใน latent space ที่มีมิติต่ำกว่า: encoder บีบรูปเป็น latent ก่อน diffusion ทั้งหมดเกิดในนั้น แล้ว decoder แปลง latent ที่ลบ noise แล้วกลับเป็นรูป</p>
+
+<p class="num">รูป RGB ขนาด 512 × 512 มี 512 × 512 × 3 = 786,432 ค่า latent ขนาด 64 × 64 × 4 มี 16,384 ค่า น้อยกว่า 48 เท่า U-Net ต้องประมวลผลข้อมูลน้อยลง 48 เท่าในทุกขั้น denoise</p>
+
+<p><mark class="src" data-p="28" title="Stable Diffusion architecture">สถาปัตยกรรมของ Stable Diffusion</mark> ห่อ diffusion model ไว้ใน <mark class="src" data-p="28" title="VAE autoencoder">VAE autoencoder</mark> VAE ดูแลการ encode รายละเอียดของรูปเป็น latent และ decode กลับเป็นรูปความละเอียดสูง diffusion จึง <mark class="src" data-p="28" title="operate solely in a latent">ทำงานเฉพาะใน latent</mark> ซึ่งเป็นพื้นที่ของแนวคิด ทำให้ <mark class="src" data-p="28" title="denoising U-Net model">U-Net ที่ลบ noise</mark> ยัง <mark class="src" data-p="28" title="lightweight">มีขนาดเล็ก</mark> เมื่อเทียบกับ U-Net ที่ทำงานบนรูปเต็ม train เร็วขึ้นและทำงานดีขึ้น</p>
+
+<figure class="viz"><img src="../assets/viz/l14-sd.svg" alt="pipeline ของ Stable Diffusion ตอนสร้างรูป"></figure>
+<p>ข้อความผ่าน CLIP text encoder ได้ embedding 77 × 768 ส่วน noise 64×64×4 วนผ่าน U-Net ที่ทาย noise โดยดูข้อความผ่าน cross-attention แล้วลบ noise ซ้ำหลายขั้น สุดท้าย VAE decoder ขยาย latent เป็นรูป 512×512×3</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p28.png" alt="Lecture14 หน้า 28: Architecture: encoder และ diffusion process ใช้ตอน training เท่านั้น ส่วน denoising U-Net, text encoder และ decoder ใช้ตอนสร้างรูป" loading="lazy">
+<figcaption>Lecture14 หน้า 28 — Architecture: encoder และ diffusion process ใช้ตอน training เท่านั้น ส่วน denoising U-Net, text encoder และ decoder ใช้ตอนสร้างรูป</figcaption>
+</figure>
+
+<p>กรอบ "Used for training only" ครอบ encoder และ diffusion process เพราะตอนสร้างรูปไม่มีรูปจริงให้ encode เริ่มจาก random noise ใน latent แล้ว denoising U-Net ทำงานร่วมกับ text embedding จาก text encoder</p>
+
+<table>
+<tr><th>ส่วนของ <mark class="src" data-p="30" title="The VAE autoencoder">VAE autoencoder</mark></th><th>ตอน train</th><th>ตอนสร้างรูป</th></tr>
+<tr><td><mark class="src" data-p="30" title="encoder">Encoder</mark></td><td>แปลงรูป 512×512×3 เป็น <mark class="src" data-p="30" title="latent space">latent</mark> 64×64×4 เพื่อเติม noise และส่งให้ U-Net</td><td>ไม่ใช้</td></tr>
+<tr><td><mark class="src" data-p="30" title="decoder">Decoder</mark></td><td>-</td><td>แปลง latent ที่ลบ noise แล้วกลับเป็นรูป</td></tr>
+</table>
+
+<p>forward และ reverse diffusion ทั้งหมดที่เรียนมาจริงๆ แล้วเกิดใน latent space ซึ่ง <mark class="src" data-p="30" title="reduces memory requirements">ลดหน่วยความจำที่ต้องใช้</mark> ลงมาก</p>
+
+<p class="trap">ข้อสอบชอบถามว่าตอน inference ใช้ส่วนไหนของ VAE คำตอบคือ decoder อย่างเดียว encoder ใช้เฉพาะตอน train (และงานที่เริ่มจากรูปจริง เช่น inpainting) และ latent ของ Stable Diffusion มี 4 channel ไม่ใช่ 3</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p27.png" alt="Lecture14 หน้า 27: Latent Diffusion Models: 512 × 512 RGB = 786,432 ค่า" loading="lazy">
+<figcaption>Lecture14 หน้า 27 — Latent Diffusion Models: 512 × 512 RGB = 786,432 ค่า</figcaption>
+</figure>
+
+<p>หน้านี้ให้ตัวเลข 786,432 ค่าของรูป 512 × 512 RGB เพื่อให้เห็นว่าทำ diffusion บน pixel แพงแค่ไหน การบีบเป็น latent ช่วยทั้งตอน train และตอนสร้างรูป</p>
+
+<h3 id="s6-steps">6.3 สร้างรูปจากข้อความทีละขั้น</h3>
+
+<table>
+<tr><th>ขั้น</th><th>ทำอะไร</th><th>shape</th></tr>
+<tr><td>1</td><td>สุ่ม tensor ใน latent space</td><td>64×64×4</td></tr>
+<tr><td>2</td><td>U-Net ที่ทาย noise รับ latent ที่มี noise และ text prompt แล้วทาย noise ใน latent</td><td>64×64×4</td></tr>
+<tr><td>3</td><td>ลบ noise ที่ทายออกจาก latent ได้ latent ใหม่ ทำขั้น 2–3 ซ้ำตามจำนวน sampling step เช่น 20 ครั้ง</td><td>64×64×4</td></tr>
+<tr><td>4</td><td>VAE decoder แปลง latent กลับเป็น pixel ได้รูปสุดท้าย</td><td>512×512×3</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p29.png" alt="Lecture14 หน้า 29: Text-to-Image Step-by-Step" loading="lazy">
+<figcaption>Lecture14 หน้า 29 — Text-to-Image Step-by-Step</figcaption>
+</figure>
+
+<p>ทุกขั้นที่วนซ้ำอยู่ใน latent 64×64×4 มีแค่ขั้นสุดท้ายที่ออกไปเป็น pixel</p>
+
+<h3 id="s6-clip">6.4 Text encoder และ CLIP</h3>
+
+<p><mark class="src" data-p="31" title="The text-encoder">Text encoder</mark> แปลง prompt เป็น embedding ที่ใช้เป็น <mark class="src" data-p="31" title="guidance for noisy latent space during U-Net training for denoising">ตัวชี้นำ latent ที่มี noise ระหว่างที่ U-Net ฝึกลบ noise</mark> ปกติใช้ <mark class="src" data-p="31" title="transformer- based encoder">encoder แบบ transformer</mark> อย่างง่าย Stable Diffusion ใช้ text encoder ที่ train ไว้แล้ว ไม่ได้ train ใหม่</p>
+
+<table>
+<tr><th></th><th>รายละเอียด</th></tr>
+<tr><td>Input</td><td>prompt ที่ถูก tokenize เป็นลำดับไม่เกิน 77 token (รวม special token และ padding)</td></tr>
+<tr><td>Output</td><td>embedding ของแต่ละ token ตามบริบท Stable Diffusion 1.x ได้ shape 77 × 768</td></tr>
+<tr><td>โมเดลที่ใช้</td><td>SD 1.x ใช้ text encoder ของ <mark class="src" data-p="31" title="CLIP">CLIP</mark> จาก OpenAI ส่วน SD 2.x ใช้ OpenCLIP ที่ train แยก</td></tr>
+</table>
+
+<p class="pic">จับคู่รูปกับคำบรรยายในอัลบั้มที่สลับกันมั่ว ถ้าทำมาเป็นร้อยล้านคู่ ก็จะเข้าใจทั้งความหมายของคำและเนื้อหาของรูป จนวัดได้ว่าคำบรรยายไหนเข้ากับรูปไหน</p>
+
+<p><mark class="src" data-p="32" title="CLIP">CLIP</mark> train จากคู่ข้อความกับรูป 400 ล้านคู่ที่เก็บจากอินเทอร์เน็ต ฝึกสอง network คือ <mark class="src" data-p="32" title="text encoder">text encoder</mark> ที่แปลงข้อความเป็น text embedding และ <mark class="src" data-p="32" title="image encoder">image encoder</mark> ที่แปลงรูปเป็น image embedding ใน batch หนึ่ง CLIP เทียบทุกคู่ของ embedding ข้อความกับรูปด้วย <mark class="src" data-p="32" title="cosine similarity">cosine similarity</mark> แล้วปรับให้คะแนนของคู่ที่ตรงกันสูงสุด และของคู่ที่ไม่ตรงกันต่ำสุด</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p32.png" alt="Lecture14 หน้า 32: The CLIP training process: ตาราง N × N ของ text embedding กับ image embedding" loading="lazy">
+<figcaption>Lecture14 หน้า 32 — The CLIP training process: ตาราง N × N ของ text embedding กับ image embedding</figcaption>
+</figure>
+
+<p class="num">batch มี 4 คู่ ตาราง cosine similarity มี 4 × 4 = 16 ช่อง ช่องบนเส้นทแยง (I₁·T₁, I₂·T₂, …) 4 ช่องเป็นคู่ที่ตรงกันและถูกดันให้สูง อีก 16 − 4 = 12 ช่องเป็นคู่ที่ไม่ตรงกันและถูกดันให้ต่ำ</p>
+
+<p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> CLIP เข้าใจเนื้อหามากกว่าโมเดลที่ฝึกจำแนก label อย่างเดียว</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl14-p33.png" alt="Lecture14 หน้า 33: CLIP (2): CLIP เทียบ ResNet-101 บน ImageNet และชุดข้อมูลที่เปลี่ยนลักษณะ" loading="lazy">
+<figcaption>Lecture14 หน้า 33 — CLIP (2): CLIP เทียบ ResNet-101 บน ImageNet และชุดข้อมูลที่เปลี่ยนลักษณะ</figcaption>
+</figure>
+
+<p>บน ImageNet ทั้ง ResNet-101 และ CLIP ViT-L ได้ 76.2% เท่ากัน แต่บน ImageNet Adversarial ResNet เหลือ 2.7% ขณะที่ CLIP ได้ 77.1% CLIP <mark class="src" data-p="33" title="more robust">ทนทานกว่ามาก</mark> เพราะเรียนความเข้าใจเชิงแนวคิดของ <mark class="src" data-p="33" title="text descriptions and images">คำบรรยายและรูปทั้งชุด</mark> ไม่ได้เก่งแค่การติด label เดียวให้รูป เมื่อสร้างโมเดลอย่าง Stable Diffusion จึง <mark class="src" data-p="33" title="take the trained text encoder for converting text to a text embedding">นำ text encoder ที่ train แล้วมาแปลงข้อความเป็น text embedding</mark> แต่ละ token กลายเป็น vector ขนาด 768</p>
+
+<h3 id="s6-xattn">6.5 U-Net และ cross-attention</h3>
+
+<p>U-Net ของ Stable Diffusion ทาย noise ใน latent ระหว่าง reverse diffusion โดยมี text prompt คอยชี้นำ</p>
+
+<table>
+<tr><th></th><th>รายละเอียด</th></tr>
+<tr><td>Input</td><td>latent ที่มี noise, เวลา t ของ diffusion และ text embedding จาก text encoder</td></tr>
+<tr><td>Output</td><td>noise ที่ทายใน latent ใช้ลบ noise ทีละขั้น</td></tr>
+<tr><td>สถาปัตยกรรม</td><td>ทาง downsampling (ลดขนาด ดึง feature) คอขวด และทาง upsampling (ขยายกลับ ใช้ skip connection) มีทั้ง ResNet block และ attention</td></tr>
+</table>
+
+<p><mark class="src" data-p="35" title="The output of the text transformer">Output ของ text transformer</mark> ถูกใช้ <mark class="src" data-p="35" title="multiple times">หลายครั้ง</mark> โดย <mark class="src" data-p="35" title="noise predictor">ตัวทาย noise</mark> ทั่วทั้ง <mark class="src" data-p="35" title="U-Net">U-Net</mark> ผ่านกลไก cross-attention ตรงนี้คือจุดที่ prompt พบกับรูป</p>
+
+<div class="eq">\[\text{CrossAttention}=\mathrm{softmax}\!\Big(\frac{Q K^\top}{\sqrt{d}}\Big)V,\qquad Q\leftarrow\text{feature ของรูป (U-Net)},\quad K,V\leftarrow\text{text embedding}\]</div>
+<p class="say">สูตรเดียวกับ attention ใน Lesson 11 ต่างแค่ที่มา: คำถาม (Q) มาจากแต่ละตำแหน่งของรูป ส่วนกุญแจ (K) และเนื้อหา (V) มาจากคำใน prompt แต่ละตำแหน่งของรูปจึงเลือกได้ว่าจะฟังคำไหน</p>
+
+<figure class="viz"><img src="../assets/viz/l14-crossattn.svg" alt="ตาราง cross-attention ระหว่างตำแหน่งในรูปกับคำใน prompt"></figure>
+<p>ตัวเลขเป็นค่าสมมติเพื่อแสดงหลักการ แถวของตำแหน่งตาให้น้ำหนักกับ "blue" และ "eyes" รวมกัน 0.85 แถวของตำแหน่งเสื้อให้น้ำหนัก "blue" แค่ 0.08 สีฟ้าจึงไปอยู่ที่ตา ไม่ใช่ที่เสื้อ</p>
+
+<p>ตัวอย่าง prompt "A man with blue eyes" มีสองกลไกทำงานต่อกัน</p>
+<table>
+<tr><th>กลไก</th><th>Q มาจาก</th><th>K, V มาจาก</th><th>ทำอะไร</th></tr>
+<tr><td>Self-attention ใน text encoder</td><td>ข้อความ</td><td>ข้อความ</td><td>จับคู่ "blue" กับ "eyes" ให้รู้ว่าสีฟ้าเป็นของตา</td></tr>
+<tr><td>Cross-attention ใน U-Net</td><td>feature ของรูป</td><td>text embedding</td><td>ให้ตำแหน่งตาในรูปดึงข้อมูลจาก "blue" และ "eyes" จึงสร้างชายตาสีฟ้า ไม่ใช่ใส่เสื้อสีฟ้า (<mark class="src" data-p="35" title="cross- attention between the prompt and the image)">cross-attention ระหว่าง prompt กับรูป</mark>)</td></tr>
+</table>
+
+<p class="trap">ใน cross-attention ของ Stable Diffusion Query มาจากรูป และ Key กับ Value มาจากข้อความ ถ้าสลับกัน (Q จากข้อความ) output จะมีขนาดตามจำนวน token ไม่ใช่ตามตำแหน่งในรูป U-Net จะเอาไปใช้ทาย noise ทุกพิกเซลไม่ได้</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 30–31, 34–36)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl14-p30.png" alt="Lecture14 หน้า 30: The VAE Autoencoder" loading="lazy">
+<figcaption>Lecture14 หน้า 30 — The VAE Autoencoder</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p31.png" alt="Lecture14 หน้า 31: Text Encoder: 77 token, 77 × 768" loading="lazy">
+<figcaption>Lecture14 หน้า 31 — Text Encoder: 77 token, 77 × 768</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p34.png" alt="Lecture14 หน้า 34: U-Net: inputs, output, architecture" loading="lazy">
+<figcaption>Lecture14 หน้า 34 — U-Net: inputs, output, architecture</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p35.png" alt="Lecture14 หน้า 35: Cross-attention: "A man with blue eyes"" loading="lazy">
+<figcaption>Lecture14 หน้า 35 — Cross-attention: "A man with blue eyes"</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl14-p36.png" alt="Lecture14 หน้า 36: Cross-attention: Q จาก U-Net, K และ V จาก text embedding" loading="lazy">
+<figcaption>Lecture14 หน้า 36 — Cross-attention: Q จาก U-Net, K และ V จาก text embedding</figcaption>
+</figure>
+</div></details>
+
+<p class="nextpage">ลองฝึกต่อใน<a href="0014-diffusion-models-and-stable-diffusion-exercises.html">แบบฝึก Lesson 14</a></p>
+
+<!--REFS-->
+<details class="fold" id="appendix"><summary>ภาคผนวก: ทุกหน้าของสไลด์ Lecture 14 อยู่ตรงไหน</summary>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>อยู่ในตอน</th></tr>
+<tr data-pages="1" class="etc"><td>1</td><td>ปก part5: Generative Models (CON’t)</td><td>etc — ปก</td></tr>
+<tr data-pages="2-4"><td>2–4</td><td>Agenda, Diffusion Models, DDM</td><td><a href="#s1">ตอน 1</a></td></tr>
+<tr data-pages="5-12"><td>5–12</td><td>Forward diffusion, derive step by step, summary, reparameterization trick, schedules</td><td><a href="#s2">ตอน 2</a></td></tr>
+<tr data-pages="13-14"><td>13–14</td><td>Reverse diffusion, การ train ให้ทาย noise</td><td><a href="#s3">ตอน 3</a></td></tr>
+<tr data-pages="15-17"><td>15–17</td><td>U-Net, Residual Blocks, DownBlocks และ UpBlocks</td><td><a href="#s4">ตอน 4</a></td></tr>
+<tr data-pages="18-22"><td>18–22</td><td>Sampling, reverse_diffusion, generate, Result, Analysis</td><td><a href="#s5">ตอน 5</a></td></tr>
+<tr data-pages="23"><td>23</td><td>Agenda (ครึ่งหลัง)</td><td><a href="#s1">ตอน 1</a> (แกลเลอรี)</td></tr>
+<tr data-pages="24-36"><td>24–36</td><td>Multimodal, Text-to-Image, Stable Diffusion, LDM, Architecture, Step-by-Step, VAE, Text Encoder, CLIP, U-Net, Cross-attention</td><td><a href="#s6">ตอน 6</a></td></tr>
+<tr data-pages="37" class="etc"><td>37</td><td>Try.. ลิงก์ keras.io สำหรับลอง Stable Diffusion</td><td>etc — ลิงก์อ้างอิงอย่างเดียว</td></tr>
+</table>
+<p>แหล่งอื่นที่ใช้: notebook ของคาบ <code>ddim.ipynb</code> เฉพาะส่วนที่สไลด์อ้างถึง (diffusion_schedule แบบ offset cosine ที่ min/max signal rate 0.02/0.95, ฟังก์ชัน denoise และ loss mean absolute error) ค่า ᾱ ของ linear schedule และ variance ในรูปที่วาดคำนวณซ้ำด้วย Python</p>
+</details>
+
+</body>
+</html>

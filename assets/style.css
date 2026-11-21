@@ -435,3 +435,10 @@ mark.src[title] { cursor: help; }
 figure.viz { margin: 1.2em 0; }
 figure.viz img { border: none; border-radius: 0; }
 
+
+/* phone width: long equations and code scroll inside their own box instead of widening the page */
+body.reader .eq, body.reader .katex-display { overflow-x: auto; overflow-y: hidden; }
+body.reader pre { overflow-x: auto; max-width: 100%; }
+body.reader table { display: block; max-width: 100%; overflow-x: auto; }
+body.reader :not(pre) > code { overflow-wrap: anywhere; }
+body.reader .qtext, body.reader .opt, body.reader .model-answer { overflow-wrap: anywhere; }
