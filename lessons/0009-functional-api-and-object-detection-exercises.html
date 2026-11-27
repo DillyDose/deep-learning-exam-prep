@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 9: Functional API, ConvNet Visualization และ Object Detection</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 9</span>
+  <span><a href="0009-functional-api-and-object-detection.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 9: Functional API, ConvNet Visualization และ Object Detection</h1>
+<p>ข้อเลือกตอบ 19 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>Functional API</span></div>
+<div class="qtext">โมเดล Wide &amp; Deep มี <code>input_A = Input(shape=[4])</code> และ <code>input_B = Input(shape=[10])</code> โดย <code>input_B</code> ผ่าน Dense(20, relu) สองชั้นต่อกัน แล้ว concatenate กับ <code>input_A</code> ก่อนเข้า Dense(1) โมเดลนี้มี parameter ทั้งหมดกี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. hidden1: 10·20 + 20 = 220. hidden2: 20·20 + 20 = 420. concat ยาว 4 + 20 = 24. output: 24 + 1 = 25. รวม 665. ค่า 661 คือลืมต่อ input_A (output = 21), ค่า 640 คือนับเฉพาะ hidden layer.">661</button>
+<button class="opt" data-correct="false" data-note="ผิด. hidden1: 10·20 + 20 = 220. hidden2: 20·20 + 20 = 420. concat ยาว 4 + 20 = 24. output: 24 + 1 = 25. รวม 665. ค่า 661 คือลืมต่อ input_A (output = 21), ค่า 640 คือนับเฉพาะ hidden layer.">640</button>
+<button class="opt" data-correct="true" data-note="ถูก. hidden1: 10·20 + 20 = 220. hidden2: 20·20 + 20 = 420. concat ยาว 4 + 20 = 24. output: 24 + 1 = 25. รวม 665. ค่า 661 คือลืมต่อ input_A (output = 21), ค่า 640 คือนับเฉพาะ hidden layer.">665</button>
+<button class="opt" data-correct="false" data-note="ผิด. hidden1: 10·20 + 20 = 220. hidden2: 20·20 + 20 = 420. concat ยาว 4 + 20 = 24. output: 24 + 1 = 25. รวม 665. ค่า 661 คือลืมต่อ input_A (output = 21), ค่า 640 คือนับเฉพาะ hidden layer.">675</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>Functional API code</span></div>
+<div class="qtext">ในโมเดลที่ input เดียวถูกส่งเข้าสอง feature extractor ขนานกัน บรรทัด <code>conv2 = Conv2D(16, kernel_size=8, activation='relu')(______)</code> ของกิ่งที่สองต้องเติม tensor ใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ทั้งสองกิ่งเริ่มจาก input tensor ตัวเดียวกัน (share input). ถ้าเติม conv1, pool1 หรือ flat1 จะกลายเป็นการต่ออนุกรมจากกิ่งแรก ไม่ใช่สองกิ่งขนาน.">flat1</button>
+<button class="opt" data-correct="false" data-note="ผิด. ทั้งสองกิ่งเริ่มจาก input tensor ตัวเดียวกัน (share input). ถ้าเติม conv1, pool1 หรือ flat1 จะกลายเป็นการต่ออนุกรมจากกิ่งแรก ไม่ใช่สองกิ่งขนาน.">pool1</button>
+<button class="opt" data-correct="false" data-note="ผิด. ทั้งสองกิ่งเริ่มจาก input tensor ตัวเดียวกัน (share input). ถ้าเติม conv1, pool1 หรือ flat1 จะกลายเป็นการต่ออนุกรมจากกิ่งแรก ไม่ใช่สองกิ่งขนาน.">conv1</button>
+<button class="opt" data-correct="true" data-note="ถูก. ทั้งสองกิ่งเริ่มจาก input tensor ตัวเดียวกัน (share input). ถ้าเติม conv1, pool1 หรือ flat1 จะกลายเป็นการต่ออนุกรมจากกิ่งแรก ไม่ใช่สองกิ่งขนาน.">input</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>Functional API code</span></div>
+<div class="qtext">ภาพ 32×32×1 ผ่าน <code>Conv2D(8, kernel_size=5, activation='relu')</code> แล้ว <code>MaxPooling2D(pool_size=(2, 2))</code> แล้ว <code>Flatten()</code> จำนวนค่าใน vector ที่ได้คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Conv valid: 32 − 5 + 1 = 28 ได้ 28×28×8. Pool: 14×14×8. Flatten: 14·14·8 = 1,568. ค่า 2,048 คือคิดว่า conv คงขนาด 32, ค่า 6,272 คือลืม pooling.">1,568</button>
+<button class="opt" data-correct="false" data-note="ผิด. Conv valid: 32 − 5 + 1 = 28 ได้ 28×28×8. Pool: 14×14×8. Flatten: 14·14·8 = 1,568. ค่า 2,048 คือคิดว่า conv คงขนาด 32, ค่า 6,272 คือลืม pooling.">2,048</button>
+<button class="opt" data-correct="false" data-note="ผิด. Conv valid: 32 − 5 + 1 = 28 ได้ 28×28×8. Pool: 14×14×8. Flatten: 14·14·8 = 1,568. ค่า 2,048 คือคิดว่า conv คงขนาด 32, ค่า 6,272 คือลืม pooling.">6,272</button>
+<button class="opt" data-correct="false" data-note="ผิด. Conv valid: 32 − 5 + 1 = 28 ได้ 28×28×8. Pool: 14×14×8. Flatten: 14·14·8 = 1,568. ค่า 2,048 คือคิดว่า conv คงขนาด 32, ค่า 6,272 คือลืม pooling.">1,352</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>Multi-output</span></div>
+<div class="qtext">โมเดลมีสอง output และ compile ด้วย <code>loss=["mse", "mse"], loss_weights=[0.8, 0.2]</code> ถ้า loss ของ output แรกเท่ากับ 0.50 และของ output ที่สองเท่ากับ 1.00 loss รวมที่ใช้เทรนคือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 0.8 × 0.50 + 0.2 × 1.00 = 0.40 + 0.20 = 0.60. ค่า 1.50 คือบวกตรงๆ, ค่า 0.75 คือเฉลี่ยไม่ถ่วงน้ำหนัก, ค่า 0.90 คือสลับน้ำหนัก.">1.50</button>
+<button class="opt" data-correct="false" data-note="ผิด. 0.8 × 0.50 + 0.2 × 1.00 = 0.40 + 0.20 = 0.60. ค่า 1.50 คือบวกตรงๆ, ค่า 0.75 คือเฉลี่ยไม่ถ่วงน้ำหนัก, ค่า 0.90 คือสลับน้ำหนัก.">0.75</button>
+<button class="opt" data-correct="true" data-note="ถูก. 0.8 × 0.50 + 0.2 × 1.00 = 0.40 + 0.20 = 0.60. ค่า 1.50 คือบวกตรงๆ, ค่า 0.75 คือเฉลี่ยไม่ถ่วงน้ำหนัก, ค่า 0.90 คือสลับน้ำหนัก.">0.60</button>
+<button class="opt" data-correct="false" data-note="ผิด. 0.8 × 0.50 + 0.2 × 1.00 = 0.40 + 0.20 = 0.60. ค่า 1.50 คือบวกตรงๆ, ค่า 0.75 คือเฉลี่ยไม่ถ่วงน้ำหนัก, ค่า 0.90 คือสลับน้ำหนัก.">0.90</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>Multi-output code</span></div>
+<div class="qtext">โมเดลสร้างด้วย <code>Model(inputs=[in_A, in_B], outputs=[main, aux])</code> และทั้งสอง output ทำนายค่าเดียวกัน ข้อใดเรียก <code>fit</code> ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. อาร์กิวเมนต์แรกคือ list ของ input ตามลำดับ inputs และอาร์กิวเมนต์ที่สองคือ list ของ label ตามลำดับ outputs. สอง output ที่ทำนายสิ่งเดียวกันใช้ label ชุดเดียวกันซ้ำสองครั้ง.">model.fit([X_A, X_B], y, epochs=10)</button>
+<button class="opt" data-correct="true" data-note="ถูก. อาร์กิวเมนต์แรกคือ list ของ input ตามลำดับ inputs และอาร์กิวเมนต์ที่สองคือ list ของ label ตามลำดับ outputs. สอง output ที่ทำนายสิ่งเดียวกันใช้ label ชุดเดียวกันซ้ำสองครั้ง.">model.fit([X_A, X_B], [y, y], epochs=10)</button>
+<button class="opt" data-correct="false" data-note="ผิด. อาร์กิวเมนต์แรกคือ list ของ input ตามลำดับ inputs และอาร์กิวเมนต์ที่สองคือ list ของ label ตามลำดับ outputs. สอง output ที่ทำนายสิ่งเดียวกันใช้ label ชุดเดียวกันซ้ำสองครั้ง.">model.fit(X_A, X_B, [y, y], epochs=10)</button>
+<button class="opt" data-correct="false" data-note="ผิด. อาร์กิวเมนต์แรกคือ list ของ input ตามลำดับ inputs และอาร์กิวเมนต์ที่สองคือ list ของ label ตามลำดับ outputs. สอง output ที่ทำนายสิ่งเดียวกันใช้ label ชุดเดียวกันซ้ำสองครั้ง.">model.fit([X_A, y], [X_B, y], epochs=10)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>Feature maps</span></div>
+<div class="qtext">ข้อใดอธิบาย feature map ของ convolution layer ชั้นลึกเมื่อเทียบกับชั้นแรกได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ชั้นลึกให้ activation ที่ abstract และตีความด้วยตายากขึ้น มีข้อมูลภาพน้อยลงแต่ข้อมูลเกี่ยวกับ class มากขึ้น และ sparsity เพิ่มขึ้น (filter ว่างมากขึ้น). ชั้นแรกเป็น edge detectors.">เก็บรายละเอียดภาพต้นฉบับมากขึ้น และมี filter ที่ว่างน้อยลง</button>
+<button class="opt" data-correct="false" data-note="ผิด. ชั้นลึกให้ activation ที่ abstract และตีความด้วยตายากขึ้น มีข้อมูลภาพน้อยลงแต่ข้อมูลเกี่ยวกับ class มากขึ้น และ sparsity เพิ่มขึ้น (filter ว่างมากขึ้น). ชั้นแรกเป็น edge detectors.">เป็นตัวตรวจจับขอบแบบต่างๆ และยังเห็นเป็นรูปของภาพต้นฉบับ</button>
+<button class="opt" data-correct="true" data-note="ถูก. ชั้นลึกให้ activation ที่ abstract และตีความด้วยตายากขึ้น มีข้อมูลภาพน้อยลงแต่ข้อมูลเกี่ยวกับ class มากขึ้น และ sparsity เพิ่มขึ้น (filter ว่างมากขึ้น). ชั้นแรกเป็น edge detectors.">เป็นนามธรรมมากขึ้น เกี่ยวกับ class มากขึ้น และมี filter ที่ว่างมากขึ้น</button>
+<button class="opt" data-correct="false" data-note="ผิด. ชั้นลึกให้ activation ที่ abstract และตีความด้วยตายากขึ้น มีข้อมูลภาพน้อยลงแต่ข้อมูลเกี่ยวกับ class มากขึ้น และ sparsity เพิ่มขึ้น (filter ว่างมากขึ้น). ชั้นแรกเป็น edge detectors.">มีขนาดกว้างและสูงมากขึ้น แต่มีจำนวน feature map น้อยลง</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>Grad-CAM</span></div>
+<div class="qtext">Feature map channel หนึ่งมี gradient ของคะแนน class เทียบกับ activation เป็น [[0.6, 0.2], [0.0, −0.4]] ค่า alpha ของ channel นี้ใน Grad-CAM คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Alpha คือค่าเฉลี่ยของ gradient ทั้งแผ่น: (0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1. ค่า 0.4 คือผลรวมที่ยังไม่หาร, ค่า 0.6 คือค่าสูงสุด, ค่า 0.3 คือเฉลี่ยค่าสัมบูรณ์.">0.4</button>
+<button class="opt" data-correct="true" data-note="ถูก. Alpha คือค่าเฉลี่ยของ gradient ทั้งแผ่น: (0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1. ค่า 0.4 คือผลรวมที่ยังไม่หาร, ค่า 0.6 คือค่าสูงสุด, ค่า 0.3 คือเฉลี่ยค่าสัมบูรณ์.">0.1</button>
+<button class="opt" data-correct="false" data-note="ผิด. Alpha คือค่าเฉลี่ยของ gradient ทั้งแผ่น: (0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1. ค่า 0.4 คือผลรวมที่ยังไม่หาร, ค่า 0.6 คือค่าสูงสุด, ค่า 0.3 คือเฉลี่ยค่าสัมบูรณ์.">0.3</button>
+<button class="opt" data-correct="false" data-note="ผิด. Alpha คือค่าเฉลี่ยของ gradient ทั้งแผ่น: (0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1. ค่า 0.4 คือผลรวมที่ยังไม่หาร, ค่า 0.6 คือค่าสูงสุด, ค่า 0.3 คือเฉลี่ยค่าสัมบูรณ์.">0.6</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>Grad-CAM</span></div>
+<div class="qtext">ข้อใดอธิบาย Grad-CAM ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Grad-CAM เป็น post-training technique: parameter ถูกตรึง. ใช้ output feature map ของ convolution layer ชั้นสุดท้ายและ gradient ของ class ที่ทำนายเทียบกับ activation นั้น มาสร้าง heatmap.">เป็นเทคนิคที่ต้องเทรนโมเดลใหม่พร้อมกับ heatmap และใช้ gradient ของ layer แรก</button>
+<button class="opt" data-correct="false" data-note="ผิด. Grad-CAM เป็น post-training technique: parameter ถูกตรึง. ใช้ output feature map ของ convolution layer ชั้นสุดท้ายและ gradient ของ class ที่ทำนายเทียบกับ activation นั้น มาสร้าง heatmap.">เป็นเทคนิคหลังการเทรน ใช้ feature map ของ dense layer สุดท้ายและไม่ใช้ gradient</button>
+<button class="opt" data-correct="false" data-note="ผิด. Grad-CAM เป็น post-training technique: parameter ถูกตรึง. ใช้ output feature map ของ convolution layer ชั้นสุดท้ายและ gradient ของ class ที่ทำนายเทียบกับ activation นั้น มาสร้าง heatmap.">เป็นเทคนิคระหว่างการเทรน ใช้ปรับ weight ของ convolution layer สุดท้ายตาม heatmap</button>
+<button class="opt" data-correct="true" data-note="ถูก. Grad-CAM เป็น post-training technique: parameter ถูกตรึง. ใช้ output feature map ของ convolution layer ชั้นสุดท้ายและ gradient ของ class ที่ทำนายเทียบกับ activation นั้น มาสร้าง heatmap.">เป็นเทคนิคหลังการเทรน ใช้ feature map และ gradient ของ convolution layer สุดท้าย</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>IoU</span></div>
+<div class="qtext">กรอบ A มีมุมซ้ายบน (0, 0) และมุมขวาล่าง (6, 4) กรอบ B มีมุมซ้ายบน (3, 0) และมุมขวาล่าง (9, 4) IoU ของสองกรอบนี้คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. พื้นที่ A = 24, B = 24. ส่วนซ้อนทับ: x จาก 3 ถึง 6, y จาก 0 ถึง 4 = 12. Union = 24 + 24 − 12 = 36. IoU = 12/36 = 1/3. ค่า 1/2 คือหารด้วยพื้นที่กรอบเดียว, ค่า 1/4 คือหารด้วย 48 โดยไม่ลบส่วนซ้อน.">1/3</button>
+<button class="opt" data-correct="false" data-note="ผิด. พื้นที่ A = 24, B = 24. ส่วนซ้อนทับ: x จาก 3 ถึง 6, y จาก 0 ถึง 4 = 12. Union = 24 + 24 − 12 = 36. IoU = 12/36 = 1/3. ค่า 1/2 คือหารด้วยพื้นที่กรอบเดียว, ค่า 1/4 คือหารด้วย 48 โดยไม่ลบส่วนซ้อน.">1/2</button>
+<button class="opt" data-correct="false" data-note="ผิด. พื้นที่ A = 24, B = 24. ส่วนซ้อนทับ: x จาก 3 ถึง 6, y จาก 0 ถึง 4 = 12. Union = 24 + 24 − 12 = 36. IoU = 12/36 = 1/3. ค่า 1/2 คือหารด้วยพื้นที่กรอบเดียว, ค่า 1/4 คือหารด้วย 48 โดยไม่ลบส่วนซ้อน.">1/4</button>
+<button class="opt" data-correct="false" data-note="ผิด. พื้นที่ A = 24, B = 24. ส่วนซ้อนทับ: x จาก 3 ถึง 6, y จาก 0 ถึง 4 = 12. Union = 24 + 24 − 12 = 36. IoU = 12/36 = 1/3. ค่า 1/2 คือหารด้วยพื้นที่กรอบเดียว, ค่า 1/4 คือหารด้วย 48 โดยไม่ลบส่วนซ้อน.">2/3</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>mAP</span></div>
+<div class="qtext">Object detector จำแนก 4 class และมี Average Precision ของแต่ละ class เท่ากับ 0.90, 0.70, 0.50 และ 0.70 ค่า mAP คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. mAP คือค่าเฉลี่ยของ AP ทุก class: (0.90 + 0.70 + 0.50 + 0.70)/4 = 2.80/4 = 0.70. ค่า 2.80 คือผลรวมที่ยังไม่หาร, ค่า 0.90 คือ AP สูงสุด.">0.70</button>
+<button class="opt" data-correct="false" data-note="ผิด. mAP คือค่าเฉลี่ยของ AP ทุก class: (0.90 + 0.70 + 0.50 + 0.70)/4 = 2.80/4 = 0.70. ค่า 2.80 คือผลรวมที่ยังไม่หาร, ค่า 0.90 คือ AP สูงสุด.">0.90</button>
+<button class="opt" data-correct="false" data-note="ผิด. mAP คือค่าเฉลี่ยของ AP ทุก class: (0.90 + 0.70 + 0.50 + 0.70)/4 = 2.80/4 = 0.70. ค่า 2.80 คือผลรวมที่ยังไม่หาร, ค่า 0.90 คือ AP สูงสุด.">2.80</button>
+<button class="opt" data-correct="false" data-note="ผิด. mAP คือค่าเฉลี่ยของ AP ทุก class: (0.90 + 0.70 + 0.50 + 0.70)/4 = 2.80/4 = 0.70. ค่า 2.80 คือผลรวมที่ยังไม่หาร, ค่า 0.90 คือ AP สูงสุด.">0.50</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>R-CNN family</span></div>
+<div class="qtext">ข้อใดคือเหตุผลหลักที่ Fast R-CNN เร็วกว่า R-CNN?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Fast R-CNN ส่งภาพผ่าน CNN ครั้งเดียวแล้วใช้ feature map ร่วมกันทุก region (25x). การแทน selective search ด้วย RPN คือ Faster R-CNN (250x) และการทำนายทุก grid cell ในครั้งเดียวคือ one-stage detector เช่น YOLO.">แทน selective search ด้วย region proposal network ภายใน network เดียว</button>
+<button class="opt" data-correct="false" data-note="ผิด. Fast R-CNN ส่งภาพผ่าน CNN ครั้งเดียวแล้วใช้ feature map ร่วมกันทุก region (25x). การแทน selective search ด้วย RPN คือ Faster R-CNN (250x) และการทำนายทุก grid cell ในครั้งเดียวคือ one-stage detector เช่น YOLO.">ทำนายกรอบและ class ของทุก grid cell โดยตรงในการ forward ครั้งเดียว</button>
+<button class="opt" data-correct="false" data-note="ผิด. Fast R-CNN ส่งภาพผ่าน CNN ครั้งเดียวแล้วใช้ feature map ร่วมกันทุก region (25x). การแทน selective search ด้วย RPN คือ Faster R-CNN (250x) และการทำนายทุก grid cell ในครั้งเดียวคือ one-stage detector เช่น YOLO.">ใช้ sliding windows ที่มี stride ใหญ่ขึ้นเพื่อลดจำนวนบริเวณที่ต้องจำแนก</button>
+<button class="opt" data-correct="true" data-note="ถูก. Fast R-CNN ส่งภาพผ่าน CNN ครั้งเดียวแล้วใช้ feature map ร่วมกันทุก region (25x). การแทน selective search ด้วย RPN คือ Faster R-CNN (250x) และการทำนายทุก grid cell ในครั้งเดียวคือ one-stage detector เช่น YOLO.">ทำ convolution ทั้งภาพเพียงครั้งเดียวแทนการรัน ConvNet แยกต่อแต่ละ region</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>Fully convolutional</span></div>
+<div class="qtext">Feature map ขนาด 5×5×16 เดิมต่อกับ FC 100 node ถ้าต้องการแทนด้วย convolution ที่ให้ output 1×1×100 และมีจำนวน parameter เท่ากัน ต้องใช้ convolution แบบใด และมี parameter กี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. FC: 5·5·16·100 + 100 = 40,100. Convolution ที่ kernel เท่าขนาด feature map (5×5) จำนวน 100 filter: (5·5·16 + 1)·100 = 40,100 และให้ output (5 − 5 + 1) = 1 คือ 1×1×100.">100 filter ขนาด 1×1 มี 1,700 parameter</button>
+<button class="opt" data-correct="true" data-note="ถูก. FC: 5·5·16·100 + 100 = 40,100. Convolution ที่ kernel เท่าขนาด feature map (5×5) จำนวน 100 filter: (5·5·16 + 1)·100 = 40,100 และให้ output (5 − 5 + 1) = 1 คือ 1×1×100.">100 filter ขนาด 5×5 มี 40,100 parameter</button>
+<button class="opt" data-correct="false" data-note="ผิด. FC: 5·5·16·100 + 100 = 40,100. Convolution ที่ kernel เท่าขนาด feature map (5×5) จำนวน 100 filter: (5·5·16 + 1)·100 = 40,100 และให้ output (5 − 5 + 1) = 1 คือ 1×1×100.">16 filter ขนาด 5×5 มี 6,416 parameter</button>
+<button class="opt" data-correct="false" data-note="ผิด. FC: 5·5·16·100 + 100 = 40,100. Convolution ที่ kernel เท่าขนาด feature map (5×5) จำนวน 100 filter: (5·5·16 + 1)·100 = 40,100 และให้ output (5 − 5 + 1) = 1 คือ 1×1×100.">100 filter ขนาด 3×3 มี 14,500 parameter</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>YOLO output</span></div>
+<div class="qtext">YOLO แบ่งภาพเป็น grid 7×7 แต่ละ cell ทำนาย 2 กรอบ และโจทย์มี 20 class จำนวนค่าที่ network ทำนายทั้งหมดคือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. S·S·(5+K)·B = 7·7·(5+20)·2 = 49·25·2 = 2,450. ค่า 1,225 คือลืมคูณ B, ค่า 980 คือลืมบวก 5 (ใช้เฉพาะ K = 20 ต่อกรอบ).">1,225</button>
+<button class="opt" data-correct="true" data-note="ถูก. S·S·(5+K)·B = 7·7·(5+20)·2 = 49·25·2 = 2,450. ค่า 1,225 คือลืมคูณ B, ค่า 980 คือลืมบวก 5 (ใช้เฉพาะ K = 20 ต่อกรอบ).">2,450</button>
+<button class="opt" data-correct="false" data-note="ผิด. S·S·(5+K)·B = 7·7·(5+20)·2 = 49·25·2 = 2,450. ค่า 1,225 คือลืมคูณ B, ค่า 980 คือลืมบวก 5 (ใช้เฉพาะ K = 20 ต่อกรอบ).">1,470</button>
+<button class="opt" data-correct="false" data-note="ผิด. S·S·(5+K)·B = 7·7·(5+20)·2 = 49·25·2 = 2,450. ค่า 1,225 คือลืมคูณ B, ค่า 980 คือลืมบวก 5 (ใช้เฉพาะ K = 20 ต่อกรอบ).">980</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>NMS</span></div>
+<div class="qtext">หลังกรองด้วย confidence threshold เหลือกรอบ class "dog" สี่กรอบที่มีคะแนน A = 0.95, B = 0.90, C = 0.85, D = 0.60 โดย IoU(A, B) = 0.7, IoU(A, C) = 0.1, IoU(A, D) = 0.6, IoU(C, B) = 0.05, IoU(C, D) = 0.0 ถ้า NMS threshold คือ IoU 0.5 กรอบใดเหลือหลัง NMS?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. เลือก A (สูงสุด) แล้ว suppress B (0.7) และ D (0.6) ที่ IoU กับ A ถึง 0.5. C มี IoU กับ A เพียง 0.1 จึงเหลือ และถูกเลือกในรอบถัดไป. ผลคือ A และ C ซึ่งเป็นสุนัขสองตัวคนละตำแหน่ง.">A เท่านั้น</button>
+<button class="opt" data-correct="false" data-note="ผิด. เลือก A (สูงสุด) แล้ว suppress B (0.7) และ D (0.6) ที่ IoU กับ A ถึง 0.5. C มี IoU กับ A เพียง 0.1 จึงเหลือ และถูกเลือกในรอบถัดไป. ผลคือ A และ C ซึ่งเป็นสุนัขสองตัวคนละตำแหน่ง.">A, B และ C</button>
+<button class="opt" data-correct="true" data-note="ถูก. เลือก A (สูงสุด) แล้ว suppress B (0.7) และ D (0.6) ที่ IoU กับ A ถึง 0.5. C มี IoU กับ A เพียง 0.1 จึงเหลือ และถูกเลือกในรอบถัดไป. ผลคือ A และ C ซึ่งเป็นสุนัขสองตัวคนละตำแหน่ง.">A และ C</button>
+<button class="opt" data-correct="false" data-note="ผิด. เลือก A (สูงสุด) แล้ว suppress B (0.7) และ D (0.6) ที่ IoU กับ A ถึง 0.5. C มี IoU กับ A เพียง 0.1 จึงเหลือ และถูกเลือกในรอบถัดไป. ผลคือ A และ C ซึ่งเป็นสุนัขสองตัวคนละตำแหน่ง.">A, C และ D</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>Confidence score</span></div>
+<div class="qtext">กรอบหนึ่งมี objectness score 0.8 และ class score ของ car, bus, person เท่ากับ 0.5, 0.4, 0.1 class-specific confidence score สูงสุดของกรอบนี้คือเท่าใด และเป็นของ class ใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Confidence score = P(มีวัตถุ) × class score. car: 0.8 × 0.5 = 0.40; bus: 0.8 × 0.4 = 0.32; person: 0.08. สูงสุดคือ 0.40 ของ car. ค่า 0.50 คือ class score ที่ยังไม่คูณ objectness.">0.40 ของ class car</button>
+<button class="opt" data-correct="false" data-note="ผิด. Confidence score = P(มีวัตถุ) × class score. car: 0.8 × 0.5 = 0.40; bus: 0.8 × 0.4 = 0.32; person: 0.08. สูงสุดคือ 0.40 ของ car. ค่า 0.50 คือ class score ที่ยังไม่คูณ objectness.">0.50 ของ class car</button>
+<button class="opt" data-correct="false" data-note="ผิด. Confidence score = P(มีวัตถุ) × class score. car: 0.8 × 0.5 = 0.40; bus: 0.8 × 0.4 = 0.32; person: 0.08. สูงสุดคือ 0.40 ของ car. ค่า 0.50 คือ class score ที่ยังไม่คูณ objectness.">0.80 ของ class car</button>
+<button class="opt" data-correct="false" data-note="ผิด. Confidence score = P(มีวัตถุ) × class score. car: 0.8 × 0.5 = 0.40; bus: 0.8 × 0.4 = 0.32; person: 0.08. สูงสุดคือ 0.40 ของ car. ค่า 0.50 คือ class score ที่ยังไม่คูณ objectness.">0.32 ของ class bus</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 16</span><span>YOLOv3</span></div>
+<div class="qtext">YOLOv3 รับภาพ 608×608 และตรวจจับที่ stride 32, 16 และ 8 โดยใช้ 3 anchor ต่อ cell ในแต่ละ scale ขนาด grid ทั้งสามคือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ขนาด grid = ขนาดภาพ ÷ stride: 608/32 = 19, 608/16 = 38, 608/8 = 76. ชุด 13, 26, 52 เป็นของภาพ 416×416.">13×13, 26×26 และ 52×52</button>
+<button class="opt" data-correct="true" data-note="ถูก. ขนาด grid = ขนาดภาพ ÷ stride: 608/32 = 19, 608/16 = 38, 608/8 = 76. ชุด 13, 26, 52 เป็นของภาพ 416×416.">19×19, 38×38 และ 76×76</button>
+<button class="opt" data-correct="false" data-note="ผิด. ขนาด grid = ขนาดภาพ ÷ stride: 608/32 = 19, 608/16 = 38, 608/8 = 76. ชุด 13, 26, 52 เป็นของภาพ 416×416.">19×19, 57×57 และ 171×171</button>
+<button class="opt" data-correct="false" data-note="ผิด. ขนาด grid = ขนาดภาพ ÷ stride: 608/32 = 19, 608/16 = 38, 608/8 = 76. ชุด 13, 26, 52 เป็นของภาพ 416×416.">32×32, 16×16 และ 8×8</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 17</span><span>YOLOv3</span></div>
+<div class="qtext">ใน YOLOv3 ที่ตรวจจับ 80 class ด้วย 3 anchor ต่อ cell จำนวน channel ของ output แต่ละ scale คือเท่าใด และ grid ใดใช้ตรวจจับวัตถุขนาดใหญ่?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. ต่อกรอบ: 5 + 80 = 85 ค่า. ต่อ cell: 3 × 85 = 255 channel. Grid 13×13 (stride 32) มี cell ที่ครอบพื้นที่กว้างจึงใช้กับวัตถุใหญ่ ส่วน 52×52 ใช้กับวัตถุเล็ก. ค่า 240 คือลืมบวก 5.">255 channel และ grid 13×13</button>
+<button class="opt" data-correct="false" data-note="ผิด. ต่อกรอบ: 5 + 80 = 85 ค่า. ต่อ cell: 3 × 85 = 255 channel. Grid 13×13 (stride 32) มี cell ที่ครอบพื้นที่กว้างจึงใช้กับวัตถุใหญ่ ส่วน 52×52 ใช้กับวัตถุเล็ก. ค่า 240 คือลืมบวก 5.">85 channel และ grid 52×52</button>
+<button class="opt" data-correct="false" data-note="ผิด. ต่อกรอบ: 5 + 80 = 85 ค่า. ต่อ cell: 3 × 85 = 255 channel. Grid 13×13 (stride 32) มี cell ที่ครอบพื้นที่กว้างจึงใช้กับวัตถุใหญ่ ส่วน 52×52 ใช้กับวัตถุเล็ก. ค่า 240 คือลืมบวก 5.">255 channel และ grid 52×52</button>
+<button class="opt" data-correct="false" data-note="ผิด. ต่อกรอบ: 5 + 80 = 85 ค่า. ต่อ cell: 3 × 85 = 255 channel. Grid 13×13 (stride 32) มี cell ที่ครอบพื้นที่กว้างจึงใช้กับวัตถุใหญ่ ส่วน 52×52 ใช้กับวัตถุเล็ก. ค่า 240 คือลืมบวก 5.">240 channel และ grid 13×13</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 18</span><span>Modern detector</span></div>
+<div class="qtext">ใน object detector สมัยใหม่ที่แบ่งเป็น Backbone, Neck และ Head ส่วน Neck ทำหน้าที่ใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Backbone สกัด visual feature, Neck รวม (fuse) feature จากหลายความละเอียด เช่น ด้วย FPN และ PAN, และ Detection Head ทำนาย bounding box กับ class. NMS เป็นขั้น post-processing ไม่ใช่ส่วนของ Neck.">สกัด visual feature จากภาพ input ที่หลายระดับความละเอียด</button>
+<button class="opt" data-correct="false" data-note="ผิด. Backbone สกัด visual feature, Neck รวม (fuse) feature จากหลายความละเอียด เช่น ด้วย FPN และ PAN, และ Detection Head ทำนาย bounding box กับ class. NMS เป็นขั้น post-processing ไม่ใช่ส่วนของ Neck.">ทำนาย bounding box และ class ของวัตถุแต่ละชิ้นเป็นผลลัพธ์</button>
+<button class="opt" data-correct="false" data-note="ผิด. Backbone สกัด visual feature, Neck รวม (fuse) feature จากหลายความละเอียด เช่น ด้วย FPN และ PAN, และ Detection Head ทำนาย bounding box กับ class. NMS เป็นขั้น post-processing ไม่ใช่ส่วนของ Neck.">ตัดกรอบที่ซ้อนทับกันออกด้วย non-maximum suppression</button>
+<button class="opt" data-correct="true" data-note="ถูก. Backbone สกัด visual feature, Neck รวม (fuse) feature จากหลายความละเอียด เช่น ด้วย FPN และ PAN, และ Detection Head ทำนาย bounding box กับ class. NMS เป็นขั้น post-processing ไม่ใช่ส่วนของ Neck.">รวม feature จากหลายระดับความละเอียดเข้าด้วยกันก่อนส่งให้ Head</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 19</span><span>DETR</span></div>
+<div class="qtext">ข้อใดเป็นคุณสมบัติของ DETR ดั้งเดิมที่ต่างจาก YOLOv3?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. DETR มองการตรวจจับเป็น set prediction ใช้ object queries และ attention ทำนาย class กับกรอบ และรุ่นดั้งเดิมไม่ต้องใช้ anchor หรือ NMS. Grid กับ anchor เป็นของ YOLOv3 และ selective search เป็นของ R-CNN.">แบ่งภาพเป็น grid และให้แต่ละ cell ทำนายกรอบจาก anchor ที่กำหนดไว้</button>
+<button class="opt" data-correct="false" data-note="ผิด. DETR มองการตรวจจับเป็น set prediction ใช้ object queries และ attention ทำนาย class กับกรอบ และรุ่นดั้งเดิมไม่ต้องใช้ anchor หรือ NMS. Grid กับ anchor เป็นของ YOLOv3 และ selective search เป็นของ R-CNN.">เสนอ region ด้วย selective search แล้วจำแนกทีละ region</button>
+<button class="opt" data-correct="true" data-note="ถูก. DETR มองการตรวจจับเป็น set prediction ใช้ object queries และ attention ทำนาย class กับกรอบ และรุ่นดั้งเดิมไม่ต้องใช้ anchor หรือ NMS. Grid กับ anchor เป็นของ YOLOv3 และ selective search เป็นของ R-CNN.">ใช้ object queries ทำนายเซตของวัตถุ โดยไม่ต้องใช้ anchor หรือ NMS</button>
+<button class="opt" data-correct="false" data-note="ผิด. DETR มองการตรวจจับเป็น set prediction ใช้ object queries และ attention ทำนาย class กับกรอบ และรุ่นดั้งเดิมไม่ต้องใช้ anchor หรือ NMS. Grid กับ anchor เป็นของ YOLOv3 และ selective search เป็นของ R-CNN.">ใช้ sliding windows ผ่าน convnet แล้วตัดกรอบซ้ำด้วย NMS</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 20</span><span>เขียนโมเดลสองหัวด้วย Functional API</span></div>
+<div class="qtext">input 20 feature → Dense(64, relu) → แตกสองหัว: หัว class 5 class และหัว regression 1 ค่า เขียนโค้ด Keras compile ให้ classification มีน้ำหนัก 0.7 และนับ parameter ทั้งหมด</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p><code>inp = Input(shape=(20,))</code> · <code>h = Dense(64, activation="relu")(inp)</code> · <code>cls = Dense(5, activation="softmax")(h)</code> · <code>reg = Dense(1)(h)</code> · <code>model = Model(inputs=inp, outputs=[cls, reg])</code></p>
+<p><code>model.compile(loss=["sparse_categorical_crossentropy", "mse"], loss_weights=[0.7, 0.3], optimizer="adam")</code></p>
+<p>parameter: 20·64 + 64 = 1,344 · 64·5 + 5 = 325 · 64 + 1 = 65 · รวม 1,734</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 21</span><span>NMS ทีละขั้น</span></div>
+<div class="qtext">กรอบของ class dog สี่กรอบ: A 0.95, B 0.85, C 0.60, D 0.40 IoU(A,B) = 0.7, IoU(A,C) = 0.1, IoU(B,C) = 0.2 confidence threshold 0.5 NMS threshold 0.5 เหลือกรอบใด อธิบายทีละขั้น</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>ขั้น 1 ทิ้ง D เพราะ 0.40 ต่ำกว่า 0.5 เหลือ A, B, C</p>
+<p>ขั้น 2 เลือก A คะแนนสูงสุด ตรวจ IoU กับที่เหลือ: B 0.7 เกิน 0.5 ถูก suppress · C 0.1 ไม่ถูก suppress</p>
+<p>ขั้น 3 เลือก C ซึ่งสูงสุดที่เหลือ ไม่มีกรอบเหลือให้ตรวจ · ผลคือ A กับ C คือสุนัขสองตัว</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 22</span><span>ขนาด output ของ YOLO</span></div>
+<div class="qtext">detector แบบ YOLO ใช้ภาพ 320×320 ตรวจที่ stride 32 และ 16 ใช้ 2 anchor ต่อ cell และมี 20 class เขียน shape output ของแต่ละ scale และจำนวนกรอบทั้งหมด</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>ต่อกรอบ 5 + 20 = 25 · ต่อ cell 2 × 25 = 50 channel</p>
+<p>stride 32: 320/32 = 10 ได้ (10, 10, 50) · stride 16: 320/16 = 20 ได้ (20, 20, 50)</p>
+<p>กรอบ: (100 + 400) × 2 = 1,000 กรอบ ก่อนผ่าน NMS</p>
+</div>
+</div>
+
+</body>
+</html>
