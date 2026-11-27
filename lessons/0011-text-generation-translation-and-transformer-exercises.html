@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 11: Text Generation, Machine Translation, Attention และ Transformer</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 11</span>
+  <span><a href="0011-text-generation-translation-and-transformer.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 11: Text Generation, Machine Translation, Attention และ Transformer</h1>
+<p>ข้อเลือกตอบ 16 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>Temperature</span></div>
+<div class="qtext">โมเดลให้ความน่าจะเป็นของคำถัดไปสามคำเป็น [0.25, 0.50, 0.25] ถ้าใช้ softmax temperature T = 0.5 ความน่าจะเป็นใหม่ของคำที่สองคือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. T = 0.5 เท่ากับยกกำลัง 1/T = 2: [0.0625, 0.25, 0.0625] รวม 0.375. คำที่สอง 0.25/0.375 = 0.667. Temperature ต่ำทำให้ตัวที่สูงยิ่งสูง ค่า 0.50 คือการกระจายเดิมที่ T = 1.">0.50</button>
+<button class="opt" data-correct="true" data-note="ถูก. T = 0.5 เท่ากับยกกำลัง 1/T = 2: [0.0625, 0.25, 0.0625] รวม 0.375. คำที่สอง 0.25/0.375 = 0.667. Temperature ต่ำทำให้ตัวที่สูงยิ่งสูง ค่า 0.50 คือการกระจายเดิมที่ T = 1.">0.67</button>
+<button class="opt" data-correct="false" data-note="ผิด. T = 0.5 เท่ากับยกกำลัง 1/T = 2: [0.0625, 0.25, 0.0625] รวม 0.375. คำที่สอง 0.25/0.375 = 0.667. Temperature ต่ำทำให้ตัวที่สูงยิ่งสูง ค่า 0.50 คือการกระจายเดิมที่ T = 1.">0.25</button>
+<button class="opt" data-correct="false" data-note="ผิด. T = 0.5 เท่ากับยกกำลัง 1/T = 2: [0.0625, 0.25, 0.0625] รวม 0.375. คำที่สอง 0.25/0.375 = 0.667. Temperature ต่ำทำให้ตัวที่สูงยิ่งสูง ค่า 0.50 คือการกระจายเดิมที่ T = 1.">0.80</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>Temperature</span></div>
+<div class="qtext">ข้อใดอธิบายผลของ softmax temperature ต่อข้อความที่สร้างได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Temperature ต่ำทำให้การกระจายแหลมจนใกล้ greedy ได้ข้อความน่าเบื่อซ้ำและอาจติด loop. Temperature สูงทำให้การกระจายเรียบ โครงสร้างระดับท้องถิ่นพังและข้อความดูสุ่ม.">temperature ต่ำมากทำให้ข้อความซ้ำและติด loop ส่วนสูงมากทำให้ข้อความสุ่ม</button>
+<button class="opt" data-correct="false" data-note="ผิด. Temperature ต่ำทำให้การกระจายแหลมจนใกล้ greedy ได้ข้อความน่าเบื่อซ้ำและอาจติด loop. Temperature สูงทำให้การกระจายเรียบ โครงสร้างระดับท้องถิ่นพังและข้อความดูสุ่ม.">temperature สูงมากทำให้ข้อความซ้ำและติด loop ส่วนต่ำมากทำให้ข้อความสุ่ม</button>
+<button class="opt" data-correct="false" data-note="ผิด. Temperature ต่ำทำให้การกระจายแหลมจนใกล้ greedy ได้ข้อความน่าเบื่อซ้ำและอาจติด loop. Temperature สูงทำให้การกระจายเรียบ โครงสร้างระดับท้องถิ่นพังและข้อความดูสุ่ม.">temperature ไม่เปลี่ยนการกระจาย เพียงเปลี่ยนจำนวน token ที่สร้างต่อครั้ง</button>
+<button class="opt" data-correct="false" data-note="ผิด. Temperature ต่ำทำให้การกระจายแหลมจนใกล้ greedy ได้ข้อความน่าเบื่อซ้ำและอาจติด loop. Temperature สูงทำให้การกระจายเรียบ โครงสร้างระดับท้องถิ่นพังและข้อความดูสุ่ม.">temperature ต่ำมากทำให้ข้อความสร้างสรรค์ที่สุด ส่วนสูงมากทำให้ซ้ำเดิม</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>Teacher forcing</span></div>
+<div class="qtext">ประโยคปลายทางหลังเติม token พิเศษคือ "[start] ich bin hier [end]" ระหว่างการเทรน decoder ของโมเดลแปลภาษา ข้อใดคือ input ของ decoder และ target ตามลำดับ?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Decoder input คือประโยคปลายทางที่ตัด token สุดท้าย ส่วน target คือประโยคเดียวกันที่ตัด token แรก สองลำดับยาวเท่ากันและเหลื่อมกันหนึ่งตำแหน่ง ทุก step จึงทำนายคำถัดไป.">[start] ich bin hier และ ich bin hier [end]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Decoder input คือประโยคปลายทางที่ตัด token สุดท้าย ส่วน target คือประโยคเดียวกันที่ตัด token แรก สองลำดับยาวเท่ากันและเหลื่อมกันหนึ่งตำแหน่ง ทุก step จึงทำนายคำถัดไป.">ich bin hier [end] และ [start] ich bin hier</button>
+<button class="opt" data-correct="false" data-note="ผิด. Decoder input คือประโยคปลายทางที่ตัด token สุดท้าย ส่วน target คือประโยคเดียวกันที่ตัด token แรก สองลำดับยาวเท่ากันและเหลื่อมกันหนึ่งตำแหน่ง ทุก step จึงทำนายคำถัดไป.">[start] ich bin hier [end] และ ich bin hier</button>
+<button class="opt" data-correct="false" data-note="ผิด. Decoder input คือประโยคปลายทางที่ตัด token สุดท้าย ส่วน target คือประโยคเดียวกันที่ตัด token แรก สองลำดับยาวเท่ากันและเหลื่อมกันหนึ่งตำแหน่ง ทุก step จึงทำนายคำถัดไป.">[start] ich bin hier และ [start] ich bin hier</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>Seq2seq code</span></div>
+<div class="qtext">ในโมเดล encoder–decoder ที่ใช้ <code>encoded_source = Bidirectional(GRU(512), merge_mode="sum")(x)</code> และ <code>decoder_gru = GRU(512, return_sequences=True)</code> เหตุใดจึงใช้ <code>merge_mode="sum"</code> แทน "concat"?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Bidirectional แบบ concat ให้ state ยาว 512 + 512 = 1,024 ซึ่งไม่ตรงกับขนาด state ของ decoder GRU(512). การบวกสองทิศได้ vector ยาว 512 จึงส่งเป็น initial_state ได้โดยตรง.">เพื่อให้ encoder คืน output ทุก time step แทนที่จะคืนเฉพาะ state สุดท้าย</button>
+<button class="opt" data-correct="false" data-note="ผิด. Bidirectional แบบ concat ให้ state ยาว 512 + 512 = 1,024 ซึ่งไม่ตรงกับขนาด state ของ decoder GRU(512). การบวกสองทิศได้ vector ยาว 512 จึงส่งเป็น initial_state ได้โดยตรง.">เพื่อลดจำนวน parameter ของ GRU ที่อ่านย้อนหลังให้เหลือครึ่งหนึ่ง</button>
+<button class="opt" data-correct="true" data-note="ถูก. Bidirectional แบบ concat ให้ state ยาว 512 + 512 = 1,024 ซึ่งไม่ตรงกับขนาด state ของ decoder GRU(512). การบวกสองทิศได้ vector ยาว 512 จึงส่งเป็น initial_state ได้โดยตรง.">เพื่อให้ state มีขนาด 512 เท่ากับ state ของ decoder จึงใช้เป็น initial state ได้</button>
+<button class="opt" data-correct="false" data-note="ผิด. Bidirectional แบบ concat ให้ state ยาว 512 + 512 = 1,024 ซึ่งไม่ตรงกับขนาด state ของ decoder GRU(512). การบวกสองทิศได้ vector ยาว 512 จึงส่งเป็น initial_state ได้โดยตรง.">เพื่อให้ decoder อ่านประโยคต้นทางได้ทั้งสองทิศทางในตอน inference</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>Seq2seq parameters</span></div>
+<div class="qtext"><code>Embedding(10000, 128)</code> ตามด้วย <code>Dense(10000, activation="softmax")</code> ที่รับ input จาก GRU 256 unit สอง layer นี้มี parameter รวมกันกี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Embedding: 10,000 × 128 = 1,280,000. Dense: 256 × 10,000 + 10,000 = 2,570,000. รวม 3,850,000. ค่า 3,840,000 คือลืม bias ของ Dense, ค่า 2,560,000 คือ weight ของ Dense อย่างเดียว.">3,850,000</button>
+<button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000 × 128 = 1,280,000. Dense: 256 × 10,000 + 10,000 = 2,570,000. รวม 3,850,000. ค่า 3,840,000 คือลืม bias ของ Dense, ค่า 2,560,000 คือ weight ของ Dense อย่างเดียว.">2,560,000</button>
+<button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000 × 128 = 1,280,000. Dense: 256 × 10,000 + 10,000 = 2,570,000. รวม 3,850,000. ค่า 3,840,000 คือลืม bias ของ Dense, ค่า 2,560,000 คือ weight ของ Dense อย่างเดียว.">3,840,000</button>
+<button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000 × 128 = 1,280,000. Dense: 256 × 10,000 + 10,000 = 2,570,000. รวม 3,850,000. ค่า 3,840,000 คือลืม bias ของ Dense, ค่า 2,560,000 คือ weight ของ Dense อย่างเดียว.">1,290,000</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>BLEU</span></div>
+<div class="qtext">ประโยคเป้าหมายคือ "the cat sat on the mat" (6 คำ) และประโยคที่โมเดลแปลคือ "the cat sat on mat" (5 คำ) ข้อใดคือ 2-gram precision และ brevity penalty ตามลำดับ?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Bigram ของประโยคที่แปล: the cat, cat sat, sat on, on mat (4 ตัว) ตรง 3 ตัว (on mat ไม่มีใน target) ⇒ 3/4. c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819.">3/4 และ 1</button>
+<button class="opt" data-correct="false" data-note="ผิด. Bigram ของประโยคที่แปล: the cat, cat sat, sat on, on mat (4 ตัว) ตรง 3 ตัว (on mat ไม่มีใน target) ⇒ 3/4. c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819.">4/4 และ e^(−0.2)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Bigram ของประโยคที่แปล: the cat, cat sat, sat on, on mat (4 ตัว) ตรง 3 ตัว (on mat ไม่มีใน target) ⇒ 3/4. c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819.">3/5 และ e^(−0.2)</button>
+<button class="opt" data-correct="true" data-note="ถูก. Bigram ของประโยคที่แปล: the cat, cat sat, sat on, on mat (4 ตัว) ตรง 3 ตัว (on mat ไม่มีใน target) ⇒ 3/4. c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819.">3/4 และ e^(−0.2)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>Beam search</span></div>
+<div class="qtext">ใช้ beam search ที่ beam width 4 กับ vocabulary 5,000 คำ ทุก step ของ decoder ต้องให้คะแนน candidate กี่ประโยค และเก็บไว้กี่ประโยค?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละประโยคใน beam ทั้ง 4 ถูกขยายด้วยทุกคำ: 4 × 5,000 = 20,000 candidate แล้วเก็บเฉพาะ 4 ประโยคที่ความน่าจะเป็นรวมสูงสุด. การเก็บไว้ประโยคเดียวคือ greedy decoding.">5,000 ประโยค และเก็บไว้ 4 ประโยค</button>
+<button class="opt" data-correct="true" data-note="ถูก. แต่ละประโยคใน beam ทั้ง 4 ถูกขยายด้วยทุกคำ: 4 × 5,000 = 20,000 candidate แล้วเก็บเฉพาะ 4 ประโยคที่ความน่าจะเป็นรวมสูงสุด. การเก็บไว้ประโยคเดียวคือ greedy decoding.">20,000 ประโยค และเก็บไว้ 4 ประโยค</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละประโยคใน beam ทั้ง 4 ถูกขยายด้วยทุกคำ: 4 × 5,000 = 20,000 candidate แล้วเก็บเฉพาะ 4 ประโยคที่ความน่าจะเป็นรวมสูงสุด. การเก็บไว้ประโยคเดียวคือ greedy decoding.">20,000 ประโยค และเก็บไว้ 1 ประโยค</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละประโยคใน beam ทั้ง 4 ถูกขยายด้วยทุกคำ: 4 × 5,000 = 20,000 candidate แล้วเก็บเฉพาะ 4 ประโยคที่ความน่าจะเป็นรวมสูงสุด. การเก็บไว้ประโยคเดียวคือ greedy decoding.">625 ประโยค และเก็บไว้ 4 ประโยค</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>Attention</span></div>
+<div class="qtext">Decoder step หนึ่งได้คะแนน alignment ของ encoder output สองตำแหน่งเป็น [0, ln 3] (ln 3 ≈ 1.099) attention weight ของสองตำแหน่งคือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Softmax: e^0 = 1 และ e^(ln 3) = 3 รวม 4 จึงได้ [1/4, 3/4] = [0.25, 0.75]. น้ำหนักต้องรวมเป็น 1 ทุก decoder step. ค่า [0.33, 0.67] คือหารคะแนนด้วยผลรวมโดยไม่ผ่าน exp.">[0.50, 0.50]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Softmax: e^0 = 1 และ e^(ln 3) = 3 รวม 4 จึงได้ [1/4, 3/4] = [0.25, 0.75]. น้ำหนักต้องรวมเป็น 1 ทุก decoder step. ค่า [0.33, 0.67] คือหารคะแนนด้วยผลรวมโดยไม่ผ่าน exp.">[0.33, 0.67]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Softmax: e^0 = 1 และ e^(ln 3) = 3 รวม 4 จึงได้ [1/4, 3/4] = [0.25, 0.75]. น้ำหนักต้องรวมเป็น 1 ทุก decoder step. ค่า [0.33, 0.67] คือหารคะแนนด้วยผลรวมโดยไม่ผ่าน exp.">[0.00, 1.00]</button>
+<button class="opt" data-correct="true" data-note="ถูก. Softmax: e^0 = 1 และ e^(ln 3) = 3 รวม 4 จึงได้ [1/4, 3/4] = [0.25, 0.75]. น้ำหนักต้องรวมเป็น 1 ทุก decoder step. ค่า [0.33, 0.67] คือหารคะแนนด้วยผลรวมโดยไม่ผ่าน exp.">[0.25, 0.75]</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>Why Transformer</span></div>
+<div class="qtext">ข้อใดเป็นเหตุผลหลักที่ Transformer เทรนได้เร็วกว่า encoder–decoder ที่ใช้ RNN บน GPU?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. RNN ต้องคำนวณ state ที่ step t จาก state ที่ step t − 1 จึงขนานข้ามลำดับไม่ได้. Self-attention คำนวณความสัมพันธ์ของทุกตำแหน่งพร้อมกันด้วยการคูณ matrix จึงใช้ GPU/TPU ได้เต็มที่ (parallel efficiency).">Transformer มีจำนวน parameter น้อยกว่า RNN เสมอในทุกขนาดของโมเดล</button>
+<button class="opt" data-correct="false" data-note="ผิด. RNN ต้องคำนวณ state ที่ step t จาก state ที่ step t − 1 จึงขนานข้ามลำดับไม่ได้. Self-attention คำนวณความสัมพันธ์ของทุกตำแหน่งพร้อมกันด้วยการคูณ matrix จึงใช้ GPU/TPU ได้เต็มที่ (parallel efficiency).">Transformer ไม่ต้องใช้ embedding layer จึงลดการคำนวณในชั้นแรก</button>
+<button class="opt" data-correct="true" data-note="ถูก. RNN ต้องคำนวณ state ที่ step t จาก state ที่ step t − 1 จึงขนานข้ามลำดับไม่ได้. Self-attention คำนวณความสัมพันธ์ของทุกตำแหน่งพร้อมกันด้วยการคูณ matrix จึงใช้ GPU/TPU ได้เต็มที่ (parallel efficiency).">Transformer คำนวณทุกตำแหน่งของลำดับพร้อมกัน ไม่ต้องรอ time step ก่อนหน้า</button>
+<button class="opt" data-correct="false" data-note="ผิด. RNN ต้องคำนวณ state ที่ step t จาก state ที่ step t − 1 จึงขนานข้ามลำดับไม่ได้. Self-attention คำนวณความสัมพันธ์ของทุกตำแหน่งพร้อมกันด้วยการคูณ matrix จึงใช้ GPU/TPU ได้เต็มที่ (parallel efficiency).">Transformer ใช้ sampled softmax ในทุก layer แทน softmax ปกติ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>Positional encoding</span></div>
+<div class="qtext">ใช้ sinusoidal positional encoding ที่ d_model = 4 ค่าของมิติที่ 2 (มิติคู่ตัวที่สอง ซึ่งใช้ตัวหาร 10000^(2/4)) ที่ตำแหน่ง pos = 4 คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 10000^(2/4) = 10000^0.5 = 100 จึงได้ sin(4/100) = sin(0.04) ≈ 0.040. มิติคู่ใช้ sin มิติคี่ใช้ cos. ค่า sin(4) คือมิติ 0 ที่ตัวหารเป็น 1.">sin(4) ≈ −0.757</button>
+<button class="opt" data-correct="false" data-note="ผิด. 10000^(2/4) = 10000^0.5 = 100 จึงได้ sin(4/100) = sin(0.04) ≈ 0.040. มิติคู่ใช้ sin มิติคี่ใช้ cos. ค่า sin(4) คือมิติ 0 ที่ตัวหารเป็น 1.">cos(0.04) ≈ 0.999</button>
+<button class="opt" data-correct="false" data-note="ผิด. 10000^(2/4) = 10000^0.5 = 100 จึงได้ sin(4/100) = sin(0.04) ≈ 0.040. มิติคู่ใช้ sin มิติคี่ใช้ cos. ค่า sin(4) คือมิติ 0 ที่ตัวหารเป็น 1.">sin(0.0004) ≈ 0.0004</button>
+<button class="opt" data-correct="true" data-note="ถูก. 10000^(2/4) = 10000^0.5 = 100 จึงได้ sin(4/100) = sin(0.04) ≈ 0.040. มิติคู่ใช้ sin มิติคี่ใช้ cos. ค่า sin(4) คือมิติ 0 ที่ตัวหารเป็น 1.">sin(0.04) ≈ 0.040</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>Positional encoding</span></div>
+<div class="qtext">Token embedding [0.2, −0.1, 0.4, 0.0] อยู่ที่ตำแหน่ง 0 ของประโยคและใช้ sinusoidal positional encoding ที่ d_model = 4 input embedding ที่ส่งเข้า encoder คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Positional encoding ของตำแหน่ง 0 คือ [sin 0, cos 0, sin 0, cos 0] = [0, 1, 0, 1] และนำมาบวกทีละมิติ (ไม่ต่อกัน): [0.2, −0.1 + 1, 0.4, 0 + 1] = [0.2, 0.9, 0.4, 1.0].">[0.2, −1.1, 0.4, −1.0]</button>
+<button class="opt" data-correct="true" data-note="ถูก. Positional encoding ของตำแหน่ง 0 คือ [sin 0, cos 0, sin 0, cos 0] = [0, 1, 0, 1] และนำมาบวกทีละมิติ (ไม่ต่อกัน): [0.2, −0.1 + 1, 0.4, 0 + 1] = [0.2, 0.9, 0.4, 1.0].">[0.2, 0.9, 0.4, 1.0]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Positional encoding ของตำแหน่ง 0 คือ [sin 0, cos 0, sin 0, cos 0] = [0, 1, 0, 1] และนำมาบวกทีละมิติ (ไม่ต่อกัน): [0.2, −0.1 + 1, 0.4, 0 + 1] = [0.2, 0.9, 0.4, 1.0].">[1.2, −0.1, 1.4, 0.0]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Positional encoding ของตำแหน่ง 0 คือ [sin 0, cos 0, sin 0, cos 0] = [0, 1, 0, 1] และนำมาบวกทีละมิติ (ไม่ต่อกัน): [0.2, −0.1 + 1, 0.4, 0 + 1] = [0.2, 0.9, 0.4, 1.0].">[0.2, −0.1, 0.4, 0.0]</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>Scaled dot-product</span></div>
+<div class="qtext">Query q = [2, 0] และ keys k₁ = [1, 0], k₂ = [0, 1] (d_k = 2) ใช้ scaled dot-product attention ข้อใดคือคะแนนหลังการ scale ก่อนเข้า softmax?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Dot product: q·k₁ = 2, q·k₂ = 0. Scale ด้วย √d_k = √2: [2/√2, 0] = [√2, 0] ≈ [1.414, 0]. ค่า [1, 0] คือหารด้วย d_k แทน √d_k, ค่า [2, 0] คือยังไม่ scale.">[2, 0]</button>
+<button class="opt" data-correct="true" data-note="ถูก. Dot product: q·k₁ = 2, q·k₂ = 0. Scale ด้วย √d_k = √2: [2/√2, 0] = [√2, 0] ≈ [1.414, 0]. ค่า [1, 0] คือหารด้วย d_k แทน √d_k, ค่า [2, 0] คือยังไม่ scale.">[√2, 0]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Dot product: q·k₁ = 2, q·k₂ = 0. Scale ด้วย √d_k = √2: [2/√2, 0] = [√2, 0] ≈ [1.414, 0]. ค่า [1, 0] คือหารด้วย d_k แทน √d_k, ค่า [2, 0] คือยังไม่ scale.">[1, 0]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Dot product: q·k₁ = 2, q·k₂ = 0. Scale ด้วย √d_k = √2: [2/√2, 0] = [√2, 0] ≈ [1.414, 0]. ค่า [1, 0] คือหารด้วย d_k แทน √d_k, ค่า [2, 0] คือยังไม่ scale.">[4, 0]</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>Query Key Value</span></div>
+<div class="qtext">ใน cross attention ของ Transformer decoder ที่แปลอังกฤษเป็นสเปน ข้อใดจับคู่บทบาทได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Cross attention ให้ target sequence (สเปนที่ decoder กำลังสร้าง) เป็น query และ source sequence (อังกฤษที่ encoder เข้ารหัส) เป็นทั้ง key และ value. ถ้าทั้งสามมาจากลำดับเดียวกันคือ self-attention.">query มาจากประโยคอังกฤษ ส่วน key และ value มาจากประโยคสเปน</button>
+<button class="opt" data-correct="false" data-note="ผิด. Cross attention ให้ target sequence (สเปนที่ decoder กำลังสร้าง) เป็น query และ source sequence (อังกฤษที่ encoder เข้ารหัส) เป็นทั้ง key และ value. ถ้าทั้งสามมาจากลำดับเดียวกันคือ self-attention.">query, key และ value มาจากประโยคสเปนทั้งหมด</button>
+<button class="opt" data-correct="true" data-note="ถูก. Cross attention ให้ target sequence (สเปนที่ decoder กำลังสร้าง) เป็น query และ source sequence (อังกฤษที่ encoder เข้ารหัส) เป็นทั้ง key และ value. ถ้าทั้งสามมาจากลำดับเดียวกันคือ self-attention.">query มาจากประโยคสเปน ส่วน key และ value มาจากประโยคอังกฤษ</button>
+<button class="opt" data-correct="false" data-note="ผิด. Cross attention ให้ target sequence (สเปนที่ decoder กำลังสร้าง) เป็น query และ source sequence (อังกฤษที่ encoder เข้ารหัส) เป็นทั้ง key และ value. ถ้าทั้งสามมาจากลำดับเดียวกันคือ self-attention.">query และ key มาจากประโยคสเปน ส่วน value มาจากประโยคอังกฤษ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>Multi-head attention</span></div>
+<div class="qtext">Transformer มี d_model = 512 และใช้ multi-head attention 8 heads โดยแบ่งมิติเท่ากัน ข้อใดถูกต้องเกี่ยวกับมิติของแต่ละ head และขนาด output ของ layer?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 512/8 = 64 มิติต่อ head. Output ของ 8 head ถูกต่อกันได้ 8 × 64 = 512 แล้วผ่าน output projection จึงยาวเท่า input ทำให้ encoder layer ซ้อนกันได้.">head ละ 512 มิติ และ output ต่อ token ยาว 4,096</button>
+<button class="opt" data-correct="false" data-note="ผิด. 512/8 = 64 มิติต่อ head. Output ของ 8 head ถูกต่อกันได้ 8 × 64 = 512 แล้วผ่าน output projection จึงยาวเท่า input ทำให้ encoder layer ซ้อนกันได้.">head ละ 8 มิติ และ output ต่อ token ยาว 64</button>
+<button class="opt" data-correct="false" data-note="ผิด. 512/8 = 64 มิติต่อ head. Output ของ 8 head ถูกต่อกันได้ 8 × 64 = 512 แล้วผ่าน output projection จึงยาวเท่า input ทำให้ encoder layer ซ้อนกันได้.">head ละ 64 มิติ และ output ต่อ token ยาว 64</button>
+<button class="opt" data-correct="true" data-note="ถูก. 512/8 = 64 มิติต่อ head. Output ของ 8 head ถูกต่อกันได้ 8 × 64 = 512 แล้วผ่าน output projection จึงยาวเท่า input ทำให้ encoder layer ซ้อนกันได้.">head ละ 64 มิติ และ output ต่อ token ยาว 512</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>Causal mask</span></div>
+<div class="qtext">Decoder ของ Transformer รับลำดับ 5 token และใช้ causal self-attention เมื่อคำนวณ representation ของ token ที่ 3 จะใช้ attention weight ที่ไม่เป็นศูนย์กับ token ใดบ้าง?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Causal mask ให้ตำแหน่ง i มองเห็นเฉพาะตำแหน่ง j ≤ i ตำแหน่ง 3 จึงเห็น token 1, 2, 3. ตำแหน่ง 4 และ 5 ถูกแทนคะแนนด้วย −∞ ก่อน softmax ได้น้ำหนัก 0 เพื่อไม่ให้ decoder เห็นคำตอบในอนาคต.">token ที่ 1, 2 และ 3</button>
+<button class="opt" data-correct="false" data-note="ผิด. Causal mask ให้ตำแหน่ง i มองเห็นเฉพาะตำแหน่ง j ≤ i ตำแหน่ง 3 จึงเห็น token 1, 2, 3. ตำแหน่ง 4 และ 5 ถูกแทนคะแนนด้วย −∞ ก่อน softmax ได้น้ำหนัก 0 เพื่อไม่ให้ decoder เห็นคำตอบในอนาคต.">token ที่ 3 ตัวเดียว</button>
+<button class="opt" data-correct="false" data-note="ผิด. Causal mask ให้ตำแหน่ง i มองเห็นเฉพาะตำแหน่ง j ≤ i ตำแหน่ง 3 จึงเห็น token 1, 2, 3. ตำแหน่ง 4 และ 5 ถูกแทนคะแนนด้วย −∞ ก่อน softmax ได้น้ำหนัก 0 เพื่อไม่ให้ decoder เห็นคำตอบในอนาคต.">token ที่ 3, 4 และ 5</button>
+<button class="opt" data-correct="false" data-note="ผิด. Causal mask ให้ตำแหน่ง i มองเห็นเฉพาะตำแหน่ง j ≤ i ตำแหน่ง 3 จึงเห็น token 1, 2, 3. ตำแหน่ง 4 และ 5 ถูกแทนคะแนนด้วย −∞ ก่อน softmax ได้น้ำหนัก 0 เพื่อไม่ให้ decoder เห็นคำตอบในอนาคต.">token ทั้ง 5 ตัว</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 16</span><span>Transformer types</span></div>
+<div class="qtext">งานใดเหมาะกับ Transformer แบบ encoder-only มากที่สุด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Encoder-only (เช่น BERT, DistilBERT) แปลงข้อความเป็น representation เชิงตัวเลขที่เหมาะกับ classification. การสร้างข้อความต่อเหมาะกับ decoder-only (GPT) ส่วนการแปลและสรุปความเหมาะกับ encoder-decoder (T5, BART).">สร้างเรื่องสั้นต่อจากประโยคเริ่มต้นที่ผู้ใช้พิมพ์</button>
+<button class="opt" data-correct="false" data-note="ผิด. Encoder-only (เช่น BERT, DistilBERT) แปลงข้อความเป็น representation เชิงตัวเลขที่เหมาะกับ classification. การสร้างข้อความต่อเหมาะกับ decoder-only (GPT) ส่วนการแปลและสรุปความเหมาะกับ encoder-decoder (T5, BART).">แปลประโยคภาษาอังกฤษเป็นภาษาสเปนแบบทั้งประโยค</button>
+<button class="opt" data-correct="true" data-note="ถูก. Encoder-only (เช่น BERT, DistilBERT) แปลงข้อความเป็น representation เชิงตัวเลขที่เหมาะกับ classification. การสร้างข้อความต่อเหมาะกับ decoder-only (GPT) ส่วนการแปลและสรุปความเหมาะกับ encoder-decoder (T5, BART).">จำแนกรีวิวสินค้าว่าเป็นเชิงบวกหรือเชิงลบจากข้อความทั้งหมด</button>
+<button class="opt" data-correct="false" data-note="ผิด. Encoder-only (เช่น BERT, DistilBERT) แปลงข้อความเป็น representation เชิงตัวเลขที่เหมาะกับ classification. การสร้างข้อความต่อเหมาะกับ decoder-only (GPT) ส่วนการแปลและสรุปความเหมาะกับ encoder-decoder (T5, BART).">สรุปบทความยาวให้เหลือย่อหน้าเดียวที่ครอบคลุมใจความ</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 17</span><span>scaled dot-product attention ด้วยมือ</span></div>
+<div class="qtext">q = [1, 0, 1, 0] k₁ = [1, 0, 1, 0] k₂ = [0, 1, 0, 1] v₁ = [4, 0] v₂ = [0, 4] คำนวณ attention output ทีละขั้น และบอกผลถ้าไม่ scale</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>dot product: q·k₁ = 2 · q·k₂ = 0 · d_k = 4 หาร √4 = 2 ได้ [1, 0]</p>
+<p>softmax: e¹ = 2.718 e⁰ = 1 รวม 3.718 ได้ [0.731, 0.269] · output = 0.731[4, 0] + 0.269[0, 4] = [2.92, 1.08]</p>
+<p>ไม่ scale: softmax([2, 0]) = [0.881, 0.119] output [3.52, 0.48] แหลมกว่า เมื่อ d_k ใหญ่ softmax จะอิ่มตัวและ gradient หาย</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 18</span><span>teacher forcing กับ inference</span></div>
+<div class="qtext">อธิบายว่า decoder ได้ input อะไรตอนเทรนและตอนใช้งาน ใช้ประโยค [start] I like cats [end] และบอกว่าโค้ด spa[:, :-1] กับ spa[:, 1:] เกี่ยวข้องอย่างไร</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>ตอนเทรน decoder input = [start] I like cats · target = I like cats [end] เหลื่อม 1 ตำแหน่ง ป้อนคำจริงทุก step เรียก teacher forcing คำนวณทุก step พร้อมกันได้</p>
+<p>spa[:, :-1] ตัด token สุดท้ายได้ decoder input · spa[:, 1:] ตัด token แรกได้ target · ฝั่งปลายทางจึงตั้ง output_sequence_length = sequence_length + 1</p>
+<p>ตอนใช้งานไม่มีประโยคปลายทาง ป้อน [start] แล้วเอาคำที่ทายได้ป้อนกลับทีละ step จนได้ [end] ถ้าทายผิดต้นทาง ความผิดจะติดไปทุก step</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 19</span><span>BLEU</span></div>
+<div class="qtext">ประโยคเป้าหมาย "the cat is on the mat" ประโยคที่ทาย "the cat on the mat" คำนวณ p₁ และ p₂ แล้วบอกว่า brevity penalty มีผลอย่างไร</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>p₁: ทายมี 5 คำ the, cat, on, the, mat ตรงทั้ง 5 ได้ 5/5 = 1</p>
+<p>p₂: bigram ที่ทาย the cat, cat on, on the, the mat มี 4 ตรง the cat, on the, the mat ได้ 3/4 = 0.75</p>
+<p>c = 5 ≤ r = 6 จึง BP = e^(1 − 6/5) = e^(−0.2) ≈ 0.819 คะแนนถูกลดเพราะคำแปลสั้นกว่าเป้าหมาย</p>
+</div>
+</div>
+
+</body>
+</html>
