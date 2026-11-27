@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 10: Sequence Models, RNN, GRU, LSTM และ Word Embeddings</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 10</span>
+  <span><a href="0010-sequence-models-and-rnn.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 10: Sequence Models, RNN, GRU, LSTM และ Word Embeddings</h1>
+<p>ข้อเลือกตอบ 24 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>RNN input shape</span></div>
+<div class="qtext">Dataset มีข้อมูลรายชั่วโมงของ 5 ตัวแปร ต้องการใช้ข้อมูลย้อนหลัง 24 ชั่วโมงทำนายค่าถัดไป โดยจัดเป็น batch ละ 64 ลำดับ shape ของ input หนึ่ง batch ที่ป้อนให้ RNN คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Input ของ RNN มี shape (batch size, sequence, feature) = (64, 24, 5). ค่า (64, 120) คือการ flatten 24 × 5 ซึ่งใช้กับ dense network และทำให้ลำดับเวลาหายไป.">(64, 5, 24)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Input ของ RNN มี shape (batch size, sequence, feature) = (64, 24, 5). ค่า (64, 120) คือการ flatten 24 × 5 ซึ่งใช้กับ dense network และทำให้ลำดับเวลาหายไป.">(24, 64, 5)</button>
+<button class="opt" data-correct="true" data-note="ถูก. Input ของ RNN มี shape (batch size, sequence, feature) = (64, 24, 5). ค่า (64, 120) คือการ flatten 24 × 5 ซึ่งใช้กับ dense network และทำให้ลำดับเวลาหายไป.">(64, 24, 5)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Input ของ RNN มี shape (batch size, sequence, feature) = (64, 24, 5). ค่า (64, 120) คือการ flatten 24 × 5 ซึ่งใช้กับ dense network และทำให้ลำดับเวลาหายไป.">(64, 120)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>RNN parameters</span></div>
+<div class="qtext"><code>SimpleRNN(8)</code> รับ input ที่มี 3 feature ต่อ time step และลำดับยาว 50 step layer นี้มี parameter ที่เรียนได้กี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. n·(n + m) + n = 8·(8 + 3) + 8 = 88 + 8 = 96. ความยาวลำดับ (50) ไม่มีผลเพราะ weight ถูกใช้ร่วมกันทุก time step. ค่า 32 คือ dense layer (3·8 + 8) ที่ไม่มี recurrent weight, ค่า 88 คือลืม bias.">96</button>
+<button class="opt" data-correct="false" data-note="ผิด. n·(n + m) + n = 8·(8 + 3) + 8 = 88 + 8 = 96. ความยาวลำดับ (50) ไม่มีผลเพราะ weight ถูกใช้ร่วมกันทุก time step. ค่า 32 คือ dense layer (3·8 + 8) ที่ไม่มี recurrent weight, ค่า 88 คือลืม bias.">32</button>
+<button class="opt" data-correct="false" data-note="ผิด. n·(n + m) + n = 8·(8 + 3) + 8 = 88 + 8 = 96. ความยาวลำดับ (50) ไม่มีผลเพราะ weight ถูกใช้ร่วมกันทุก time step. ค่า 32 คือ dense layer (3·8 + 8) ที่ไม่มี recurrent weight, ค่า 88 คือลืม bias.">88</button>
+<button class="opt" data-correct="false" data-note="ผิด. n·(n + m) + n = 8·(8 + 3) + 8 = 88 + 8 = 96. ความยาวลำดับ (50) ไม่มีผลเพราะ weight ถูกใช้ร่วมกันทุก time step. ค่า 32 คือ dense layer (3·8 + 8) ที่ไม่มี recurrent weight, ค่า 88 คือลืม bias.">4,800</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>RNN forward</span></div>
+<div class="qtext">RNN มี 1 neuron ใช้ activation tanh โดย W_a = 1, W_x = 2, b_a = 0 และ a⟨0⟩ = 0 ถ้า x⟨1⟩ = 0 และ x⟨2⟩ = 0.5 ค่า a⟨2⟩ คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. a⟨1⟩ = tanh(1·0 + 2·0) = tanh(0) = 0. a⟨2⟩ = tanh(1·0 + 2·0.5) = tanh(1) ≈ 0.762. ค่า tanh(0.5) คือลืมคูณ W_x = 2.">tanh(0.5) ≈ 0.462</button>
+<button class="opt" data-correct="false" data-note="ผิด. a⟨1⟩ = tanh(1·0 + 2·0) = tanh(0) = 0. a⟨2⟩ = tanh(1·0 + 2·0.5) = tanh(1) ≈ 0.762. ค่า tanh(0.5) คือลืมคูณ W_x = 2.">tanh(2) ≈ 0.964</button>
+<button class="opt" data-correct="true" data-note="ถูก. a⟨1⟩ = tanh(1·0 + 2·0) = tanh(0) = 0. a⟨2⟩ = tanh(1·0 + 2·0.5) = tanh(1) ≈ 0.762. ค่า tanh(0.5) คือลืมคูณ W_x = 2.">tanh(1) ≈ 0.762</button>
+<button class="opt" data-correct="false" data-note="ผิด. a⟨1⟩ = tanh(1·0 + 2·0) = tanh(0) = 0. a⟨2⟩ = tanh(1·0 + 2·0.5) = tanh(1) ≈ 0.762. ค่า tanh(0.5) คือลืมคูณ W_x = 2.">tanh(1.5) ≈ 0.905</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>RNN types</span></div>
+<div class="qtext">งานจำแนกอีเมลแต่ละฉบับ (ลำดับของคำ) ว่าเป็น spam หรือไม่ จัดเป็น RNN ชนิดใด และควรตั้ง <code>return_sequences</code> ของ recurrent layer สุดท้ายอย่างไร?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Input เป็นลำดับ (T_x &gt; 1) และ output เป็นค่าเดียว (T_y = 1) จึงเป็น sequence-to-vector. ใช้เฉพาะ output ของ time step สุดท้าย จึงตั้ง return_sequences=False ซึ่งเป็นค่า default.">sequence-to-sequence และ return_sequences=True</button>
+<button class="opt" data-correct="true" data-note="ถูก. Input เป็นลำดับ (T_x &gt; 1) และ output เป็นค่าเดียว (T_y = 1) จึงเป็น sequence-to-vector. ใช้เฉพาะ output ของ time step สุดท้าย จึงตั้ง return_sequences=False ซึ่งเป็นค่า default.">sequence-to-vector และ return_sequences=False</button>
+<button class="opt" data-correct="false" data-note="ผิด. Input เป็นลำดับ (T_x &gt; 1) และ output เป็นค่าเดียว (T_y = 1) จึงเป็น sequence-to-vector. ใช้เฉพาะ output ของ time step สุดท้าย จึงตั้ง return_sequences=False ซึ่งเป็นค่า default.">vector-to-sequence และ return_sequences=True</button>
+<button class="opt" data-correct="false" data-note="ผิด. Input เป็นลำดับ (T_x &gt; 1) และ output เป็นค่าเดียว (T_y = 1) จึงเป็น sequence-to-vector. ใช้เฉพาะ output ของ time step สุดท้าย จึงตั้ง return_sequences=False ซึ่งเป็นค่า default.">sequence-to-vector และ return_sequences=True</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>BPTT</span></div>
+<div class="qtext">ใน BPTT ของ RNN ที่คลี่ออก 4 time step gradient ของ cost เทียบกับ weight W_a ที่คิดจากแต่ละ step คือ 0.1, 0.3, −0.2 และ 0.2 gradient ที่ใช้อัปเดต W_a คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Weight ถูกใช้ร่วมกันทุก time step จึงบวก gradient ของทุก step: 0.1 + 0.3 − 0.2 + 0.2 = 0.4. ค่า 0.1 คือค่าเฉลี่ย, ค่า 0.8 คือบวกค่าสัมบูรณ์.">0.1</button>
+<button class="opt" data-correct="true" data-note="ถูก. Weight ถูกใช้ร่วมกันทุก time step จึงบวก gradient ของทุก step: 0.1 + 0.3 − 0.2 + 0.2 = 0.4. ค่า 0.1 คือค่าเฉลี่ย, ค่า 0.8 คือบวกค่าสัมบูรณ์.">0.4</button>
+<button class="opt" data-correct="false" data-note="ผิด. Weight ถูกใช้ร่วมกันทุก time step จึงบวก gradient ของทุก step: 0.1 + 0.3 − 0.2 + 0.2 = 0.4. ค่า 0.1 คือค่าเฉลี่ย, ค่า 0.8 คือบวกค่าสัมบูรณ์.">0.2</button>
+<button class="opt" data-correct="false" data-note="ผิด. Weight ถูกใช้ร่วมกันทุก time step จึงบวก gradient ของทุก step: 0.1 + 0.3 − 0.2 + 0.2 = 0.4. ค่า 0.1 คือค่าเฉลี่ย, ค่า 0.8 คือบวกค่าสัมบูรณ์.">0.8</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>GRU</span></div>
+<div class="qtext">ใน GRU ที่ c⟨t⟩ = Γu · c̃⟨t⟩ + (1 − Γu) · c⟨t−1⟩ ถ้า c⟨t−1⟩ = 0.6, c̃⟨t⟩ = −0.4 และ Γu = 0.5 ค่า c⟨t⟩ คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. 0.5·(−0.4) + (1 − 0.5)·0.6 = −0.2 + 0.3 = 0.1. ค่า −0.4 คือกรณี Γu = 1 (เขียนทับทั้งหมด) และ 0.6 จะได้เมื่อ Γu = 0 (คงค่าเดิม).">0.1</button>
+<button class="opt" data-correct="false" data-note="ผิด. 0.5·(−0.4) + (1 − 0.5)·0.6 = −0.2 + 0.3 = 0.1. ค่า −0.4 คือกรณี Γu = 1 (เขียนทับทั้งหมด) และ 0.6 จะได้เมื่อ Γu = 0 (คงค่าเดิม).">0.5</button>
+<button class="opt" data-correct="false" data-note="ผิด. 0.5·(−0.4) + (1 − 0.5)·0.6 = −0.2 + 0.3 = 0.1. ค่า −0.4 คือกรณี Γu = 1 (เขียนทับทั้งหมด) และ 0.6 จะได้เมื่อ Γu = 0 (คงค่าเดิม).">−0.4</button>
+<button class="opt" data-correct="false" data-note="ผิด. 0.5·(−0.4) + (1 − 0.5)·0.6 = −0.2 + 0.3 = 0.1. ค่า −0.4 คือกรณี Γu = 1 (เขียนทับทั้งหมด) และ 0.6 จะได้เมื่อ Γu = 0 (คงค่าเดิม).">0.2</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>GRU</span></div>
+<div class="qtext">ใน GRU ถ้า update gate Γu เท่ากับ 0 ต่อเนื่องกันตั้งแต่ time step 2 ถึง 6 ข้อใดถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. เมื่อ Γu = 0: c⟨t⟩ = 0·c̃⟨t⟩ + 1·c⟨t−1⟩ = c⟨t−1⟩. ทำซ้ำห้า step ได้ c⟨6⟩ = c⟨1⟩. Memory ถูกคัดลอกโดยไม่ผ่าน weight หรือ tanh จึงเก็บข้อมูลระยะไกลได้.">c⟨6⟩ เท่ากับ c̃⟨6⟩ เพราะ gate ที่ปิดรับค่าใหม่ทั้งหมด</button>
+<button class="opt" data-correct="false" data-note="ผิด. เมื่อ Γu = 0: c⟨t⟩ = 0·c̃⟨t⟩ + 1·c⟨t−1⟩ = c⟨t−1⟩. ทำซ้ำห้า step ได้ c⟨6⟩ = c⟨1⟩. Memory ถูกคัดลอกโดยไม่ผ่าน weight หรือ tanh จึงเก็บข้อมูลระยะไกลได้.">c⟨6⟩ เท่ากับ 0 เพราะ gate ที่เป็นศูนย์ลบ memory ทิ้งทุก step</button>
+<button class="opt" data-correct="false" data-note="ผิด. เมื่อ Γu = 0: c⟨t⟩ = 0·c̃⟨t⟩ + 1·c⟨t−1⟩ = c⟨t−1⟩. ทำซ้ำห้า step ได้ c⟨6⟩ = c⟨1⟩. Memory ถูกคัดลอกโดยไม่ผ่าน weight หรือ tanh จึงเก็บข้อมูลระยะไกลได้.">c⟨6⟩ เข้าใกล้ศูนย์ เพราะถูกคูณด้วย W_a ซ้ำทุก step</button>
+<button class="opt" data-correct="true" data-note="ถูก. เมื่อ Γu = 0: c⟨t⟩ = 0·c̃⟨t⟩ + 1·c⟨t−1⟩ = c⟨t−1⟩. ทำซ้ำห้า step ได้ c⟨6⟩ = c⟨1⟩. Memory ถูกคัดลอกโดยไม่ผ่าน weight หรือ tanh จึงเก็บข้อมูลระยะไกลได้.">c⟨6⟩ เท่ากับ c⟨1⟩ เพราะ memory ถูกส่งต่อไปโดยไม่เปลี่ยนค่า</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>LSTM</span></div>
+<div class="qtext">ใน LSTM ที่ c⟨t⟩ = Γu · c̃⟨t⟩ + Γf · c⟨t−1⟩ ถ้า c⟨t−1⟩ = 2.0, c̃⟨t⟩ = 0.5, Γu = 0.4 และ Γf = 0.5 ค่า c⟨t⟩ คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. 0.4·0.5 + 0.5·2.0 = 0.2 + 1.0 = 1.2. ค่า 1.4 คือใช้ (1 − Γu) = 0.6 แทน Γf ซึ่งเป็นสูตรของ GRU ไม่ใช่ LSTM.">1.2</button>
+<button class="opt" data-correct="false" data-note="ผิด. 0.4·0.5 + 0.5·2.0 = 0.2 + 1.0 = 1.2. ค่า 1.4 คือใช้ (1 − Γu) = 0.6 แทน Γf ซึ่งเป็นสูตรของ GRU ไม่ใช่ LSTM.">0.7</button>
+<button class="opt" data-correct="false" data-note="ผิด. 0.4·0.5 + 0.5·2.0 = 0.2 + 1.0 = 1.2. ค่า 1.4 คือใช้ (1 − Γu) = 0.6 แทน Γf ซึ่งเป็นสูตรของ GRU ไม่ใช่ LSTM.">1.4</button>
+<button class="opt" data-correct="false" data-note="ผิด. 0.4·0.5 + 0.5·2.0 = 0.2 + 1.0 = 1.2. ค่า 1.4 คือใช้ (1 − Γu) = 0.6 แทน Γf ซึ่งเป็นสูตรของ GRU ไม่ใช่ LSTM.">2.5</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>LSTM vs GRU</span></div>
+<div class="qtext">ข้อใดเป็นความต่างที่ถูกต้องระหว่าง LSTM กับ GRU?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. LSTM มี gate สามตัว (update, forget, output) และ state สองตัว (c กับ a). GRU มี gate สองตัว (update, reset), state เดียว และใช้ (1 − Γu) แทน forget gate. Gate ของทั้งสองใช้ sigmoid.">LSTM มี gate สองตัวและ state เดียว ส่วน GRU มี gate สามตัวและ state สองตัว</button>
+<button class="opt" data-correct="false" data-note="ผิด. LSTM มี gate สามตัว (update, forget, output) และ state สองตัว (c กับ a). GRU มี gate สองตัว (update, reset), state เดียว และใช้ (1 − Γu) แทน forget gate. Gate ของทั้งสองใช้ sigmoid.">LSTM ใช้ (1 − Γu) เป็นตัวลืม ส่วน GRU มี forget gate แยกเป็นอิสระ</button>
+<button class="opt" data-correct="true" data-note="ถูก. LSTM มี gate สามตัว (update, forget, output) และ state สองตัว (c กับ a). GRU มี gate สองตัว (update, reset), state เดียว และใช้ (1 − Γu) แทน forget gate. Gate ของทั้งสองใช้ sigmoid.">LSTM มี forget gate และ output gate แยก ส่วน GRU ใช้ (1 − Γu) เป็นตัวลืม</button>
+<button class="opt" data-correct="false" data-note="ผิด. LSTM มี gate สามตัว (update, forget, output) และ state สองตัว (c กับ a). GRU มี gate สองตัว (update, reset), state เดียว และใช้ (1 − Γu) แทน forget gate. Gate ของทั้งสองใช้ sigmoid.">LSTM ใช้ tanh เป็น activation ของ gate ส่วน GRU ใช้ sigmoid เป็น activation ของ gate</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>Recurrent parameters</span></div>
+<div class="qtext"><code>LSTM(32)</code> รับ input ที่มี 8 feature ต่อ time step layer นี้มี parameter ที่เรียนได้กี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. หนึ่งชุด weight: 32·(32 + 8) + 32 = 1,312. LSTM มี 4 ชุด (candidate และ gate สามตัว): 4 × 1,312 = 5,248. ค่า 1,312 คือ SimpleRNN, ค่า 3,936 คือ 3 ชุด, ค่า 5,120 คือลืม bias.">1,312</button>
+<button class="opt" data-correct="true" data-note="ถูก. หนึ่งชุด weight: 32·(32 + 8) + 32 = 1,312. LSTM มี 4 ชุด (candidate และ gate สามตัว): 4 × 1,312 = 5,248. ค่า 1,312 คือ SimpleRNN, ค่า 3,936 คือ 3 ชุด, ค่า 5,120 คือลืม bias.">5,248</button>
+<button class="opt" data-correct="false" data-note="ผิด. หนึ่งชุด weight: 32·(32 + 8) + 32 = 1,312. LSTM มี 4 ชุด (candidate และ gate สามตัว): 4 × 1,312 = 5,248. ค่า 1,312 คือ SimpleRNN, ค่า 3,936 คือ 3 ชุด, ค่า 5,120 คือลืม bias.">3,936</button>
+<button class="opt" data-correct="false" data-note="ผิด. หนึ่งชุด weight: 32·(32 + 8) + 32 = 1,312. LSTM มี 4 ชุด (candidate และ gate สามตัว): 4 × 1,312 = 5,248. ค่า 1,312 คือ SimpleRNN, ค่า 3,936 คือ 3 ชุด, ค่า 5,120 คือลืม bias.">5,120</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>Keras RNN code</span></div>
+<div class="qtext">ต้องการซ้อน GRU สองชั้นเพื่อทำนายค่าเดียวจากทั้งลำดับ ข้อใดตั้งค่า <code>return_sequences</code> ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Recurrent layer ทุกชั้นยกเว้นชั้นสุดท้ายต้องคืน output ทุก time step เพื่อให้ชั้นถัดไปได้ input 3 มิติ. ชั้นสุดท้ายคืนเฉพาะ step สุดท้ายเมื่อต้องการทำนายค่าเดียว.">GRU(32) → GRU(32, return_sequences=True) → Dense(1)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Recurrent layer ทุกชั้นยกเว้นชั้นสุดท้ายต้องคืน output ทุก time step เพื่อให้ชั้นถัดไปได้ input 3 มิติ. ชั้นสุดท้ายคืนเฉพาะ step สุดท้ายเมื่อต้องการทำนายค่าเดียว.">GRU(32, return_sequences=False) → GRU(32) → Dense(1)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Recurrent layer ทุกชั้นยกเว้นชั้นสุดท้ายต้องคืน output ทุก time step เพื่อให้ชั้นถัดไปได้ input 3 มิติ. ชั้นสุดท้ายคืนเฉพาะ step สุดท้ายเมื่อต้องการทำนายค่าเดียว.">GRU(32) → Dense(1) → GRU(32, return_sequences=True)</button>
+<button class="opt" data-correct="true" data-note="ถูก. Recurrent layer ทุกชั้นยกเว้นชั้นสุดท้ายต้องคืน output ทุก time step เพื่อให้ชั้นถัดไปได้ input 3 มิติ. ชั้นสุดท้ายคืนเฉพาะ step สุดท้ายเมื่อต้องการทำนายค่าเดียว.">GRU(32, return_sequences=True) → GRU(32) → Dense(1)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>Bidirectional</span></div>
+<div class="qtext"><code>Bidirectional(LSTM(64))</code> โดยไม่ตั้ง <code>return_sequences</code> ให้ output ของแต่ละตัวอย่างยาวกี่ค่า?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Bidirectional สร้าง LSTM สองตัว (อ่านไปหน้าและย้อนหลัง) แล้วต่อ output เข้าด้วยกัน: 64 + 64 = 128. ค่า 256 คือสับสนกับจำนวนชุด weight (4) ของ LSTM.">32</button>
+<button class="opt" data-correct="false" data-note="ผิด. Bidirectional สร้าง LSTM สองตัว (อ่านไปหน้าและย้อนหลัง) แล้วต่อ output เข้าด้วยกัน: 64 + 64 = 128. ค่า 256 คือสับสนกับจำนวนชุด weight (4) ของ LSTM.">64</button>
+<button class="opt" data-correct="true" data-note="ถูก. Bidirectional สร้าง LSTM สองตัว (อ่านไปหน้าและย้อนหลัง) แล้วต่อ output เข้าด้วยกัน: 64 + 64 = 128. ค่า 256 คือสับสนกับจำนวนชุด weight (4) ของ LSTM.">128</button>
+<button class="opt" data-correct="false" data-note="ผิด. Bidirectional สร้าง LSTM สองตัว (อ่านไปหน้าและย้อนหลัง) แล้วต่อ output เข้าด้วยกัน: 64 + 64 = 128. ค่า 256 คือสับสนกับจำนวนชุด weight (4) ของ LSTM.">256</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>Gradient clipping</span></div>
+<div class="qtext">Gradient มีค่า [3, 4] และตั้ง gradient clipping ตาม norm ที่ threshold 1 gradient หลัง clipping คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Norm = √(9 + 16) = 5 เกิน threshold จึงคูณด้วย 1/5 ได้ [0.6, 0.8] ซึ่งมี norm เท่ากับ 1 และทิศทางเดิม. [1, 1] คือการ clip ทีละค่า ซึ่งเปลี่ยนทิศทางของ gradient.">[1, 1]</button>
+<button class="opt" data-correct="true" data-note="ถูก. Norm = √(9 + 16) = 5 เกิน threshold จึงคูณด้วย 1/5 ได้ [0.6, 0.8] ซึ่งมี norm เท่ากับ 1 และทิศทางเดิม. [1, 1] คือการ clip ทีละค่า ซึ่งเปลี่ยนทิศทางของ gradient.">[0.6, 0.8]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Norm = √(9 + 16) = 5 เกิน threshold จึงคูณด้วย 1/5 ได้ [0.6, 0.8] ซึ่งมี norm เท่ากับ 1 และทิศทางเดิม. [1, 1] คือการ clip ทีละค่า ซึ่งเปลี่ยนทิศทางของ gradient.">[3, 4]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Norm = √(9 + 16) = 5 เกิน threshold จึงคูณด้วย 1/5 ได้ [0.6, 0.8] ซึ่งมี norm เท่ากับ 1 และทิศทางเดิม. [1, 1] คือการ clip ทีละค่า ซึ่งเปลี่ยนทิศทางของ gradient.">[0.75, 1]</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>Time series windowing</span></div>
+<div class="qtext">ลำดับคือ 0, 1, 2, …, 11 สร้าง dataset ด้วย <code>data = seq[:-1]</code>, <code>targets = seq[4:]</code>, <code>sequence_length = 4</code> ตัวอย่างแรกและจำนวนตัวอย่างทั้งหมดคือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. data คือ 0 ถึง 10 (11 ตัว) หน้าต่างยาว 4 จึงมี 11 − 4 + 1 = 8 หน้าต่าง. Target ของหน้าต่างที่เริ่มที่ตำแหน่ง N คือ targets[N] = seq[N + 4] ดังนั้นหน้าต่างแรก [0, 1, 2, 3] มี target 4.">[0, 1, 2, 3] → 4 และมี 8 ตัวอย่าง</button>
+<button class="opt" data-correct="false" data-note="ผิด. data คือ 0 ถึง 10 (11 ตัว) หน้าต่างยาว 4 จึงมี 11 − 4 + 1 = 8 หน้าต่าง. Target ของหน้าต่างที่เริ่มที่ตำแหน่ง N คือ targets[N] = seq[N + 4] ดังนั้นหน้าต่างแรก [0, 1, 2, 3] มี target 4.">[0, 1, 2, 3] → 5 และมี 8 ตัวอย่าง</button>
+<button class="opt" data-correct="false" data-note="ผิด. data คือ 0 ถึง 10 (11 ตัว) หน้าต่างยาว 4 จึงมี 11 − 4 + 1 = 8 หน้าต่าง. Target ของหน้าต่างที่เริ่มที่ตำแหน่ง N คือ targets[N] = seq[N + 4] ดังนั้นหน้าต่างแรก [0, 1, 2, 3] มี target 4.">[1, 2, 3, 4] → 5 และมี 7 ตัวอย่าง</button>
+<button class="opt" data-correct="false" data-note="ผิด. data คือ 0 ถึง 10 (11 ตัว) หน้าต่างยาว 4 จึงมี 11 − 4 + 1 = 8 หน้าต่าง. Target ของหน้าต่างที่เริ่มที่ตำแหน่ง N คือ targets[N] = seq[N + 4] ดังนั้นหน้าต่างแรก [0, 1, 2, 3] มี target 4.">[0, 1, 2, 3] → 4 และมี 7 ตัวอย่าง</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>Time series windowing</span></div>
+<div class="qtext">ข้อมูลบันทึกทุก 15 นาที ต้องการลำดับรายชั่วโมงที่ย้อนหลัง 2 วัน และทำนายค่าที่ 12 ชั่วโมงหลังจุดสุดท้ายของลำดับ ค่า <code>sampling_rate</code>, <code>sequence_length</code> และ <code>delay = sampling_rate * (sequence_length + 12 - 1)</code> คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 60/15 = 4 แถวต่อชั่วโมงจึง sampling_rate = 4. สองวัน = 48 ชั่วโมงจึง sequence_length = 48. delay = 4 × (48 + 12 − 1) = 4 × 59 = 236 แถว. ค่า 240 คือลืมลบ 1.">4, 48 และ 240</button>
+<button class="opt" data-correct="true" data-note="ถูก. 60/15 = 4 แถวต่อชั่วโมงจึง sampling_rate = 4. สองวัน = 48 ชั่วโมงจึง sequence_length = 48. delay = 4 × (48 + 12 − 1) = 4 × 59 = 236 แถว. ค่า 240 คือลืมลบ 1.">4, 48 และ 236</button>
+<button class="opt" data-correct="false" data-note="ผิด. 60/15 = 4 แถวต่อชั่วโมงจึง sampling_rate = 4. สองวัน = 48 ชั่วโมงจึง sequence_length = 48. delay = 4 × (48 + 12 − 1) = 4 × 59 = 236 แถว. ค่า 240 คือลืมลบ 1.">15, 48 และ 885</button>
+<button class="opt" data-correct="false" data-note="ผิด. 60/15 = 4 แถวต่อชั่วโมงจึง sampling_rate = 4. สองวัน = 48 ชั่วโมงจึง sequence_length = 48. delay = 4 × (48 + 12 − 1) = 4 × 59 = 236 แถว. ค่า 240 คือลืมลบ 1.">4, 192 และ 812</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 16</span><span>Forecasting strategy</span></div>
+<div class="qtext">ข้อใดคือข้อเสียหลักของ recursive forecasting เมื่อทำนายหลาย step ข้างหน้า?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Recursive forecasting ทำนายทีละ step แล้วป้อนคำทำนายกลับเป็น input ถัดไป error จึงสะสมและโตขึ้นใน time step หลัง. Target หลายค่าต่อ step เป็นข้อเสียของ forecast at every time step.">ต้องเตรียม target หลายค่าต่อ time step ทำให้การเตรียมข้อมูลซับซ้อนมาก</button>
+<button class="opt" data-correct="false" data-note="ผิด. Recursive forecasting ทำนายทีละ step แล้วป้อนคำทำนายกลับเป็น input ถัดไป error จึงสะสมและโตขึ้นใน time step หลัง. Target หลายค่าต่อ step เป็นข้อเสียของ forecast at every time step.">ทำนายได้เฉพาะ horizon เดียวที่กำหนดไว้ จึงไม่ได้ค่าระหว่างทาง</button>
+<button class="opt" data-correct="false" data-note="ผิด. Recursive forecasting ทำนายทีละ step แล้วป้อนคำทำนายกลับเป็น input ถัดไป error จึงสะสมและโตขึ้นใน time step หลัง. Target หลายค่าต่อ step เป็นข้อเสียของ forecast at every time step.">ต้องเทรนโมเดลแยกหนึ่งตัวต่อหนึ่ง step จึงใช้ parameter มากเกินไป</button>
+<button class="opt" data-correct="true" data-note="ถูก. Recursive forecasting ทำนายทีละ step แล้วป้อนคำทำนายกลับเป็น input ถัดไป error จึงสะสมและโตขึ้นใน time step หลัง. Target หลายค่าต่อ step เป็นข้อเสียของ forecast at every time step.">คำทำนายถูกป้อนกลับเป็น input จึงสะสม error และผิดมากขึ้นใน step หลัง</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 17</span><span>Preparing text</span></div>
+<div class="qtext">ข้อใดเรียงสามขั้นตอนของการแปลงข้อความเป็นตัวเลข และจับคู่กับงานของแต่ละขั้นได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Text standardization ทำให้ข้อความอยู่ในรูปที่ง่าย (ตัวพิมพ์เล็ก, ลบวรรคตอน, stemming), tokenization แบ่งเป็น token (ตัวอักษร, คำ หรือ n-gram) และ vectorization ผูกแต่ละ token กับ array ของตัวเลข.">Tokenization (ทำเป็นตัวพิมพ์เล็ก) → Standardization (แบ่งเป็นคำ) → Vectorization (แปลงเป็นตัวเลข)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Text standardization ทำให้ข้อความอยู่ในรูปที่ง่าย (ตัวพิมพ์เล็ก, ลบวรรคตอน, stemming), tokenization แบ่งเป็น token (ตัวอักษร, คำ หรือ n-gram) และ vectorization ผูกแต่ละ token กับ array ของตัวเลข.">Vectorization (แปลงเป็นตัวเลข) → Standardization (ทำเป็นตัวพิมพ์เล็ก) → Tokenization (แบ่งเป็นคำ)</button>
+<button class="opt" data-correct="true" data-note="ถูก. Text standardization ทำให้ข้อความอยู่ในรูปที่ง่าย (ตัวพิมพ์เล็ก, ลบวรรคตอน, stemming), tokenization แบ่งเป็น token (ตัวอักษร, คำ หรือ n-gram) และ vectorization ผูกแต่ละ token กับ array ของตัวเลข.">Standardization (ทำเป็นตัวพิมพ์เล็ก) → Tokenization (แบ่งเป็นคำ) → Vectorization (แปลงเป็นตัวเลข)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Text standardization ทำให้ข้อความอยู่ในรูปที่ง่าย (ตัวพิมพ์เล็ก, ลบวรรคตอน, stemming), tokenization แบ่งเป็น token (ตัวอักษร, คำ หรือ n-gram) และ vectorization ผูกแต่ละ token กับ array ของตัวเลข.">Standardization (แบ่งเป็นคำ) → Tokenization (แปลงเป็นตัวเลข) → Vectorization (ทำเป็นตัวพิมพ์เล็ก)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 18</span><span>One-hot encoding</span></div>
+<div class="qtext">Vocabulary มี 5,000 คำ ประโยคหนึ่งมี 10 token ถ้าแทนด้วย one-hot encoding จะใช้ตัวเลขทั้งหมดกี่ค่า และมีกี่ค่าที่เป็น 1?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. แต่ละ token เป็น vector ยาว 5,000 ที่มี 1 เพียงตำแหน่งเดียว. สิบ token ใช้ 10 × 5,000 = 50,000 ค่า โดยมี 10 ค่าที่เป็น 1 (ร้อยละ 0.02). ค่า 5,000 ค่ากับ 1 สิบตัวคือ bag of words ของทั้งประโยค.">50,000 ค่า และมี 10 ค่าที่เป็น 1</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละ token เป็น vector ยาว 5,000 ที่มี 1 เพียงตำแหน่งเดียว. สิบ token ใช้ 10 × 5,000 = 50,000 ค่า โดยมี 10 ค่าที่เป็น 1 (ร้อยละ 0.02). ค่า 5,000 ค่ากับ 1 สิบตัวคือ bag of words ของทั้งประโยค.">5,000 ค่า และมี 10 ค่าที่เป็น 1</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละ token เป็น vector ยาว 5,000 ที่มี 1 เพียงตำแหน่งเดียว. สิบ token ใช้ 10 × 5,000 = 50,000 ค่า โดยมี 10 ค่าที่เป็น 1 (ร้อยละ 0.02). ค่า 5,000 ค่ากับ 1 สิบตัวคือ bag of words ของทั้งประโยค.">50,000 ค่า และมี 5,000 ค่าที่เป็น 1</button>
+<button class="opt" data-correct="false" data-note="ผิด. แต่ละ token เป็น vector ยาว 5,000 ที่มี 1 เพียงตำแหน่งเดียว. สิบ token ใช้ 10 × 5,000 = 50,000 ค่า โดยมี 10 ค่าที่เป็น 1 (ร้อยละ 0.02). ค่า 5,000 ค่ากับ 1 สิบตัวคือ bag of words ของทั้งประโยค.">5,010 ค่า และมี 10 ค่าที่เป็น 1</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 19</span><span>Embedding parameters</span></div>
+<div class="qtext"><code>Embedding(input_dim=5000, output_dim=64)</code> มี parameter ที่เรียนได้กี่ตัว และลำดับยาว 20 token ที่ผ่าน layer นี้มี output shape ต่อตัวอย่างเป็นเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Embedding matrix มี 5,000 × 64 = 320,000 ค่า (หนึ่ง vector 64 มิติต่อคำ). แต่ละ token ถูกแทนด้วย vector 64 มิติ ลำดับ 20 token จึงได้ (20, 64). ค่า 1,280 = 20 × 64 คือขนาด output ไม่ใช่ parameter.">5,064 ตัว และ output (20, 5000)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Embedding matrix มี 5,000 × 64 = 320,000 ค่า (หนึ่ง vector 64 มิติต่อคำ). แต่ละ token ถูกแทนด้วย vector 64 มิติ ลำดับ 20 token จึงได้ (20, 64). ค่า 1,280 = 20 × 64 คือขนาด output ไม่ใช่ parameter.">320,000 ตัว และ output (64,)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Embedding matrix มี 5,000 × 64 = 320,000 ค่า (หนึ่ง vector 64 มิติต่อคำ). แต่ละ token ถูกแทนด้วย vector 64 มิติ ลำดับ 20 token จึงได้ (20, 64). ค่า 1,280 = 20 × 64 คือขนาด output ไม่ใช่ parameter.">1,280 ตัว และ output (20, 64)</button>
+<button class="opt" data-correct="true" data-note="ถูก. Embedding matrix มี 5,000 × 64 = 320,000 ค่า (หนึ่ง vector 64 มิติต่อคำ). แต่ละ token ถูกแทนด้วย vector 64 มิติ ลำดับ 20 token จึงได้ (20, 64). ค่า 1,280 = 20 × 64 คือขนาด output ไม่ใช่ parameter.">320,000 ตัว และ output (20, 64)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 20</span><span>Word2Vec</span></div>
+<div class="qtext">ประโยค "I like deep learning very much" ใช้หน้าต่าง 1 คำแต่ละข้าง สำหรับ center word "deep" ข้อใดคือ training sample ของ CBOW และของ SkipGram ตามลำดับ?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. CBOW ทำนาย center word จาก context: ((like, learning), deep) หนึ่ง sample. SkipGram กลับทิศ ทำนาย context แต่ละคำจาก center word: (deep, like) และ (deep, learning) สอง sample.">CBOW: (deep, like), (deep, learning) และ SkipGram: ((like, learning), deep)</button>
+<button class="opt" data-correct="false" data-note="ผิด. CBOW ทำนาย center word จาก context: ((like, learning), deep) หนึ่ง sample. SkipGram กลับทิศ ทำนาย context แต่ละคำจาก center word: (deep, like) และ (deep, learning) สอง sample.">CBOW: ((I, like), deep) และ SkipGram: (deep, learning), (deep, very)</button>
+<button class="opt" data-correct="false" data-note="ผิด. CBOW ทำนาย center word จาก context: ((like, learning), deep) หนึ่ง sample. SkipGram กลับทิศ ทำนาย context แต่ละคำจาก center word: (deep, like) และ (deep, learning) สอง sample.">CBOW: ((like, learning), deep) และ SkipGram: (like, deep), (learning, deep)</button>
+<button class="opt" data-correct="true" data-note="ถูก. CBOW ทำนาย center word จาก context: ((like, learning), deep) หนึ่ง sample. SkipGram กลับทิศ ทำนาย context แต่ละคำจาก center word: (deep, like) และ (deep, learning) สอง sample.">CBOW: ((like, learning), deep) และ SkipGram: (deep, like), (deep, learning)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 21</span><span>Word embeddings</span></div>
+<div class="qtext">ข้อใดเปรียบเทียบ one-hot vector กับ word embedding ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. One-hot: sparse, high-dimensional (เท่าขนาด vocabulary), hardcoded และทุกคู่คำห่างเท่ากัน. Word embedding: dense, lower-dimensional, learned from data และคำที่ความหมายใกล้กันอยู่ใกล้กันใน vector space.">One-hot เป็น dense และเรียนจากข้อมูล ส่วน embedding เป็น sparse และกำหนดตายตัว</button>
+<button class="opt" data-correct="true" data-note="ถูก. One-hot: sparse, high-dimensional (เท่าขนาด vocabulary), hardcoded และทุกคู่คำห่างเท่ากัน. Word embedding: dense, lower-dimensional, learned from data และคำที่ความหมายใกล้กันอยู่ใกล้กันใน vector space.">One-hot เป็น sparse มิติสูงและกำหนดตายตัว ส่วน embedding เป็น dense มิติต่ำและเรียนจากข้อมูล</button>
+<button class="opt" data-correct="false" data-note="ผิด. One-hot: sparse, high-dimensional (เท่าขนาด vocabulary), hardcoded และทุกคู่คำห่างเท่ากัน. Word embedding: dense, lower-dimensional, learned from data และคำที่ความหมายใกล้กันอยู่ใกล้กันใน vector space.">One-hot มีมิติต่ำและจับความคล้ายของคำได้ ส่วน embedding มีมิติสูงเท่า vocabulary</button>
+<button class="opt" data-correct="false" data-note="ผิด. One-hot: sparse, high-dimensional (เท่าขนาด vocabulary), hardcoded และทุกคู่คำห่างเท่ากัน. Word embedding: dense, lower-dimensional, learned from data และคำที่ความหมายใกล้กันอยู่ใกล้กันใน vector space.">One-hot เป็น sparse และเรียนจากข้อมูล ส่วน embedding เป็น dense และกำหนดตายตัว</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 22</span><span>TextVectorization</span></div>
+<div class="qtext">ต้องการให้ <code>TextVectorization</code> คืนลำดับของ integer index เพื่อป้อนเข้า Embedding layer และ LSTM ต้องเติมค่าใดในช่องว่างของ <code>TextVectorization(max_tokens=20000, output_mode=______)</code>?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. output_mode=&quot;int&quot; คืนลำดับของ index (หนึ่ง index ต่อ token) ซึ่งรักษาลำดับคำ. &quot;tf_idf&quot;, &quot;count&quot; และ &quot;multi_hot&quot; คืน vector เดียวยาวเท่า vocabulary ต่อข้อความ ซึ่งเป็น bag-of-words และทิ้งลำดับ.">"int"</button>
+<button class="opt" data-correct="false" data-note="ผิด. output_mode=&quot;int&quot; คืนลำดับของ index (หนึ่ง index ต่อ token) ซึ่งรักษาลำดับคำ. &quot;tf_idf&quot;, &quot;count&quot; และ &quot;multi_hot&quot; คืน vector เดียวยาวเท่า vocabulary ต่อข้อความ ซึ่งเป็น bag-of-words และทิ้งลำดับ.">"tf_idf"</button>
+<button class="opt" data-correct="false" data-note="ผิด. output_mode=&quot;int&quot; คืนลำดับของ index (หนึ่ง index ต่อ token) ซึ่งรักษาลำดับคำ. &quot;tf_idf&quot;, &quot;count&quot; และ &quot;multi_hot&quot; คืน vector เดียวยาวเท่า vocabulary ต่อข้อความ ซึ่งเป็น bag-of-words และทิ้งลำดับ.">"multi_hot"</button>
+<button class="opt" data-correct="false" data-note="ผิด. output_mode=&quot;int&quot; คืนลำดับของ index (หนึ่ง index ต่อ token) ซึ่งรักษาลำดับคำ. &quot;tf_idf&quot;, &quot;count&quot; และ &quot;multi_hot&quot; คืน vector เดียวยาวเท่า vocabulary ต่อข้อความ ซึ่งเป็น bag-of-words และทิ้งลำดับ.">"count"</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 23</span><span>Masking</span></div>
+<div class="qtext"><code>Embedding(input_dim=50, output_dim=8, mask_zero=True)</code> รับ input <code>[[4, 9, 0, 0], [7, 0, 0, 0], [3, 5, 2, 6]]</code> ผลของ <code>compute_mask</code> มี <code>True</code> ทั้งหมดกี่ตัว และแถวที่สองคือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Mask เป็น True ที่ token ที่ไม่ใช่ 0: แถวแรก 2 ตัว, แถวที่สอง 1 ตัว, แถวที่สาม 4 ตัว รวม 7. แถวที่สอง [7, 0, 0, 0] ให้ [True, False, False, False]. ค่า 5 คือจำนวน False.">5 ตัว และแถวที่สองคือ [False, True, True, True]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Mask เป็น True ที่ token ที่ไม่ใช่ 0: แถวแรก 2 ตัว, แถวที่สอง 1 ตัว, แถวที่สาม 4 ตัว รวม 7. แถวที่สอง [7, 0, 0, 0] ให้ [True, False, False, False]. ค่า 5 คือจำนวน False.">12 ตัว และแถวที่สองคือ [True, True, True, True]</button>
+<button class="opt" data-correct="true" data-note="ถูก. Mask เป็น True ที่ token ที่ไม่ใช่ 0: แถวแรก 2 ตัว, แถวที่สอง 1 ตัว, แถวที่สาม 4 ตัว รวม 7. แถวที่สอง [7, 0, 0, 0] ให้ [True, False, False, False]. ค่า 5 คือจำนวน False.">7 ตัว และแถวที่สองคือ [True, False, False, False]</button>
+<button class="opt" data-correct="false" data-note="ผิด. Mask เป็น True ที่ token ที่ไม่ใช่ 0: แถวแรก 2 ตัว, แถวที่สอง 1 ตัว, แถวที่สาม 4 ตัว รวม 7. แถวที่สอง [7, 0, 0, 0] ให้ [True, False, False, False]. ค่า 5 คือจำนวน False.">7 ตัว และแถวที่สองคือ [False, True, True, True]</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 24</span><span>Sequence model parameters</span></div>
+<div class="qtext">โมเดลมี <code>Embedding(input_dim=10000, output_dim=64)</code> ตามด้วย <code>Bidirectional(LSTM(16))</code> และ <code>Dense(1, activation="sigmoid")</code> โมเดลนี้มี parameter ทั้งหมดกี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000·64 = 640,000. LSTM หนึ่งทิศ: 4·[16·(16 + 64) + 16] = 5,184 และสองทิศ = 10,368. Dense รับ 32 ค่า: 33. รวม 650,401. ค่า 645,201 คือคิด LSTM ทิศเดียว, ค่า 650,273 คือลืม bias ของ LSTM, ค่า 642,625 คือใช้สูตรของ SimpleRNN.">645,201</button>
+<button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000·64 = 640,000. LSTM หนึ่งทิศ: 4·[16·(16 + 64) + 16] = 5,184 และสองทิศ = 10,368. Dense รับ 32 ค่า: 33. รวม 650,401. ค่า 645,201 คือคิด LSTM ทิศเดียว, ค่า 650,273 คือลืม bias ของ LSTM, ค่า 642,625 คือใช้สูตรของ SimpleRNN.">650,273</button>
+<button class="opt" data-correct="false" data-note="ผิด. Embedding: 10,000·64 = 640,000. LSTM หนึ่งทิศ: 4·[16·(16 + 64) + 16] = 5,184 และสองทิศ = 10,368. Dense รับ 32 ค่า: 33. รวม 650,401. ค่า 645,201 คือคิด LSTM ทิศเดียว, ค่า 650,273 คือลืม bias ของ LSTM, ค่า 642,625 คือใช้สูตรของ SimpleRNN.">642,625</button>
+<button class="opt" data-correct="true" data-note="ถูก. Embedding: 10,000·64 = 640,000. LSTM หนึ่งทิศ: 4·[16·(16 + 64) + 16] = 5,184 และสองทิศ = 10,368. Dense รับ 32 ค่า: 33. รวม 650,401. ค่า 645,201 คือคิด LSTM ทิศเดียว, ค่า 650,273 คือลืม bias ของ LSTM, ค่า 642,625 คือใช้สูตรของ SimpleRNN.">650,401</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 25</span><span>parameter ของโมเดล recurrent</span></div>
+<div class="qtext">input (None, 30, 5) → GRU(8, return_sequences=True) → LSTM(4) → Dense(1) ใช้สูตรตามสไลด์ คือ GRU 3 ชุด LSTM 4 ชุด bias ชุดเดียว เขียน parameter ทุกชั้นและ output shape</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>GRU: หนึ่งชุด 8 × (8 + 5) + 8 = 112 · สามชุด 336 · output (None, 30, 8) เพราะ return_sequences=True</p>
+<p>LSTM: m = 8 จากชั้นก่อน หนึ่งชุด 4 × (4 + 8) + 4 = 52 · สี่ชุด 208 · output (None, 4)</p>
+<p>Dense(1): 4 + 1 = 5 · รวม 549 · ถ้าใช้ GRU ของ Keras ที่มี bias สองชุดจะได้ 3 × (112 + 8) = 360</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 26</span><span>ไล่ GRU ด้วยมือ</span></div>
+<div class="qtext">GRU แบบ simplified memory เริ่ม c⟨0⟩ = 0 ค่าเสนอ c̃ ของสาม step คือ 0.8, −0.4, 0.6 และ Γ_u คือ 1, 0, 0.5 คำนวณ c ทุก step และบอกว่า step ไหน memory ถูกคัดลอกเฉยๆ</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>step 1: 1 × 0.8 + 0 × 0 = 0.8</p>
+<p>step 2: Γ_u = 0 จึง 0 × (−0.4) + 1 × 0.8 = 0.8 คือคัดลอกค่าเดิม ค่าเสนอ −0.4 ถูกละทิ้ง</p>
+<p>step 3: 0.5 × 0.6 + 0.5 × 0.8 = 0.7</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 27</span><span>one-hot กับ embedding</span></div>
+<div class="qtext">vocabulary 50,000 คำ ประโยคยาว 12 คำ เทียบ one-hot กับ Embedding(input_dim=50000, output_dim=100) ในแง่จำนวนค่าที่ป้อนเข้า layer ถัดไป จำนวน parameter และความสามารถบอกว่าคำสองคำคล้ายกัน</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>one-hot: 12 × 50,000 = 600,000 ค่าต่อประโยค ไม่มี parameter ให้เรียน dot product ของคำต่างกันเป็น 0 ทุกคู่ จึงบอกความคล้ายไม่ได้</p>
+<p>Embedding: 12 × 100 = 1,200 ค่าต่อประโยค มี parameter 50,000 × 100 = 5,000,000 ที่เรียนจากข้อมูล</p>
+<p>embedding วางคำความหมายใกล้กันไว้ใกล้กัน และทิศใน vector space แทนความสัมพันธ์ เช่น Dog → Wolf ขนานกับ Cat → Tiger</p>
+</div>
+</div>
+
+</body>
+</html>
