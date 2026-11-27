@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 8: CNN Architectures, Transfer Learning และ Vision Transformers</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 8</span>
+  <span><a href="0008-cnn-architectures-and-transfer-learning.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 8: CNN Architectures, Transfer Learning และ Vision Transformers</h1>
+<p>ข้อเลือกตอบ 21 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>Top-5 error</span></div>
+<div class="qtext">โมเดลหนึ่งทดสอบกับภาพ 2,000 ภาพ โดยมี 1,500 ภาพที่ class จริงเป็นอันดับ 1 ของคำทำนาย และอีก 380 ภาพที่ class จริงอยู่อันดับ 2 ถึง 5 top-5 error rate ของโมเดลนี้คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ภาพที่ class จริงอยู่ใน 5 อันดับแรก = 1,500 + 380 = 1,880 ภาพ. ภาพที่พลาด = 120 ภาพ. Top-5 error = 120/2,000 = 6%. ค่า 25% คือ top-1 error, ค่า 94% คือ top-5 accuracy.">25%</button>
+<button class="opt" data-correct="false" data-note="ผิด. ภาพที่ class จริงอยู่ใน 5 อันดับแรก = 1,500 + 380 = 1,880 ภาพ. ภาพที่พลาด = 120 ภาพ. Top-5 error = 120/2,000 = 6%. ค่า 25% คือ top-1 error, ค่า 94% คือ top-5 accuracy.">19%</button>
+<button class="opt" data-correct="true" data-note="ถูก. ภาพที่ class จริงอยู่ใน 5 อันดับแรก = 1,500 + 380 = 1,880 ภาพ. ภาพที่พลาด = 120 ภาพ. Top-5 error = 120/2,000 = 6%. ค่า 25% คือ top-1 error, ค่า 94% คือ top-5 accuracy.">6%</button>
+<button class="opt" data-correct="false" data-note="ผิด. ภาพที่ class จริงอยู่ใน 5 อันดับแรก = 1,500 + 380 = 1,880 ภาพ. ภาพที่พลาด = 120 ภาพ. Top-5 error = 120/2,000 = 6%. ค่า 25% คือ top-1 error, ค่า 94% คือ top-5 accuracy.">94%</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>AlexNet</span></div>
+<div class="qtext">ข้อใดคือชุดเทคนิคสามอย่างที่ AlexNet ใช้เพื่อลด overfitting?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. สามเทคนิคลด overfitting ของ AlexNet คือ dropout, data augmentation และ L2 regularization. ReLU ใช้บรรเทา vanishing gradient ส่วน local response normalization และ GPU ใช้เร่งการเทรน. Batch normalization และ skip connections มาใน ResNet.">ReLU, local response normalization และ GPU สองตัว</button>
+<button class="opt" data-correct="true" data-note="ถูก. สามเทคนิคลด overfitting ของ AlexNet คือ dropout, data augmentation และ L2 regularization. ReLU ใช้บรรเทา vanishing gradient ส่วน local response normalization และ GPU ใช้เร่งการเทรน. Batch normalization และ skip connections มาใน ResNet.">Dropout, data augmentation และ L2 regularization</button>
+<button class="opt" data-correct="false" data-note="ผิด. สามเทคนิคลด overfitting ของ AlexNet คือ dropout, data augmentation และ L2 regularization. ReLU ใช้บรรเทา vanishing gradient ส่วน local response normalization และ GPU ใช้เร่งการเทรน. Batch normalization และ skip connections มาใน ResNet.">Dropout, batch normalization และ skip connections</button>
+<button class="opt" data-correct="false" data-note="ผิด. สามเทคนิคลด overfitting ของ AlexNet คือ dropout, data augmentation และ L2 regularization. ReLU ใช้บรรเทา vanishing gradient ส่วน local response normalization และ GPU ใช้เร่งการเทรน. Batch normalization และ skip connections มาใน ResNet.">Max pooling, ReLU และ convolution ขนาด 11×11</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>Output size</span></div>
+<div class="qtext">Convolution layer แรกของ network หนึ่งรับภาพ 99×99×3 ใช้ 32 filter ขนาด 7×7 stride 4 padding valid shape ของ output คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. (99 − 7)/4 + 1 = 23 + 1 = 24 และ channel ของ output เท่ากับจำนวน filter คือ 32. ค่า 23 คือลืมบวก 1, ค่า 25 คือปัดขึ้นจาก 99/4.">23×23×32</button>
+<button class="opt" data-correct="false" data-note="ผิด. (99 − 7)/4 + 1 = 23 + 1 = 24 และ channel ของ output เท่ากับจำนวน filter คือ 32. ค่า 23 คือลืมบวก 1, ค่า 25 คือปัดขึ้นจาก 99/4.">25×25×32</button>
+<button class="opt" data-correct="false" data-note="ผิด. (99 − 7)/4 + 1 = 23 + 1 = 24 และ channel ของ output เท่ากับจำนวน filter คือ 32. ค่า 23 คือลืมบวก 1, ค่า 25 คือปัดขึ้นจาก 99/4.">24×24×3</button>
+<button class="opt" data-correct="true" data-note="ถูก. (99 − 7)/4 + 1 = 23 + 1 = 24 และ channel ของ output เท่ากับจำนวน filter คือ 32. ค่า 23 คือลืมบวก 1, ค่า 25 คือปัดขึ้นจาก 99/4.">24×24×32</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>VGG</span></div>
+<div class="qtext">ข้อใดคือ configuration ที่ VGG ใช้เหมือนกันทั้ง network?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. VGG กำหนด convolutional layer ทุกชั้นเป็น 3×3, stride 1, padding same และ pooling layer ทุกชั้นเป็น 2×2, stride 2 ซึ่งทำให้ขนาดลดครึ่งเฉพาะที่ pooling.">Conv 3×3 stride 1 padding same และ max pooling 2×2 stride 2</button>
+<button class="opt" data-correct="false" data-note="ผิด. VGG กำหนด convolutional layer ทุกชั้นเป็น 3×3, stride 1, padding same และ pooling layer ทุกชั้นเป็น 2×2, stride 2 ซึ่งทำให้ขนาดลดครึ่งเฉพาะที่ pooling.">Conv 5×5 stride 1 padding same และ max pooling 3×3 stride 2</button>
+<button class="opt" data-correct="false" data-note="ผิด. VGG กำหนด convolutional layer ทุกชั้นเป็น 3×3, stride 1, padding same และ pooling layer ทุกชั้นเป็น 2×2, stride 2 ซึ่งทำให้ขนาดลดครึ่งเฉพาะที่ pooling.">Conv 3×3 stride 2 padding valid และ max pooling 2×2 stride 2</button>
+<button class="opt" data-correct="false" data-note="ผิด. VGG กำหนด convolutional layer ทุกชั้นเป็น 3×3, stride 1, padding same และ pooling layer ทุกชั้นเป็น 2×2, stride 2 ซึ่งทำให้ขนาดลดครึ่งเฉพาะที่ pooling.">Conv 3×3 stride 1 padding valid และ max pooling 2×2 stride 1</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>VGG</span></div>
+<div class="qtext">Convolution 3×3 ซ้อนกันสามชั้น (stride 1) มี receptive field เทียบเท่า convolution ชั้นเดียวขนาดใด และถ้าทุกชั้นมี 32 channel (ไม่นับ bias) แบบใดใช้ weight น้อยกว่า?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Receptive field = 3 + 2 + 2 = 7. Weight ของ 3×3 สามชั้น = 3·9·32·32 = 27,648; ของ 7×7 ชั้นเดียว = 49·32·32 = 50,176.">เทียบเท่า 9×9 และ 3×3 สามชั้นใช้ weight น้อยกว่า</button>
+<button class="opt" data-correct="false" data-note="ผิด. Receptive field = 3 + 2 + 2 = 7. Weight ของ 3×3 สามชั้น = 3·9·32·32 = 27,648; ของ 7×7 ชั้นเดียว = 49·32·32 = 50,176.">เทียบเท่า 7×7 และ 7×7 ชั้นเดียวใช้ weight น้อยกว่า</button>
+<button class="opt" data-correct="false" data-note="ผิด. Receptive field = 3 + 2 + 2 = 7. Weight ของ 3×3 สามชั้น = 3·9·32·32 = 27,648; ของ 7×7 ชั้นเดียว = 49·32·32 = 50,176.">เทียบเท่า 5×5 และ 3×3 สามชั้นใช้ weight น้อยกว่า</button>
+<button class="opt" data-correct="true" data-note="ถูก. Receptive field = 3 + 2 + 2 = 7. Weight ของ 3×3 สามชั้น = 3·9·32·32 = 27,648; ของ 7×7 ชั้นเดียว = 49·32·32 = 50,176.">เทียบเท่า 7×7 และ 3×3 สามชั้นใช้ weight น้อยกว่า</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>Inception</span></div>
+<div class="qtext">Inception module หนึ่งรับ input 14×14×480 เส้นทางทั้งสี่ให้ output 192, 208, 48 และ 64 channel ตามลำดับ (ทุกเส้นทาง stride 1 padding same) shape หลัง depth concatenation คือข้อใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Concatenate ตาม depth คือบวกจำนวน channel: 192 + 208 + 48 + 64 = 512. กว้างและสูงคงเดิมที่ 14×14. ค่า 992 คือบวก channel ของ input เข้าไปด้วย.">14×14×992</button>
+<button class="opt" data-correct="false" data-note="ผิด. Concatenate ตาม depth คือบวกจำนวน channel: 192 + 208 + 48 + 64 = 512. กว้างและสูงคงเดิมที่ 14×14. ค่า 992 คือบวก channel ของ input เข้าไปด้วย.">56×56×128</button>
+<button class="opt" data-correct="true" data-note="ถูก. Concatenate ตาม depth คือบวกจำนวน channel: 192 + 208 + 48 + 64 = 512. กว้างและสูงคงเดิมที่ 14×14. ค่า 992 คือบวก channel ของ input เข้าไปด้วย.">14×14×512</button>
+<button class="opt" data-correct="false" data-note="ผิด. Concatenate ตาม depth คือบวกจำนวน channel: 192 + 208 + 48 + 64 = 512. กว้างและสูงคงเดิมที่ 14×14. ค่า 992 คือบวก channel ของ input เข้าไปด้วย.">14×14×208</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>Inception</span></div>
+<div class="qtext">Input 14×14×256 ต้องการ output 14×14×64 จาก conv 5×5 (padding same) ถ้าใส่ conv 1×1 จำนวน 32 filter ไว้ก่อน จำนวนการคูณทั้งหมดคือเท่าใด เมื่อใช้สูตร (ขนาด output) × (ขนาด filter) × (depth ของ input)?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. 1×1: (14·14·32)·1·256 = 1,605,632. 5×5: (14·14·64)·25·32 = 10,035,200. รวม 11,640,832. ค่า 80,281,600 คือกรณีไม่มี bottleneck ซึ่งมากกว่าราว 6.9 เท่า.">11,640,832</button>
+<button class="opt" data-correct="false" data-note="ผิด. 1×1: (14·14·32)·1·256 = 1,605,632. 5×5: (14·14·64)·25·32 = 10,035,200. รวม 11,640,832. ค่า 80,281,600 คือกรณีไม่มี bottleneck ซึ่งมากกว่าราว 6.9 เท่า.">80,281,600</button>
+<button class="opt" data-correct="false" data-note="ผิด. 1×1: (14·14·32)·1·256 = 1,605,632. 5×5: (14·14·64)·25·32 = 10,035,200. รวม 11,640,832. ค่า 80,281,600 คือกรณีไม่มี bottleneck ซึ่งมากกว่าราว 6.9 เท่า.">10,035,200</button>
+<button class="opt" data-correct="false" data-note="ผิด. 1×1: (14·14·32)·1·256 = 1,605,632. 5×5: (14·14·64)·25·32 = 10,035,200. รวม 11,640,832. ค่า 80,281,600 คือกรณีไม่มี bottleneck ซึ่งมากกว่าราว 6.9 เท่า.">1,605,632</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>ResNet</span></div>
+<div class="qtext">ใน residual block ถ้า h(x) คือ output ของทั้งบล็อกและ x คือ input สอง convolutional layer ภายในบล็อกเรียนฟังก์ชัน f(x) ที่สัมพันธ์กับ h(x) อย่างไร?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Skip connection บวก input เข้ากับ output ของสอง layer: h(x) = f(x) + x จึงได้ f(x) = h(x) − x คือส่วนต่าง (residual) ที่ต้องเพิ่มจาก input.">f(x) = h(x) + x</button>
+<button class="opt" data-correct="true" data-note="ถูก. Skip connection บวก input เข้ากับ output ของสอง layer: h(x) = f(x) + x จึงได้ f(x) = h(x) − x คือส่วนต่าง (residual) ที่ต้องเพิ่มจาก input.">f(x) = h(x) − x</button>
+<button class="opt" data-correct="false" data-note="ผิด. Skip connection บวก input เข้ากับ output ของสอง layer: h(x) = f(x) + x จึงได้ f(x) = h(x) − x คือส่วนต่าง (residual) ที่ต้องเพิ่มจาก input.">f(x) = h(x) · x</button>
+<button class="opt" data-correct="false" data-note="ผิด. Skip connection บวก input เข้ากับ output ของสอง layer: h(x) = f(x) + x จึงได้ f(x) = h(x) − x คือส่วนต่าง (residual) ที่ต้องเพิ่มจาก input.">f(x) = x − h(x)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>ResNet</span></div>
+<div class="qtext">ResNet รุ่นหนึ่งมี convolution แรก 1 ชั้น ตามด้วย residual unit แบบ 2 convolution จำนวน 2, 2, 2, 2 ตัวในสี่ stage และ fully connected 1 ชั้น network นี้มีกี่ weight layers?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 1 + (2 + 2 + 2 + 2) × 2 + 1 = 1 + 16 + 1 = 18 (ResNet-18). ค่า 16 คือลืมนับ convolution แรกและ FC, ค่า 10 คือนับ residual unit เป็น 1 layer.">10</button>
+<button class="opt" data-correct="false" data-note="ผิด. 1 + (2 + 2 + 2 + 2) × 2 + 1 = 1 + 16 + 1 = 18 (ResNet-18). ค่า 16 คือลืมนับ convolution แรกและ FC, ค่า 10 คือนับ residual unit เป็น 1 layer.">16</button>
+<button class="opt" data-correct="false" data-note="ผิด. 1 + (2 + 2 + 2 + 2) × 2 + 1 = 1 + 16 + 1 = 18 (ResNet-18). ค่า 16 คือลืมนับ convolution แรกและ FC, ค่า 10 คือนับ residual unit เป็น 1 layer.">34</button>
+<button class="opt" data-correct="true" data-note="ถูก. 1 + (2 + 2 + 2 + 2) × 2 + 1 = 1 + 16 + 1 = 18 (ResNet-18). ค่า 16 คือลืมนับ convolution แรกและ FC, ค่า 10 คือนับ residual unit เป็น 1 layer.">18</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>Comparison</span></div>
+<div class="qtext">ข้อใดจับคู่สถาปัตยกรรมกับจุดเด่น (salient feature) ได้ถูกต้องทั้งหมด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. VGGNet ใช้ kernel 3×3 ขนาดเดียวทั้ง network, Inception ใช้ kernel หลายขนาดขนานกันในโมดูลเดียว, ResNet ใช้ shortcut (skip) connections.">VGGNet: parallel kernels, Inception: shortcut connections, ResNet: fixed-size kernels</button>
+<button class="opt" data-correct="true" data-note="ถูก. VGGNet ใช้ kernel 3×3 ขนาดเดียวทั้ง network, Inception ใช้ kernel หลายขนาดขนานกันในโมดูลเดียว, ResNet ใช้ shortcut (skip) connections.">VGGNet: fixed-size kernels, Inception: parallel kernels, ResNet: shortcut connections</button>
+<button class="opt" data-correct="false" data-note="ผิด. VGGNet ใช้ kernel 3×3 ขนาดเดียวทั้ง network, Inception ใช้ kernel หลายขนาดขนานกันในโมดูลเดียว, ResNet ใช้ shortcut (skip) connections.">VGGNet: shortcut connections, Inception: fixed-size kernels, ResNet: parallel kernels</button>
+<button class="opt" data-correct="false" data-note="ผิด. VGGNet ใช้ kernel 3×3 ขนาดเดียวทั้ง network, Inception ใช้ kernel หลายขนาดขนานกันในโมดูลเดียว, ResNet ใช้ shortcut (skip) connections.">VGGNet: fixed-size kernels, Inception: shortcut connections, ResNet: parallel kernels</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>Separable convolution</span></div>
+<div class="qtext">Depthwise separable convolution ใช้ kernel 3×3 กับ input 32 channel และให้ output 64 channel ถ้าไม่นับ bias layer นี้มี weight กี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Depthwise: 3·3·32 = 288. Pointwise 1×1: 32·64 = 2,048. รวม 2,336. ค่า 18,432 = 3·3·32·64 คือ convolution ปกติ ซึ่งมากกว่าราว 7.9 เท่า.">18,432</button>
+<button class="opt" data-correct="false" data-note="ผิด. Depthwise: 3·3·32 = 288. Pointwise 1×1: 32·64 = 2,048. รวม 2,336. ค่า 18,432 = 3·3·32·64 คือ convolution ปกติ ซึ่งมากกว่าราว 7.9 เท่า.">2,912</button>
+<button class="opt" data-correct="true" data-note="ถูก. Depthwise: 3·3·32 = 288. Pointwise 1×1: 32·64 = 2,048. รวม 2,336. ค่า 18,432 = 3·3·32·64 คือ convolution ปกติ ซึ่งมากกว่าราว 7.9 เท่า.">2,336</button>
+<button class="opt" data-correct="false" data-note="ผิด. Depthwise: 3·3·32 = 288. Pointwise 1×1: 32·64 = 2,048. รวม 2,336. ค่า 18,432 = 3·3·32·64 คือ convolution ปกติ ซึ่งมากกว่าราว 7.9 เท่า.">608</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>Modern CNN</span></div>
+<div class="qtext">ข้อใดอธิบาย compound scaling ของ EfficientNet ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Compound scaling เพิ่มจำนวน layer (depth), จำนวน filter ต่อ layer (width) และความละเอียดของภาพ (resolution) พร้อมกัน. การแยก pattern คือ separable convolution และการป้อนให้ทุก layer ถัดไปคือ DenseNet.">เพิ่ม depth, width และ resolution ของภาพ input ร่วมกันอย่างมีหลักการ</button>
+<button class="opt" data-correct="false" data-note="ผิด. Compound scaling เพิ่มจำนวน layer (depth), จำนวน filter ต่อ layer (width) และความละเอียดของภาพ (resolution) พร้อมกัน. การแยก pattern คือ separable convolution และการป้อนให้ทุก layer ถัดไปคือ DenseNet.">เพิ่มเฉพาะจำนวน layer ให้ลึกขึ้นเรื่อยๆ โดยคงจำนวน filter และขนาดภาพ</button>
+<button class="opt" data-correct="false" data-note="ผิด. Compound scaling เพิ่มจำนวน layer (depth), จำนวน filter ต่อ layer (width) และความละเอียดของภาพ (resolution) พร้อมกัน. การแยก pattern คือ separable convolution และการป้อนให้ทุก layer ถัดไปคือ DenseNet.">แยก spatial pattern กับ cross-channel pattern ออกเป็นสอง convolution</button>
+<button class="opt" data-correct="false" data-note="ผิด. Compound scaling เพิ่มจำนวน layer (depth), จำนวน filter ต่อ layer (width) และความละเอียดของภาพ (resolution) พร้อมกัน. การแยก pattern คือ separable convolution และการป้อนให้ทุก layer ถัดไปคือ DenseNet.">ป้อน output ของแต่ละ layer ให้ทุก layer ถัดไปภายใน block เดียวกัน</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>Transfer learning</span></div>
+<div class="qtext">มีภาพ 800 ภาพสำหรับจำแนกชนิดดอกไม้ และ pretrained model เทรนมาบนภาพธรรมชาติทั่วไปซึ่งมีดอกไม้จำนวนมาก ตามแนวทางเลือกระดับ transfer learning ควรใช้วิธีใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Dataset เล็กและ domain คล้าย source คือ scenario 1: freeze feature extractor ทั้งหมดแล้วเทรนเฉพาะ classifier ใหม่. Dataset เล็กมักทำให้ overfit จึง fine tune น้อยและพึ่ง source dataset มาก.">Fine-tune ทั้งโมเดลตั้งแต่ layer แรก</button>
+<button class="opt" data-correct="false" data-note="ผิด. Dataset เล็กและ domain คล้าย source คือ scenario 1: freeze feature extractor ทั้งหมดแล้วเทรนเฉพาะ classifier ใหม่. Dataset เล็กมักทำให้ overfit จึง fine tune น้อยและพึ่ง source dataset มาก.">Fine-tune โดย freeze ประมาณ 33%–50% แรกของโมเดล</button>
+<button class="opt" data-correct="false" data-note="ผิด. Dataset เล็กและ domain คล้าย source คือ scenario 1: freeze feature extractor ทั้งหมดแล้วเทรนเฉพาะ classifier ใหม่. Dataset เล็กมักทำให้ overfit จึง fine tune น้อยและพึ่ง source dataset มาก.">เทรนโมเดลใหม่จากศูนย์โดยไม่ใช้ pretrained weight</button>
+<button class="opt" data-correct="true" data-note="ถูก. Dataset เล็กและ domain คล้าย source คือ scenario 1: freeze feature extractor ทั้งหมดแล้วเทรนเฉพาะ classifier ใหม่. Dataset เล็กมักทำให้ overfit จึง fine tune น้อยและพึ่ง source dataset มาก.">ใช้ pretrained network เป็น feature extractor</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>Transfer learning</span></div>
+<div class="qtext">ข้อใดคือความต่างระหว่างการใช้ pretrained model เป็น feature detector กับ fine tuning?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ทั้งสองแบบเพิ่ม classifier ใหม่. Feature detector freeze feature extractor ทั้งหมดและเทรนเฉพาะ classifier; fine tuning freeze เพียงบางส่วนแล้วเทรน layer ที่ไม่ถูก freeze ร่วมกับ classifier.">Feature detector ไม่เพิ่ม classifier ใหม่ ส่วน fine tuning เพิ่ม classifier ใหม่</button>
+<button class="opt" data-correct="true" data-note="ถูก. ทั้งสองแบบเพิ่ม classifier ใหม่. Feature detector freeze feature extractor ทั้งหมดและเทรนเฉพาะ classifier; fine tuning freeze เพียงบางส่วนแล้วเทรน layer ที่ไม่ถูก freeze ร่วมกับ classifier.">Feature detector freeze ส่วนสกัด feature ทั้งหมด ส่วน fine tuning freeze เพียงบางส่วน</button>
+<button class="opt" data-correct="false" data-note="ผิด. ทั้งสองแบบเพิ่ม classifier ใหม่. Feature detector freeze feature extractor ทั้งหมดและเทรนเฉพาะ classifier; fine tuning freeze เพียงบางส่วนแล้วเทรน layer ที่ไม่ถูก freeze ร่วมกับ classifier.">Feature detector ใช้ learning rate ต่ำกว่า ส่วน fine tuning ใช้ค่าที่สูงกว่าเสมอ</button>
+<button class="opt" data-correct="false" data-note="ผิด. ทั้งสองแบบเพิ่ม classifier ใหม่. Feature detector freeze feature extractor ทั้งหมดและเทรนเฉพาะ classifier; fine tuning freeze เพียงบางส่วนแล้วเทรน layer ที่ไม่ถูก freeze ร่วมกับ classifier.">Feature detector เทรนทุก layer ของโมเดล ส่วน fine tuning ไม่เทรน layer ใดเลย</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>Fine tuning</span></div>
+<div class="qtext">ข้อใดเป็นลำดับที่เหมาะสมเมื่อ fine-tune pretrained model ที่ต่อ classifier ใหม่ซึ่งสุ่มค่าเริ่มต้น?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Classifier ที่สุ่มค่าให้ error gradient ขนาดใหญ่ที่อาจทำลาย weight เดิม จึง freeze layer เดิมไว้ก่อน. เมื่อ unfreeze ต้อง compile ใหม่ให้การเปลี่ยนมีผล และลด learning rate เพื่อไม่ให้ weight เดิมเสียหาย.">Unfreeze ทุก layer ก่อน เทรนด้วย learning rate สูง แล้วจึง freeze เมื่อ loss ลดลง</button>
+<button class="opt" data-correct="false" data-note="ผิด. Classifier ที่สุ่มค่าให้ error gradient ขนาดใหญ่ที่อาจทำลาย weight เดิม จึง freeze layer เดิมไว้ก่อน. เมื่อ unfreeze ต้อง compile ใหม่ให้การเปลี่ยนมีผล และลด learning rate เพื่อไม่ให้ weight เดิมเสียหาย.">Freeze classifier ใหม่ เทรน layer เดิมก่อน แล้ว unfreeze classifier ด้วย learning rate สูง</button>
+<button class="opt" data-correct="true" data-note="ถูก. Classifier ที่สุ่มค่าให้ error gradient ขนาดใหญ่ที่อาจทำลาย weight เดิม จึง freeze layer เดิมไว้ก่อน. เมื่อ unfreeze ต้อง compile ใหม่ให้การเปลี่ยนมีผล และลด learning rate เพื่อไม่ให้ weight เดิมเสียหาย.">Freeze layer เดิม เทรน classifier ก่อน แล้ว unfreeze, compile ใหม่ และลด learning rate</button>
+<button class="opt" data-correct="false" data-note="ผิด. Classifier ที่สุ่มค่าให้ error gradient ขนาดใหญ่ที่อาจทำลาย weight เดิม จึง freeze layer เดิมไว้ก่อน. เมื่อ unfreeze ต้อง compile ใหม่ให้การเปลี่ยนมีผล และลด learning rate เพื่อไม่ให้ weight เดิมเสียหาย.">Freeze layer เดิม เทรน classifier ก่อน แล้ว unfreeze และเพิ่ม learning rate โดยไม่ compile</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 16</span><span>Keras transfer learning</span></div>
+<div class="qtext">ต้องการโหลด VGG16 พร้อม weight ของ ImageNet โดยตัดส่วน fully connected classifier ออก เพื่อนำมาต่อ classifier ของตัวเอง ต้องเติมอาร์กิวเมนต์ใดในช่องว่างของ <code>VGG16(weights='imagenet', ______, input_shape=(224,224,3))</code>?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. include_top=False ตัด Flatten และ dense layer ทั้งสาม (fc1, fc2, predictions) ออก เหลือ conv base 14,714,688 parameter. trainable ไม่ใช่อาร์กิวเมนต์ของการโหลด ต้องตั้งภายหลังด้วย conv_base.trainable = False.">include_top=False</button>
+<button class="opt" data-correct="false" data-note="ผิด. include_top=False ตัด Flatten และ dense layer ทั้งสาม (fc1, fc2, predictions) ออก เหลือ conv base 14,714,688 parameter. trainable ไม่ใช่อาร์กิวเมนต์ของการโหลด ต้องตั้งภายหลังด้วย conv_base.trainable = False.">trainable=False</button>
+<button class="opt" data-correct="false" data-note="ผิด. include_top=False ตัด Flatten และ dense layer ทั้งสาม (fc1, fc2, predictions) ออก เหลือ conv base 14,714,688 parameter. trainable ไม่ใช่อาร์กิวเมนต์ของการโหลด ต้องตั้งภายหลังด้วย conv_base.trainable = False.">include_top=True</button>
+<button class="opt" data-correct="false" data-note="ผิด. include_top=False ตัด Flatten และ dense layer ทั้งสาม (fc1, fc2, predictions) ออก เหลือ conv base 14,714,688 parameter. trainable ไม่ใช่อาร์กิวเมนต์ของการโหลด ต้องตั้งภายหลังด้วย conv_base.trainable = False.">pooling='flatten'</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 17</span><span>Keras transfer learning</span></div>
+<div class="qtext">Conv base ที่ถูก freeze มี 14,714,688 parameter และให้ output 7×7×512 ต่อด้วย Flatten → Dense(128, relu) → Dropout(0.5) → Dense(1, sigmoid) โมเดลนี้มี trainable parameter กี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Flatten = 25,088. Dense(128): 25,088·128 + 128 = 3,211,392. Dense(1): 128 + 1 = 129. รวม 3,211,521. Dropout ไม่มี parameter และ conv base ที่ freeze เป็น non-trainable. ค่า 17,926,209 คือ total params.">17,926,209</button>
+<button class="opt" data-correct="false" data-note="ผิด. Flatten = 25,088. Dense(128): 25,088·128 + 128 = 3,211,392. Dense(1): 128 + 1 = 129. รวม 3,211,521. Dropout ไม่มี parameter และ conv base ที่ freeze เป็น non-trainable. ค่า 17,926,209 คือ total params.">3,211,392</button>
+<button class="opt" data-correct="false" data-note="ผิด. Flatten = 25,088. Dense(128): 25,088·128 + 128 = 3,211,392. Dense(1): 128 + 1 = 129. รวม 3,211,521. Dropout ไม่มี parameter และ conv base ที่ freeze เป็น non-trainable. ค่า 17,926,209 คือ total params.">3,211,649</button>
+<button class="opt" data-correct="true" data-note="ถูก. Flatten = 25,088. Dense(128): 25,088·128 + 128 = 3,211,392. Dense(1): 128 + 1 = 129. รวม 3,211,521. Dropout ไม่มี parameter และ conv base ที่ freeze เป็น non-trainable. ค่า 17,926,209 คือ total params.">3,211,521</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 18</span><span>Keras transfer learning</span></div>
+<div class="qtext">Train set มี 3,000 ภาพ โหลดด้วย <code>image_dataset_from_directory(..., image_size=(224,224), batch_size=64)</code> ข้อใดคือ shape ของ batch ข้อมูลหนึ่ง batch เต็ม และจำนวน batch ต่อ epoch?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Batch มี shape (batch, สูง, กว้าง, channel) = (64, 224, 224, 3). จำนวน batch = ⌈3000/64⌉ = ⌈46.875⌉ = 47 โดย batch สุดท้ายมี 3000 − 46·64 = 56 ภาพ.">(64, 224, 224) และ 46 batch</button>
+<button class="opt" data-correct="false" data-note="ผิด. Batch มี shape (batch, สูง, กว้าง, channel) = (64, 224, 224, 3). จำนวน batch = ⌈3000/64⌉ = ⌈46.875⌉ = 47 โดย batch สุดท้ายมี 3000 − 46·64 = 56 ภาพ.">(64, 224, 224, 3) และ 46 batch</button>
+<button class="opt" data-correct="true" data-note="ถูก. Batch มี shape (batch, สูง, กว้าง, channel) = (64, 224, 224, 3). จำนวน batch = ⌈3000/64⌉ = ⌈46.875⌉ = 47 โดย batch สุดท้ายมี 3000 − 46·64 = 56 ภาพ.">(64, 224, 224, 3) และ 47 batch</button>
+<button class="opt" data-correct="false" data-note="ผิด. Batch มี shape (batch, สูง, กว้าง, channel) = (64, 224, 224, 3). จำนวน batch = ⌈3000/64⌉ = ⌈46.875⌉ = 47 โดย batch สุดท้ายมี 3000 − 46·64 = 56 ภาพ.">(224, 224, 3, 64) และ 47 batch</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 19</span><span>ViT</span></div>
+<div class="qtext">ภาพขนาด 384×384 ถูกแบ่งเป็น patch ขนาด 32×32 โดย Vision Transformer จำนวน patch ทั้งหมดคือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 384/32 = 12 patch ต่อด้าน จึงมี 12 × 12 = 144 patch. ค่า 12 คือจำนวนต่อด้านเท่านั้น, ค่า 196 คือกรณีภาพ 224 กับ patch 16, ค่า 1,024 = 32 × 32 คือจำนวน pixel ต่อ patch ต่อ channel.">12</button>
+<button class="opt" data-correct="true" data-note="ถูก. 384/32 = 12 patch ต่อด้าน จึงมี 12 × 12 = 144 patch. ค่า 12 คือจำนวนต่อด้านเท่านั้น, ค่า 196 คือกรณีภาพ 224 กับ patch 16, ค่า 1,024 = 32 × 32 คือจำนวน pixel ต่อ patch ต่อ channel.">144</button>
+<button class="opt" data-correct="false" data-note="ผิด. 384/32 = 12 patch ต่อด้าน จึงมี 12 × 12 = 144 patch. ค่า 12 คือจำนวนต่อด้านเท่านั้น, ค่า 196 คือกรณีภาพ 224 กับ patch 16, ค่า 1,024 = 32 × 32 คือจำนวน pixel ต่อ patch ต่อ channel.">196</button>
+<button class="opt" data-correct="false" data-note="ผิด. 384/32 = 12 patch ต่อด้าน จึงมี 12 × 12 = 144 patch. ค่า 12 คือจำนวนต่อด้านเท่านั้น, ค่า 196 คือกรณีภาพ 224 กับ patch 16, ค่า 1,024 = 32 × 32 คือจำนวน pixel ต่อ patch ต่อ channel.">1,024</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 20</span><span>ViT vs Swin</span></div>
+<div class="qtext">ข้อใดอธิบายความต่างของการคำนวณ self-attention ระหว่าง ViT ดั้งเดิมกับ Swin Transformer ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. ViT ทำ global self-attention ระหว่างทุก patch ซึ่งแพงเมื่อ patch มาก. Swin (Shifted Window) คำนวณ self-attention ภายใน local window แล้วเลื่อน window ระหว่าง layer ที่ต่อกันเพื่อให้ข้อมูลไหลข้าม window.">ViT คำนวณระหว่างทุก patch ทั้งภาพ ส่วน Swin คำนวณภายใน window ที่เลื่อนระหว่าง layer</button>
+<button class="opt" data-correct="false" data-note="ผิด. ViT ทำ global self-attention ระหว่างทุก patch ซึ่งแพงเมื่อ patch มาก. Swin (Shifted Window) คำนวณ self-attention ภายใน local window แล้วเลื่อน window ระหว่าง layer ที่ต่อกันเพื่อให้ข้อมูลไหลข้าม window.">ViT คำนวณภายใน window เฉพาะที่ ส่วน Swin คำนวณระหว่างทุก patch ทั้งภาพ</button>
+<button class="opt" data-correct="false" data-note="ผิด. ViT ทำ global self-attention ระหว่างทุก patch ซึ่งแพงเมื่อ patch มาก. Swin (Shifted Window) คำนวณ self-attention ภายใน local window แล้วเลื่อน window ระหว่าง layer ที่ต่อกันเพื่อให้ข้อมูลไหลข้าม window.">ViT ใช้ convolution ก่อน attention ส่วน Swin ใช้ attention เพียงอย่างเดียว</button>
+<button class="opt" data-correct="false" data-note="ผิด. ViT ทำ global self-attention ระหว่างทุก patch ซึ่งแพงเมื่อ patch มาก. Swin (Shifted Window) คำนวณ self-attention ภายใน local window แล้วเลื่อน window ระหว่าง layer ที่ต่อกันเพื่อให้ข้อมูลไหลข้าม window.">ViT เลื่อน window ระหว่าง layer ส่วน Swin ใช้ window ตำแหน่งเดิมทุก layer</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 21</span><span>ViT vs CNN</span></div>
+<div class="qtext">ข้อใดเป็นคุณสมบัติของ Vision Transformer ดั้งเดิมเมื่อเทียบกับ CNN?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ViT ดั้งเดิมไม่ต้องใช้ convolution มี inductive bias เฉพาะภาพน้อยกว่า CNN จึงต้องเรียนโครงสร้างเชิงพื้นที่จากข้อมูล และได้ประโยชน์มากจาก large-scale pretraining. Locality bias แรงและ hierarchical feature เป็นคุณสมบัติของ CNN.">มี locality bias แรงกว่า และสร้าง hierarchical feature โดยธรรมชาติ</button>
+<button class="opt" data-correct="false" data-note="ผิด. ViT ดั้งเดิมไม่ต้องใช้ convolution มี inductive bias เฉพาะภาพน้อยกว่า CNN จึงต้องเรียนโครงสร้างเชิงพื้นที่จากข้อมูล และได้ประโยชน์มากจาก large-scale pretraining. Locality bias แรงและ hierarchical feature เป็นคุณสมบัติของ CNN.">ต้องใช้ convolution ในทุก layer และไม่ต้องการ position embedding</button>
+<button class="opt" data-correct="false" data-note="ผิด. ViT ดั้งเดิมไม่ต้องใช้ convolution มี inductive bias เฉพาะภาพน้อยกว่า CNN จึงต้องเรียนโครงสร้างเชิงพื้นที่จากข้อมูล และได้ประโยชน์มากจาก large-scale pretraining. Locality bias แรงและ hierarchical feature เป็นคุณสมบัติของ CNN.">มี inductive bias เฉพาะภาพมากกว่า จึงต้องการข้อมูล pretrain น้อยกว่า</button>
+<button class="opt" data-correct="true" data-note="ถูก. ViT ดั้งเดิมไม่ต้องใช้ convolution มี inductive bias เฉพาะภาพน้อยกว่า CNN จึงต้องเรียนโครงสร้างเชิงพื้นที่จากข้อมูล และได้ประโยชน์มากจาก large-scale pretraining. Locality bias แรงและ hierarchical feature เป็นคุณสมบัติของ CNN.">มี inductive bias เฉพาะภาพน้อยกว่า และได้ประโยชน์มากจาก pretraining ขนาดใหญ่</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 22</span><span>parameter ของ transfer learning</span></div>
+<div class="qtext">โหลด VGG16 include_top=False input 224×224×3 แล้วต่อ Flatten → Dense(128, relu) → Dense(3, softmax) และตั้ง conv_base.trainable = False เขียน trainable, non-trainable และ total parameter พร้อมวิธีคิด</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>conv base ของ VGG16 มี 14,714,688 parameter และ output (7, 7, 512) · Flatten ได้ 25,088</p>
+<p>Dense(128): 25,088·128 + 128 = 3,211,392 · Dense(3): 128·3 + 3 = 387 · trainable = 3,211,779</p>
+<p>non-trainable = 14,714,688 เพราะ freeze ทั้ง conv base · total = 17,926,467</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 23</span><span>residual block กับ vanishing gradient</span></div>
+<div class="qtext">อธิบายว่าทำไม network ธรรมดาที่ลึก 50 ชั้นเทรนยาก และ residual block แก้ได้อย่างไร ใช้สมการ h(x) = f(x) + x และตัวเลขประกอบ</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>backprop คูณ gradient ย้อนทีละชั้น ถ้าตัวคูณแต่ละชั้นราว 0.8 ห้าสิบชั้นได้ 0.8⁵⁰ ≈ 0.000014 layer ต้นแทบไม่ถูกอัปเดต</p>
+<p>residual block ให้ h(x) = f(x) + x จึงได้ ∂h/∂x = ∂f/∂x + 1 ถ้า ∂f/∂x = 0.01 ก็ยังส่งต่อ 1.01 gradient มีทางลัดผ่าน skip connection</p>
+<p>อีกข้อคือถ้า weight เป็น 0 บล็อกกลายเป็น identity h(x) = x การเพิ่มบล็อกจึงไม่ทำให้แย่ลง</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 24</span><span>เลือกแนวทาง transfer learning</span></div>
+<div class="qtext">มีภาพรถยนต์ 200,000 ภาพแยก 50 รุ่น และภาพใบไม้เป็นโรค 300 ภาพแยก 4 โรค ทั้งสองงานใช้ ResNet ที่เทรนบน ImageNet ควรใช้ scenario ใดและตั้ง learning rate อย่างไร</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>รถยนต์: ข้อมูลมาก + domain คล้าย ImageNet คือ scenario #2 fine tune ส่วนท้าย freeze ราว 60%–80%</p>
+<p>ใบไม้เป็นโรค: ข้อมูลน้อย + domain ต่าง คือ scenario #3 fine tune จาก activation ช่วงต้น freeze ราว 33%–50%</p>
+<p>ทั้งสองงานใช้ learning rate เล็กกว่าการเทรนปกติ ฝึก head ใหม่ก่อนสองสาม epoch แล้วค่อยปลดล็อก compile ใหม่ และลด learning rate อีก</p>
+</div>
+</div>
+
+</body>
+</html>
