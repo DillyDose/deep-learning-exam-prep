@@ -1,0 +1,694 @@
+[
+ {
+  "id": "L8-01",
+  "lesson": 8,
+  "topic": "LeNet-5",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "LeNet-5 conv ชั้นที่สองใช้ 16 filter ขนาด 5×5 กับ input 14×14×6 มี parameter เท่าใด",
+  "options": [
+   "2,416",
+   "2,400",
+   "416",
+   "1,216"
+  ],
+  "answer": 0,
+  "explanation": "<p>(5·5·6 + 1)·16 = 151·16 = 2,416 ขนาด 14×14 ไม่อยู่ในสูตร</p>",
+  "why_wrong": [
+   "ลืม bias",
+   "ลืม channel 6",
+   "ใช้ filter 8 ตัว"
+  ],
+  "ref": "Lesson 8 §1.2"
+ },
+ {
+  "id": "L8-02",
+  "lesson": 8,
+  "topic": "AlexNet ขนาดชั้นแรก",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "AlexNet C1 ใช้ 96 filter 11×11 stride 4 padding valid กับ input 227×227×3 ได้กว้างเท่าใด",
+  "options": [
+   "55",
+   "54",
+   "57",
+   "56"
+  ],
+  "answer": 0,
+  "explanation": "<p>⌊(227 − 11)/4⌋ + 1 = 54 + 1 = 55 ถ้าใช้ input 224 แบบโค้ดบนสไลด์จะได้ 54</p>",
+  "why_wrong": [
+   "ลืม +1 หรือใช้ input 224",
+   "คิดแบบ same ⌈227/4⌉",
+   "ปัดผิด"
+  ],
+  "ref": "Lesson 8 §1.3"
+ },
+ {
+  "id": "L8-03",
+  "lesson": 8,
+  "topic": "AlexNet เทคนิค",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "สามเทคนิคที่ AlexNet ใช้เอาชนะ overfitting ตามสไลด์คืออะไร",
+  "options": [
+   "dropout, data augmentation, L2 regularization",
+   "ReLU, GPU สองตัว, local response normalization",
+   "batch normalization, skip connection, dropout",
+   "1×1 conv, inception module, early stopping"
+  ],
+  "answer": 0,
+  "explanation": "<p>สไลด์หน้า 6: overcome overfitting ด้วย drop-out, data augmentation, l2 regularizations ส่วน ReLU แก้ vanishing gradient LRN และ GPU เร่งการเทรน</p>",
+  "why_wrong": [
+   "ReLU และ GPU ไม่ได้แก้ overfitting",
+   "BN และ skip connection มาจาก ResNet",
+   "1×1 และ inception มาจาก GoogLeNet"
+  ],
+  "ref": "Lesson 8 §1.3"
+ },
+ {
+  "id": "L8-04",
+  "lesson": 8,
+  "topic": "AlexNet ข้อเสีย",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ข้อเสียของ AlexNet ที่ VGG มาแก้คืออะไร",
+  "options": [
+   "hyperparameter เยอะ kernel stride padding ต่างทุกชั้น",
+   "ตื้นเกินไปจนเรียน feature ที่ซับซ้อนไม่ได้",
+   "ไม่มี fully connected layer จึงจำแนกภาพไม่ได้",
+   "ใช้ sigmoid ทั้ง network จึงเกิด vanishing gradient"
+  ],
+  "answer": 0,
+  "explanation": "<p>สไลด์ระบุ many hyperparameters to tune VGG ตอบด้วย one uniform configuration: conv 3×3 stride 1 same และ pool 2×2 stride 2 ทุกชั้น</p>",
+  "why_wrong": [
+   "AlexNet ลึก 8 ชั้นซึ่งลึกที่สุดในยุคนั้น",
+   "AlexNet มี FC สามชั้น",
+   "AlexNet ใช้ ReLU"
+  ],
+  "ref": "Lesson 8 §1.3"
+ },
+ {
+  "id": "L8-05",
+  "lesson": 8,
+  "topic": "receptive field",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "conv 3×3 stride 1 ซ้อนกันสี่ชั้น มี receptive field เท่าใด",
+  "options": [
+   "9×9",
+   "12×12",
+   "7×7",
+   "81×81"
+  ],
+  "answer": 0,
+  "explanation": "<p>3 + 2(k − 1) = 3 + 2·3 = 9 แต่ละชั้นที่เพิ่มขยายมุมมองข้างละ 1 รวม 2</p>",
+  "why_wrong": [
+   "คูณ 3 × 4",
+   "นับสามชั้น",
+   "ยกกำลังผิด"
+  ],
+  "ref": "Lesson 8 §2.1"
+ },
+ {
+  "id": "L8-06",
+  "lesson": 8,
+  "topic": "3×3 ซ้อนเทียบ 5×5",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "input และ output 128 channel ใช้ conv 3×3 สองชั้นแทน 5×5 หนึ่งชั้น parameter ลดลงเท่าใด",
+  "options": [
+   "114,560",
+   "409,728",
+   "295,168",
+   "123,008"
+  ],
+  "answer": 0,
+  "explanation": "<p>5×5: (25·128 + 1)·128 = 409,728 · 3×3 สองชั้น: 2·(9·128 + 1)·128 = 2·147,584 = 295,168 · ลดลง 409,728 − 295,168 = 114,560</p>",
+  "why_wrong": [
+   "นั่นคือของ 5×5",
+   "นั่นคือของ 3×3 สองชั้น",
+   "คิด bias ผิด"
+  ],
+  "ref": "Lesson 8 §2.1"
+ },
+ {
+  "id": "L8-07",
+  "lesson": 8,
+  "topic": "VGG configuration",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ค่าตั้งเดียวของ VGG สำหรับ conv และ pooling คืออะไร",
+  "options": [
+   "conv 3×3 stride 1 same · pool 2×2 stride 2",
+   "conv 5×5 stride 2 valid · pool 3×3 stride 2",
+   "conv 1×1 stride 1 same · pool 2×2 stride 1",
+   "conv 11×11 stride 4 valid · pool 3×3 stride 2"
+  ],
+  "answer": 0,
+  "explanation": "<p>สไลด์หน้า 8: convolution filter 3×3, stride 1, same padding · pooling 2×2, stride 2</p>",
+  "why_wrong": [
+   "ไม่ใช่ของ VGG",
+   "1×1 เป็นของ Inception",
+   "นั่นคือ C1 ของ AlexNet"
+  ],
+  "ref": "Lesson 8 §2.1"
+ },
+ {
+  "id": "L8-08",
+  "lesson": 8,
+  "topic": "naive inception cost",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "output 14×14×64 จาก input 14×14×256 ด้วย conv 3×3 ตรงๆ ต้องคูณกี่ครั้ง",
+  "options": [
+   "28,901,376",
+   "3,211,264",
+   "115,605,504",
+   "7,225,344"
+  ],
+  "answer": 0,
+  "explanation": "<p>ขนาด output × ขนาด filter × depth input = (14·14·64) × 9 × 256 = 12,544 × 2,304 = 28,901,376</p>",
+  "why_wrong": [
+   "ลืมคูณ 9",
+   "ใช้ 28×28",
+   "ลืมคูณ 4 ของ depth"
+  ],
+  "ref": "Lesson 8 §2.2"
+ },
+ {
+  "id": "L8-09",
+  "lesson": 8,
+  "topic": "1×1 bottleneck",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "conv 1×1 จำนวน 16 filter กับ input 28×28×192 ได้ output อะไร",
+  "options": [
+   "28×28×16 ลด depth คงกว้างสูง",
+   "1×1×16 ลดกว้างสูงเหลือหนึ่งจุด",
+   "28×28×192 ไม่เปลี่ยนอะไร",
+   "14×14×16 ลดทั้งกว้างสูงและ depth"
+  ],
+  "answer": 0,
+  "explanation": "<p>1×1 conv คง H และ W เปลี่ยนแค่ depth เป็นจำนวน filter ใช้ลด depth ก่อน 3×3 หรือ 5×5 เพื่อลดการคูณ</p>",
+  "why_wrong": [
+   "1×1 ไม่ใช่ global pooling",
+   "depth เปลี่ยนเป็นจำนวน filter",
+   "stride 1 ไม่ลดกว้างสูง"
+  ],
+  "ref": "Lesson 8 §2.2"
+ },
+ {
+  "id": "L8-10",
+  "lesson": 8,
+  "topic": "inception concatenate",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "inception module สี่ทางให้ channel ปลายทาง 64, 96, 32, 32 กว้างสูง 28 ทุกทาง output shape คืออะไร",
+  "options": [
+   "28×28×224",
+   "28×28×64",
+   "112×28×56",
+   "28×28×96"
+  ],
+  "answer": 0,
+  "explanation": "<p>ทุกทางใช้ same จึงกว้างสูงเท่ากัน concatenate ตาม depth = บวก channel 64 + 96 + 32 + 32 = 224</p>",
+  "why_wrong": [
+   "เลือกแค่ทางแรก",
+   "ต่อตามกว้าง",
+   "เลือกค่ามากสุด"
+  ],
+  "ref": "Lesson 8 §2.2"
+ },
+ {
+  "id": "L8-11",
+  "lesson": 8,
+  "topic": "residual block",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "residual block ที่ weight ของสอง layer เป็นศูนย์ทั้งหมดให้ output อะไร",
+  "options": [
+   "h(x) = x บล็อกกลายเป็น identity",
+   "h(x) = 0 สัญญาณหายทั้งหมด",
+   "h(x) = 2x เพราะบวก x สองครั้ง",
+   "h(x) = f(x) ที่สุ่มใหม่"
+  ],
+  "answer": 0,
+  "explanation": "<p>h(x) = f(x) + x ถ้า f(x) = 0 ได้ h(x) = x การเพิ่มบล็อกจึงไม่ทำให้แย่ลงและเรียน identity ได้ง่าย</p>",
+  "why_wrong": [
+   "นั่นคือบล็อกธรรมดา",
+   "บวก x ครั้งเดียว",
+   "weight ศูนย์ให้ f(x) = 0"
+  ],
+  "ref": "Lesson 8 §3.1"
+ },
+ {
+  "id": "L8-12",
+  "lesson": 8,
+  "topic": "gradient ผ่าน skip",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "residual block มี ∂f/∂x = 0.02 gradient ของ h เทียบ x เท่าใด",
+  "options": [
+   "1.02",
+   "0.02",
+   "0.98",
+   "2.02"
+  ],
+  "answer": 0,
+  "explanation": "<p>∂h/∂x = ∂f/∂x + 1 = 1.02 พจน์ +1 คือทางลัดที่ gradient ไหลกลับโดยไม่ถูกคูณค่าเล็ก</p>",
+  "why_wrong": [
+   "ไม่มี skip",
+   "ลบแทนบวก",
+   "บวก 2"
+  ],
+  "ref": "Lesson 8 §3.1"
+ },
+ {
+  "id": "L8-13",
+  "lesson": 8,
+  "topic": "นับ layer ResNet",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "ResNet ใช้บล็อก bottleneck สามชั้น stage ละ 3, 4, 23, 3 บล็อก บวก conv แรกและ FC ได้กี่ weight layer",
+  "options": [
+   "101",
+   "66",
+   "99",
+   "152"
+  ],
+  "answer": 0,
+  "explanation": "<p>1 + (3 + 4 + 23 + 3) × 3 + 1 = 1 + 99 + 1 = 101</p>",
+  "why_wrong": [
+   "คิดบล็อกละ 2 ชั้น",
+   "ลืม conv แรกกับ FC",
+   "นั่นคือ 3, 8, 36, 3"
+  ],
+  "ref": "Lesson 8 §3.2"
+ },
+ {
+  "id": "L8-14",
+  "lesson": 8,
+  "topic": "ตารางเปรียบเทียบ",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "จากตาราง comparison สถาปัตยกรรมใดมี parameter มากที่สุด",
+  "options": [
+   "VGGNet 138M",
+   "ResNet-152 60.3M",
+   "AlexNet 62M",
+   "Inception 6.4M"
+  ],
+  "answer": 0,
+  "explanation": "<p>VGG มี 138M เพราะ FC ใหญ่ ทั้งที่ใช้ 3×3 ส่วน Inception น้อยที่สุด 6.4M ResNet-152 ลึกเกือบ 10 เท่าของ VGG16 แต่ parameter ไม่ถึงครึ่ง</p>",
+  "why_wrong": [
+   "ลึกสุดไม่ใช่ parameter มากสุด",
+   "62M น้อยกว่า 138M",
+   "น้อยที่สุด"
+  ],
+  "ref": "Lesson 8 §3.3"
+ },
+ {
+  "id": "L8-15",
+  "lesson": 8,
+  "topic": "top-5 error",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "จับคู่ข้อใดถูกตามตาราง ILSVRC",
+  "options": [
+   "GoogLeNet 22 layers top-5 error 6.67%",
+   "VGG 16 layers top-5 error 15.3%",
+   "ResNet-152 top-5 error 7.3%",
+   "AlexNet 8 layers top-5 error 4.49%"
+  ],
+  "answer": 0,
+  "explanation": "<p>AlexNet 8 / 15.3% · VGG 16 / 7.3% · GoogLeNet 22 / 6.67% · ResNet-152 152 / 4.49%</p>",
+  "why_wrong": [
+   "15.3% เป็นของ AlexNet",
+   "7.3% เป็นของ VGG",
+   "4.49% เป็นของ ResNet"
+  ],
+  "ref": "Lesson 8 §1.1"
+ },
+ {
+  "id": "L8-16",
+  "lesson": 8,
+  "topic": "separable conv",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "SeparableConv2D(64, 3) บน input 32 channel มี parameter เท่าใด รวม bias ของ pointwise",
+  "options": [
+   "2,400",
+   "18,496",
+   "2,112",
+   "2,336"
+  ],
+  "answer": 0,
+  "explanation": "<p>depthwise 3·3·32 = 288 · pointwise 32·64 + 64 = 2,112 · รวม 2,400 เทียบ Conv2D ปกติ (9·32 + 1)·64 = 18,496</p>",
+  "why_wrong": [
+   "นั่นคือ Conv2D ปกติ",
+   "ลืม depthwise",
+   "ลืม bias"
+  ],
+  "ref": "Lesson 8 §4.2"
+ },
+ {
+  "id": "L8-17",
+  "lesson": 8,
+  "topic": "Xception สมมติฐาน",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "depthwise separable convolution ตั้งสมมติฐานว่าอะไร",
+  "options": [
+   "pattern เชิงพื้นที่กับข้าม channel แยกกันโมเดลได้",
+   "ภาพทุกภาพมีขอบแนวตั้งมากกว่าขอบแนวนอน",
+   "channel ของภาพอิสระต่อกันจึงไม่ต้องผสมเลย",
+   "filter ขนาดใหญ่ดีกว่า filter เล็กหลายชั้นเสมอ"
+  ],
+  "answer": 0,
+  "explanation": "<p>depthwise ทำ spatial filter ทีละ channel แล้ว pointwise 1×1 ผสมข้าม channel ทีหลัง ผสม channel ยังเกิด ไม่ได้ทิ้ง</p>",
+  "why_wrong": [
+   "ไม่เกี่ยวกับทิศของขอบ",
+   "ยังผสม channel ด้วย pointwise",
+   "ขัดกับแนวคิด 3×3 ของ VGG"
+  ],
+  "ref": "Lesson 8 §4.2"
+ },
+ {
+  "id": "L8-18",
+  "lesson": 8,
+  "topic": "modern CNN",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "รุ่นใดใช้ compound scaling เพิ่ม depth, width, resolution ร่วมกัน",
+  "options": [
+   "EfficientNet",
+   "DenseNet",
+   "MobileNet",
+   "ConvNeXt"
+  ],
+  "answer": 0,
+  "explanation": "<p>EfficientNet ของ Tan &amp; Le scale ทั้งสามมิติอย่างมีหลัก DenseNet คือ feature reuse MobileNet คือ depthwise separable เพื่อความเบา ConvNeXt คือ CNN ที่ได้แรงบันดาลใจจาก Transformer</p>",
+  "why_wrong": [
+   "dense connection",
+   "separable conv เพื่อมือถือ",
+   "ปรับ ResNet ตาม Transformer"
+  ],
+  "ref": "Lesson 8 §4.1"
+ },
+ {
+  "id": "L8-19",
+  "lesson": 8,
+  "topic": "DenseNet channel",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "dense block รับ input 64 channel ทุก layer ให้ output 32 channel layer ที่ 5 รับ input กี่ channel",
+  "options": [
+   "192",
+   "160",
+   "96",
+   "224"
+  ],
+  "answer": 0,
+  "explanation": "<p>layer 5 รับ concatenation ของ input กับ output ของ layer 1–4: 64 + 4 × 32 = 192</p>",
+  "why_wrong": [
+   "นับถึง layer 4",
+   "นับแค่ layer ก่อนหน้า",
+   "นับ 5 layer"
+  ],
+  "ref": "Lesson 8 §4.1"
+ },
+ {
+  "id": "L8-20",
+  "lesson": 8,
+  "topic": "สามแนวทาง transfer",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "แนวทางใดล็อก feature extractor ทั้งหมดแล้วเทรน classifier ใหม่จากศูนย์",
+  "options": [
+   "pretrained model as feature detector",
+   "pretrained model as a classifier",
+   "fine tuning บางส่วนของ conv base",
+   "train from scratch ทั้งโมเดลใหม่"
+  ],
+  "answer": 0,
+  "explanation": "<p>feature detector: freeze a feature extractor part แล้ว add a new classifier ที่ train from scratch · classifier ใช้ตรงๆ ไม่เทรน · fine tuning ล็อกแค่บางส่วน</p>",
+  "why_wrong": [
+   "ไม่เทรนอะไรเลย",
+   "ล็อกแค่บางส่วน",
+   "ไม่ได้ใช้ pretrained weight"
+  ],
+  "ref": "Lesson 8 §5.1"
+ },
+ {
+  "id": "L8-21",
+  "lesson": 8,
+  "topic": "scenario",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "ภาพ MRI 300 ภาพ ใช้ VGG16 ที่เทรนบน ImageNet ควรทำแบบใดตามสี่ scenario",
+  "options": [
+   "fine tune จาก activation ช่วงต้น freeze ราว 33%–50%",
+   "ใช้เป็น feature extractor ล็อกทั้ง conv base",
+   "fine tune ส่วนท้าย freeze ราว 60%–80%",
+   "fine tune ทั้งโมเดลไม่ freeze เลย"
+  ],
+  "answer": 0,
+  "explanation": "<p>ข้อมูลน้อย + domain ต่างจาก ImageNet คือ scenario #3 ต้องปลดย้อนถึงชั้นต้นเพราะ feature ระดับสูงของ source ใช้ไม่ได้ แต่ข้อมูลน้อยจึงยังล็อกบางส่วน</p>",
+  "why_wrong": [
+   "นั่นคือ small + similar",
+   "นั่นคือ large + similar",
+   "นั่นคือ large + different"
+  ],
+  "ref": "Lesson 8 §5.2"
+ },
+ {
+  "id": "L8-22",
+  "lesson": 8,
+  "topic": "learning rate ตอน fine tune",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตอนปลดล็อก layer เดิมเพื่อ fine tune ควรทำอะไรกับ learning rate",
+  "options": [
+   "ลดลง เพื่อไม่ทำลาย weight ที่ดีอยู่แล้ว",
+   "เพิ่มขึ้น เพื่อให้ layer เดิมเรียนทันชั้นใหม่",
+   "คงเดิม เพราะ optimizer ปรับเองอยู่แล้ว",
+   "ตั้งเป็น 0 เพื่อไม่ให้ weight เปลี่ยน"
+  ],
+  "answer": 0,
+  "explanation": "<p>สไลด์หน้า 25: use smaller learning rate when fine tuning และหลัง unfreeze ให้ reduce the learning rate อีก notebook ใช้ 0.00001 เทียบ 0.001</p>",
+  "why_wrong": [
+   "ใหญ่ขึ้นทำลาย weight เดิม",
+   "สไลด์ให้ลด",
+   "0 คือไม่เทรนเลย"
+  ],
+  "ref": "Lesson 8 §5.2"
+ },
+ {
+  "id": "L8-23",
+  "lesson": 8,
+  "topic": "include_top",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "<code>VGG16(weights='imagenet', include_top=False, input_shape=(224,224,3))</code> output shape และ parameter คืออะไร",
+  "options": [
+   "(None, 7, 7, 512) และ 14,714,688",
+   "(None, 1000) และ 138,357,544",
+   "(None, 4096) และ 134,260,544",
+   "(None, 7, 7, 512) และ 138,357,544"
+  ],
+  "answer": 0,
+  "explanation": "<p>include_top=False ตัด Flatten, fc1, fc2, predictions เหลือ conv base จบที่ block5_pool 7×7×512 มี 14,714,688 parameter</p>",
+  "why_wrong": [
+   "นั่นคือ include_top=True",
+   "ไม่มี fc2 เหลือ",
+   "parameter ของทั้งโมเดลเดิม"
+  ],
+  "ref": "Lesson 8 §5.3"
+ },
+ {
+  "id": "L8-24",
+  "lesson": 8,
+  "topic": "trainable หลัง freeze",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "โค้ดนี้มี trainable parameter เท่าใด",
+  "options": [
+   "3,211,521",
+   "17,926,209",
+   "14,714,688",
+   "3,211,392"
+  ],
+  "answer": 0,
+  "explanation": "<p>conv_base ล็อกทั้งหมด · Flatten 7·7·512 = 25,088 · Dense(128): 25,088·128 + 128 = 3,211,392 · Dense(1): 128 + 1 = 129 · trainable 3,211,521 · total 17,926,209</p>",
+  "why_wrong": [
+   "นั่นคือ total รวม conv base",
+   "นั่นคือ non-trainable",
+   "ลืม Dense(1)"
+  ],
+  "ref": "Lesson 8 §5.3",
+  "code": "conv_base = VGG16(weights='imagenet', include_top=False, input_shape=(224,224,3))\nconv_base.trainable = False\nmodel = Sequential([conv_base, Flatten(), Dense(128, activation='relu'), Dense(1, activation='sigmoid')])"
+ },
+ {
+  "id": "L8-25",
+  "lesson": 8,
+  "topic": "set_trainable loop",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "ลูปนี้ทำให้ layer ใดของ VGG16 conv base เป็น trainable",
+  "options": [
+   "block5_conv1 ถึง block5_conv3 และ block5_pool",
+   "block5_conv1 เพียง layer เดียวเท่านั้น",
+   "ทุก layer ที่อยู่ก่อนหน้า block5_conv1",
+   "ไม่มีเลย เพราะ set_trainable เริ่มเป็น False"
+  ],
+  "answer": 0,
+  "explanation": "<p>ธงพลิกเป็น True ที่ block5_conv1 และค้างเป็น True กับทุก layer ถัดไป จึงได้ block5 ทั้งหมดรวม pool</p>",
+  "why_wrong": [
+   "ธงไม่ถูกตั้งกลับ",
+   "กลับทิศ",
+   "ธงถูกพลิกในลูป"
+  ],
+  "ref": "Lesson 8 §5.3",
+  "code": "set_trainable = False\nfor layer in conv_base.layers:\n  if layer.name == 'block5_conv1':\n    set_trainable = True\n  if set_trainable:\n    layer.trainable = True\n  else:\n    layer.trainable = False"
+ },
+ {
+  "id": "L8-26",
+  "lesson": 8,
+  "topic": "feature extraction ไม่มี augmentation",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "ทำไมวิธีดึง feature ด้วย conv_base.predict ครั้งเดียวแล้วเทรน Dense ใช้ data augmentation ไม่ได้",
+  "options": [
+   "feature คำนวณจากภาพเดิมครั้งเดียว ภาพที่แปลงใหม่ไม่ผ่าน conv base",
+   "data augmentation ใช้ได้เฉพาะกับภาพ grayscale ไม่ใช่ภาพ RGB",
+   "predict ปิด dropout ทำให้ augmentation ทำงานไม่ได้เลย",
+   "Dense layer รับภาพที่ถูกหมุนไม่ได้เพราะ shape เปลี่ยนไป"
+  ],
+  "answer": 0,
+  "explanation": "<p>augmentation ต้องให้ภาพที่สุ่มแปลงใหม่ไหลผ่าน conv base ทุก batch จึงต้องใส่ conv_base ไว้ในโมเดลแล้ว freeze ซึ่งช้ากว่า วิธีดึง feature ครั้งเดียวเร็วมากราว 1 วินาทีต่อ epoch</p>",
+  "why_wrong": [
+   "ใช้กับ RGB ได้",
+   "dropout ไม่เกี่ยว",
+   "หมุนแล้ว shape เท่าเดิม"
+  ],
+  "ref": "Lesson 8 §5.3"
+ },
+ {
+  "id": "L8-27",
+  "lesson": 8,
+  "topic": "ViT patch",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "ภาพ 384×384 patch 16×16 ได้กี่ patch และ patch หนึ่ง flatten มีกี่ค่า",
+  "options": [
+   "576 patch, 768 ค่า",
+   "24 patch, 768 ค่า",
+   "576 patch, 256 ค่า",
+   "1,152 patch, 768 ค่า"
+  ],
+  "answer": 0,
+  "explanation": "<p>384/16 = 24 ต่อด้าน · 24² = 576 · 16·16·3 = 768</p>",
+  "why_wrong": [
+   "นับแค่ด้านเดียว",
+   "ลืม 3 channel",
+   "คูณ 2 เกิน"
+  ],
+  "ref": "Lesson 8 §6.1"
+ },
+ {
+  "id": "L8-28",
+  "lesson": 8,
+  "topic": "ViT vs CNN",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ข้อใดตรงกับคุณสมบัติของ ViT ตามสไลด์",
+  "options": [
+   "inductive bias น้อยกว่า CNN จึงพึ่ง pretraining ขนาดใหญ่",
+   "ใช้ convolution ขนาดเล็กแทน self-attention ในชั้นแรก",
+   "มี feature map หลายระดับโดยธรรมชาติเหมือนกับ CNN",
+   "ต้องการข้อมูลน้อยกว่า CNN เพราะเห็นทั้งภาพได้ทันที"
+  ],
+  "answer": 0,
+  "explanation": "<p>ViT ไม่มี convolution ไม่มีความเชื่อตั้งต้นว่า pixel ใกล้กันเกี่ยวกัน ต้องเรียนจากข้อมูลเอง จึงต้องการ large-scale pretraining และ ViT ดั้งเดิมไม่เป็นลำดับชั้น</p>",
+  "why_wrong": [
+   "ViT ไม่ใช้ convolution",
+   "นั่นคือ Swin หรือ CNN",
+   "ตรงข้าม ต้องการข้อมูลมาก"
+  ],
+  "ref": "Lesson 8 §6.1"
+ },
+ {
+  "id": "L8-29",
+  "lesson": 8,
+  "topic": "Swin cost",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "feature map 32×32 = 1,024 patch window 8×8 = 64 patch Swin คิดกี่คู่ เทียบ global attention",
+  "options": [
+   "65,536 เทียบ 1,048,576",
+   "4,096 เทียบ 1,048,576",
+   "65,536 เทียบ 1,024",
+   "16 เทียบ 1,048,576"
+  ],
+  "answer": 0,
+  "explanation": "<p>window = 1,024/64 = 16 · คู่ต่อ window 64² = 4,096 · รวม 16 × 4,096 = 65,536 · global 1,024² = 1,048,576 ถูกกว่า 16 เท่า</p>",
+  "why_wrong": [
+   "นับ window เดียว",
+   "global ไม่ใช่ 1,024",
+   "นับจำนวน window"
+  ],
+  "ref": "Lesson 8 §6.2"
+ },
+ {
+  "id": "L8-30",
+  "lesson": 8,
+  "topic": "Swin downsampling",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "Swin Transformer ใช้อะไรลดขนาดเชิงพื้นที่ระหว่าง stage",
+  "options": [
+   "Patch Merging",
+   "Max pooling",
+   "Stride 2 convolution",
+   "ไม่มีการลดขนาด"
+  ],
+  "answer": 0,
+  "explanation": "<p>ตาราง CNN vs ViT vs Swin: downsampling ของ Swin คือ Patch Merging ได้ 56 → 28 → 14 → 7 channel 96 → 192 → 384 → 768</p>",
+  "why_wrong": [
+   "เป็นของ CNN",
+   "Swin ไม่ใช้ conv",
+   "นั่นคือ ViT ดั้งเดิม"
+  ],
+  "ref": "Lesson 8 §6.2"
+ }
+]

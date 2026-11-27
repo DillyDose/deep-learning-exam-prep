@@ -1,0 +1,693 @@
+[
+ {
+  "id": "L13-01",
+  "lesson": 13,
+  "topic": "generative model",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "โมเดลใดเป็น generative model",
+  "options": [
+   "โมเดลที่สุ่มสร้างรูปใบหน้าใหม่ได้หลายแบบ",
+   "โมเดลที่บอกว่ารูปเป็นแมว 0.9 ทุกครั้ง",
+   "โมเดลที่ทายราคาบ้านออกมาเป็นตัวเลข",
+   "โมเดลที่หากรอบของวัตถุในรูปภาพ"
+  ],
+  "answer": 0,
+  "explanation": "<p>generative ต้องให้ผลเป็นข้อมูลชนิดเดียวกับ training data และสุ่มได้หลายแบบ โมเดลจำแนก ทำนาย หรือ detection ไม่ได้สร้างข้อมูลใหม่</p>",
+  "why_wrong": [
+   "classification",
+   "regression",
+   "detection"
+  ],
+  "ref": "Lesson 13 §1.1"
+ },
+ {
+  "id": "L13-02",
+  "lesson": 13,
+  "topic": "latent space",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "latent space ของ autoencoder คืออะไร",
+  "options": [
+   "พื้นที่มิติต่ำที่เก็บเฉพาะส่วนสำคัญของข้อมูล",
+   "พื้นที่ของ pixel ทั้งหมดของภาพ input",
+   "ชุดของ label ทั้งหมดที่ใช้ในการเทรน",
+   "ค่า loss ที่บันทึกระหว่างเทรนแต่ละ epoch"
+  ],
+  "answer": 0,
+  "explanation": "<p>encoder ย่อภาพเป็นจุดในพื้นที่มิติต่ำ เช่น 2 มิติ decoder ขยายกลับ ตัวเลขแต่ละแกนไม่มีชื่อความหมายตายตัว</p>",
+  "why_wrong": [
+   "นั่นคือ input space",
+   "autoencoder ไม่ใช้ label",
+   "ไม่ใช่ loss"
+  ],
+  "ref": "Lesson 13 §1.2"
+ },
+ {
+  "id": "L13-03",
+  "lesson": 13,
+  "topic": "bottleneck ใหญ่เกิน",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ถ้าคอขวดของ autoencoder มีขนาดเท่า input จะเกิดอะไร",
+  "options": [
+   "ลอก pixel ตรงๆ ได้ loss ต่ำแต่ไม่ได้เรียน feature",
+   "reconstruct ไม่ได้เพราะข้อมูลหายไปมาก",
+   "กลายเป็น VAE ไปโดยอัตโนมัติทันที",
+   "decoder จะไม่มี parameter ให้เรียนเลย"
+  ],
+  "answer": 0,
+  "explanation": "<p>คอขวดเล็กบังคับให้เก็บแค่ส่วนสำคัญ ถ้าใหญ่เท่า input โมเดลคัดลอกได้เลย ไม่ต้องเรียนอะไร</p>",
+  "why_wrong": [
+   "ข้อมูลไม่หาย",
+   "ต้องมี μ σ และ KL",
+   "decoder ยังมี weight"
+  ],
+  "ref": "Lesson 13 §2.1"
+ },
+ {
+  "id": "L13-04",
+  "lesson": 13,
+  "topic": "Dense ก่อน Reshape",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "encoder flatten จาก 7×7×64 decoder ต้องใช้ Dense กี่ unit ก่อน <code>Reshape((7, 7, 64))</code>",
+  "options": [
+   "3,136",
+   "448",
+   "64",
+   "49"
+  ],
+  "answer": 0,
+  "explanation": "<p>7 × 7 × 64 = 3,136 จำนวนค่าต้องเท่ากันจึง reshape ได้</p>",
+  "why_wrong": [
+   "คูณแค่ 7 × 64",
+   "แค่ channel",
+   "แค่ 7 × 7"
+  ],
+  "ref": "Lesson 13 §2.3"
+ },
+ {
+  "id": "L13-05",
+  "lesson": 13,
+  "topic": "Conv2DTranspose",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "feature 7×7×64 ผ่าน <code>Conv2DTranspose(32, 3, strides=2, padding=\"same\")</code> ได้ shape อะไร",
+  "options": [
+   "14×14×32",
+   "7×7×32",
+   "14×14×64",
+   "13×13×32"
+  ],
+  "answer": 0,
+  "explanation": "<p>transpose conv stride 2 same ขยายกว้างสูงสองเท่า 7 → 14 channel = จำนวน filter 32</p>",
+  "why_wrong": [
+   "คิดว่า stride ไม่ขยาย",
+   "channel ต้องเป็น 32",
+   "สูตร valid ของ conv ปกติ"
+  ],
+  "ref": "Lesson 13 §2.3"
+ },
+ {
+  "id": "L13-06",
+  "lesson": 13,
+  "topic": "output layer AE",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "decoder ของ autoencoder Fashion MNIST ที่ pixel อยู่ในช่วง 0–1 ควรจบด้วยอะไร",
+  "options": [
+   "Conv2D(1, 3, sigmoid, same) กับ binary cross-entropy",
+   "Conv2D(1, 3, relu) กับ categorical cross-entropy",
+   "Dense(10, softmax) กับ sparse categorical",
+   "Conv2D(3, 3, tanh) กับ hinge loss ต่อ pixel"
+  ],
+  "answer": 0,
+  "explanation": "<p>sigmoid ให้ค่า 0–1 ตรงกับ pixel ที่ normalize ภาพ grayscale มี 1 channel loss เป็น binary cross-entropy ต่อ pixel</p>",
+  "why_wrong": [
+   "relu ไม่จำกัดบน และไม่ใช่ multiclass",
+   "ไม่ใช่การจำแนก",
+   "ภาพ grayscale 1 channel"
+  ],
+  "ref": "Lesson 13 §2.3"
+ },
+ {
+  "id": "L13-07",
+  "lesson": 13,
+  "topic": "ปัญหา AE",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "autoencoder reconstruct ได้ชัด แต่สุ่มจุดใน latent แล้วได้รูปเพี้ยน สาเหตุตามบทเรียนคืออะไร",
+  "options": [
+   "latent ไม่ต่อเนื่องและไม่มีการแจกแจงที่นิยามไว้",
+   "decoder มีจำนวน parameter น้อยเกินไป",
+   "encoder ใช้ stride มากเกินไปจนข้อมูลหาย",
+   "loss เป็น binary cross-entropy แทน MSE"
+  ],
+  "answer": 0,
+  "explanation": "<p>reconstruct ได้กับสร้างของใหม่ได้เป็นคนละเรื่อง จุดที่ไม่มีภาพเทรนแมปไปอาจไม่มีความหมาย VAE แก้ด้วยการบังคับ latent ให้ใกล้ N(0, 1)</p>",
+  "why_wrong": [
+   "ขนาด decoder ไม่ใช่ปัญหาหลัก",
+   "stride ไม่ใช่สาเหตุ",
+   "loss ไม่ใช่สาเหตุ"
+  ],
+  "ref": "Lesson 13 §2.5"
+ },
+ {
+  "id": "L13-08",
+  "lesson": 13,
+  "topic": "reparameterization",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "μ = 1.0 σ = 0.5 ε = −2 ค่า z เท่าใด",
+  "options": [
+   "0.0",
+   "2.0",
+   "−1.0",
+   "0.5"
+  ],
+  "answer": 0,
+  "explanation": "<p>z = μ + σε = 1.0 + 0.5 × (−2) = 0.0</p>",
+  "why_wrong": [
+   "บวกแทนลบ",
+   "ลืม μ",
+   "ไม่คูณ ε"
+  ],
+  "ref": "Lesson 13 §3.1"
+ },
+ {
+  "id": "L13-09",
+  "lesson": 13,
+  "topic": "variance กับ σ",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "encoder ให้ μ = 0.3 และ variance σ² = 0.09 สุ่ม ε = 2 ค่า z เท่าใด",
+  "options": [
+   "0.9",
+   "0.48",
+   "0.21",
+   "0.6"
+  ],
+  "answer": 0,
+  "explanation": "<p>σ = √0.09 = 0.3 · z = 0.3 + 0.3 × 2 = 0.9 ถ้าใช้ variance คูณตรงได้ 0.48 ซึ่งผิด</p>",
+  "why_wrong": [
+   "ใช้ σ² แทน σ",
+   "ลบแทนบวก",
+   "ลืม μ"
+  ],
+  "ref": "Lesson 13 §3.1"
+ },
+ {
+  "id": "L13-10",
+  "lesson": 13,
+  "topic": "log variance",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "z_log_var = −2 ได้ σ เท่าใด",
+  "options": [
+   "e⁻¹ ≈ 0.37",
+   "e⁻² ≈ 0.14",
+   "−1",
+   "e¹ ≈ 2.72"
+  ],
+  "answer": 0,
+  "explanation": "<p>σ = exp(0.5 × log σ²) = e^(−1) ≈ 0.37 ค่า exp เป็นบวกเสมอ</p>",
+  "why_wrong": [
+   "ลืม 0.5 ได้ σ²",
+   "σ ติดลบไม่ได้",
+   "เครื่องหมายผิด"
+  ],
+  "ref": "Lesson 13 §3.2"
+ },
+ {
+  "id": "L13-11",
+  "lesson": 13,
+  "topic": "Sampling code",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "บรรทัด return ของ Sampling layer ถ้าเขียนเป็น <code>z_mean + ops.exp(z_log_var) * epsilon</code> ผิดอย่างไร",
+  "options": [
+   "ได้ σ² แทน σ ความกว้างของการสุ่มผิด",
+   "z จะติดลบไม่ได้อีกต่อไปเลย",
+   "Sampling จะมี weight ให้เรียนเพิ่ม",
+   "epsilon จะไม่ถูกสุ่มใหม่ทุก batch"
+  ],
+  "answer": 0,
+  "explanation": "<p>exp(log σ²) = σ² ต้องใช้ exp(0.5 × log σ²) = σ</p>",
+  "why_wrong": [
+   "z ยังติดลบได้",
+   "ยังไม่มี weight",
+   "ไม่เกี่ยวกับการสุ่ม ε"
+  ],
+  "ref": "Lesson 13 §3.2"
+ },
+ {
+  "id": "L13-12",
+  "lesson": 13,
+  "topic": "Sampling parameter",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "Sampling layer ใน model.summary() มี parameter กี่ตัว",
+  "options": [
+   "0",
+   "2",
+   "เท่ากับมิติ latent",
+   "เท่ากับ z_mean รวม z_log_var"
+  ],
+  "answer": 0,
+  "explanation": "<p>Sampling แค่คำนวณ μ + σε ไม่มี weight ที่เรียนได้</p>",
+  "why_wrong": [
+   "ไม่มี weight",
+   "ไม่มี weight",
+   "parameter อยู่ที่ Dense ก่อนหน้า"
+  ],
+  "ref": "Lesson 13 §3.2"
+ },
+ {
+  "id": "L13-13",
+  "lesson": 13,
+  "topic": "z_mean z_log_var",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "layer ก่อนหน้าให้ 16 ค่า latent 2 มิติ Dense z_mean และ z_log_var มี parameter รวมเท่าใด",
+  "options": [
+   "68",
+   "34",
+   "136",
+   "64"
+  ],
+  "answer": 0,
+  "explanation": "<p>แต่ละตัว 16·2 + 2 = 34 · สองตัวแยกกัน 68</p>",
+  "why_wrong": [
+   "นับตัวเดียว",
+   "คูณซ้ำ",
+   "ลืม bias"
+  ],
+  "ref": "Lesson 13 §3.3"
+ },
+ {
+  "id": "L13-14",
+  "lesson": 13,
+  "topic": "z_log_var activation",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ทำไม Dense ของ z_log_var ไม่มี activation",
+  "options": [
+   "log σ² ต้องติดลบได้ เมื่อ σ น้อยกว่า 1",
+   "เพื่อให้ σ มีค่าเป็นศูนย์ได้พอดี",
+   "เพื่อลดจำนวน parameter ของ layer",
+   "เพราะ Sampling ใส่ relu ให้อยู่แล้ว"
+  ],
+  "answer": 0,
+  "explanation": "<p>σ &lt; 1 ทำให้ log σ² &lt; 0 ถ้าใส่ relu จะตัดค่าลบทิ้ง σ จะไม่ต่ำกว่า 1</p>",
+  "why_wrong": [
+   "σ = 0 ไม่ต้องการ",
+   "activation ไม่เพิ่ม parameter",
+   "Sampling ไม่มี relu"
+  ],
+  "ref": "Lesson 13 §3.3"
+ },
+ {
+  "id": "L13-15",
+  "lesson": 13,
+  "topic": "KL ต่อมิติ",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "KL ต่อมิติ = ½(σ² + μ² − 1 − log σ²) ถ้า μ = 1 σ = 1 มีค่าเท่าใด",
+  "options": [
+   "0.5",
+   "0",
+   "1",
+   "2"
+  ],
+  "answer": 0,
+  "explanation": "<p>½(1 + 1 − 1 − 0) = 0.5</p>",
+  "why_wrong": [
+   "นั่นคือ μ = 0",
+   "ลืม ½",
+   "μ = 2"
+  ],
+  "ref": "Lesson 13 §3.4"
+ },
+ {
+  "id": "L13-16",
+  "lesson": 13,
+  "topic": "KL ต่ำสุด",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "hard",
+  "stem": "KL loss ของ VAE ดัน μ และ σ ของแต่ละมิติไปที่ใด",
+  "options": [
+   "μ = 0 และ σ = 1",
+   "μ = 0 และ σ = 0",
+   "μ = 1 และ σ = 1",
+   "μ = 0 และ σ ใหญ่ที่สุด"
+  ],
+  "answer": 0,
+  "explanation": "<p>ค่าต่ำสุด 0 เกิดที่ μ = 0 σ = 1 ถ้า σ → 0 พจน์ −log σ² พุ่งเป็นอนันต์ VAE จะกลายเป็น autoencoder ธรรมดา</p>",
+  "why_wrong": [
+   "σ = 0 ถูกลงโทษหนัก",
+   "μ ต้องเป็น 0",
+   "σ ใหญ่ก็ถูกลงโทษจาก σ²"
+  ],
+  "ref": "Lesson 13 §3.4"
+ },
+ {
+  "id": "L13-17",
+  "lesson": 13,
+  "topic": "KL code",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "โค้ดนี้ z_mean = 0 z_log_var = 0 ทุกมิติ ได้ kl_loss เท่าใด",
+  "options": [
+   "0",
+   "−0.5",
+   "0.5",
+   "1"
+  ],
+  "answer": 0,
+  "explanation": "<p>−0.5 × (1 + 0 − 0 − e⁰) = −0.5 × 0 = 0 ตรงกับ μ = 0 σ = 1</p>",
+  "why_wrong": [
+   "คิดเครื่องหมายผิด",
+   "ลืม −1 จาก exp",
+   "ลืม 1"
+  ],
+  "ref": "Lesson 13 §3.4",
+  "code": "kl_loss = -0.5 * (1 + z_log_var - ops.square(z_mean) - ops.exp(z_log_var))\nkl_loss = ops.mean(ops.sum(kl_loss, axis=1))"
+ },
+ {
+  "id": "L13-18",
+  "lesson": 13,
+  "topic": "β-VAE",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "เพิ่ม β ของ KL loss ให้มากขึ้นมีผลอย่างไร",
+  "options": [
+   "latent เรียบ สุ่มสร้างดีขึ้น แต่ reconstruct คมน้อยลง",
+   "reconstruct คมขึ้น แต่ latent ขาดเป็นช่วงๆ มากขึ้น",
+   "ไม่มีผลอะไรเลย เพราะ KL เป็นค่าคงที่เสมอ",
+   "เทรนเร็วขึ้นโดยไม่มีผลต่อคุณภาพของรูปเลย"
+  ],
+  "answer": 0,
+  "explanation": "<p>β ชั่งน้ำหนักสอง loss KL มากขึ้นดัน latent ให้ใกล้ N(0, 1) มากขึ้น reconstruction ถูกลดความสำคัญลง</p>",
+  "why_wrong": [
+   "นั่นคือ β ต่ำ",
+   "KL ไม่คงที่",
+   "ไม่ใช่เรื่องความเร็ว"
+  ],
+  "ref": "Lesson 13 §3.5"
+ },
+ {
+  "id": "L13-19",
+  "lesson": 13,
+  "topic": "GAN สองฝ่าย",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "easy",
+  "stem": "ใน GAN generator พยายามทำอะไร",
+  "options": [
+   "สร้างรูปปลอมที่หลอก discriminator ว่าเป็นของจริง",
+   "แยกรูปจริงกับรูปปลอมให้แม่นยำที่สุด",
+   "ย่อรูปลง latent แล้วขยายกลับให้เหมือนเดิม",
+   "ลด KL divergence ของ latent ให้ใกล้ศูนย์"
+  ],
+  "answer": 0,
+  "explanation": "<p>generator คือช่างปลอม discriminator คือคนตรวจ ทั้งสองแข่งกัน</p>",
+  "why_wrong": [
+   "นั่นคือ discriminator",
+   "นั่นคือ autoencoder",
+   "นั่นคือ VAE"
+  ],
+  "ref": "Lesson 13 §4.1"
+ },
+ {
+  "id": "L13-20",
+  "lesson": 13,
+  "topic": "discriminator loss",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "รูปปลอม label 0 discriminator ทาย 0.75 binary cross-entropy เท่าใด",
+  "options": [
+   "−log 0.25 ≈ 1.39",
+   "−log 0.75 ≈ 0.29",
+   "0.75",
+   "−log 0.5 ≈ 0.69"
+  ],
+  "answer": 0,
+  "explanation": "<p>label 0 ใช้ −log(1 − p) = −log 0.25 ≈ 1.386 ทายผิดมากจึงถูกลงโทษมาก</p>",
+  "why_wrong": [
+   "ใช้สูตรของ label 1",
+   "ไม่ใช่ loss",
+   "ค่าสุ่ม"
+  ],
+  "ref": "Lesson 13 §4.3"
+ },
+ {
+  "id": "L13-21",
+  "lesson": 13,
+  "topic": "generator loss",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ตอนเทรน generator label ของรูปปลอมที่ส่งเข้า discriminator ตั้งเป็นอะไร",
+  "options": [
+   "label เดียวกับรูปจริง เพื่อดันให้ D ทายว่าจริง",
+   "label ของรูปปลอม เพื่อให้ D แยกได้แม่นขึ้น",
+   "label สุ่มครึ่งจริงครึ่งปลอมในแต่ละ batch",
+   "ไม่ใช้ label เพราะ G เรียนแบบ unsupervised"
+  ],
+  "answer": 0,
+  "explanation": "<p>misleading labels บอกว่าทุกรูปเป็นของจริง gradient จึงดัน G ไปทางที่ D เชื่อ ในโค้ดของอาจารย์รูปจริงคือ 0 จึงใช้ zeros</p>",
+  "why_wrong": [
+   "นั่นคือการเทรน D",
+   "ไม่สุ่ม",
+   "ยังใช้ loss ของ D กับ label"
+  ],
+  "ref": "Lesson 13 §4.5"
+ },
+ {
+  "id": "L13-22",
+  "lesson": 13,
+  "topic": "label กลับด้าน",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "ในโค้ด DCGAN ของอาจารย์ <code>misleading_labels = ops.zeros((batch_size, 1))</code> เป็นศูนย์เพราะอะไร",
+  "options": [
+   "โหลดแบบโฟลเดอร์เดียว รูปจริงเป็น 0 ศูนย์จึงหมายถึงจริง",
+   "generator ต้องการให้ discriminator ทายว่าเป็นของปลอม",
+   "ศูนย์ทำให้ gradient ของ discriminator เป็นศูนย์ไปด้วย",
+   "ใช้ศูนย์เพื่อปิดการทำ label smoothing ในจังหวะนี้"
+  ],
+  "answer": 0,
+  "explanation": "<p>โค้ดนี้กลับด้านจากทฤษฎี combined labels ให้รูปปลอมเป็น ones รูปจริงเป็น zeros หลักการเดิม: label ของ G คือ label ของรูปจริง</p>",
+  "why_wrong": [
+   "G อยากให้ทายว่าจริง",
+   "อัปเดตเฉพาะ weight ของ G อยู่แล้ว",
+   "smoothing อยู่ที่บรรทัด +0.05 noise"
+  ],
+  "ref": "Lesson 13 §4.5"
+ },
+ {
+  "id": "L13-23",
+  "lesson": 13,
+  "topic": "label noise",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "medium",
+  "stem": "<code>labels += 0.05 * tf.random.uniform(tf.shape(labels))</code> ทำอะไร",
+  "options": [
+   "เติม noise เล็กน้อยให้ label ช่วยให้เทรนเสถียร",
+   "สลับ label ของรูปจริงกับรูปปลอมราว 5%",
+   "ลด learning rate ของทั้งสอง network ลง 5%",
+   "เพิ่มจำนวนรูปปลอมอีก 5% ในทุก batch"
+  ],
+  "answer": 0,
+  "explanation": "<p>comment ในโค้ดเรียกว่า important trick ทำให้ D ไม่มั่นใจเกินไป ไม่ได้สลับ label</p>",
+  "why_wrong": [
+   "ไม่ได้สลับ",
+   "ไม่เกี่ยวกับ lr",
+   "ไม่เพิ่มรูป"
+  ],
+  "ref": "Lesson 13 §4.5"
+ },
+ {
+  "id": "L13-24",
+  "lesson": 13,
+  "topic": "discriminator layer",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "discriminator ของ DCGAN ในบทลดขนาดภาพด้วยอะไร",
+  "options": [
+   "Conv2D strides=2",
+   "MaxPooling2D",
+   "Conv2DTranspose",
+   "Dropout"
+  ],
+  "answer": 0,
+  "explanation": "<p>64 → 32 → 16 → 8 ด้วย strides=2 ไม่ใช้ pooling LeakyReLU และ Dropout ไม่มี parameter</p>",
+  "why_wrong": [
+   "ไม่ได้ใช้",
+   "ใช้ขยายใน generator",
+   "ไม่ลดขนาด"
+  ],
+  "ref": "Lesson 13 §4.3"
+ },
+ {
+  "id": "L13-25",
+  "lesson": 13,
+  "topic": "generator ขนาด",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "generator เริ่ม 8×8 ใช้ Conv2DTranspose stride 2 กี่ครั้งจึงได้ 64×64",
+  "options": [
+   "3",
+   "2",
+   "4",
+   "8"
+  ],
+  "answer": 0,
+  "explanation": "<p>8 → 16 → 32 → 64 คือ 3 ครั้ง</p>",
+  "why_wrong": [
+   "ได้ 32",
+   "ได้ 128",
+   "หารผิด"
+  ],
+  "ref": "Lesson 13 §4.4"
+ },
+ {
+  "id": "L13-26",
+  "lesson": 13,
+  "topic": "mode collapse",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "mode collapse คืออะไร",
+  "options": [
+   "generator สร้างได้แค่ไม่กี่แบบที่หลอก D ได้",
+   "discriminator ชนะจน generator ไม่ได้ gradient",
+   "loss ของทั้งสอง network เป็นศูนย์พร้อมกัน",
+   "latent space ของ VAE หดลงเหลือจุดเดียว"
+  ],
+  "answer": 0,
+  "explanation": "<p>mode collapse เกิดตอน generator ชนะด้วยรูปแบบเดิมๆ ถ้า discriminator ชนะ ปัญหาคือ gradient อ่อน</p>",
+  "why_wrong": [
+   "นั่นคือ D ชนะ",
+   "ไม่ใช่นิยาม",
+   "เป็นเรื่องของ VAE"
+  ],
+  "ref": "Lesson 13 §5.1"
+ },
+ {
+  "id": "L13-27",
+  "lesson": 13,
+  "topic": "FID IS",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ทิศของตัวชี้วัด GAN ข้อใดถูก",
+  "options": [
+   "FID ยิ่งต่ำยิ่งดี · Inception score ยิ่งสูงยิ่งดี",
+   "FID ยิ่งสูงยิ่งดี · Inception score ยิ่งต่ำยิ่งดี",
+   "FID และ Inception score ยิ่งต่ำยิ่งดี",
+   "FID และ Inception score ยิ่งสูงยิ่งดี"
+  ],
+  "answer": 0,
+  "explanation": "<p>FID เป็นระยะห่างจากรูปจริง ยิ่งน้อยยิ่งใกล้ · IS เป็นคะแนน ยิ่งมากยิ่งดี</p>",
+  "why_wrong": [
+   "กลับทิศ",
+   "IS ยิ่งสูงยิ่งดี",
+   "FID เป็น distance"
+  ],
+  "ref": "Lesson 13 §5.2"
+ },
+ {
+  "id": "L13-28",
+  "lesson": 13,
+  "topic": "VAE vs GAN",
+  "source": "lesson",
+  "type": "concept",
+  "difficulty": "medium",
+  "stem": "ข้อใดเทียบ VAE กับ GAN ได้ถูก",
+  "options": [
+   "VAE เสถียรแต่รูปเบลอ · GAN รูปคมแต่เทรนยาก",
+   "VAE รูปคมกว่า และเทรนยากกว่า GAN",
+   "GAN มี encoder และ KL loss เหมือน VAE",
+   "ทั้ง VAE และ GAN ไม่มี latent space"
+  ],
+  "answer": 0,
+  "explanation": "<p>VAE มี loss ชัด latent เรียบ รูปมักเบลอ GAN แข่งสองฝ่าย รูปคมกว่า เสี่ยง mode collapse และ non-convergence</p>",
+  "why_wrong": [
+   "กลับกัน",
+   "GAN ไม่มี encoder หรือ KL",
+   "ทั้งสองเริ่มจาก latent"
+  ],
+  "ref": "Lesson 13 §5.3"
+ },
+ {
+  "id": "L13-29",
+  "lesson": 13,
+  "topic": "train D ก่อน",
+  "source": "lesson",
+  "type": "code",
+  "difficulty": "hard",
+  "stem": "ในจังหวะเทรน discriminator gradient ถูกนำไปอัปเดต weight ของใคร",
+  "options": [
+   "discriminator.trainable_weights เท่านั้น",
+   "generator.trainable_weights เท่านั้น",
+   "weight ของทั้งสอง network พร้อมกัน",
+   "ไม่มีใครเพราะใช้ label noise อยู่"
+  ],
+  "answer": 0,
+  "explanation": "<p>สองจังหวะแยกกัน: เทรน D ด้วย combined images และ label แล้วอัปเดตแค่ D · เทรน G ด้วย misleading labels แล้วอัปเดตแค่ G</p>",
+  "why_wrong": [
+   "นั่นคือจังหวะของ G",
+   "อัปเดตแยกกัน",
+   "noise ไม่ได้หยุดการอัปเดต"
+  ],
+  "ref": "Lesson 13 §4.5"
+ },
+ {
+  "id": "L13-30",
+  "lesson": 13,
+  "topic": "VAE loss",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "hard",
+  "stem": "reconstruction loss 120 KL ของ latent 2 มิติคือ 0.5 และ 1.5 ใช้ β = 1 total loss เท่าใด",
+  "options": [
+   "122",
+   "121",
+   "120",
+   "240"
+  ],
+  "answer": 0,
+  "explanation": "<p>KL รวมทุกมิติ 0.5 + 1.5 = 2 · total = 120 + 2 = 122</p>",
+  "why_wrong": [
+   "เฉลี่ย KL แทนรวม",
+   "ลืม KL",
+   "คูณผิด"
+  ],
+  "ref": "Lesson 13 §3.4"
+ }
+]
