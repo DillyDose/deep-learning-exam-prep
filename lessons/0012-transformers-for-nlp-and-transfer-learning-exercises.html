@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 12: Transfer Learning และ Transformers สำหรับ NLP</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 12</span>
+  <span><a href="0012-transformers-for-nlp-and-transfer-learning.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 12: Transfer Learning และ Transformers สำหรับ NLP</h1>
+<p>ข้อเลือกตอบ 16 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>Hugging Face libraries</span></div>
+<div class="qtext">ทีมหนึ่งใช้ Hugging Face และต้องการคำนวณ macro F1 ของโมเดลบน test set ควรใช้ library ใด และข้อใดถูกเกี่ยวกับ tokenizer?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Datasets ไม่ได้รวม metric ไว้แล้ว metric แยกไปอยู่ใน Evaluate. Tokenizer เพียงตัดข้อความเป็น token และแปลงเป็น ID ความเข้าใจบริบทเกิดใน self-attention ของโมเดล.">Tokenizers สำหรับ metric และ tokenizer เป็นผู้เรียนบริบทของคำในประโยค</button>
+<button class="opt" data-correct="true" data-note="ถูก. Datasets ไม่ได้รวม metric ไว้แล้ว metric แยกไปอยู่ใน Evaluate. Tokenizer เพียงตัดข้อความเป็น token และแปลงเป็น ID ความเข้าใจบริบทเกิดใน self-attention ของโมเดล.">Evaluate สำหรับ metric และบริบทของคำถูกเรียนโดยโมเดล ไม่ใช่ tokenizer</button>
+<button class="opt" data-correct="false" data-note="ผิด. Datasets ไม่ได้รวม metric ไว้แล้ว metric แยกไปอยู่ใน Evaluate. Tokenizer เพียงตัดข้อความเป็น token และแปลงเป็น ID ความเข้าใจบริบทเกิดใน self-attention ของโมเดล.">Diffusers สำหรับ metric และ tokenizer เป็นผู้เรียนบริบทของคำในประโยค</button>
+<button class="opt" data-correct="false" data-note="ผิด. Datasets ไม่ได้รวม metric ไว้แล้ว metric แยกไปอยู่ใน Evaluate. Tokenizer เพียงตัดข้อความเป็น token และแปลงเป็น ID ความเข้าใจบริบทเกิดใน self-attention ของโมเดล.">Transformers สำหรับ metric และบริบทของคำถูกเรียนโดย tokenizer ทั้งหมด</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>NER</span></div>
+<div class="qtext">ใช้ <code>pipeline("ner", aggregation_strategy="simple")</code> กับข้อความ "We met Tim Cook in Paris" ข้อใดอธิบายผลของ aggregation_strategy="simple" ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. aggregation_strategy=&quot;simple&quot; รวม token ย่อยที่ติดกันและมีชนิด entity เดียวกันเป็นคำเดียว เช่นเดียวกับ &quot;Old Church&quot; (98→108) ในตัวอย่าง. ค่า start/end ยังเป็นตำแหน่งตัวอักษรในข้อความ.">ทำให้ได้ผลเฉพาะ entity ที่ score เกิน 0.9 และตัดแถวที่เหลือทิ้งทั้งหมด</button>
+<button class="opt" data-correct="false" data-note="ผิด. aggregation_strategy=&quot;simple&quot; รวม token ย่อยที่ติดกันและมีชนิด entity เดียวกันเป็นคำเดียว เช่นเดียวกับ &quot;Old Church&quot; (98→108) ในตัวอย่าง. ค่า start/end ยังเป็นตำแหน่งตัวอักษรในข้อความ.">ทำให้ start และ end เป็นตำแหน่งของ token แทนตำแหน่งของตัวอักษร</button>
+<button class="opt" data-correct="false" data-note="ผิด. aggregation_strategy=&quot;simple&quot; รวม token ย่อยที่ติดกันและมีชนิด entity เดียวกันเป็นคำเดียว เช่นเดียวกับ &quot;Old Church&quot; (98→108) ในตัวอย่าง. ค่า start/end ยังเป็นตำแหน่งตัวอักษรในข้อความ.">ทำให้โมเดลจัด Tim และ Cook เป็นสอง entity แยกกันเสมอ ไม่ว่าชนิดใด</button>
+<button class="opt" data-correct="true" data-note="ถูก. aggregation_strategy=&quot;simple&quot; รวม token ย่อยที่ติดกันและมีชนิด entity เดียวกันเป็นคำเดียว เช่นเดียวกับ &quot;Old Church&quot; (98→108) ในตัวอย่าง. ค่า start/end ยังเป็นตำแหน่งตัวอักษรในข้อความ.">ทำให้ token ที่ติดกันและมี entity เดียวกัน เช่น Tim Cook รวมเป็นแถวเดียว</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>Extractive QA</span></div>
+<div class="qtext">ระบบ extractive question answering ได้ context "The battery lasts ten hours but the screen is dim." และคำถาม "How long does the battery last?" ข้อใดเป็นคำตอบที่ระบบชนิดนี้สามารถคืนได้?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Extractive QA เลือก span (ตำแหน่ง start ถึง end) จาก context เท่านั้น จึงคืนได้เฉพาะข้อความที่มีอยู่จริง. การเรียบเรียงใหม่หรือเติมความเห็นเป็นงานของโมเดลแบบ generative.">"ten hours" ซึ่งเป็นช่วงข้อความที่ตัดออกมาจาก context โดยตรง</button>
+<button class="opt" data-correct="false" data-note="ผิด. Extractive QA เลือก span (ตำแหน่ง start ถึง end) จาก context เท่านั้น จึงคืนได้เฉพาะข้อความที่มีอยู่จริง. การเรียบเรียงใหม่หรือเติมความเห็นเป็นงานของโมเดลแบบ generative.">"about 10 hrs" ซึ่งโมเดลเรียบเรียงคำตอบขึ้นใหม่จากความเข้าใจ</button>
+<button class="opt" data-correct="false" data-note="ผิด. Extractive QA เลือก span (ตำแหน่ง start ถึง end) จาก context เท่านั้น จึงคืนได้เฉพาะข้อความที่มีอยู่จริง. การเรียบเรียงใหม่หรือเติมความเห็นเป็นงานของโมเดลแบบ generative.">"The battery lasts a long time" ซึ่งเป็นการสรุปความจาก context</button>
+<button class="opt" data-correct="false" data-note="ผิด. Extractive QA เลือก span (ตำแหน่ง start ถึง end) จาก context เท่านั้น จึงคืนได้เฉพาะข้อความที่มีอยู่จริง. การเรียบเรียงใหม่หรือเติมความเห็นเป็นงานของโมเดลแบบ generative.">"Ten hours, which is good" ซึ่งเติมความเห็นจากความรู้ของโมเดล</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>Cross-attention shape</span></div>
+<div class="qtext">ใช้ T5 แปลประโยคต้นทางยาว 7 token เป็นประโยคปลายทางยาว 9 token โดย batch size 1 และแต่ละ layer มี 8 heads ข้อใดคือ shape ของ <code>outputs.cross_attentions[0]</code>?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Cross-attention หนึ่ง layer มี shape (batch size, number of heads, target length, source length) = (1, 8, 9, 7). แต่ละแถวคือ token ปลายทางหนึ่งตัว (query) ที่กระจาย weight ไปยัง token ต้นทาง 7 ตัว (key).">(1, 8, 7, 9)</button>
+<button class="opt" data-correct="true" data-note="ถูก. Cross-attention หนึ่ง layer มี shape (batch size, number of heads, target length, source length) = (1, 8, 9, 7). แต่ละแถวคือ token ปลายทางหนึ่งตัว (query) ที่กระจาย weight ไปยัง token ต้นทาง 7 ตัว (key).">(1, 8, 9, 7)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Cross-attention หนึ่ง layer มี shape (batch size, number of heads, target length, source length) = (1, 8, 9, 7). แต่ละแถวคือ token ปลายทางหนึ่งตัว (query) ที่กระจาย weight ไปยัง token ต้นทาง 7 ตัว (key).">(1, 9, 7, 8)</button>
+<button class="opt" data-correct="false" data-note="ผิด. Cross-attention หนึ่ง layer มี shape (batch size, number of heads, target length, source length) = (1, 8, 9, 7). แต่ละแถวคือ token ปลายทางหนึ่งตัว (query) ที่กระจาย weight ไปยัง token ต้นทาง 7 ตัว (key).">(8, 1, 9, 7)</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>Approaches</span></div>
+<div class="qtext">บริษัทมีคู่มือภายในที่แก้ไขทุกสัปดาห์ และต้องการให้ generative model ตอบคำถามพนักงานจากคู่มือฉบับล่าสุดโดยไม่ต้องเทรนโมเดลใหม่ทุกครั้งที่คู่มือเปลี่ยน วิธีใดเหมาะที่สุด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. RAG ดึงข้อมูลภายนอกมาเติมใน input ของ generator จึงอัปเดตความรู้ได้ด้วยการอัปเดต knowledge base และ embedding โดยไม่ต้องเทรน generator ใหม่. วิธีอื่นต้องเทรนทุกครั้งที่ข้อมูลเปลี่ยน.">Full fine-tuning บนคู่มือฉบับใหม่ทุกสัปดาห์</button>
+<button class="opt" data-correct="true" data-note="ถูก. RAG ดึงข้อมูลภายนอกมาเติมใน input ของ generator จึงอัปเดตความรู้ได้ด้วยการอัปเดต knowledge base และ embedding โดยไม่ต้องเทรน generator ใหม่. วิธีอื่นต้องเทรนทุกครั้งที่ข้อมูลเปลี่ยน.">RAG ที่ค้นส่วนที่เกี่ยวข้องจากคู่มือแล้วเติมใน input</button>
+<button class="opt" data-correct="false" data-note="ผิด. RAG ดึงข้อมูลภายนอกมาเติมใน input ของ generator จึงอัปเดตความรู้ได้ด้วยการอัปเดต knowledge base และ embedding โดยไม่ต้องเทรน generator ใหม่. วิธีอื่นต้องเทรนทุกครั้งที่ข้อมูลเปลี่ยน.">Feature extraction แล้วเทรน logistic regression</button>
+<button class="opt" data-correct="false" data-note="ผิด. RAG ดึงข้อมูลภายนอกมาเติมใน input ของ generator จึงอัปเดตความรู้ได้ด้วยการอัปเดต knowledge base และ embedding โดยไม่ต้องเทรน generator ใหม่. วิธีอื่นต้องเทรนทุกครั้งที่ข้อมูลเปลี่ยน.">LoRA ที่เทรน adapter ใหม่ทุกสัปดาห์บนคู่มือ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>LoRA parameters</span></div>
+<div class="qtext">ใช้ LoRA rank r = 4 กับ weight matrix ขนาด 1024 × 1024 หนึ่งตัว จำนวน trainable parameter ของ LoRA สำหรับ matrix นี้คือเท่าใด?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. A มีขนาด 4 × 1024 = 4,096 และ B มีขนาด 1024 × 4 = 4,096 รวม 8,192 (= 2dr). ค่า 1,048,576 คือ matrix เต็ม 1024², ค่า 4,096 คือนับแค่ A ตัวเดียว.">4,096</button>
+<button class="opt" data-correct="false" data-note="ผิด. A มีขนาด 4 × 1024 = 4,096 และ B มีขนาด 1024 × 4 = 4,096 รวม 8,192 (= 2dr). ค่า 1,048,576 คือ matrix เต็ม 1024², ค่า 4,096 คือนับแค่ A ตัวเดียว.">1,048,576</button>
+<button class="opt" data-correct="true" data-note="ถูก. A มีขนาด 4 × 1024 = 4,096 และ B มีขนาด 1024 × 4 = 4,096 รวม 8,192 (= 2dr). ค่า 1,048,576 คือ matrix เต็ม 1024², ค่า 4,096 คือนับแค่ A ตัวเดียว.">8,192</button>
+<button class="opt" data-correct="false" data-note="ผิด. A มีขนาด 4 × 1024 = 4,096 และ B มีขนาด 1024 × 4 = 4,096 รวม 8,192 (= 2dr). ค่า 1,048,576 คือ matrix เต็ม 1024², ค่า 4,096 คือนับแค่ A ตัวเดียว.">16,384</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>LoRA formula</span></div>
+<div class="qtext">Linear layer ที่ใช้ LoRA โดย lora_alpha = 32 และ r = 8 ข้อใดคือ output ของ layer นี้ตอนเทรน?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. LoRA: h = W₀x + (α/r)BAx และ α/r = 32/8 = 4. W₀ แช่แข็ง เทรนเฉพาะ A กับ B. ค่า 0.25 คือ r/α กลับด้าน และ scale ต้องคูณกับ BA ไม่ใช่ W₀.">h = W₀x + 4ABx โดยเทรน W₀, A และ B ทั้งหมด</button>
+<button class="opt" data-correct="false" data-note="ผิด. LoRA: h = W₀x + (α/r)BAx และ α/r = 32/8 = 4. W₀ แช่แข็ง เทรนเฉพาะ A กับ B. ค่า 0.25 คือ r/α กลับด้าน และ scale ต้องคูณกับ BA ไม่ใช่ W₀.">h = W₀x + 0.25BAx โดยเทรน A และ B แต่ W₀ ถูกแช่แข็ง</button>
+<button class="opt" data-correct="true" data-note="ถูก. LoRA: h = W₀x + (α/r)BAx และ α/r = 32/8 = 4. W₀ แช่แข็ง เทรนเฉพาะ A กับ B. ค่า 0.25 คือ r/α กลับด้าน และ scale ต้องคูณกับ BA ไม่ใช่ W₀.">h = W₀x + 4BAx โดยเทรน A และ B แต่ W₀ ถูกแช่แข็ง</button>
+<button class="opt" data-correct="false" data-note="ผิด. LoRA: h = W₀x + (α/r)BAx และ α/r = 32/8 = 4. W₀ แช่แข็ง เทรนเฉพาะ A กับ B. ค่า 0.25 คือ r/α กลับด้าน และ scale ต้องคูณกับ BA ไม่ใช่ W₀.">h = 4W₀x + BAx โดยเทรน A และ B แต่ W₀ ถูกแช่แข็ง</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>LoRA target modules</span></div>
+<div class="qtext">ใน LoraConfig ที่ตั้ง <code>target_modules=["q_lin", "v_lin"]</code> และ <code>modules_to_save=["pre_classifier", "classifier"]</code> กับ DistilBERT ข้อใดถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. target_modules เลือก projection ที่เติม adapter: q_lin (Query) และ v_lin (Value) เท่านั้น Key กับ FFN จึงแช่แข็ง. modules_to_save ระบุ layer ที่เทรนเต็มและบันทึกคู่กับ adapter คือ head ใหม่ทั้งสองชั้น.">Key projection ไม่ได้รับ LoRA และยังถูกแช่แข็ง ส่วน classifier ถูกเทรนเต็มที่</button>
+<button class="opt" data-correct="false" data-note="ผิด. target_modules เลือก projection ที่เติม adapter: q_lin (Query) และ v_lin (Value) เท่านั้น Key กับ FFN จึงแช่แข็ง. modules_to_save ระบุ layer ที่เทรนเต็มและบันทึกคู่กับ adapter คือ head ใหม่ทั้งสองชั้น.">Key projection ได้รับ LoRA ด้วย ส่วน classifier ถูกแช่แข็งตลอดการเทรน</button>
+<button class="opt" data-correct="false" data-note="ผิด. target_modules เลือก projection ที่เติม adapter: q_lin (Query) และ v_lin (Value) เท่านั้น Key กับ FFN จึงแช่แข็ง. modules_to_save ระบุ layer ที่เทรนเต็มและบันทึกคู่กับ adapter คือ head ใหม่ทั้งสองชั้น.">Query และ Value ถูกเทรนเต็มที่ทุก weight ส่วน classifier ได้รับ LoRA</button>
+<button class="opt" data-correct="false" data-note="ผิด. target_modules เลือก projection ที่เติม adapter: q_lin (Query) และ v_lin (Value) เท่านั้น Key กับ FFN จึงแช่แข็ง. modules_to_save ระบุ layer ที่เทรนเต็มและบันทึกคู่กับ adapter คือ head ใหม่ทั้งสองชั้น.">ทุก linear layer ได้รับ LoRA และ pre_classifier ถูกตัดออกจากโมเดล</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>RAG similarity</span></div>
+<div class="qtext">ระบบ RAG ค้นเอกสารให้คำถามหนึ่งได้ cosine similarity สูงสุด 0.92 แต่คำตอบที่ generator สร้างผิด ข้อใดอธิบายได้ถูกต้องที่สุด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Similarity score วัดว่าเอกสารเกี่ยวข้องกับคำถามแค่ไหน (retrieval relevance) ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ. Generator ขนาดเล็กอาจใช้ context ไม่เป็นแม้ค้นได้ถูก เหมือน FLAN-T5-small ที่ตอบ &quot;2.&quot;.">similarity วัดความเกี่ยวข้องของเอกสารที่ค้นได้ ไม่ได้รับประกันว่าคำตอบถูก</button>
+<button class="opt" data-correct="false" data-note="ผิด. Similarity score วัดว่าเอกสารเกี่ยวข้องกับคำถามแค่ไหน (retrieval relevance) ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ. Generator ขนาดเล็กอาจใช้ context ไม่เป็นแม้ค้นได้ถูก เหมือน FLAN-T5-small ที่ตอบ &quot;2.&quot;.">similarity 0.92 แปลว่าคำตอบถูกต้อง 92% จึงผิดได้เพียง 8% ของกรณี</button>
+<button class="opt" data-correct="false" data-note="ผิด. Similarity score วัดว่าเอกสารเกี่ยวข้องกับคำถามแค่ไหน (retrieval relevance) ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ. Generator ขนาดเล็กอาจใช้ context ไม่เป็นแม้ค้นได้ถูก เหมือน FLAN-T5-small ที่ตอบ &quot;2.&quot;.">similarity สูงแปลว่า generator มั่นใจในคำตอบ ระบบจึงต้องเทรนใหม่</button>
+<button class="opt" data-correct="false" data-note="ผิด. Similarity score วัดว่าเอกสารเกี่ยวข้องกับคำถามแค่ไหน (retrieval relevance) ไม่ใช่ความถูกต้องหรือความมั่นใจของคำตอบ. Generator ขนาดเล็กอาจใช้ context ไม่เป็นแม้ค้นได้ถูก เหมือน FLAN-T5-small ที่ตอบ &quot;2.&quot;.">similarity สูงแปลว่า embedding model ผิด จึงควรเลือกเอกสารที่ต่ำที่สุด</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>Imbalanced metric</span></div>
+<div class="qtext">Dataset 3 คลาสมีสัดส่วน 80%, 15%, 5% และโมเดลทายคลาสแรกทุกข้อ ข้อใดคือ accuracy และ macro F1 ของโมเดลนี้โดยประมาณ?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Accuracy = 0.80. คลาสแรก precision 0.8, recall 1 ⇒ F1 = 1.6/1.8 = 0.889; อีกสองคลาส F1 = 0. Macro F1 = 0.889/3 ≈ 0.30. นี่คือเหตุผลที่ workshop เลือกโมเดลด้วย macro F1.">accuracy 0.80 และ macro F1 0.80</button>
+<button class="opt" data-correct="false" data-note="ผิด. Accuracy = 0.80. คลาสแรก precision 0.8, recall 1 ⇒ F1 = 1.6/1.8 = 0.889; อีกสองคลาส F1 = 0. Macro F1 = 0.889/3 ≈ 0.30. นี่คือเหตุผลที่ workshop เลือกโมเดลด้วย macro F1.">accuracy 0.33 และ macro F1 0.89</button>
+<button class="opt" data-correct="false" data-note="ผิด. Accuracy = 0.80. คลาสแรก precision 0.8, recall 1 ⇒ F1 = 1.6/1.8 = 0.889; อีกสองคลาส F1 = 0. Macro F1 = 0.889/3 ≈ 0.30. นี่คือเหตุผลที่ workshop เลือกโมเดลด้วย macro F1.">accuracy 0.80 และ macro F1 0.33</button>
+<button class="opt" data-correct="true" data-note="ถูก. Accuracy = 0.80. คลาสแรก precision 0.8, recall 1 ⇒ F1 = 1.6/1.8 = 0.889; อีกสองคลาส F1 = 0. Macro F1 = 0.889/3 ≈ 0.30. นี่คือเหตุผลที่ workshop เลือกโมเดลด้วย macro F1.">accuracy 0.80 และ macro F1 0.30</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>Tokenizer</span></div>
+<div class="qtext">Tokenizer ของ distilbert-base-uncased แปลงประโยค "I love NLP" เป็น ['[CLS]', 'i', 'love', 'nl', '##p', '[SEP]'] ข้อใดถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ## แปลว่า token นี้ต่อจาก token ก่อนหน้าโดยไม่มีช่องว่าง (subword). [CLS] = 101 และ [SEP] = 102 ถูกเติมที่ต้นและท้าย ไม่ใช่ [PAD] (ID 0). ตัวพิมพ์เล็กมาจาก checkpoint แบบ uncased ไม่ใช่ attention mask.">'##p' เป็น token ที่ไม่รู้จัก จึงถูกแทนด้วย [UNK] ตอนป้อนเข้าโมเดล</button>
+<button class="opt" data-correct="false" data-note="ผิด. ## แปลว่า token นี้ต่อจาก token ก่อนหน้าโดยไม่มีช่องว่าง (subword). [CLS] = 101 และ [SEP] = 102 ถูกเติมที่ต้นและท้าย ไม่ใช่ [PAD] (ID 0). ตัวพิมพ์เล็กมาจาก checkpoint แบบ uncased ไม่ใช่ attention mask.">ผลมี 6 token เพราะ tokenizer เติม [PAD] หนึ่งตัวที่ต้นและท้ายประโยค</button>
+<button class="opt" data-correct="true" data-note="ถูก. ## แปลว่า token นี้ต่อจาก token ก่อนหน้าโดยไม่มีช่องว่าง (subword). [CLS] = 101 และ [SEP] = 102 ถูกเติมที่ต้นและท้าย ไม่ใช่ [PAD] (ID 0). ตัวพิมพ์เล็กมาจาก checkpoint แบบ uncased ไม่ใช่ attention mask.">'##p' ต้องต่อกับ 'nl' โดยไม่มีช่องว่าง และ [CLS] มี ID 101 กับ [SEP] มี ID 102</button>
+<button class="opt" data-correct="false" data-note="ผิด. ## แปลว่า token นี้ต่อจาก token ก่อนหน้าโดยไม่มีช่องว่าง (subword). [CLS] = 101 และ [SEP] = 102 ถูกเติมที่ต้นและท้าย ไม่ใช่ [PAD] (ID 0). ตัวพิมพ์เล็กมาจาก checkpoint แบบ uncased ไม่ใช่ attention mask.">'i' เป็นตัวเล็กเพราะ attention_mask ทำให้ทุก token เป็นตัวพิมพ์เล็กก่อนเข้าโมเดล</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>Padding</span></div>
+<div class="qtext">Tokenize batch ที่มีสองข้อความยาว 5 และ 8 token (นับ [CLS] และ [SEP] แล้ว) ด้วย padding=True ข้อใดคือ attention_mask ของข้อความแรก?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. padding=True เติม [PAD] (ID 0) ต่อท้ายจนยาวเท่าข้อความที่ยาวที่สุดใน batch (8). attention_mask เป็น 1 ที่ token จริง 5 ตำแหน่ง และ 0 ที่ padding 3 ตำแหน่งท้าย เพื่อให้โมเดลไม่สนใจ padding.">[1, 1, 1, 1, 1, 1, 0, 0]</button>
+<button class="opt" data-correct="false" data-note="ผิด. padding=True เติม [PAD] (ID 0) ต่อท้ายจนยาวเท่าข้อความที่ยาวที่สุดใน batch (8). attention_mask เป็น 1 ที่ token จริง 5 ตำแหน่ง และ 0 ที่ padding 3 ตำแหน่งท้าย เพื่อให้โมเดลไม่สนใจ padding.">[0, 0, 0, 1, 1, 1, 1, 1]</button>
+<button class="opt" data-correct="false" data-note="ผิด. padding=True เติม [PAD] (ID 0) ต่อท้ายจนยาวเท่าข้อความที่ยาวที่สุดใน batch (8). attention_mask เป็น 1 ที่ token จริง 5 ตำแหน่ง และ 0 ที่ padding 3 ตำแหน่งท้าย เพื่อให้โมเดลไม่สนใจ padding.">[1, 1, 1, 1, 1, 1, 1, 1]</button>
+<button class="opt" data-correct="true" data-note="ถูก. padding=True เติม [PAD] (ID 0) ต่อท้ายจนยาวเท่าข้อความที่ยาวที่สุดใน batch (8). attention_mask เป็น 1 ที่ token จริง 5 ตำแหน่ง และ 0 ที่ padding 3 ตำแหน่งท้าย เพื่อให้โมเดลไม่สนใจ padding.">[1, 1, 1, 1, 1, 0, 0, 0]</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>Hidden state shape</span></div>
+<div class="qtext">ป้อน batch ของ 8 ประโยคที่ pad ให้ยาว 20 token เข้า DistilBERT (hidden_dim 768) แล้วใช้ <code>outputs.last_hidden_state[:, 0]</code> ผลมี shape เท่าใดและเป็น vector ของอะไร?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. last_hidden_state มี shape [batch_size, n_tokens, hidden_dim] = [8, 20, 768]. Index [:, 0] เลือกทุกประโยคที่ token ตำแหน่ง 0 ซึ่งคือ [CLS] ได้ [8, 768]. การเฉลี่ยทุก token คือ mean pooling ซึ่งเป็นอีกทางเลือก.">[20, 768] เป็น hidden state ของทุก token ในประโยคแรก</button>
+<button class="opt" data-correct="false" data-note="ผิด. last_hidden_state มี shape [batch_size, n_tokens, hidden_dim] = [8, 20, 768]. Index [:, 0] เลือกทุกประโยคที่ token ตำแหน่ง 0 ซึ่งคือ [CLS] ได้ [8, 768]. การเฉลี่ยทุก token คือ mean pooling ซึ่งเป็นอีกทางเลือก.">[8, 20] เป็น attention weight ของ token แรกในทุกประโยค</button>
+<button class="opt" data-correct="true" data-note="ถูก. last_hidden_state มี shape [batch_size, n_tokens, hidden_dim] = [8, 20, 768]. Index [:, 0] เลือกทุกประโยคที่ token ตำแหน่ง 0 ซึ่งคือ [CLS] ได้ [8, 768]. การเฉลี่ยทุก token คือ mean pooling ซึ่งเป็นอีกทางเลือก.">[8, 768] เป็น hidden state ของ token [CLS] ในแต่ละประโยค</button>
+<button class="opt" data-correct="false" data-note="ผิด. last_hidden_state มี shape [batch_size, n_tokens, hidden_dim] = [8, 20, 768]. Index [:, 0] เลือกทุกประโยคที่ token ตำแหน่ง 0 ซึ่งคือ [CLS] ได้ [8, 768]. การเฉลี่ยทุก token คือ mean pooling ซึ่งเป็นอีกทางเลือก.">[8, 768] เป็นค่าเฉลี่ยของ hidden state ทุก token ในประโยค</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>Feature extraction vs fine-tuning</span></div>
+<div class="qtext">ข้อใดเปรียบเทียบ feature extraction กับ fine-tuning ของ DistilBERT ได้ถูกต้อง?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Fine-tuning เทรนทั้งโมเดล gradient จึงต้องผ่าน head เข้า encoder head ต้อง differentiable (neural network). Feature extraction แช่แข็ง encoder แล้วเทรน classifier แยกบน hidden state ที่คำนวณไว้ จึงใช้ logistic regression ได้.">Feature extraction update ทุก weight ของ encoder ส่วน fine-tuning เทรนเฉพาะ classifier</button>
+<button class="opt" data-correct="false" data-note="ผิด. Fine-tuning เทรนทั้งโมเดล gradient จึงต้องผ่าน head เข้า encoder head ต้อง differentiable (neural network). Feature extraction แช่แข็ง encoder แล้วเทรน classifier แยกบน hidden state ที่คำนวณไว้ จึงใช้ logistic regression ได้.">Fine-tuning ใช้ classifier ใดก็ได้รวม random forest เพราะไม่ต้องส่ง gradient ย้อนกลับ</button>
+<button class="opt" data-correct="false" data-note="ผิด. Fine-tuning เทรนทั้งโมเดล gradient จึงต้องผ่าน head เข้า encoder head ต้อง differentiable (neural network). Feature extraction แช่แข็ง encoder แล้วเทรน classifier แยกบน hidden state ที่คำนวณไว้ จึงใช้ logistic regression ได้.">Feature extraction ต้องใช้ head ที่ differentiable เพราะ gradient ต้องไหลเข้า encoder</button>
+<button class="opt" data-correct="true" data-note="ถูก. Fine-tuning เทรนทั้งโมเดล gradient จึงต้องผ่าน head เข้า encoder head ต้อง differentiable (neural network). Feature extraction แช่แข็ง encoder แล้วเทรน classifier แยกบน hidden state ที่คำนวณไว้ จึงใช้ logistic regression ได้.">Fine-tuning ต้องใช้ head ที่ differentiable เพราะ gradient ต้องไหลย้อนเข้า encoder</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>Classification head</span></div>
+<div class="qtext">ต้องการจำแนก tweet เป็น 4 คลาสด้วย <code>AutoModelForSequenceClassification</code> บน checkpoint ที่ hidden size 768 และ head เป็น Linear ชั้นเดียว Linear ชั้นนี้มี parameter กี่ตัว?</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Linear 768 → 4 มี weight 768 × 4 = 3,072 และ bias 4 รวม 3,076. ค่า 4,614 คือ head 6 คลาสของ workshop (768 × 6 + 6), ค่า 590,592 คือ pre_classifier 768 → 768.">3,072</button>
+<button class="opt" data-correct="true" data-note="ถูก. Linear 768 → 4 มี weight 768 × 4 = 3,072 และ bias 4 รวม 3,076. ค่า 4,614 คือ head 6 คลาสของ workshop (768 × 6 + 6), ค่า 590,592 คือ pre_classifier 768 → 768.">3,076</button>
+<button class="opt" data-correct="false" data-note="ผิด. Linear 768 → 4 มี weight 768 × 4 = 3,072 และ bias 4 รวม 3,076. ค่า 4,614 คือ head 6 คลาสของ workshop (768 × 6 + 6), ค่า 590,592 คือ pre_classifier 768 → 768.">590,592</button>
+<button class="opt" data-correct="false" data-note="ผิด. Linear 768 → 4 มี weight 768 × 4 = 3,072 และ bias 4 รวม 3,076. ค่า 4,614 คือ head 6 คลาสของ workshop (768 × 6 + 6), ค่า 590,592 คือ pre_classifier 768 → 768.">4,614</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 16</span><span>Architectures</span></div>
+<div class="qtext">ข้อใดจับคู่ชนิดของ Transformer กับโมเดลและงานได้ถูกต้องทั้งหมด?</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. Encoder-only คือ BERT, RoBERTa, DistilBERT (classification, NER). Decoder-only คือ GPT, LLaMA (text generation, chat). Encoder–decoder คือ T5, BART (translation, summarization).">Decoder-only: GPT และ LLaMA สำหรับ text generation และ chat</button>
+<button class="opt" data-correct="false" data-note="ผิด. Encoder-only คือ BERT, RoBERTa, DistilBERT (classification, NER). Decoder-only คือ GPT, LLaMA (text generation, chat). Encoder–decoder คือ T5, BART (translation, summarization).">Encoder-only: T5 และ BART สำหรับ translation และ summarization</button>
+<button class="opt" data-correct="false" data-note="ผิด. Encoder-only คือ BERT, RoBERTa, DistilBERT (classification, NER). Decoder-only คือ GPT, LLaMA (text generation, chat). Encoder–decoder คือ T5, BART (translation, summarization).">Encoder–decoder: BERT และ RoBERTa สำหรับ classification และ NER</button>
+<button class="opt" data-correct="false" data-note="ผิด. Encoder-only คือ BERT, RoBERTa, DistilBERT (classification, NER). Decoder-only คือ GPT, LLaMA (text generation, chat). Encoder–decoder คือ T5, BART (translation, summarization).">Decoder-only: DistilBERT และ RoBERTa สำหรับ text generation</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 17</span><span>LoRA กับ full fine-tuning</span></div>
+<div class="qtext">โมเดล encoder 12 layer d_model = 768 ใส่ LoRA r = 16 ที่ q และ v ทุก layer head ใหม่คือ Dense 768 → 3 คำนวณ trainable parameter และอธิบายว่าทำไมเวลาเทรนไม่ลดตามสัดส่วน</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>LoRA ต่อ matrix: 16 × 768 + 768 × 16 = 24,576 · 12 layer × 2 matrix = 24 matrix ได้ 589,824</p>
+<p>head: 768 × 3 + 3 = 2,307 · trainable รวม 592,131</p>
+<p>forward และ backward ยังต้องผ่านทั้งโมเดล เวลาจึงลดไม่มาก สิ่งที่ประหยัดคือ memory ของ optimizer และพื้นที่เก็บ adapter ต่องาน</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 18</span><span>feature extraction กับ fine-tuning</span></div>
+<div class="qtext">เทียบสองวิธีใน workshop DistilBERT: อะไรถูกเทรน ใช้ hidden state ตัวไหน classifier เป็นอะไร และผลต่างกันเพราะอะไร</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>feature extraction: ล็อก DistilBERT ทั้ง body ดึง last_hidden_state[:, 0] คือ [CLS] 768 ค่าต่อข้อความ แล้วเทรน logistic regression ภายนอก val acc 0.635 macro F1 0.531</p>
+<p>fine-tuning: AutoModelForSequenceClassification(num_labels=6) เทรนทั้ง 66,958,086 parameter head ต้อง differentiable gradient ย้อนเข้า encoder test acc 0.9235 macro F1 0.8754</p>
+<p>fine-tuning ดีกว่าเพราะ hidden state ถูกปรับให้แยกอารมณ์ได้ ส่วน feature ที่ล็อกไว้มาจากการ pretrain ทาย [MASK] ซึ่งไม่ได้ตั้งใจแยกอารมณ์ คลาสเล็กอย่าง love และ surprise จึงอ่อน</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 19</span><span>accuracy กับ macro F1</span></div>
+<div class="qtext">dataset 3 คลาส มี 900, 80, 20 ตัวอย่าง โมเดลทายคลาสแรกทุกข้อ คำนวณ accuracy และ macro F1 แล้วบอกว่าควรใช้ metric ไหนเลือกโมเดล</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>accuracy = 900/1,000 = 0.90</p>
+<p>คลาสแรก precision 0.9 recall 1 F1 = 2 × 0.9 × 1/1.9 ≈ 0.947 · อีกสองคลาส F1 = 0 · macro F1 = 0.947/3 ≈ 0.316</p>
+<p>ข้อมูลไม่สมดุลแบบนี้ accuracy หลอกได้ ควรใช้ macro F1 ซึ่งให้น้ำหนักทุกคลาสเท่ากัน แบบที่ workshop emotion ใช้</p>
+</div>
+</div>
+
+</body>
+</html>
