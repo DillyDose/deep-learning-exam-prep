@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lesson 15: Agentic AI</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/reader.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="0014-diffusion-models-and-stable-diffusion.html">← Lesson 14</a> · Lesson 15</span>
+  <span><a href="0015-agentic-ai-exercises.html">แบบฝึก</a> · <a href="../index.html">หน้าแรก</a></span>
+</nav>
+
+<p class="kicker">Lecture 15 — Part 6 Agentic AI</p>
+<h1>Agentic AI: Tool, LangChain และ LangGraph</h1>
+<p class="readmeta">อ่านประมาณ 30 นาที · สไลด์บทนี้ไม่มีข้อความทำสี ใจความสำคัญอยู่ที่ตารางและ Key Takeaway ของแต่ละหน้า · รูปสไลด์กดเพื่อขยาย</p>
+
+<p>บทก่อนๆ ทำให้โมเดลทำนายหรือสร้างข้อความ บทนี้ให้โมเดลลงมือทำ คือเลือก tool เรียกข้อมูลจริง แล้วตัดสินใจขั้นต่อไปจากผลที่ได้ ตัวอย่างเดียวใช้ทั้งบทคือ agent บริการลูกค้าของร้านออนไลน์ ข้อมูลตัวอย่างคือ customer U1234 order A123 สถานะ Pending invoice $50 refund Pending โค้ดใช้ LangChain กับ LangGraph ซึ่งข้อสอบน่าจะถามแบบอ่านโค้ดแล้วบอกว่าใครทำอะไร</p>
+
+<table class="map">
+<tr><th>คำถาม</th><th>คำตอบสั้น</th><th>อ่านที่</th></tr>
+<tr><td>agent ต่างจาก chatbot และ ML เดิมอย่างไร</td><td>เลือก action และใช้ tool ได้ ไม่ใช่แค่ทำนายหรือตอบข้อความ</td><td><a href="#s1">ตอน 1</a></td></tr>
+<tr><td>agentic system มีส่วนประกอบอะไร</td><td>foundation model, tools, memory, knowledge base, orchestration</td><td><a href="#s2">ตอน 2</a></td></tr>
+<tr><td>tool calling ทำงานอย่างไร</td><td>LLM เลือก tool และสร้าง argument · Python รันจริง</td><td><a href="#s3">ตอน 3</a></td></tr>
+<tr><td>single tool กับ parallel ต่างกันอย่างไร</td><td>tool เดียว · หลาย tool อิสระรันพร้อมกัน</td><td><a href="#s4">ตอน 4</a></td></tr>
+<tr><td>chain ใน LCEL เขียนอย่างไร</td><td><code>a | b | c</code> output ก่อนหน้าเป็น input ถัดไป</td><td><a href="#s5">ตอน 5</a></td></tr>
+<tr><td>graph ใน LangGraph มีอะไร</td><td>node, edge, conditional edge, state · context engineering · agent pattern · การประเมิน</td><td><a href="#s6">ตอน 6</a></td></tr>
+</table>
+
+<table class="sym">
+<tr><td>foundation model</td><td>โมเดลขนาดใหญ่ที่ pretrain แล้ว เช่น LLM ใช้ซ้ำได้หลายงาน</td></tr>
+<tr><td>tool</td><td>ความสามารถที่เรียกใช้ได้ เช่นฟังก์ชัน Python หรือ API</td></tr>
+<tr><td>orchestration</td><td>ส่วนที่ประสานว่าเรียก model, tool, memory เมื่อไรและอย่างไร</td></tr>
+<tr><td>tool call</td><td>คำขอแบบมีโครงสร้างที่ LLM สร้าง บอกชื่อ tool และ argument</td></tr>
+<tr><td>state</td><td>ข้อมูลของ workflow ปัจจุบันที่ทุกขั้นอ่านและอัปเดตได้</td></tr>
+</table>
+
+<!-- ===================================================== -->
+<h2 id="s1">1. Agentic AI คืออะไร</h2>
+
+<h3 id="s1-def">1.1 จากการทำนาย สู่การลงมือทำ</h3>
+
+<p class="pic">ผู้ช่วยที่ตอบได้ว่า "ตรวจสถานะพัสดุได้ที่เว็บ" กับผู้ช่วยที่เปิดระบบดูให้แล้วบอกว่า "ส่งแล้วครับ" คนแรกพูด คนที่สองทำ agent คือคนที่สอง</p>
+
+<p>สไลด์เรียก Agentic AI ว่าคลื่นที่สามของ AI: จากการทำนาย สู่การสร้าง สู่การลงมือทำเอง นิยามสามข้อ: เป็นแนวทางที่ให้ระบบ AI ให้เหตุผล วางแผน ตัดสินใจ และลงมือทำเพื่อบรรลุเป้าหมาย · ใช้ tool และระบบภายนอก แล้วปรับ action ถัดไปตามผลที่ได้ · ทำงานได้ด้วยความอิสระระดับหนึ่ง ลดการที่คนต้องสั่งทุกขั้น</p>
+
+<p>AI agent คือระบบที่ตีความสภาพแวดล้อม ตัดสินใจ และลงมือทำเพื่อเป้าหมาย ต่างจาก automation ปกติตรงที่เลือก action ตามสถานการณ์ได้ ไม่ต้องเดินตามลำดับที่เขียนตายตัวอย่างเดียว</p>
+
+<figure class="viz"><img src="../assets/viz/l15-levels.svg" alt="สี่ระดับของ agency"></figure>
+<p>สี่ขั้นจากสไลด์หน้า 3 ใช้โจทย์ refund เดียวกัน กล่องยิ่งขวายิ่งให้ระบบตัดสินใจเอง สไลด์ย้ำว่า agent มีระดับความอิสระต่างกันได้ ไม่ใช่ทุก agent ต้องทำงานโดยไม่มีคนดูแล</p>
+
+<table>
+<tr><th></th><th>Traditional ML</th><th>Foundation model-based agent</th></tr>
+<tr><td>สร้างโมเดล</td><td>เทรนเฉพาะงาน</td><td>ใช้ foundation model ที่ pretrain แล้ว</td></tr>
+<tr><td>ข้อมูลเทรน</td><td>ต้องมีข้อมูลเฉพาะงาน</td><td>บางงานไม่ต้องเทรนเพิ่ม</td></tr>
+<tr><td>input</td><td>รูปแบบกำหนดไว้</td><td>ภาษาธรรมชาติแบบยืดหยุ่น</td></tr>
+<tr><td>output</td><td>prediction, class, ตัวเลข</td><td>ข้อความ, การตัดสินใจแบบมีโครงสร้าง, tool call</td></tr>
+<tr><td>การตัดสินใจ</td><td>เขียนแยกต่างหาก</td><td>ใช้โมเดลช่วยเลือก action</td></tr>
+<tr><td>ติดต่อภายนอก</td><td>ต้องเขียน logic เพิ่ม</td><td>ใช้ tool และ orchestration</td></tr>
+<tr><td>ปรับตัว</td><td>จำกัดตามงานที่เทรน</td><td>เลือก action ต่างกันตามบริบท</td></tr>
+</table>
+
+<p class="num">ML เดิม: ทายว่าลูกค้าจะขอ refund ไหม · agent: เข้าใจคำขอ refund ดึงข้อมูล order ตรวจสิทธิ์ แล้วบอกขั้นถัดไป · โมเดล ML เดิมยังใส่เข้าไปเป็น tool ของ agent ได้</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p05.png" alt="Lecture 15 หน้า 5: From Chatbots to AI Agents: chatbot เทียบ tool-using agent" loading="lazy">
+<figcaption>Lecture 15 หน้า 5 — From Chatbots to AI Agents: chatbot เทียบ tool-using agent</figcaption>
+</figure>
+
+<p>คำถามเดียวกัน "What is the status of my order A123?" chatbot ตอบได้แค่ให้ไปดูที่เว็บ เพราะไม่มีสิทธิ์เห็นข้อมูลจริง agent เรียก lookup_order("A123") ได้ผล Shipped แล้วตอบ "Your order A123 has been shipped." ซึ่งอิงข้อมูลจริง Key Takeaway: tool ทำให้ agent ไปไกลกว่าการสร้างข้อความ</p>
+
+<p class="trap">agent ไม่จำเป็นต้องอิสระเต็มที่ · ML เดิมไม่ได้ถูกแทนที่ ใส่เป็น tool ได้ · chatbot เดิมสร้างคำตอบ agent ดึงข้อมูลและทำ operation ได้</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 2–4)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p02.png" alt="Lecture 15 หน้า 2: Agentic AI: The Third Wave of AI" loading="lazy">
+<figcaption>Lecture 15 หน้า 2 — Agentic AI: The Third Wave of AI</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p03.png" alt="Lecture 15 หน้า 3: What Is an AI Agent?" loading="lazy">
+<figcaption>Lecture 15 หน้า 3 — What Is an AI Agent?</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p04.png" alt="Lecture 15 หน้า 4: Traditional ML vs. Foundation Model-Based Agents" loading="lazy">
+<figcaption>Lecture 15 หน้า 4 — Traditional ML vs. Foundation Model-Based Agents</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s1-choose">1.2 ไม่ใช่ทุกงานต้องใช้ agent</h3>
+
+<p>หลักบนสไลด์: ใช้วิธีที่ง่ายที่สุดที่แก้ปัญหาได้อย่างเชื่อถือได้ ขึ้นกับความซับซ้อน ความไม่แน่นอน และความจำเป็นต้องตัดสินใจแบบ dynamic</p>
+
+<table>
+<tr><th>วิธี</th><th>งานที่เหมาะ</th><th>ตัวอย่าง</th><th>dynamic planning</th><th>คาดเดาได้</th><th>ซับซ้อน</th><th>ยืดหยุ่น</th></tr>
+<tr><td>Traditional code</td><td>กฎตายตัว input คาดได้</td><td>คำนวณยอด invoice</td><td>No</td><td>High</td><td>Low</td><td>Low</td></tr>
+<tr><td>Deterministic workflow</td><td>ขั้นตอนและเงื่อนไขกำหนดไว้</td><td>เช็คสถานะก่อนยกเลิก</td><td>Usually no</td><td>High</td><td>Low–Medium</td><td>Medium</td></tr>
+<tr><td>Chatbot / RAG</td><td>ตอบจากเอกสาร</td><td>อธิบายนโยบาย refund</td><td>Not required</td><td>Variable</td><td>Medium</td><td>Medium</td></tr>
+<tr><td>Autonomous agent</td><td>ต้องคิดตามบริบท วางแผน ปรับตัว</td><td>สืบเรื่องร้องเรียนแล้วตัดสิน action</td><td>Supported</td><td>Variable</td><td>Medium–High</td><td>High</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p07.png" alt="Lecture 15 หน้า 7: Four Approaches to Customer Support: "I want to cancel my order A123."" loading="lazy">
+<figcaption>Lecture 15 หน้า 7 — Four Approaches to Customer Support: "I want to cancel my order A123."</figcaption>
+</figure>
+
+<p>คำขอเดียวกันทำได้สี่ระดับ: code ตายตัวเจอคำ cancel ก็แสดงวิธียกเลิก · workflow ดึงสถานะแล้วใช้กฎยกเลิกหรือปฏิเสธ · RAG ดึงนโยบายการยกเลิกแล้วอธิบาย แต่ไม่ได้ทำ action · agent ตีความคำขอ เลือก tool ดูผล ตัดสินขั้นต่อไป แล้วทำหรือส่งต่อคน</p>
+
+<p class="trap">RAG ดึงความรู้แต่ไม่จำเป็นต้องลงมือทำ · workflow คาดเดาได้สูงเพราะนักพัฒนากำหนดเส้นทาง · agent ไม่ใช่คำตอบที่ดีที่สุดเสมอ</p>
+
+<details class="check"><summary>ระบบคำนวณภาษีจากยอดขายด้วยสูตรตายตัว ควรใช้วิธีไหน</summary>
+<p>traditional code เพราะกฎตายตัว input คาดได้ ไม่ต้องวางแผน</p>
+</details>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 6, 8–9)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p06.png" alt="Lecture 15 หน้า 6: Workflows and Agents: Choosing the Right Approach" loading="lazy">
+<figcaption>Lecture 15 หน้า 6 — Workflows and Agents: Choosing the Right Approach</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p08.png" alt="Lecture 15 หน้า 8: Types of AI Agents: Application Perspective" loading="lazy">
+<figcaption>Lecture 15 หน้า 8 — Types of AI Agents: Application Perspective</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p09.png" alt="Lecture 15 หน้า 9: Practical Applications of AI Agents" loading="lazy">
+<figcaption>Lecture 15 หน้า 9 — Practical Applications of AI Agents</figcaption>
+</figure>
+</div></details>
+
+<p>agent แบ่งตามงานได้: business-task เช่นประมวลผล invoice · conversational เช่น customer support · research เช่น literature review · analytics · developer เช่น coding assistant · domain-specific เช่นตรวจเอกสารกฎหมาย · browser-using เช่นกรอกฟอร์มบนเว็บ · voice เช่นคอลเซ็นเตอร์อัตโนมัติ · video เช่น avatar บนเว็บ งานจริงมีทั้ง customer support, การเงิน, สุขภาพ, IT help desk, security operations, supply chain</p>
+
+<!-- ===================================================== -->
+<h2 id="s2">2. ส่วนประกอบของ agentic system</h2>
+
+<h3 id="s2-parts">2.1 ห้าส่วน และ running example</h3>
+
+<table>
+<tr><th>ส่วน</th><th>หน้าที่</th></tr>
+<tr><td>Foundation model</td><td>ตีความคำขอ ให้เหตุผล เลือก action สร้างคำตอบ</td></tr>
+<tr><td>Tools</td><td>ดึงข้อมูลและทำ operation</td></tr>
+<tr><td>Memory</td><td>เก็บและดึงข้อมูลจาก interaction ก่อนหน้า</td></tr>
+<tr><td>Knowledge base</td><td>ความรู้ภายนอกหรือความรู้เฉพาะโดเมน</td></tr>
+<tr><td>Orchestration</td><td>ประสานการทำงานของทุกส่วน</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p11.png" alt="Lecture 15 หน้า 11: Running Example: Customer Support Agent" loading="lazy">
+<figcaption>Lecture 15 หน้า 11 — Running Example: Customer Support Agent</figcaption>
+</figure>
+
+<p>ร้าน e-commerce ต้องการ agent ตอบเรื่อง billing, order, refund และปัญหาเทคนิค แต่ละคำขอต้องใช้ความสามารถต่างกัน: invoice balance ต้องดึง invoice · refund ต้องดึงสถานะ refund · order อยู่ไหนต้องดึง order · ยกเลิกได้ไหมต้องเช็คสิทธิ์ · log in ไม่ได้ต้องดึงวิธีแก้</p>
+
+<p>foundation model ทำหน้าที่ตัดสินใจ: เข้าใจเจตนา · จัดหมวด billing หรือ technical · เลือก tool เช่น get_refund_status() · สร้าง parameter คือดึง customer ID จากข้อความ · วางแผนว่าต้องทำอะไรบ้าง · สร้างคำตอบเป็นภาษาคน คำขอ "What is the refund status for customer U1234?" โมเดลสร้าง tool call แบบมีโครงสร้าง แล้ว orchestration layer เป็นคนตีความและรันฟังก์ชันจริง</p>
+
+<p class="trap">โมเดลไม่ได้รันฟังก์ชันเอง แค่สร้าง tool call · orchestration เป็นคนรัน</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 10, 12)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p10.png" alt="Lecture 15 หน้า 10: Architecture of Agentic Systems" loading="lazy">
+<figcaption>Lecture 15 หน้า 10 — Architecture of Agentic Systems</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p12.png" alt="Lecture 15 หน้า 12: Foundation Models in Agentic Systems" loading="lazy">
+<figcaption>Lecture 15 หน้า 12 — Foundation Models in Agentic Systems</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s2-tools">2.2 Tools</h3>
+
+<p>tool คือความสามารถที่ให้ agent ดึงข้อมูล คำนวณ และติดต่อระบบภายนอก ตัวอย่างบนสไลด์: get_invoice() ดึง invoice · get_refund_status() ดึงสถานะ refund · lookup_order() ดึง order</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p13.png" alt="Lecture 15 หน้า 13: Tools in Agentic Systems: local tool กับ API-based tool" loading="lazy">
+<figcaption>Lecture 15 หน้า 13 — Tools in Agentic Systems: local tool กับ API-based tool</figcaption>
+</figure>
+
+<p>local tool get_invoice("U1234") คืน dict {"user_id": "U1234", "balance": 50, "currency": "USD"} ทำงานในเครื่องเรา API-based tool lookup_order เรียก requests.get ไปที่ api.example.com/orders พร้อม timeout=10 แล้วคืน response.json()</p>
+
+<table>
+<tr><th>ข้อจำกัดของ LLM</th><th>tool แก้อย่างไร</th></tr>
+<tr><td>เข้าถึงข้อมูลธุรกิจส่วนตัวไม่ได้</td><td>query ฐานข้อมูลลูกค้า</td></tr>
+<tr><td>ความรู้อาจเก่า</td><td>ดึงข้อมูลปัจจุบันผ่าน API</td></tr>
+<tr><td>คำนวณตัวเลขไม่น่าเชื่อถือ</td><td>รันฟังก์ชัน Python ที่ deterministic</td></tr>
+<tr><td>แก้ไขระบบภายนอกเองไม่ได้</td><td>ทำ operation ที่ได้รับอนุญาต</td></tr>
+<tr><td>เข้าถึงบริการเฉพาะทางได้จำกัด</td><td>ต่อ tool เฉพาะโดเมน</td></tr>
+</table>
+
+<p>แบ่งตามที่ทำงาน: local tool ทำงานในแอปเอง เช่นคำนวณยอด refund · API-based tool คุยกับบริการภายนอกผ่าน API เช่นดึง order จาก backend</p>
+
+<p class="trap">tool ที่แก้ไขระบบภายนอก เช่น cancel_order ต้องมีการอนุญาตและตรวจสอบเข้มกว่า tool ที่อ่านอย่างเดียว</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 14)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p14.png" alt="Lecture 15 หน้า 14: Understanding Tools in AI Agents" loading="lazy">
+<figcaption>Lecture 15 หน้า 14 — Understanding Tools in AI Agents</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s2-mem">2.3 Memory, knowledge base และ state</h3>
+
+<p class="pic">พนักงานคอลเซ็นเตอร์มีคู่มือนโยบายบนโต๊ะ มีโน้ตว่าลูกค้าคนนี้เคยโทรมาเรื่องอะไร และมีใบงานของสายที่กำลังคุยอยู่ สามอย่างนี้คือ knowledge base, memory และ state</p>
+
+<table>
+<tr><th>memory</th><th>คืออะไร</th><th>ตัวอย่าง</th></tr>
+<tr><td>short-term</td><td>ข้อมูลของบทสนทนาหรืองานปัจจุบัน</td><td>order ID ปัจจุบัน ผลของ tool ก่อนหน้า</td></tr>
+<tr><td>long-term</td><td>ข้อมูลข้ามหลาย session</td><td>ความชอบของลูกค้า ประวัติการติดต่อ</td></tr>
+</table>
+
+<p>ใน LangChain ประวัติบทสนทนาคือ list ของ message: SystemMessage ให้คำสั่ง agent · HumanMessage ก่อนหน้า มี customer ID · AIMessage คำตอบก่อนหน้า · HumanMessage ปัจจุบัน คำถามใหม่</p>
+
+<p class="trap">โมเดลไม่จำการเรียก API ครั้งก่อนเอง แอปต้องเก็บและส่งประวัติที่เกี่ยวข้องให้ทุกครั้ง</p>
+
+<table>
+<tr><th>ส่วน</th><th>จุดประสงค์</th><th>ตัวอย่าง</th></tr>
+<tr><td>Knowledge base</td><td>เก็บความรู้โดเมนและเอกสารอ้างอิง</td><td>นโยบายยกเลิกและ refund</td></tr>
+<tr><td>Memory</td><td>เก็บข้อมูลจาก interaction ที่ผ่านมาไว้ใช้ตอนนี้หรืออนาคต</td><td>customer ID ที่เคยให้ ความชอบ ประวัติแชท</td></tr>
+<tr><td>State</td><td>ติดตามและอัปเดตข้อมูลของ workflow ปัจจุบันระหว่างขั้น</td><td>คำขอปัจจุบัน ประเภทปัญหา สถานะ order ผล tool คำตอบที่สร้าง</td></tr>
+</table>
+
+<p class="trap">memory กับ state ซ้อนกันได้ เช่น customer ID จาก memory กลายเป็นส่วนของ state แยกกันที่จุดประสงค์ ไม่ใช่ระยะเวลาที่เก็บ</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 15–16)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p15.png" alt="Lecture 15 หน้า 15: Memory in Agentic Systems" loading="lazy">
+<figcaption>Lecture 15 หน้า 15 — Memory in Agentic Systems</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p16.png" alt="Lecture 15 หน้า 16: Knowledge Base vs. Memory vs. State" loading="lazy">
+<figcaption>Lecture 15 หน้า 16 — Knowledge Base vs. Memory vs. State</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s2-orch">2.4 Orchestration และ single หรือ multi-agent</h3>
+
+<p>orchestration คือกลไกที่ประสาน model, tool, memory เพื่อเป้าหมาย หน้าที่: planning · tool selection · execution and coordination คือรันตามลำดับที่เหมาะ · state management · monitoring ตรวจความคืบหน้าและความล้มเหลว · dynamic replanning ปรับ action เมื่อมีข้อมูลใหม่ Key Takeaway: tool กำหนดว่า agent ทำอะไรได้ orchestration กำหนดว่าใช้เมื่อไรและอย่างไร</p>
+
+<table>
+<tr><th></th><th>Single-agent</th><th>Multi-agent</th></tr>
+<tr><td>specialization</td><td>agent เดียวทำหลายงาน</td><td>แต่ละ agent ถนัดคนละงาน</td></tr>
+<tr><td>coordination</td><td>ค่อนข้างง่าย</td><td>ต้องประสานระหว่าง agent</td></tr>
+<tr><td>cost</td><td>overhead การประสานต่ำ</td><td>อาจเรียกโมเดลมากขึ้น</td></tr>
+<tr><td>งานที่เหมาะ</td><td>งานที่นิยามชัด</td><td>งานซับซ้อนที่แยกย่อยได้</td></tr>
+</table>
+
+<p>ตัวอย่างบนสไลด์ หน้า 18: single-agent มี Customer Support Agent ตัวเดียวถือ invoice, refund, order, technical tool · multi-agent มี coordinator agent กระจายงานให้ billing, refund, order, technical agent</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 17–18)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p17.png" alt="Lecture 15 หน้า 17: Orchestration in Agentic Systems" loading="lazy">
+<figcaption>Lecture 15 หน้า 17 — Orchestration in Agentic Systems</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p18.png" alt="Lecture 15 หน้า 18: Single-Agent vs. Multi-Agent Architecture" loading="lazy">
+<figcaption>Lecture 15 หน้า 18 — Single-Agent vs. Multi-Agent Architecture</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s3">3. Framework, tool calling และการเลือก tool</h2>
+
+<h3 id="s3-fw">3.1 Framework และ LangChain</h3>
+
+<table>
+<tr><th>Framework</th><th>จุดแข็ง</th><th>เหมาะกับ</th></tr>
+<tr><td>LangChain</td><td>ต่อ model, tool, message, operation ประกอบกันได้</td><td>แอป LLM และการต่อ tool</td></tr>
+<tr><td>LangGraph</td><td>workflow มี state, routing ตามเงื่อนไข, วนซ้ำ</td><td>agentic workflow ซับซ้อน</td></tr>
+<tr><td>AutoGen</td><td>สื่อสารและร่วมงานระหว่าง agent</td><td>multi-agent</td></tr>
+<tr><td>CrewAI</td><td>agent ตามบทบาท ประสานงาน</td><td>prototype multi-agent เร็ว</td></tr>
+<tr><td>OpenAI Agents SDK</td><td>สร้าง agent และต่อ tool</td><td>agent ที่ใช้ tool</td></tr>
+</table>
+
+<p>จำเป็นต้องใช้ framework ไหม: ไม่ agent ง่ายๆ เขียนด้วย model API กับ Python ธรรมดาได้ บทนี้ใช้ LangChain ต่อ model กับ tool และ LangGraph สำหรับ orchestration แบบกราฟ</p>
+
+<table>
+<tr><th>ส่วนของ LangChain</th><th>หน้าที่</th><th>method</th><th>หน้าที่</th></tr>
+<tr><td>Chat Models</td><td>interface กลางเรียก LLM</td><td><code>llm.invoke()</code></td><td>เรียก LLM</td></tr>
+<tr><td>Messages</td><td>คำสั่ง ประวัติ ผล tool</td><td><code>llm.bind_tools()</code></td><td>ให้ tool definition กับโมเดล</td></tr>
+<tr><td>Tools</td><td>ความสามารถที่เรียกได้</td><td><code>tool.invoke()</code></td><td>รัน tool</td></tr>
+<tr><td>Runnables</td><td>interface ประกอบต่อกันได้</td><td><code>chain.invoke()</code></td><td>รันลำดับที่ประกอบไว้</td></tr>
+</table>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 19–20)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p19.png" alt="Lecture 15 หน้า 19: Agentic Frameworks" loading="lazy">
+<figcaption>Lecture 15 หน้า 19 — Agentic Frameworks</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p20.png" alt="Lecture 15 หน้า 20: LangChain Fundamentals" loading="lazy">
+<figcaption>Lecture 15 หน้า 20 — LangChain Fundamentals</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s3-call">3.2 Tool calling และ bind_tools</h3>
+
+<figure class="viz"><img src="../assets/viz/l15-toolcall.svg" alt="ลำดับ tool calling"></figure>
+<p>ไล่ลูกศรจากบนลงล่าง: คำถามไปถึง LLM ครั้งแรก LLM คืน tool call ไม่ใช่คำตอบ Python รัน tool ได้ผล แล้วส่งคำถามเดิม tool call และผลกลับให้ LLM ครั้งที่สองเพื่อสรุปคำตอบ</p>
+
+<table>
+<tr><th>ขั้น</th><th>ใครทำ</th></tr>
+<tr><td>เข้าใจคำขอ · เลือก tool · สร้าง argument</td><td>LLM</td></tr>
+<tr><td>รันฟังก์ชัน Python</td><td>orchestration layer</td></tr>
+<tr><td>สร้างคำตอบสุดท้าย</td><td>LLM</td></tr>
+</table>
+
+<p>bind_tools รับประกันว่าจะเรียก tool ไหม: ไม่ ถ้าไม่ bind <code>llm.invoke("What is my invoice balance?")</code> โมเดลอาจถามข้อมูลเพิ่มหรืออธิบายวิธีเช็ค แต่ขอใช้ tool ผ่าน interface ไม่ได้เพราะไม่รู้จัก tool ถ้า bind แล้ว <code>llm_with_tools.invoke("What is my invoice balance? My customer ID is U1234.")</code> โมเดลเลือก tool และสร้าง argument ได้ แต่การเรียกจริงขึ้นกับความสามารถโมเดล นิยาม tool คำสั่ง และบริบท</p>
+
+<p class="trap">bind_tools ไม่ได้รัน tool และไม่รับประกันว่าจะเรียก · ใน lab ใช้ tool_choice="required" บังคับให้เรียกอย่างน้อยหนึ่ง tool</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 21–22)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p21.png" alt="Lecture 15 หน้า 21: Complete Tool-Calling Workflow" loading="lazy">
+<figcaption>Lecture 15 หน้า 21 — Complete Tool-Calling Workflow</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p22.png" alt="Lecture 15 หน้า 22: Does Binding Tools Guarantee Tool Usage?" loading="lazy">
+<figcaption>Lecture 15 หน้า 22 — Does Binding Tools Guarantee Tool Usage?</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s3-select">3.3 เลือก tool และสร้าง argument</h3>
+
+<p>tool ยิ่งมาก ยิ่งเลือกยาก โดยเฉพาะ tool ที่คำอธิบายคล้ายกัน ตัวอย่าง 8 tool: get_invoice, get_refund_status, get_order_status, calculate_refund, cancel_order, reset_password, get_service_logs, create_ticket ลูกค้าถาม "I returned my product last week. Has my money been sent back?" agent ต้องตัดสินว่า ต้องใช้ tool ไหม: ใช่ · tool ไหน: get_refund_status · argument อะไร: customer ID · ต้องถามเพิ่มไหม: ถามหา customer ID ถ้ายังไม่มี</p>
+
+<table>
+<tr><th></th><th>Standard</th><th>Semantic</th><th>Hierarchical</th></tr>
+<tr><td>วิธี</td><td>ส่งนิยามทุก tool ให้ LLM</td><td>ใช้ embedding ของชื่อและคำอธิบาย tool ค้น tool ที่เกี่ยวก่อน</td><td>เลือกกลุ่ม tool ก่อน แล้วเลือก tool ในกลุ่ม</td></tr>
+<tr><td>ตัดตัวเลือกด้วย</td><td>ไม่ตัด</td><td>embedding similarity</td><td>จัดกลุ่ม</td></tr>
+<tr><td>LLM call ตอนเลือก</td><td>ปกติ 1</td><td>ปกติ 1 + query embedding</td><td>ปกติ 2</td></tr>
+<tr><td>โครงสร้างเพิ่ม</td><td>น้อยที่สุด</td><td>embedding model และ retrieval index</td><td>นิยามกลุ่มและ routing</td></tr>
+<tr><td>input token</td><td>เพิ่มตามจำนวน tool</td><td>คุมด้วย top-k</td><td>คุมด้วยกลุ่มที่เลือก</td></tr>
+<tr><td>พังแบบไหน</td><td>เลือก tool ผิด</td><td>ค้นไม่เจอ tool ที่ถูก</td><td>เลือกกลุ่มผิด</td></tr>
+<tr><td>เหมาะกับ</td><td>tool น้อยหรือแยกกันชัด</td><td>tool เยอะ ค้นได้</td><td>tool เยอะ แบ่งกลุ่มตามธรรมชาติ</td></tr>
+</table>
+
+<p class="trap">ทั้งสามวิธี LLM เป็นคนเลือก tool สุดท้ายเหมือนกัน ต่างแค่การตัดตัวเลือกก่อนส่ง · hierarchical ใช้ LLM สองครั้ง</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p26.png" alt="Lecture 15 หน้า 26: Tool Parameterization: ข้อผิดพลาดห้าแบบ" loading="lazy">
+<figcaption>Lecture 15 หน้า 26 — Tool Parameterization: ข้อผิดพลาดห้าแบบ</figcaption>
+</figure>
+
+<p>tool get_invoice(user_id: str) คำขอ "What is the invoice balance for customer U1234?" tool call ที่ถูกคือ name get_invoice args {"user_id": "U1234"} ข้อผิดพลาดห้าแบบ:</p>
+
+<table>
+<tr><th>ข้อผิดพลาด</th><th>ตัวอย่าง</th></tr>
+<tr><td>ขาด argument</td><td><code>get_invoice()</code></td></tr>
+<tr><td>ชื่อ parameter ผิด</td><td><code>get_invoice(customer="U1234")</code></td></tr>
+<tr><td>ชนิดข้อมูลผิด</td><td><code>get_invoice(user_id=1234)</code></td></tr>
+<tr><td>ค่าผิด</td><td><code>get_invoice(user_id="U4321")</code></td></tr>
+<tr><td>แต่งค่าขึ้นเอง</td><td>สร้าง ID ที่ผู้ใช้ไม่เคยให้</td></tr>
+</table>
+
+<pre><code>import re
+
+def validate_customer_id(user_id: str) -> bool:
+    return (
+        isinstance(user_id, str)
+        and re.fullmatch(
+            r"U\d{4}",
+            user_id
+        ) is not None
+    )
+
+print(validate_customer_id("U1234")) # True
+print(validate_customer_id("1234")) # False</code></pre>
+
+<p>ก่อนรัน tool orchestration ควรตรวจ argument ฟังก์ชันนี้รับเฉพาะ string ที่ขึ้นต้นด้วย U ตามด้วยตัวเลข 4 หลักพอดี</p>
+
+<details class="check"><summary>validate_customer_id("U12345") และ validate_customer_id(1234) ได้อะไร</summary>
+<p>"U12345" มีเลข 5 หลัก fullmatch ไม่ตรง ได้ False · 1234 ไม่ใช่ str ได้ False ตั้งแต่ isinstance</p>
+</details>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 23–25)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p23.png" alt="Lecture 15 หน้า 23: Tool Selection" loading="lazy">
+<figcaption>Lecture 15 หน้า 23 — Tool Selection</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p24.png" alt="Lecture 15 หน้า 24: Three Approaches to Tool Selection" loading="lazy">
+<figcaption>Lecture 15 หน้า 24 — Three Approaches to Tool Selection</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p25.png" alt="Lecture 15 หน้า 25: Comparing the Three Tool Selection Strategies" loading="lazy">
+<figcaption>Lecture 15 หน้า 25 — Comparing the Three Tool Selection Strategies</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s4">4. Tool topology: single tool และ parallel</h2>
+
+<h3 id="s4-topo">4.1 สี่แบบของ tool topology</h3>
+
+<p>tool topology คือวิธีจัด เชื่อม และรัน tool ใน agent software เดิมนักพัฒนากำหนด control flow เองทั้งหมด agentic AI ให้บางการตัดสินใจเกิดแบบ dynamic ตามคำขอและบริบท เลือก topology จากความซับซ้อน dependency ระหว่าง tool และข้อกำหนดการรัน</p>
+
+<figure class="viz"><img src="../assets/viz/l15-topologies.svg" alt="สี่แบบของ tool topology"></figure>
+<p>อ่านซ้ายไปขวา ความซับซ้อนเพิ่มขึ้น: tool เดียว · หลาย tool ที่ไม่พึ่งกันรันพร้อมกัน · tool ที่ต้องรอผลกันเรียงเป็นแถว · กราฟที่แยกทางตาม state และวนได้ แถวล่างบอกเครื่องมือที่ใช้เขียนแต่ละแบบในบทนี้</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 27)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p27.png" alt="Lecture 15 หน้า 27: Tool Topologies" loading="lazy">
+<figcaption>Lecture 15 หน้า 27 — Tool Topologies</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s4-single">4.2 Single tool execution</h3>
+
+<p>agent เลือกและรัน tool เดียวพอดี ขั้นตอน: รับคำขอ → เลือก tool → สร้าง argument → รัน → สร้างคำตอบจากผล ลักษณะ: tool เดียวต่อคำขอ · LLM เลือก tool และ argument · ไม่มี dependency · ซับซ้อนน้อย latency ต่ำ tool ตัวอย่าง get_invoice, get_refund, get_order ทุกตัวรับ customer ID</p>
+
+<p>ขั้นที่ 1 นิยาม tool: <code>@tool</code> แปลงฟังก์ชัน Python เป็น LangChain tool · ชื่อฟังก์ชันคือชื่อ tool · docstring บอกจุดประสงค์ · type hint บอก input · return คือผล ในงานจริงฟังก์ชันจะดึงจากฐานข้อมูลหรือ API ตัวอย่างนี้คืนข้อมูลจำลอง</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p30.png" alt="Lecture 15 หน้า 30: Single Tool Execution: Step 1 — Define Tools" loading="lazy">
+<figcaption>Lecture 15 หน้า 30 — Single Tool Execution: Step 1 — Define Tools</figcaption>
+</figure>
+
+<p>สาม tool คืนข้อมูลจำลองที่ใช้ต่อทั้งบท: invoice balance 50 USD · refund Pending · order Shipped tool_map จับคู่ชื่อกับ tool ไว้ใช้ตอนรัน</p>
+
+<pre><code>from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage, SystemMessage
+
+@tool
+def get_invoice(user_id: str) -> dict:
+    """Retrieve the outstanding invoice balance for a customer ID."""
+    return {"user_id": user_id, "balance": 50, "currency": "USD"}
+
+@tool
+def get_refund(user_id: str) -> dict:
+    """Retrieve the refund status for a customer ID."""
+    return {"user_id": user_id, "status": "Pending"}
+
+@tool
+def get_order(user_id: str) -> dict:
+    """Retrieve the order status for a customer ID."""
+    return {"user_id": user_id, "status": "Shipped"}
+
+tools = [get_invoice, get_refund, get_order]
+tool_map = {t.name: t for t in tools}</code></pre>
+
+<p>notebook แสดง schema ที่ LangChain สร้างจาก signature และ docstring: type function · name get_invoice · description จาก docstring · parameters มี user_id ชนิด string และ required ["user_id"] นี่คือสิ่งที่โมเดลเห็น ไม่ใช่ตัวโค้ด</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p31.png" alt="Lecture 15 หน้า 31: Single Tool Execution: Step 2 — Bind and Select a Tool" loading="lazy">
+<figcaption>Lecture 15 หน้า 31 — Single Tool Execution: Step 2 — Bind and Select a Tool</figcaption>
+</figure>
+
+<p>ผลที่พิมพ์คือ list ที่มี tool call เดียว: args {'user_id': 'U1234'} · id ที่สร้างตอนรัน · name 'get_invoice' · type 'tool_call' สไลด์ย้ำว่า LLM เลือก tool และสร้าง argument แต่ไม่ได้รันฟังก์ชัน</p>
+
+<pre><code>from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0
+)
+
+tools = [get_invoice, get_refund, get_order]
+
+llm_with_tools = llm.bind_tools(
+    tools,
+    tool_choice="required",
+    parallel_tool_calls=False
+)
+
+query = (
+    "What is my outstanding invoice balance? "
+    "My customer ID is U1234."
+)
+
+ai_msg = llm_with_tools.invoke(query)
+
+print(ai_msg.tool_calls)</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>temperature=0</code></td><td>ให้ผลคงที่ที่สุด</td></tr>
+<tr><td><code>tool_choice="required"</code></td><td>บังคับให้เรียก tool อย่างน้อยหนึ่งตัว ไม่ตอบเป็นข้อความเปล่า</td></tr>
+<tr><td><code>parallel_tool_calls=False</code></td><td>จำกัดให้เรียกได้ทีละ tool</td></tr>
+<tr><td><code>ai_msg.tool_calls</code></td><td>AIMessage มี tool call ฟังก์ชันยังไม่ถูกรัน</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p32.png" alt="Lecture 15 หน้า 32: Single Tool Execution: Step 3 — Execute the Tool and Generate a Response" loading="lazy">
+<figcaption>Lecture 15 หน้า 32 — Single Tool Execution: Step 3 — Execute the Tool and Generate a Response</figcaption>
+</figure>
+
+<p>Python หยิบ tool จาก tool_map ตามชื่อแล้ว invoke ด้วย tool call ทั้งก้อน ได้ ToolMessage ที่มี content {"user_id": "U1234", "balance": 50, "currency": "USD"} จากนั้นส่งคำถาม AIMessage และ ToolMessage ให้ llm ตัวที่ไม่ bind tool ได้ "Your outstanding invoice balance is $50 USD."</p>
+
+<pre><code>tool_map = {t.name: t for t in tools}
+
+# Retrieve the selected tool call
+tool_call = ai_msg.tool_calls[0]
+
+# Execute the selected tool
+tool_msg = tool_map[tool_call["name"]].invoke(
+    tool_call
+)
+
+print(tool_msg.content)
+
+from langchain_core.messages import HumanMessage
+
+messages = [
+    HumanMessage(content=query),
+    ai_msg,
+    tool_msg
+]
+
+response = llm.invoke(messages)
+
+print(response.content)</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>tool_map[tool_call["name"]]</code></td><td>แปลงชื่อที่ LLM เลือกเป็น tool จริง</td></tr>
+<tr><td><code>.invoke(tool_call)</code></td><td>ส่ง tool call ทั้งก้อนจึงได้ ToolMessage ที่มี tool_call_id ตรงกัน</td></tr>
+<tr><td><code>messages = [HumanMessage, ai_msg, tool_msg]</code></td><td>LLM ครั้งที่สองไม่จำครั้งแรก ต้องส่งประวัติเอง</td></tr>
+<tr><td><code>llm.invoke(messages)</code></td><td>ใช้ llm ปกติที่ไม่ bind tool สรุปคำตอบ</td></tr>
+</table>
+
+<p class="num">หน้าที่สรุปบนสไลด์: LLM เลือกและสร้าง parameter · Python รัน tool · tool ดึงข้อมูล · LLM สร้างคำตอบสุดท้าย · ทั้ง workflow เรียก LLM 2 ครั้ง</p>
+
+<p class="trap">notebook เพิ่ม SystemMessage และตรวจ tool call ก่อนรัน: ไม่มีหรือ invalid ให้ error · ต้องมี tool call เดียว · ชื่อต้องอยู่ใน tool_map · ถ้าใส่ SystemMessage ให้บอกว่าข้อมูลจำลอง คำตอบจะต่อท้าย "Please note that these records are simulated."</p>
+
+<details class="check"><summary>ถ้าเปลี่ยน query เป็น "Has my refund been processed? My customer ID is U1234." tool call และคำตอบควรเป็นอะไร</summary>
+<p>name get_refund args {"user_id": "U1234"} · ToolMessage status Pending · คำตอบบอกว่า refund ยัง Pending</p>
+</details>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 28–29)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p28.png" alt="Lecture 15 หน้า 28: Single Tool Execution" loading="lazy">
+<figcaption>Lecture 15 หน้า 28 — Single Tool Execution</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p29.png" alt="Lecture 15 หน้า 29: Single Tool Execution: Customer Support Example" loading="lazy">
+<figcaption>Lecture 15 หน้า 29 — Single Tool Execution: Customer Support Example</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s4-par">4.3 Parallel tool execution</h3>
+
+<p>รันหลาย tool อิสระพร้อมกัน agent ต้องตัดสินทั้งว่าใช้ tool ไหนและกี่ตัว ขั้นตอน: วิเคราะห์คำขอ → เลือกทุก tool ที่เกี่ยว → สร้าง argument ของแต่ละตัว → รันพร้อมกัน → รวมผล → สร้างคำตอบ ลักษณะ: แต่ละ tool มี argument ของตัวเอง ไม่พึ่ง output ของกัน เก็บผลครบก่อนสร้างคำตอบ</p>
+
+<p>ตัวอย่างคำขอ หน้า 34: "Please check my outstanding invoice, refund status, and order status. My customer ID is U1234."</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p35.png" alt="Lecture 15 หน้า 35: Parallel Tool Execution: Step 1 — Select Multiple Tools" loading="lazy">
+<figcaption>Lecture 15 หน้า 35 — Parallel Tool Execution: Step 1 — Select Multiple Tools</figcaption>
+</figure>
+
+<p>เปลี่ยนแค่ parallel_tool_calls=True โมเดลคืน tool call สามตัวใน response เดียว: get_invoice, get_refund, get_order ทุกตัว args {"user_id": "U1234"}</p>
+
+<pre><code>tools = [get_invoice, get_refund, get_order]
+
+llm_with_tools = llm.bind_tools(
+    tools,
+    parallel_tool_calls=True
+)
+
+query = (
+    "Check my invoice balance, refund status, "
+    "and order status. My customer ID is U1234."
+)
+
+ai_msg = llm_with_tools.invoke(query)
+
+print(ai_msg.tool_calls)</code></pre>
+
+<p class="trap">parallel_tool_calls=True ให้โมเดลสร้างหลาย tool call ในคำตอบเดียว แต่ไม่ได้รัน tool พร้อมกันเอง การรันพร้อมกันต้องเขียนเอง</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p36.png" alt="Lecture 15 หน้า 36: Parallel Tool Execution: Step 2 — Execute Tools Concurrently" loading="lazy">
+<figcaption>Lecture 15 หน้า 36 — Parallel Tool Execution: Step 2 — Execute Tools Concurrently</figcaption>
+</figure>
+
+<p>ThreadPoolExecutor กระจาย tool call ให้ thread รันพร้อมกัน ผลที่พิมพ์: get_invoice balance 50 USD · get_refund Pending · get_order Shipped การใช้ thread เหมาะกับ tool ที่รอ I/O เช่น query ฐานข้อมูลหรือเรียก API</p>
+
+<pre><code>from concurrent.futures import ThreadPoolExecutor
+
+tool_map = {t.name: t for t in tools}
+
+
+def execute_tool(tool_call):
+    selected_tool = tool_map[tool_call["name"]]
+    return selected_tool.invoke(tool_call)
+
+
+with ThreadPoolExecutor(max_workers=3) as executor:
+
+    tool_messages = list(
+        executor.map(execute_tool, ai_msg.tool_calls)
+    )
+
+for msg in tool_messages:
+    print(msg.name, msg.content)
+
+messages = [
+    HumanMessage(content=query),
+    ai_msg,
+    *tool_messages
+]
+
+response = llm.invoke(messages)
+
+print(response.content)</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>ThreadPoolExecutor</code></td><td>จัดการการรันพร้อมกัน</td></tr>
+<tr><td><code>max_workers=3</code></td><td>จำนวน thread สูงสุด</td></tr>
+<tr><td><code>executor.map(execute_tool, ai_msg.tool_calls)</code></td><td>กระจาย tool call ให้ worker</td></tr>
+<tr><td><code>*tool_messages</code></td><td>แตก list ToolMessage ทั้งสามเข้าไปใน messages</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p37.png" alt="Lecture 15 หน้า 37: Parallel Tool Execution: Step 3 — Integrate Results" loading="lazy">
+<figcaption>Lecture 15 หน้า 37 — Parallel Tool Execution: Step 3 — Integrate Results</figcaption>
+</figure>
+
+<p>LLM รับผลสามชิ้นจากสภาพแวดล้อมแล้วรวมเป็นคำตอบเดียว: invoice $50 USD refund Pending order Shipped หน้าที่: LLM เลือกหลาย tool และสร้าง argument ให้แต่ละตัว · Python executor รันพร้อมกัน · tool ดึงข้อมูลอิสระ · LLM รวมผลและตอบ</p>
+
+<figure class="viz"><img src="../assets/viz/l15-latency.svg" alt="sequential 9s เทียบ parallel 4s"></figure>
+<p>แถวบนรันทีละตัวจึงต้องรอผลรวมทุกตัว แถวล่างรันพร้อมกัน เวลาจบจึงเท่ากับตัวที่ช้าที่สุด</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p38.png" alt="Lecture 15 หน้า 38: Parallel Tool Execution: Benefits and Trade-offs" loading="lazy">
+<figcaption>Lecture 15 หน้า 38 — Parallel Tool Execution: Benefits and Trade-offs</figcaption>
+</figure>
+
+<p class="num">invoice 2s refund 3s order 4s: sequential 2 + 3 + 4 = 9s · parallel max(2, 3, 4) = 4s · ลดลง 5/9 = 55.6% · lab ใส่ sleep 1s ให้ทั้งสาม tool ได้ sequential 3.0s concurrent 1.0s</p>
+
+<table>
+<tr><th>ข้อดี</th><th>ข้อจำกัด</th></tr>
+<tr><td>latency ลดลง</td><td>orchestration ซับซ้อนขึ้น</td></tr>
+<tr><td>ดึงข้อมูลได้ครบ</td><td>ต้องเป็น operation อิสระ</td></tr>
+<tr><td>หลายแหล่งข้อมูล</td><td>ใช้ทรัพยากรพร้อมกันมากขึ้น</td></tr>
+<tr><td>คำตอบสมบูรณ์ขึ้น</td><td>ต้องรับมือความล้มเหลวบางส่วน</td></tr>
+</table>
+
+<details class="check"><summary>tool สี่ตัวใช้เวลา 1, 1, 5, 2 วินาที รันพร้อมกันลดเวลาได้กี่เปอร์เซ็นต์</summary>
+<p>sequential 9s · parallel 5s · ลด 4/9 ≈ 44.4%</p>
+</details>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 33–34)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p33.png" alt="Lecture 15 หน้า 33: Parallel Tool Execution" loading="lazy">
+<figcaption>Lecture 15 หน้า 33 — Parallel Tool Execution</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p34.png" alt="Lecture 15 หน้า 34: Parallel Tool Execution: Customer Support Example" loading="lazy">
+<figcaption>Lecture 15 หน้า 34 — Parallel Tool Execution: Customer Support Example</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s5">5. Chains และ LCEL</h2>
+
+<h3 id="s5-idea">5.1 เมื่อ operation ต้องรอกัน</h3>
+
+<p>chain คือลำดับ operation ที่ output ของขั้นหนึ่งเป็น input ของขั้นถัดไป ต่างจาก parallel ตรงที่มี dependency ลักษณะ: รันเรียงลำดับ · ขั้นหลังพึ่งผลขั้นก่อน · ลำดับสำคัญ · ส่งผลระหว่างกลางต่อกัน · error ลามต่อได้</p>
+
+<p>ตัวอย่าง หน้า 40: "Can I get a refund for my latest order? My customer ID is U1234." ต้องหา order ID ล่าสุดก่อน แล้วดึงรายละเอียด order แล้วจึงตัดสินสิทธิ์ refund รันพร้อมกันไม่ได้เพราะขั้นหลังต้องใช้ผลขั้นก่อน</p>
+
+<p>LangChain Expression Language หรือ LCEL ประกอบ operation เป็น chain ด้วย pipe <code>chain = component_a | component_b | component_c</code> ทุก component เป็น Runnable จึงประกอบและรันแบบเดียวกันได้</p>
+
+<table>
+<tr><th>method</th><th>ทำอะไร</th><th>component</th><th>ทำอะไร</th></tr>
+<tr><td><code>invoke()</code></td><td>รัน 1 input</td><td>RunnableLambda</td><td>ห่อฟังก์ชัน Python เป็น Runnable</td></tr>
+<tr><td><code>batch()</code></td><td>รันหลาย input</td><td>PromptTemplate</td><td>สร้าง prompt</td></tr>
+<tr><td><code>stream()</code></td><td>ส่ง output ทีละส่วน</td><td>ChatOpenAI</td><td>เรียก LLM</td></tr>
+<tr><td><code>ainvoke()</code></td><td>รันแบบ asynchronous</td><td>StrOutputParser</td><td>แปลง output เป็น string</td></tr>
+<tr><td></td><td></td><td>RunnableSequence</td><td>รันหลาย Runnable ตามลำดับ</td></tr>
+</table>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 39–41)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p39.png" alt="Lecture 15 หน้า 39: Chains" loading="lazy">
+<figcaption>Lecture 15 หน้า 39 — Chains</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p40.png" alt="Lecture 15 หน้า 40: Chains: Customer Support Example" loading="lazy">
+<figcaption>Lecture 15 หน้า 40 — Chains: Customer Support Example</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p41.png" alt="Lecture 15 หน้า 41: Chains: LangChain Expression Language (LCEL)" loading="lazy">
+<figcaption>Lecture 15 หน้า 41 — Chains: LangChain Expression Language (LCEL)</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s5-code">5.2 โค้ด refund eligibility</h3>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p42.png" alt="Lecture 15 หน้า 42: Chains: Step 1 — Define Dependent Operations" loading="lazy">
+<figcaption>Lecture 15 หน้า 42 — Chains: Step 1 — Define Dependent Operations</figcaption>
+</figure>
+
+<p>ทุกฟังก์ชันรับ dict จากขั้นก่อนแล้วคืน dict ที่เพิ่ม field ใหม่ <code>**data</code> คัดลอกข้อมูลเดิมไปด้วย แนวคิดเหมือน state ของ LangGraph ต่างตรงที่ LCEL ต้องส่งข้อมูลสะสมต่อเอง</p>
+
+<pre><code>def get_latest_order(data: dict) -> dict:
+    """Retrieve the customer's latest order."""
+
+    return {
+        **data,
+        "order_id": "O5678"
+    }
+
+def get_order_details(data: dict) -> dict:
+    """Retrieve details using the order ID."""
+
+    order_id = data["order_id"]
+
+    # Simulated database retrieval
+    return {
+        **data,
+        "days_since_delivery": 5,
+        "order_status": "Delivered"
+    }
+
+def check_refund_eligibility(data: dict) -> dict:
+    """Determine eligibility using the order details."""
+
+    eligible = (
+        data["order_status"] == "Delivered"
+        and data["days_since_delivery"] &lt;= 14
+    )
+
+    return {
+        **data,
+        "refund_eligible": eligible
+    }</code></pre>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p43.png" alt="Lecture 15 หน้า 43: Chains: Step 2 — Compose Operations Using LCEL" loading="lazy">
+<figcaption>Lecture 15 หน้า 43 — Chains: Step 2 — Compose Operations Using LCEL</figcaption>
+</figure>
+
+<p>ห่อสามฟังก์ชันด้วย RunnableLambda แล้วต่อด้วย pipe ผลของ invoke({"user_id": "U1234"}) คือ dict ที่มี days_since_delivery 5 · order_id O5678 · order_status Delivered · refund_eligible True · user_id U1234 สไลด์พิมพ์หัวข้อว่า "Using LCE" ขาดตัว L</p>
+
+<pre><code>from langchain_core.runnables import RunnableLambda
+
+order_step = RunnableLambda(get_latest_order)
+
+details_step = RunnableLambda(get_order_details)
+
+eligibility_step = RunnableLambda(
+    check_refund_eligibility
+)
+
+refund_chain = (
+    order_step
+    | details_step
+    | eligibility_step
+)
+
+result = refund_chain.invoke({
+    "user_id": "U1234"
+})
+
+print(result)</code></pre>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p44.png" alt="Lecture 15 หน้า 44: Chains: Step 3 — Add LLM Response Generation" loading="lazy">
+<figcaption>Lecture 15 หน้า 44 — Chains: Step 3 — Add LLM Response Generation</figcaption>
+</figure>
+
+<p>ต่อ prompt, llm และ StrOutputParser ท้าย chain เดิม prompt เติมค่าจาก dict ลงใน {user_id}, {order_id} ฯลฯ LLM แค่อธิบายผล ไม่ได้ตัดสินสิทธิ์ เพราะสิทธิ์ถูกคำนวณแล้วด้วยกฎ 14 วัน ทั้ง chain เรียก LLM ครั้งเดียว</p>
+
+<pre><code>from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+prompt = PromptTemplate.from_template(
+    """
+    Generate a concise customer support response
+    using only the following simulated information.
+
+    Customer ID: {user_id}
+    Order ID: {order_id}
+    Order status: {order_status}
+    Days since delivery: {days_since_delivery}
+    Refund eligible: {refund_eligible}
+
+    The refund eligibility period is 14 days.
+    Do not claim that a refund has been processed.
+    """
+)
+
+customer_support_chain = (
+    order_step
+    | details_step
+    | eligibility_step
+    | prompt
+    | llm
+    | StrOutputParser()
+)</code></pre>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p45.png" alt="Lecture 15 หน้า 45: Chains: Understanding Data Flow" loading="lazy">
+<figcaption>Lecture 15 หน้า 45 — Chains: Understanding Data Flow</figcaption>
+</figure>
+
+<p class="num">input {"user_id": "U1234"} · ขั้น 1 เพิ่ม order_id O5678 · ขั้น 2 เพิ่ม days_since_delivery 5 และ order_status Delivered · ขั้น 3 เพิ่ม refund_eligible True เพราะ 5 ≤ 14 · ขั้น 4 prompt แปลง dict เป็นข้อความ · ขั้น 5 LLM + parser ได้ string · notebook ทดสอบลูกค้า U5678 order O9999 ส่งมา 20 วัน ได้ False</p>
+
+<table>
+<tr><th>ข้อดี</th><th>ข้อจำกัด</th></tr>
+<tr><td>รองรับ operation ที่พึ่งกัน</td><td>รันเรียงจึง latency สูงขึ้น</td></tr>
+<tr><td>workflow ชัดเข้าใจง่าย</td><td>error ลามระหว่างขั้น</td></tr>
+<tr><td>ประกอบง่ายด้วย LCEL</td><td>chain ตายตัวยืดหยุ่นน้อย</td></tr>
+<tr><td>เหมาะกับกระบวนการเส้นตรง</td><td>ไม่เหมาะกับการแตกกิ่งซับซ้อน</td></tr>
+</table>
+
+<p>best practice: กำหนด input/output ระหว่าง component ให้ชัด · ตรวจผลกลางทางก่อนไปต่อ · จัดการ error · จำกัดจำนวนขั้นของ chain ที่สร้างแบบ dynamic · อย่าทำ chain ยาวเกินจำเป็น ถ้าต้องแตกกิ่ง หลายเส้นทาง หรือวนแก้ ให้ใช้ graph</p>
+
+<p class="trap">ถ้าไม่ใส่ **data ขั้นถัดไปจะหา field เดิมไม่เจอ เช่น check_refund_eligibility ไม่มี order_status · LCEL ไม่มี state กลางให้อัตโนมัติ</p>
+
+<details class="check"><summary>ถ้า days_since_delivery = 14 และ order_status = "Delivered" ได้ refund_eligible อะไร และถ้า order_status = "Shipped"</summary>
+<p>14 ≤ 14 เป็นจริง ได้ True · Shipped ไม่ใช่ Delivered ได้ False ไม่ว่ากี่วัน</p>
+</details>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 46)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p46.png" alt="Lecture 15 หน้า 46: Chains: Benefits and Limitations" loading="lazy">
+<figcaption>Lecture 15 หน้า 46 — Chains: Benefits and Limitations</figcaption>
+</figure>
+</div></details>
+
+<!-- ===================================================== -->
+<h2 id="s6">6. Graph, context engineering, agent pattern และการประเมิน</h2>
+
+<h3 id="s6-graph">6.1 LangGraph</h3>
+
+<p class="pic">แผนผังสายด่วนของบริษัท: กด 1 เรื่องบิล กด 2 เรื่องเทคนิค แต่ละทางมีเจ้าหน้าที่ต่างกัน สุดท้ายทุกสายมาจบที่การสรุปเรื่องให้ลูกค้า ใบงานเดียวกันถูกส่งต่อและเติมข้อมูลตลอดทาง</p>
+
+<p>ทำไมต้องมี graph: billing ต้องใช้ invoice หรือ refund · technical ต้องแก้ login หรือ performance · คำขอไม่ชัดต้องถามกลับ · บางงานต้องวนหรือตัดสินตามเงื่อนไข ลำดับตายตัวเส้นเดียวไม่พอ graph รองรับหลายเส้นทาง routing ตามเงื่อนไข state ร่วม และการวน</p>
+
+<table>
+<tr><th>topology</th><th>ตัวอย่าง customer support</th></tr>
+<tr><td>Single tool</td><td>เช็คยอด invoice</td></tr>
+<tr><td>Parallel</td><td>เช็ค invoice, refund, order พร้อมกัน</td></tr>
+<tr><td>Chain</td><td>หา order ดูรายละเอียด แล้วตัดสินสิทธิ์ refund</td></tr>
+<tr><td>Graph</td><td>จัดหมวดคำขอแล้วส่งไปคนละ workflow</td></tr>
+</table>
+
+<p>graph-based agent ประกอบด้วย <b>node</b> คือ tool หรือ operation · <b>edge</b> คือการเปลี่ยนจาก node หนึ่งไปอีก node · <b>conditional edge</b> เลือก node ถัดไปจาก state · <b>state</b> เก็บและส่งข้อมูลตลอด workflow ตัวอย่าง: จัดคำขอเป็น billing ได้แก่ invoice, refund หรือ technical ได้แก่ login, performance ส่งไป handler ที่ตรง แล้วสร้างคำตอบสุดท้าย</p>
+
+<figure class="viz"><img src="../assets/viz/l15-graph.svg" alt="LangGraph customer support graph"></figure>
+<p>categorize_issue เป็น node ที่เรียก LLM จัดหมวด เส้นประคือ conditional edge ที่ route_issue เลือก handler หนึ่งตัว ทุก handler มารวมที่ summarize_response ซึ่งเรียก LLM อีกครั้ง คอลัมน์ขวาบอกว่าแต่ละ field ของ state ถูกเติมโดย node ไหน</p>
+
+<table>
+<tr><th>state field</th><th>คืออะไร</th></tr>
+<tr><td>user_message</td><td>คำขอเดิมของลูกค้า</td></tr>
+<tr><td>user_id</td><td>รหัสลูกค้า</td></tr>
+<tr><td>issue_type</td><td>ผลการจัดหมวด</td></tr>
+<tr><td>step_result</td><td>ผลจาก handler ที่ถูกเลือก</td></tr>
+<tr><td>response</td><td>คำตอบสุดท้าย</td></tr>
+</table>
+
+<p>state คือโครงสร้างข้อมูลร่วม ทุก node อ่าน state ปัจจุบันแล้วคืนการอัปเดตให้ node ถัดไปใช้ node จึงไม่ต้องเรียก node ถัดไปเอง</p>
+
+<pre><code>from typing import TypedDict
+
+class AgentState(TypedDict, total=False):
+    user_message: str
+    user_id: str
+    issue_type: str
+    step_result: str
+    response: str</code></pre>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p50.png" alt="Lecture 15 หน้า 50: Step 1: Define Nodes — LLM-based node และ function-based node" loading="lazy">
+<figcaption>Lecture 15 หน้า 50 — Step 1: Define Nodes — LLM-based node และ function-based node</figcaption>
+</figure>
+
+<p>node มีสองแบบ: LLM-based node เช่น categorize_issue ส่ง prompt ให้ LLM ตอบ billing หรือ technical แล้วคืน {"issue_type": ...} · function-based node เช่น handle_invoice ทำ operation แล้วคืน {"step_result": ...} node คืนเฉพาะ field ที่อัปเดต LangGraph รวมเข้า state เอง</p>
+
+<pre><code>def categorize_issue(state: AgentState) -> dict:
+    prompt = (
+        "Classify this request as 'billing' or 'technical'. "
+        "Return only the category name.\n"
+        f"Message: {state['user_message']}"
+    )
+    result = llm.invoke(prompt)
+    return {
+        "issue_type": result.content.strip().lower()
+    }
+
+def handle_invoice(state: AgentState) -> dict:
+    # Fetch invoice details...
+    return {
+        "step_result": f"Invoice details for {state['user_id']}"
+    }</code></pre>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p51.png" alt="Lecture 15 หน้า 51: Step 2: Build the Graph — register nodes และ conditional edges" loading="lazy">
+<figcaption>Lecture 15 หน้า 51 — Step 2: Build the Graph — register nodes และ conditional edges</figcaption>
+</figure>
+
+<p>สร้าง StateGraph จาก AgentState ลงทะเบียนทุก node ด้วย add_node ต่อ START เข้า categorize_issue แล้วใช้ route_issue เป็น router ที่อ่าน state คืนชื่อ node ถัดไป ต่อด้วย add_conditional_edges billing ที่มีคำว่า refund ไป handle_refund นอกนั้นไป handle_invoice · technical ที่มีคำว่า login ไป handle_login นอกนั้นไป handle_performance</p>
+
+<pre><code>from langgraph.graph import StateGraph, START, END
+
+# Initialize the graph with the state schema
+graph = StateGraph(AgentState)
+
+# Register nodes
+graph.add_node("categorize_issue", categorize_issue)
+graph.add_node("handle_invoice", handle_invoice)
+graph.add_node("handle_refund", handle_refund)
+graph.add_node("handle_login", handle_login)
+graph.add_node("handle_performance", handle_performance)
+graph.add_node("summarize_response", summarize_response)
+
+# Identify the starting point
+graph.add_edge(START, "categorize_issue")
+
+def route_issue(state: AgentState) -> str:
+    issue_type = state["issue_type"]
+    message = state["user_message"].lower()
+
+    if issue_type == "billing":
+        if "refund" in message:
+            return "handle_refund"
+        return "handle_invoice"
+
+    elif issue_type == "technical":
+        if "login" in message:
+            return "handle_login"
+        return "handle_performance"
+
+    raise ValueError("Unknown issue type")
+
+graph.add_conditional_edges(
+    "categorize_issue",
+    route_issue,
+    {
+        "handle_invoice": "handle_invoice",
+        "handle_refund": "handle_refund",
+        "handle_login": "handle_login",
+        "handle_performance": "handle_performance"
+    }
+)</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>StateGraph(AgentState)</code></td><td>กราฟที่ใช้ AgentState เป็น schema ของ state</td></tr>
+<tr><td><code>graph.add_node("categorize_issue", categorize_issue)</code></td><td>นิยามฟังก์ชันอย่างเดียวยังไม่เป็น node ต้องลงทะเบียนก่อน</td></tr>
+<tr><td><code>graph.add_edge(START, "categorize_issue")</code></td><td>จุดเริ่ม</td></tr>
+<tr><td><code>route_issue(state) -> str</code></td><td>router คืนชื่อเส้นทาง ไม่ได้คืน state update</td></tr>
+<tr><td><code>add_conditional_edges(src, router, path_map)</code></td><td>path map แปลงชื่อที่ router คืนเป็น node ที่ลงทะเบียน</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p52.png" alt="Lecture 15 หน้า 52: Step 2 (continue): รวมทุกเส้นทางที่ summarize_response" loading="lazy">
+<figcaption>Lecture 15 หน้า 52 — Step 2 (continue): รวมทุกเส้นทางที่ summarize_response</figcaption>
+</figure>
+
+<p>ทุก handler ต่อ edge ไป summarize_response แล้วต่อไป END แผนภาพจาก notebook มี clarify_request เพิ่ม notebook ให้ LLM จัดเป็น billing, technical หรือ other ด้วย structured output และส่งคำขอที่ไม่ชัดไป clarify แทน raise ValueError แบบโค้ดบนสไลด์</p>
+
+<pre><code># Connect all handler nodes to the response generation node
+graph.add_edge("handle_invoice", "summarize_response")
+graph.add_edge("handle_refund", "summarize_response")
+graph.add_edge("handle_login", "summarize_response")
+graph.add_edge("handle_performance", "summarize_response")
+
+# Identify the ending point
+graph.add_edge("summarize_response", END)</code></pre>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p53.png" alt="Lecture 15 หน้า 53: Step 3: Execute the Graph" loading="lazy">
+<figcaption>Lecture 15 หน้า 53 — Step 3: Execute the Graph</figcaption>
+</figure>
+
+<p>compile แล้ว invoke ด้วย state เริ่มต้น state ไหลไป categorize_issue ได้ billing → handle_invoice → summarize_response → END ผลคือ "Thank you for reaching out. Your invoice information for U1234 shows a balance of $50." Key Takeaway: นักพัฒนากำหนด operation และเส้นทางที่อนุญาต เส้นทางจริงตัดสินแบบ dynamic จาก state และ routing</p>
+
+<pre><code>initial_state = {
+    "user_message": "I need help with my invoice.",
+    "user_id": "U1234",
+}
+
+app = graph.compile()
+result = app.invoke(initial_state, config={"recursion_limit": 10})
+print(result["response"])
+print("Final state:", result)</code></pre>
+
+<table class="codeexp compact">
+<tr><td><code>graph.compile()</code></td><td>เตรียมกราฟให้รันได้</td></tr>
+<tr><td><code>app.invoke(initial_state, ...)</code></td><td>รันแล้วคืน state สุดท้ายทั้งก้อน</td></tr>
+<tr><td><code>recursion_limit: 10</code></td><td>จำกัดจำนวนขั้น กันวนไม่จบ</td></tr>
+</table>
+
+<p class="trap">issue_type ไม่มีตอน START มีหลัง categorize_issue · คำขอหนึ่งเดินผ่าน handler เดียว ไม่ใช่ parallel · node ที่ไม่ได้ add_node ใช้ใน edge ไม่ได้</p>
+
+<details class="check"><summary>user_message = "I would like a refund." เดินผ่าน node ไหนบ้าง</summary>
+<p>START → categorize_issue ได้ billing → route_issue เจอคำว่า refund → handle_refund → summarize_response → END</p>
+</details>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 47–49)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p47.png" alt="Lecture 15 หน้า 47: Transition to Graphs" loading="lazy">
+<figcaption>Lecture 15 หน้า 47 — Transition to Graphs</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p48.png" alt="Lecture 15 หน้า 48: Building a Graph-Based Agent with LangGraph" loading="lazy">
+<figcaption>Lecture 15 หน้า 48 — Building a Graph-Based Agent with LangGraph</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p49.png" alt="Lecture 15 หน้า 49: Defining the Graph State" loading="lazy">
+<figcaption>Lecture 15 หน้า 49 — Defining the Graph State</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s6-cmp">6.2 เทียบสี่ topology</h3>
+
+<table>
+<tr><th></th><th>Single</th><th>Parallel</th><th>Chain</th><th>Graph</th></tr>
+<tr><td>จำนวน tool</td><td>หนึ่ง</td><td>หลาย</td><td>หลาย</td><td>แปรผัน</td></tr>
+<tr><td>รูปแบบการรัน</td><td>ครั้งเดียว</td><td>พร้อมกัน</td><td>เรียงลำดับ</td><td>ยืดหยุ่น</td></tr>
+<tr><td>dependency</td><td>ไม่มี</td><td>อิสระ</td><td>พึ่งกัน</td><td>ยืดหยุ่น</td></tr>
+<tr><td>แตกกิ่งตามเงื่อนไข</td><td>No</td><td>ไม่มีในตัว</td><td>ไม่มีในตัว</td><td>Yes</td></tr>
+<tr><td>วนซ้ำ</td><td>No</td><td>ไม่มีในตัว</td><td>ไม่มีใน chain ตายตัว</td><td>รองรับ</td></tr>
+<tr><td>ส่งข้อมูล</td><td>output ของ tool</td><td>รวม output</td><td>output ต่อกันตามลำดับ</td><td>shared state</td></tr>
+<tr><td>ความซับซ้อน</td><td>Low</td><td>Moderate</td><td>Moderate</td><td>Higher</td></tr>
+<tr><td>เขียนด้วย</td><td>bind_tools() + execution</td><td>ThreadPoolExecutor</td><td>LCEL</td><td>LangGraph</td></tr>
+</table>
+
+<p class="trap">Key Takeaway: topology ที่ซับซ้อนกว่าไม่ได้ดีกว่าเสมอ เลือกแบบง่ายที่สุดที่ตอบโจทย์</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 54)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p54.png" alt="Lecture 15 หน้า 54: Comparison of Tool Topologies" loading="lazy">
+<figcaption>Lecture 15 หน้า 54 — Comparison of Tool Topologies</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s6-ctx">6.3 Context engineering</h3>
+
+<p>context engineering คือการเลือก จัด และประกอบข้อมูลที่เกี่ยวข้องให้ LLM ในแต่ละขั้น state มีข้อมูลเยอะ แต่ไม่ต้องส่งทั้งหมดทุกครั้ง Key Takeaway: ข้อมูลที่ agent มี ไม่จำเป็นต้องเป็นข้อมูลที่ควรส่งให้ LLM</p>
+
+<table>
+<tr><th>แนวคิด</th><th>รับผิดชอบ</th></tr>
+<tr><td>State management</td><td>เก็บข้อมูลตลอด workflow</td></tr>
+<tr><td>Tool topology</td><td>จัดการรัน tool และ node</td></tr>
+<tr><td>Prompt engineering</td><td>ออกแบบคำสั่งที่ดี</td></tr>
+<tr><td>Context engineering</td><td>ตัดสินว่า LLM ได้รับข้อมูลอะไรในแต่ละขั้น</td></tr>
+</table>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p56.png" alt="Lecture 15 หน้า 56: More Relevant Context to LLM: billing context กับ technical context" loading="lazy">
+<figcaption>Lecture 15 หน้า 56 — More Relevant Context to LLM: billing context กับ technical context</figcaption>
+</figure>
+
+<p>shared state มี user_message, issue_type, response, conversation_history, user_id, step_result, customer_profile, support_policy node จัดหมวดได้แค่ system instruction กับ user_message ส่วน node สรุปคำตอบได้ user_message, step_result และนโยบายที่เกี่ยว ถ้าเป็น billing ส่ง billing policy ไม่ส่ง technical policy ตัวอย่าง "I need help correcting my invoice." context ที่ส่งมีแค่ user_message, step_result "invoice information for U1234; balance $50" และ policy ว่าแก้ invoice ได้ภายใน 30 วัน</p>
+
+<p class="trap">best practice สี่ข้อบนสไลด์: relevance, structure, summarization, dynamic assembly · ส่งทุกอย่างใน state ให้ LLM ไม่ใช่วิธีที่ดี เปลือง token และอาจทำให้ตอบผิด</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 55)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p55.png" alt="Lecture 15 หน้า 55: Context Engineering in Agent Workflows" loading="lazy">
+<figcaption>Lecture 15 หน้า 55 — Context Engineering in Agent Workflows</figcaption>
+</figure>
+</div></details>
+
+<h3 id="s6-patterns">6.4 Agent pattern, การออกแบบ และการประเมิน</h3>
+
+<table>
+<tr><th>pattern</th><th>วางแผน</th><th>ปรับตัว</th><th>overhead</th><th>งาน</th><th>เลือกเมื่อ</th></tr>
+<tr><td>Reflex</td><td>ไม่วางแผน</td><td>Low</td><td>Low</td><td>routing ง่าย</td><td>input และ action คาดได้</td></tr>
+<tr><td>ReAct</td><td>วางแผนทีละขั้น</td><td>High</td><td>Variable</td><td>troubleshooting</td><td>ไม่รู้ action ถัดไป</td></tr>
+<tr><td>Planner–Executor</td><td>วางแผนทั้งหมดก่อน</td><td>Medium–High</td><td>planning overhead</td><td>งานธุรกิจหลายขั้น</td><td>ลำดับงานย่อยชัด</td></tr>
+<tr><td>Query Decomposition</td><td>แยกเป็นคำถามย่อย</td><td>Medium–High</td><td>retrieval หลายครั้ง</td><td>Q&amp;A ซับซ้อน</td><td>ต้องการข้อมูลหลายส่วน</td></tr>
+<tr><td>Reflection</td><td>ประเมินแล้วแก้</td><td>Medium–High</td><td>ประเมินเพิ่ม</td><td>งานที่ต้องการคุณภาพ</td><td>ต้องตรวจหรือแก้ผล</td></tr>
+<tr><td>Deep Research</td><td>ผสมหลายวิธี</td><td>High</td><td>Usually high</td><td>สืบค้นกว้าง</td><td>รวบรวมหลักฐานมากแล้วสังเคราะห์</td></tr>
+</table>
+
+<p>pattern เหล่านี้ไม่แยกขาดกัน ระบบเดียวผสมได้หลายแบบ</p>
+
+<table>
+<tr><th>มิติการออกแบบ</th><th>คำถาม</th><th>ตัวเลือก</th><th>agent customer support</th></tr>
+<tr><td>Application type</td><td>ทำงานอะไร</td><td>Customer support, Research, Analytics</td><td>Customer Support</td></tr>
+<tr><td>Orchestration pattern</td><td>คิดและวางแผนอย่างไร</td><td>ReAct, Planner–Executor, Reflection</td><td>ReAct</td></tr>
+<tr><td>Tool type</td><td>ความสามารถแบบไหน</td><td>Local, API-based, Custom, Pre-built</td><td>Local-based API</td></tr>
+<tr><td>Tool selection</td><td>หา tool อย่างไร</td><td>Standard, Semantic, Hierarchical</td><td>Selection</td></tr>
+<tr><td>Tool topology</td><td>จัดการรันอย่างไร</td><td>Single, Parallel, Chain, Graph</td><td>Graph</td></tr>
+<tr><td>Context engineering</td><td>ส่งข้อมูลอะไรให้โมเดล</td><td>Context selection, Dynamic assembly</td><td>Dynamic context assembly</td></tr>
+</table>
+
+<p>การประเมิน agent ต้องดูหลายระดับ ไม่ใช่แค่คำตอบสุดท้าย เริ่มจากทีละ component แล้วประเมินทั้ง workflow</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p59.png" alt="Lecture 15 หน้า 59: Evaluating a Tool-Using Agent" loading="lazy">
+<figcaption>Lecture 15 หน้า 59 — Evaluating a Tool-Using Agent</figcaption>
+</figure>
+
+<p>ตาราง test case บนสไลด์: "Check invoice for U1234." ต้องเรียก get_invoice · "Where is my order?" ต้องถาม customer ID ก่อนถ้าไม่มี · "Hello!" ไม่ต้องใช้ tool แค่ทักทาย · ID ไม่ถูกต้องต้องไม่รันสำเร็จ และขอให้แก้ ตัวชี้วัด: tool selection accuracy, argument accuracy, execution success rate, task completion rate, response correctness คือคำตอบตรงกับผล tool, robustness, latency, token usage, user satisfaction</p>
+
+<p class="trap">ตอบประโยคสวยแต่เรียก tool ผิดยังถือว่าพัง ต้องวัด tool selection และ argument ด้วย · "Hello!" ที่คาดหวังคือไม่เรียก tool</p>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 57–58)</summary><div class="gallery">
+<figure>
+<img src="../assets/slides/dl15-p57.png" alt="Lecture 15 หน้า 57: Agent Types: Orchestration Perspective" loading="lazy">
+<figcaption>Lecture 15 หน้า 57 — Agent Types: Orchestration Perspective</figcaption>
+</figure>
+<figure>
+<img src="../assets/slides/dl15-p58.png" alt="Lecture 15 หน้า 58: Concluding Remarks" loading="lazy">
+<figcaption>Lecture 15 หน้า 58 — Concluding Remarks</figcaption>
+</figure>
+</div></details>
+
+<p class="nextpage">ลองฝึกต่อใน<a href="0015-agentic-ai-exercises.html">แบบฝึก Lesson 15</a></p>
+
+<!--REFS-->
+<details class="fold" id="appendix"><summary>ภาคผนวก: ทุกหน้าของสไลด์ Lecture 15 อยู่ตรงไหน</summary>
+<table>
+<tr><th>หน้า</th><th>เนื้อหา</th><th>อยู่ในตอน</th></tr>
+<tr data-pages="1" class="etc"><td>1</td><td>ปก Part 6</td><td>etc — ปก</td></tr>
+<tr data-pages="2-9"><td>2–9</td><td>Agentic AI, AI agent, ML vs agent, chatbot vs agent, choosing approach, four approaches, agent types, applications</td><td><a href="#s1">ตอน 1</a></td></tr>
+<tr data-pages="10-18"><td>10–18</td><td>Architecture, running example, foundation model, tools, memory, knowledge base vs memory vs state, orchestration, single vs multi-agent</td><td><a href="#s2">ตอน 2</a></td></tr>
+<tr data-pages="19-26"><td>19–26</td><td>Frameworks, LangChain, tool-calling workflow, bind_tools, tool selection, parameterization</td><td><a href="#s3">ตอน 3</a></td></tr>
+<tr data-pages="27-38"><td>27–38</td><td>Tool topologies, single tool execution, parallel tool execution</td><td><a href="#s4">ตอน 4</a></td></tr>
+<tr data-pages="39-46"><td>39–46</td><td>Chains, LCEL, refund eligibility chain, data flow, benefits</td><td><a href="#s5">ตอน 5</a></td></tr>
+<tr data-pages="47-59"><td>47–59</td><td>Graphs, LangGraph, topology comparison, context engineering, agent patterns, concluding remarks, evaluation</td><td><a href="#s6">ตอน 6</a></td></tr>
+<tr data-pages="60" class="etc"><td>60</td><td>Reference: Albada 2025</td><td>etc — บรรณานุกรม</td></tr>
+</table>
+<p>โค้ดบนสไลด์เทียบกับ notebook Lab 01–04 แล้ว ส่วนที่ต่างกันระบุไว้ในบท: notebook เพิ่ม SystemMessage การตรวจ tool call และเส้นทาง clarify ใน LangGraph notebook customer_support_free_llm ไม่ได้ใช้ในบท</p>
+</details>
+
+</body>
+</html>

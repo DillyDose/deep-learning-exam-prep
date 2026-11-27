@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>แบบฝึก Lesson 15: Agentic AI</title>
+<link rel="stylesheet" href="../assets/style.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<script defer src="../assets/katex/katex.min.js"></script>
+<script defer src="../assets/katex/auto-render.min.js"></script>
+<script defer src="../assets/math.js"></script>
+<script defer src="../assets/quiz.js"></script>
+</head>
+<body class="reader">
+
+<nav class="lesson-nav">
+  <span><a href="../index.html">หน้าแรก</a> · แบบฝึก Lesson 15</span>
+  <span><a href="0015-agentic-ai.html">← กลับไปที่บทเรียน</a></span>
+</nav>
+
+<h1>แบบฝึก Lesson 15: Agentic AI</h1>
+<p>ข้อเลือกตอบ 16 ข้อ กดแล้วเห็นผลและเหตุผลของทุกตัวเลือกทันที ข้อคำนวณทุกข้อทำได้ด้วยมือโดยไม่ใช้เครื่องคิดเลข ส่วนข้อเขียน 3 ข้อให้ลองเขียนก่อนแล้วจึงกดดูเฉลย</p>
+<p class="quiz-score"></p>
+
+<h3>ข้อเลือกตอบ</h3>
+
+<div class="quiz">
+<div class="qhead"><span>ข้อ 1</span><span>ใครรัน tool</span></div>
+<div class="qtext">โค้ด <code>ai_msg = llm_with_tools.invoke(query)</code> ทำงานเสร็จและ <code>ai_msg.tool_calls</code> มี get_invoice ข้อใดถูก</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. LLM สร้างแค่ tool call แบบมีโครงสร้าง orchestration layer หรือโค้ด Python ต้องเรียก tool_map[name].invoke(call) เอง">ฟังก์ชัน get_invoice ถูกรันแล้วและผลอยู่ใน ai_msg.content</button>
+<button class="opt" data-correct="true" data-note="ถูก. LLM สร้างแค่ tool call แบบมีโครงสร้าง orchestration layer หรือโค้ด Python ต้องเรียก tool_map[name].invoke(call) เอง">ฟังก์ชัน get_invoice ยังไม่ถูกรัน ต้องให้ Python เรียก tool เอง</button>
+<button class="opt" data-correct="false" data-note="ผิด. LLM สร้างแค่ tool call แบบมีโครงสร้าง orchestration layer หรือโค้ด Python ต้องเรียก tool_map[name].invoke(call) เอง">ฟังก์ชัน get_invoice ถูกรันแล้วและผลอยู่ใน ai_msg.tool_calls</button>
+<button class="opt" data-correct="false" data-note="ผิด. LLM สร้างแค่ tool call แบบมีโครงสร้าง orchestration layer หรือโค้ด Python ต้องเรียก tool_map[name].invoke(call) เอง">bind_tools รัน get_invoice ทันทีที่โมเดลเลือก tool นั้น</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 2</span><span>จำนวนครั้งที่เรียก LLM</span></div>
+<div class="qtext">single tool execution ใน lab 1 ตั้งแต่รับคำถามถึงได้คำตอบ "Your outstanding invoice balance is $50 USD." เรียก LLM กี่ครั้ง</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ครั้งแรก llm_with_tools.invoke ได้ tool call ครั้งที่สอง llm.invoke(messages) สรุปคำตอบ การรัน tool เป็นงานของ Python ไม่ใช่ LLM">1 ครั้ง: LLM เลือกและรัน tool พร้อมสรุปในคราวเดียว</button>
+<button class="opt" data-correct="false" data-note="ผิด. ครั้งแรก llm_with_tools.invoke ได้ tool call ครั้งที่สอง llm.invoke(messages) สรุปคำตอบ การรัน tool เป็นงานของ Python ไม่ใช่ LLM">3 ครั้ง: เลือก tool, รัน tool และสรุปคำตอบ</button>
+<button class="opt" data-correct="false" data-note="ผิด. ครั้งแรก llm_with_tools.invoke ได้ tool call ครั้งที่สอง llm.invoke(messages) สรุปคำตอบ การรัน tool เป็นงานของ Python ไม่ใช่ LLM">2 ครั้ง: เลือก tool กับรัน tool ส่วนคำตอบมาจาก ToolMessage</button>
+<button class="opt" data-correct="true" data-note="ถูก. ครั้งแรก llm_with_tools.invoke ได้ tool call ครั้งที่สอง llm.invoke(messages) สรุปคำตอบ การรัน tool เป็นงานของ Python ไม่ใช่ LLM">2 ครั้ง: ครั้งแรกเลือก tool กับ argument ครั้งที่สองสรุปคำตอบ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 3</span><span>parallel_tool_calls</span></div>
+<div class="qtext">ตั้ง <code>parallel_tool_calls=True</code> ตอน bind_tools แล้วโมเดลคืน tool call 3 ตัว ข้อใดถูก</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. สไลด์หน้า 35 เขียนชัดว่าการเปิด parallel tool calls ให้สร้างหลาย call ในคำตอบเดียว ไม่ได้รันพร้อมกันอัตโนมัติ">โมเดลสร้างหลาย tool call ได้ แต่การรันพร้อมกันต้องเขียนเองเช่นด้วย ThreadPoolExecutor</button>
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 35 เขียนชัดว่าการเปิด parallel tool calls ให้สร้างหลาย call ในคำตอบเดียว ไม่ได้รันพร้อมกันอัตโนมัติ">LangChain รันทั้งสาม tool พร้อมกันให้อัตโนมัติเมื่อ invoke เสร็จ</button>
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 35 เขียนชัดว่าการเปิด parallel tool calls ให้สร้างหลาย call ในคำตอบเดียว ไม่ได้รันพร้อมกันอัตโนมัติ">โมเดลจะรันทั้งสาม tool ตามลำดับเพราะ parallel หมายถึงหลาย tool</button>
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 35 เขียนชัดว่าการเปิด parallel tool calls ให้สร้างหลาย call ในคำตอบเดียว ไม่ได้รันพร้อมกันอัตโนมัติ">ตั้ง True แล้วโมเดลถูกบังคับให้เรียกทุก tool ที่ bind ไว้เสมอ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 4</span><span>latency</span></div>
+<div class="qtext">tool สี่ตัวใช้เวลา 3, 1, 4, 2 วินาที ทุกตัวอิสระต่อกัน รันพร้อมกันด้วย thread พอเพียง เวลาลดลงจาก sequential กี่เปอร์เซ็นต์</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. sequential 3 + 1 + 4 + 2 = 10 วินาที parallel เท่ากับตัวช้าสุด 4 วินาที ลด 6/10 = 60%">40%</button>
+<button class="opt" data-correct="false" data-note="ผิด. sequential 3 + 1 + 4 + 2 = 10 วินาที parallel เท่ากับตัวช้าสุด 4 วินาที ลด 6/10 = 60%">75%</button>
+<button class="opt" data-correct="true" data-note="ถูก. sequential 3 + 1 + 4 + 2 = 10 วินาที parallel เท่ากับตัวช้าสุด 4 วินาที ลด 6/10 = 60%">60%</button>
+<button class="opt" data-correct="false" data-note="ผิด. sequential 3 + 1 + 4 + 2 = 10 วินาที parallel เท่ากับตัวช้าสุด 4 วินาที ลด 6/10 = 60%">25%</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 5</span><span>เลือก topology</span></div>
+<div class="qtext">ลูกค้าถาม "คืนเงิน order ล่าสุดได้ไหม" ต้องหา order ID ก่อน แล้วดึงรายละเอียด แล้วตัดสินสิทธิ์ topology ใดเหมาะที่สุด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. มี dependency ต่อกันเป็นเส้นตรง รันพร้อมกันไม่ได้ และไม่ต้องแตกกิ่ง chain จึงเป็นแบบง่ายที่สุดที่พอ">Parallel เพราะมีสาม operation และอยากลดเวลา</button>
+<button class="opt" data-correct="true" data-note="ถูก. มี dependency ต่อกันเป็นเส้นตรง รันพร้อมกันไม่ได้ และไม่ต้องแตกกิ่ง chain จึงเป็นแบบง่ายที่สุดที่พอ">Chain เพราะแต่ละขั้นต้องใช้ผลของขั้นก่อน</button>
+<button class="opt" data-correct="false" data-note="ผิด. มี dependency ต่อกันเป็นเส้นตรง รันพร้อมกันไม่ได้ และไม่ต้องแตกกิ่ง chain จึงเป็นแบบง่ายที่สุดที่พอ">Single tool เพราะเป็นคำถามเรื่อง refund เรื่องเดียว</button>
+<button class="opt" data-correct="false" data-note="ผิด. มี dependency ต่อกันเป็นเส้นตรง รันพร้อมกันไม่ได้ และไม่ต้องแตกกิ่ง chain จึงเป็นแบบง่ายที่สุดที่พอ">Graph เพราะมีมากกว่าสอง operation ต้องใช้กราฟเสมอ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 6</span><span>**data ใน LCEL</span></div>
+<div class="qtext">ถ้าเขียน get_order_details ให้คืน <code>{"days_since_delivery": 5, "order_status": "Delivered"}</code> โดยไม่มี <code>**data</code> แล้วรัน refund_chain เกิดอะไรขึ้น</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. check_refund_eligibility ใช้แค่ order_status กับ days_since_delivery ซึ่งยังอยู่ จึงคำนวณได้ แต่ field เดิมหายจากผลสุดท้าย LCEL ไม่มี state กลางแบบ LangGraph ต้องส่งต่อเองด้วย **data">ไม่มีผลต่อ check_refund_eligibility แต่ผลสุดท้ายไม่มี user_id และ order_id</button>
+<button class="opt" data-correct="false" data-note="ผิด. check_refund_eligibility ใช้แค่ order_status กับ days_since_delivery ซึ่งยังอยู่ จึงคำนวณได้ แต่ field เดิมหายจากผลสุดท้าย LCEL ไม่มี state กลางแบบ LangGraph ต้องส่งต่อเองด้วย **data">ไม่มีผลเพราะ LCEL รวม dict ของทุกขั้นเป็น state ให้อัตโนมัติ</button>
+<button class="opt" data-correct="false" data-note="ผิด. check_refund_eligibility ใช้แค่ order_status กับ days_since_delivery ซึ่งยังอยู่ จึงคำนวณได้ แต่ field เดิมหายจากผลสุดท้าย LCEL ไม่มี state กลางแบบ LangGraph ต้องส่งต่อเองด้วย **data">check_refund_eligibility เกิด KeyError เพราะไม่มี order_status</button>
+<button class="opt" data-correct="false" data-note="ผิด. check_refund_eligibility ใช้แค่ order_status กับ days_since_delivery ซึ่งยังอยู่ จึงคำนวณได้ แต่ field เดิมหายจากผลสุดท้าย LCEL ไม่มี state กลางแบบ LangGraph ต้องส่งต่อเองด้วย **data">get_order_details เกิด KeyError ทันทีเพราะไม่มี user_id</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 7</span><span>refund eligibility</span></div>
+<div class="qtext">กฎ <code>order_status == "Delivered" and days_since_delivery &lt;= 14</code> ข้อมูลใดได้ refund_eligible เป็น True</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. 14 ≤ 14 เป็นจริงและสถานะ Delivered จึง True ข้ออื่นสถานะไม่ใช่ Delivered หรือเกิน 14 วัน">Shipped และส่งมาแล้ว 3 วัน</button>
+<button class="opt" data-correct="false" data-note="ผิด. 14 ≤ 14 เป็นจริงและสถานะ Delivered จึง True ข้ออื่นสถานะไม่ใช่ Delivered หรือเกิน 14 วัน">Delivered และส่งมาแล้ว 15 วัน</button>
+<button class="opt" data-correct="false" data-note="ผิด. 14 ≤ 14 เป็นจริงและสถานะ Delivered จึง True ข้ออื่นสถานะไม่ใช่ Delivered หรือเกิน 14 วัน">Pending และส่งมาแล้ว 0 วัน</button>
+<button class="opt" data-correct="true" data-note="ถูก. 14 ≤ 14 เป็นจริงและสถานะ Delivered จึง True ข้ออื่นสถานะไม่ใช่ Delivered หรือเกิน 14 วัน">Delivered และส่งมาแล้ว 14 วัน</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 8</span><span>router ของ LangGraph</span></div>
+<div class="qtext">ใน LangGraph ฟังก์ชัน route_issue ที่ส่งให้ add_conditional_edges ควรคืนอะไร</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. router อ่าน state แล้วคืน label เช่น &quot;handle_refund&quot; ไม่ได้คืน state update node ต่างหากที่คืน dict อัปเดต">dict ที่อัปเดต field issue_type ของ state</button>
+<button class="opt" data-correct="false" data-note="ผิด. router อ่าน state แล้วคืน label เช่น &quot;handle_refund&quot; ไม่ได้คืน state update node ต่างหากที่คืน dict อัปเดต">object ของ node ถัดไปที่ต้องเรียกต่อ</button>
+<button class="opt" data-correct="true" data-note="ถูก. router อ่าน state แล้วคืน label เช่น &quot;handle_refund&quot; ไม่ได้คืน state update node ต่างหากที่คืน dict อัปเดต">ชื่อเส้นทางที่ path map แปลงเป็น node ถัดไป</button>
+<button class="opt" data-correct="false" data-note="ผิด. router อ่าน state แล้วคืน label เช่น &quot;handle_refund&quot; ไม่ได้คืน state update node ต่างหากที่คืน dict อัปเดต">state ทั้งก้อนหลังรัน handler แล้ว</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 9</span><span>state ระหว่างทาง</span></div>
+<div class="qtext">graph customer support รับ initial state มีแค่ user_message และ user_id ขณะ route_issue ทำงาน state มี field ใดแน่นอน</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. categorize_issue รันก่อนและเติม issue_type step_result เกิดหลัง handler response เกิดหลัง summarize_response">user_message, user_id, issue_type</button>
+<button class="opt" data-correct="false" data-note="ผิด. categorize_issue รันก่อนและเติม issue_type step_result เกิดหลัง handler response เกิดหลัง summarize_response">user_message, user_id, issue_type, step_result</button>
+<button class="opt" data-correct="false" data-note="ผิด. categorize_issue รันก่อนและเติม issue_type step_result เกิดหลัง handler response เกิดหลัง summarize_response">user_message, user_id เท่านั้น</button>
+<button class="opt" data-correct="false" data-note="ผิด. categorize_issue รันก่อนและเติม issue_type step_result เกิดหลัง handler response เกิดหลัง summarize_response">ทุก field รวม response เพราะ TypedDict กำหนดไว้</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 10</span><span>add_node</span></div>
+<div class="qtext">นักศึกษานิยามฟังก์ชัน handle_billing แล้วเขียน <code>graph.add_edge("categorize_issue", "handle_billing")</code> โดยไม่เรียก add_node ผลคืออะไร</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 51: การนิยามฟังก์ชันไม่ได้ทำให้เป็น node อัตโนมัติ ต้อง add_node ก่อน">ใช้ได้ LangGraph หาฟังก์ชันชื่อเดียวกันมาเป็น node เอง</button>
+<button class="opt" data-correct="true" data-note="ถูก. สไลด์หน้า 51: การนิยามฟังก์ชันไม่ได้ทำให้เป็น node อัตโนมัติ ต้อง add_node ก่อน">ใช้ไม่ได้ เพราะฟังก์ชันต้องลงทะเบียนเป็น node ด้วย add_node ก่อน</button>
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 51: การนิยามฟังก์ชันไม่ได้ทำให้เป็น node อัตโนมัติ ต้อง add_node ก่อน">ใช้ได้แต่ handle_billing จะไม่อัปเดต state</button>
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 51: การนิยามฟังก์ชันไม่ได้ทำให้เป็น node อัตโนมัติ ต้อง add_node ก่อน">ใช้ได้ถ้าฟังก์ชันรับ state เป็น argument แรก</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 11</span><span>tool selection strategy</span></div>
+<div class="qtext">agent มี tool 300 ตัวที่ไม่ได้แบ่งกลุ่ม ต้องการคุม input token ด้วย top-k ความเสี่ยงหลักของวิธีที่เหมาะคืออะไร</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. วิธีที่เหมาะคือ semantic selection ใช้ embedding ค้น top-k จุดพังคือ relevant tool not retrieved ส่วนเลือกกลุ่มผิดและ LLM 2 ครั้งเป็นของ hierarchical token โตตามจำนวน tool เป็นของ standard">เลือกกลุ่ม tool ผิดตั้งแต่ขั้นแรก</button>
+<button class="opt" data-correct="false" data-note="ผิด. วิธีที่เหมาะคือ semantic selection ใช้ embedding ค้น top-k จุดพังคือ relevant tool not retrieved ส่วนเลือกกลุ่มผิดและ LLM 2 ครั้งเป็นของ hierarchical token โตตามจำนวน tool เป็นของ standard">token เพิ่มตามจำนวน tool ทั้ง 300 ตัว</button>
+<button class="opt" data-correct="false" data-note="ผิด. วิธีที่เหมาะคือ semantic selection ใช้ embedding ค้น top-k จุดพังคือ relevant tool not retrieved ส่วนเลือกกลุ่มผิดและ LLM 2 ครั้งเป็นของ hierarchical token โตตามจำนวน tool เป็นของ standard">ต้องเรียก LLM สองครั้งต่อการเลือก tool</button>
+<button class="opt" data-correct="true" data-note="ถูก. วิธีที่เหมาะคือ semantic selection ใช้ embedding ค้น top-k จุดพังคือ relevant tool not retrieved ส่วนเลือกกลุ่มผิดและ LLM 2 ครั้งเป็นของ hierarchical token โตตามจำนวน tool เป็นของ standard">ค้นไม่เจอ tool ที่ถูกก่อนส่งให้ LLM</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 12</span><span>parameterization error</span></div>
+<div class="qtext">tool <code>get_invoice(user_id: str)</code> ผู้ใช้ให้ ID U1234 โมเดลสร้าง <code>get_invoice(user_id="U4321")</code> เป็นข้อผิดพลาดแบบใด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ชื่อ parameter และชนิดถูก แต่ค่าผิด ถ้าเป็น ID ที่ผู้ใช้ไม่เคยให้เลยจะเรียก invented value">Incorrect Parameter Name</button>
+<button class="opt" data-correct="true" data-note="ถูก. ชื่อ parameter และชนิดถูก แต่ค่าผิด ถ้าเป็น ID ที่ผู้ใช้ไม่เคยให้เลยจะเรียก invented value">Incorrect Value</button>
+<button class="opt" data-correct="false" data-note="ผิด. ชื่อ parameter และชนิดถูก แต่ค่าผิด ถ้าเป็น ID ที่ผู้ใช้ไม่เคยให้เลยจะเรียก invented value">Incorrect Data Type</button>
+<button class="opt" data-correct="false" data-note="ผิด. ชื่อ parameter และชนิดถูก แต่ค่าผิด ถ้าเป็น ID ที่ผู้ใช้ไม่เคยให้เลยจะเรียก invented value">Missing Argument</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 13</span><span>validate argument</span></div>
+<div class="qtext">ฟังก์ชันใช้ <code>re.fullmatch(r"U\d{4}", user_id)</code> กับการตรวจ isinstance str ค่าใดผ่าน</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. ต้องเป็น string ขึ้นต้นด้วย U ตัวใหญ่ตามด้วยตัวเลข 4 หลักพอดี U12345 มี 5 หลัก u ตัวเล็กไม่ตรง 1234 ไม่ใช่ string">"U12345"</button>
+<button class="opt" data-correct="false" data-note="ผิด. ต้องเป็น string ขึ้นต้นด้วย U ตัวใหญ่ตามด้วยตัวเลข 4 หลักพอดี U12345 มี 5 หลัก u ตัวเล็กไม่ตรง 1234 ไม่ใช่ string">"u1234"</button>
+<button class="opt" data-correct="true" data-note="ถูก. ต้องเป็น string ขึ้นต้นด้วย U ตัวใหญ่ตามด้วยตัวเลข 4 หลักพอดี U12345 มี 5 หลัก u ตัวเล็กไม่ตรง 1234 ไม่ใช่ string">"U0000"</button>
+<button class="opt" data-correct="false" data-note="ผิด. ต้องเป็น string ขึ้นต้นด้วย U ตัวใหญ่ตามด้วยตัวเลข 4 หลักพอดี U12345 มี 5 หลัก u ตัวเล็กไม่ตรง 1234 ไม่ใช่ string">1234</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 14</span><span>memory vs state</span></div>
+<div class="qtext">ข้อใดอธิบายความต่างของ memory กับ state ได้ถูกตามสไลด์</div>
+<div class="options">
+<button class="opt" data-correct="true" data-note="ถูก. สไลด์หน้า 16 เขียนว่าทั้งสองอาจมีข้อมูลซ้อนกัน เช่น customer ID จาก memory เข้า state แยกกันที่ purpose ส่วนนโยบาย refund คือ knowledge base">แยกกันที่จุดประสงค์ ไม่ใช่ระยะเวลาเก็บ และข้อมูลซ้อนกันได้</button>
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 16 เขียนว่าทั้งสองอาจมีข้อมูลซ้อนกัน เช่น customer ID จาก memory เข้า state แยกกันที่ purpose ส่วนนโยบาย refund คือ knowledge base">memory เก็บข้ามวัน state เก็บไม่เกินหนึ่งข้อความ จึงไม่ซ้อนกัน</button>
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 16 เขียนว่าทั้งสองอาจมีข้อมูลซ้อนกัน เช่น customer ID จาก memory เข้า state แยกกันที่ purpose ส่วนนโยบาย refund คือ knowledge base">state คือความรู้โดเมนอย่างนโยบาย memory คือผลลัพธ์ของ tool ทุกตัว</button>
+<button class="opt" data-correct="false" data-note="ผิด. สไลด์หน้า 16 เขียนว่าทั้งสองอาจมีข้อมูลซ้อนกัน เช่น customer ID จาก memory เข้า state แยกกันที่ purpose ส่วนนโยบาย refund คือ knowledge base">memory อยู่ในน้ำหนักของโมเดล state อยู่ในโค้ดของแอปเท่านั้น</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 15</span><span>เลือกวิธีแก้ปัญหา</span></div>
+<div class="qtext">งานอธิบายนโยบายคืนสินค้าจากเอกสารบริษัท ไม่ต้องแก้ไขข้อมูลใดในระบบ วิธีใดเหมาะที่สุดตามหลัก "ง่ายที่สุดที่เชื่อถือได้"</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. งานคือตอบจากเอกสาร ไม่ต้องวางแผนหรือทำ action ตารางหน้า 6 จับคู่ Chatbot / RAG กับ &quot;Explain the refund policy&quot;">Autonomous agent ที่มี tool cancel_order</button>
+<button class="opt" data-correct="false" data-note="ผิด. งานคือตอบจากเอกสาร ไม่ต้องวางแผนหรือทำ action ตารางหน้า 6 จับคู่ Chatbot / RAG กับ &quot;Explain the refund policy&quot;">Multi-agent ที่มี coordinator agent</button>
+<button class="opt" data-correct="false" data-note="ผิด. งานคือตอบจากเอกสาร ไม่ต้องวางแผนหรือทำ action ตารางหน้า 6 จับคู่ Chatbot / RAG กับ &quot;Explain the refund policy&quot;">Traditional code ที่จับ keyword ตายตัว</button>
+<button class="opt" data-correct="true" data-note="ถูก. งานคือตอบจากเอกสาร ไม่ต้องวางแผนหรือทำ action ตารางหน้า 6 จับคู่ Chatbot / RAG กับ &quot;Explain the refund policy&quot;">Chatbot / RAG ที่ดึงเอกสารนโยบายมาตอบ</button>
+</div>
+<div class="feedback"></div>
+</div>
+<div class="quiz">
+<div class="qhead"><span>ข้อ 16</span><span>agent pattern</span></div>
+<div class="qtext">งานตรวจสอบรายงานให้ถูกต้องก่อนส่ง ต้องร่างแล้วตรวจแล้วแก้ซ้ำ pattern ใดเหมาะที่สุด</div>
+<div class="options">
+<button class="opt" data-correct="false" data-note="ผิด. Reflection คือ evaluate and revise เหมาะกับ quality-sensitive tasks Reflex ไม่วางแผน Query Decomposition แยกคำถามย่อย Planner–Executor วางแผนทั้งหมดก่อนแล้วทำตาม">Reflex</button>
+<button class="opt" data-correct="false" data-note="ผิด. Reflection คือ evaluate and revise เหมาะกับ quality-sensitive tasks Reflex ไม่วางแผน Query Decomposition แยกคำถามย่อย Planner–Executor วางแผนทั้งหมดก่อนแล้วทำตาม">Query Decomposition</button>
+<button class="opt" data-correct="true" data-note="ถูก. Reflection คือ evaluate and revise เหมาะกับ quality-sensitive tasks Reflex ไม่วางแผน Query Decomposition แยกคำถามย่อย Planner–Executor วางแผนทั้งหมดก่อนแล้วทำตาม">Reflection</button>
+<button class="opt" data-correct="false" data-note="ผิด. Reflection คือ evaluate and revise เหมาะกับ quality-sensitive tasks Reflex ไม่วางแผน Query Decomposition แยกคำถามย่อย Planner–Executor วางแผนทั้งหมดก่อนแล้วทำตาม">Planner–Executor</button>
+</div>
+<div class="feedback"></div>
+</div>
+
+<h3>ข้อเขียน</h3>
+
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 17</span><span>ไล่ tool calling ด้วยมือ</span></div>
+<div class="qtext">agent มี get_invoice, get_refund, get_order ลูกค้าพิมพ์ "Has my refund been processed? My customer ID is U1234." เขียนลำดับขั้นตั้งแต่ข้อความถึงคำตอบ บอกว่าแต่ละขั้นใครทำ และ messages ที่ส่งให้ LLM ครั้งที่สองมีอะไร</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>ขั้น 1 LLM ที่ bind tool อ่านคำขอ เลือก get_refund และสร้าง args {"user_id": "U1234"} ได้ AIMessage ที่มี tool_calls</p>
+<p>ขั้น 2 Python ตรวจชื่อและ argument แล้ว tool_map["get_refund"].invoke(call) ได้ ToolMessage {"user_id": "U1234", "status": "Pending"}</p>
+<p>ขั้น 3 ส่ง [HumanMessage(query), ai_msg, tool_msg] ให้ llm ปกติ ได้คำตอบว่า refund ยัง Pending · LLM ถูกเรียก 2 ครั้ง ไม่ได้รันฟังก์ชันเอง</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 18</span><span>ออกแบบ graph</span></div>
+<div class="qtext">เพิ่มประเภท "shipping" ให้ graph customer support: คำขอเรื่องพัสดุไป handle_tracking ระบุว่าต้องแก้ส่วนใดของ classifier, router, การลงทะเบียน node และ edge</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>classifier: เพิ่ม "shipping" ใน prompt หรือ Literal ของ IssueClassification</p>
+<p>node: graph.add_node("handle_tracking", handle_tracking) ที่คืน {"step_result": ...}</p>
+<p>router: เพิ่มกรณี issue_type == "shipping" คืน "handle_tracking" และเพิ่ม key ใน path map ของ add_conditional_edges</p>
+<p>edge: graph.add_edge("handle_tracking", "summarize_response") เพื่อรวมเส้นทางก่อน END</p>
+</div>
+</div>
+<div class="quiz free">
+<div class="qhead"><span>ข้อ 19</span><span>parallel หรือ chain</span></div>
+<div class="qtext">คำขอ "เช็คยอด invoice และสถานะ refund ของฉัน แล้วบอกว่าถ้าได้ refund ยอดคงเหลือจะเป็นเท่าไร" tool get_invoice 2 วินาที get_refund 3 วินาที calculate_balance 1 วินาทีต้องใช้ผลทั้งสองตัว ออกแบบ topology และคำนวณเวลาเทียบกับรันทีละตัว</div>
+<textarea placeholder="เขียนคำตอบ"></textarea>
+<button class="reveal-btn">เฉลย</button>
+<div class="model-answer">
+<p>get_invoice กับ get_refund อิสระต่อกัน รันพร้อมกันได้ ใช้เวลา max(2, 3) = 3 วินาที</p>
+<p>calculate_balance ต้องรอผลทั้งสอง จึงต่อท้ายแบบ chain อีก 1 วินาที รวม 4 วินาที</p>
+<p>รันทีละตัว 2 + 3 + 1 = 6 วินาที ลดได้ 2/6 ≈ 33% topology ที่ได้คือ parallel ตามด้วยขั้นต่อเนื่อง ซึ่งเขียนเป็น graph ได้</p>
+</div>
+</div>
+
+</body>
+</html>
