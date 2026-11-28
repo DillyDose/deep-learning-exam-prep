@@ -160,6 +160,27 @@ print(pd.DataFrame(result))</code></pre>
 </table>
 
 <figure class="thumb">
+<img src="../assets/slides/dl12-p10.png" alt="Lecture 12 หน้า 10: Question Answering" loading="lazy">
+<figcaption>Lecture 12 หน้า 10 — Question Answering</figcaption>
+</figure>
+
+<p>QA ถาม "How does the author feel about this movie" จาก context "The music was beautiful; I was listening to it in the library." ดูกรอบ output ล่างสุดของรูป ช่วงที่ตอบคือ start 0 ถึง end 23 ของ context เดิม score แค่ 0.2515</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl12-p11.png" alt="Lecture 12 หน้า 11: Text Generation" loading="lazy">
+<figcaption>Lecture 12 หน้า 11 — Text Generation</figcaption>
+</figure>
+
+<p>text-generation ต่อจาก prompt เป็นจดหมายขอโทษเรื่องรับบัตรเครดิตไม่ได้ ซึ่งโมเดลแต่งเองทั้งหมด และหยุดกลางคำ "This could result" เพราะครบ max_length=100</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl12-p12.png" alt="Lecture 12 หน้า 12: Summarization" loading="lazy">
+<figcaption>Lecture 12 หน้า 12 — Summarization</figcaption>
+</figure>
+
+<p>summarization ได้ output สั้นที่ลอกประโยคแรกๆ ของรีวิวมาเกือบตรงตัว ส่วนที่ติเรื่องเสียงกับคำบรรยายไม่เหลือเลย</p>
+
+<figure class="thumb">
 <img src="../assets/slides/dl12-p13.png" alt="Lecture 12 หน้า 13: Example of Machine Translation: ไทยเป็นอังกฤษ" loading="lazy">
 <figcaption>Lecture 12 หน้า 13 — Example of Machine Translation: ไทยเป็นอังกฤษ</figcaption>
 </figure>
@@ -167,21 +188,6 @@ print(pd.DataFrame(result))</code></pre>
 <p>ชื่องานในโค้ดเขียน "translation_en_to_th" กลับทิศกับโมเดล th-en แต่เมื่อระบุ model= ทิศมาจากโมเดลที่เลือก ผลจึงเป็นอังกฤษ เชอร์คัสซอฟกลายเป็น "Shercus Sof"</p>
 
 <p class="trap">QA แบบนี้คือ extractive คัดลอกช่วงจาก context ไม่ได้แต่งคำตอบใหม่ · ชื่องานใน pipeline ไม่ได้กำหนดทิศการแปลถ้าระบุ model แล้ว</p>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 10–12)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl12-p10.png" alt="Lecture 12 หน้า 10: Question Answering" loading="lazy">
-<figcaption>Lecture 12 หน้า 10 — Question Answering</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl12-p11.png" alt="Lecture 12 หน้า 11: Text Generation" loading="lazy">
-<figcaption>Lecture 12 หน้า 11 — Text Generation</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl12-p12.png" alt="Lecture 12 หน้า 12: Summarization" loading="lazy">
-<figcaption>Lecture 12 หน้า 12 — Summarization</figcaption>
-</figure>
-</div></details>
 
 <h3 id="s2-viz">2.3 ดู attention weight</h3>
 
@@ -357,7 +363,21 @@ attn = outputs.cross_attentions[layer][0, head].cpu().numpy()</code></pre>
 
 <p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> ค้นถูกไม่ได้แปลว่าตอบถูก</p>
 
-<p>ในผลที่รันจริง คำถามเรื่อง max token length และ metric ได้ Workshop setup 0.420 สูงสุด แต่ FLAN-T5-small ตอบแค่ "2." และตอนไม่มี retrieval ก็ตอบวนไม่จบ</p>
+<p>สไลด์โชว์แค่ prompt ผลที่รันจริงอยู่ใน notebook ของอาจารย์ notebooke_transformer_69_inclass.ipynb ถามว่า workshop ใช้ max token length เท่าไรและเลือกโมเดลด้วย metric อะไร คำตอบที่ถูกคือ 64 token กับ validation macro F1</p>
+
+<pre><code>1. Workshop setup (similarity=0.420)
+   This workshop uses DistilBERT ... maximum length of 64 tokens.
+2. Feature extraction (similarity=0.244)
+3. Workshop evaluation (similarity=0.227)
+   The best checkpoint is selected using validation macro F1. ...
+
+ANSWER WITHOUT RETRIEVAL
+a metric that is a metric that is a metric that is ...
+
+RAG WITH top_k=3
+Answer: 2.</code></pre>
+
+<p>retrieval ทำงานถูก เอกสารที่มีคำตอบทั้งสองส่วนติด top-3 แต่ FLAN-T5-small ตอบแค่ "2." ส่วนตอนไม่มี retrieval ก็พูดวนไม่จบ</p>
 
 <div class="eq">\[\cos(q, d) = \frac{q \cdot d}{\lVert q \rVert\,\lVert d \rVert}\]</div>
 <p class="say">ถ้า normalize embedding ให้ยาว 1 แล้ว dot product คือ cosine similarity เลย ใน notebook ตั้ง normalize_embeddings=True</p>
@@ -368,6 +388,11 @@ attn = outputs.cross_attentions[layer][0, head].cpu().numpy()</code></pre>
 <h2 id="s5">5. Workshop: dataset และ tokenizer</h2>
 
 <h3 id="s5-data">5.1 Emotion dataset</h3>
+
+<figure class="thumb">
+<img src="../assets/slides/dl12-p23.png" alt="Lecture 12 หน้า 23: Example on Text Classification: emotion detector" loading="lazy">
+<figcaption>Lecture 12 หน้า 23 — Example on Text Classification: emotion detector</figcaption>
+</figure>
 
 <p><mark class="src" data-p="23" title="Text classification dataset">dataset สำหรับ text classification</mark> ของ workshop มาจากงานวิจัยอารมณ์ใน tweet ภาษาอังกฤษ สไลด์ระบุหกอารมณ์ <mark class="src" data-p="23" title="anger disgust fear">โกรธ รังเกียจ กลัว</mark> <mark class="src" data-p="23" title="joy">สุข</mark> <mark class="src" data-p="23" title="sadness">เศร้า</mark> และ <mark class="src" data-p="23" title="surprise">ประหลาดใจ</mark> โมเดลคือ <mark class="src" data-p="23" title="DistilBERT">DistilBERT</mark> ซึ่งเล็กและเร็วกว่า BERT แต่แม่นใกล้เคียงกัน (6 layer แทน 12 และ parameter ราว 66 ล้านแทน 110 ล้าน) เปลี่ยนเป็น BERT ได้ด้วยการเปลี่ยนชื่อ checkpoint</p>
 
@@ -392,7 +417,12 @@ df.head()</code></pre>
 <tr><td><code>emotions.set_format(type="pandas")</code></td><td>ให้ Dataset คืน pandas DataFrame เปลี่ยนกลับได้</td></tr>
 </table>
 
-<p>ห้าแถวแรก: "i didnt feel humiliated" label 0 sadness · "i am feeling grouchy" label 3 anger ข้อความเป็นตัวพิมพ์เล็กไม่มีวรรคตอน</p>
+<figure class="thumb">
+<img src="../assets/slides/dl12-p26.png" alt="Lecture 12 หน้า 26: Explore the Dataset" loading="lazy">
+<figcaption>Lecture 12 หน้า 26 — Explore the Dataset</figcaption>
+</figure>
+
+<p>ห้าแถวแรกจาก df.head() ในสไลด์หน้า 26: "i didnt feel humiliated" label 0 sadness · "i am feeling grouchy" label 3 anger ข้อความเป็นตัวพิมพ์เล็กไม่มีวรรคตอน</p>
 
 <figure class="viz"><img src="../assets/viz/l12-results.svg" alt="accuracy และ macro F1 ของแต่ละวิธี"></figure>
 <p>แถวบนคือ baseline ที่ทาย joy ทุกข้อ ได้ accuracy 0.335 แต่ macro F1 แค่ 0.084 เพราะห้าคลาสที่เหลือได้ F1 = 0 นี่คือเหตุที่ workshop เลือกโมเดลด้วย macro F1 แถว feature extraction เป็นค่าบน validation แถวอื่นเป็น test</p>
@@ -402,7 +432,7 @@ df.head()</code></pre>
 <figcaption>Lecture 12 หน้า 27 — Class Distribution: ข้อมูลไม่สมดุล</figcaption>
 </figure>
 
-<p class="num">joy 5,362 คือ 33.5% · surprise 572 คือ 3.6% · ต่างกัน 9.4 เท่า · ทาย joy ทุกข้อ: F1 ของ joy = 2 × 0.335 × 1/1.335 = 0.50 · macro F1 = 0.50/6 = 0.084</p>
+<p class="num">กราฟหน้า 27 ไม่มีตัวเลข นับจาก train set ของ dataset emotion ได้ joy 5,362 คือ 33.5% · surprise 572 คือ 3.6% · ต่างกัน 9.4 เท่า · ทาย joy ทุกข้อ: F1 ของ joy = 2 × 0.335 × 1/1.335 = 0.50 · macro F1 = 0.50/6 = 0.084</p>
 
 <p class="trap">กราฟการกระจายคลาส แกน x ของ validation และ test ยาวถึง 5,000 เท่า train ทั้งที่แต่ละ split มี 2,000 แถว ใช้ดูลำดับของคลาสเท่านั้น</p>
 
@@ -420,11 +450,7 @@ plt.suptitle("")
 plt.xlabel("")
 plt.show()</code></pre>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 23–26)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl12-p23.png" alt="Lecture 12 หน้า 23: Example on Text Classification: emotion detector" loading="lazy">
-<figcaption>Lecture 12 หน้า 23 — Example on Text Classification: emotion detector</figcaption>
-</figure>
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 24–25)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl12-p24.png" alt="Lecture 12 หน้า 24: Kaggle: notebook ที่มี GPU" loading="lazy">
 <figcaption>Lecture 12 หน้า 24 — Kaggle: notebook ที่มี GPU</figcaption>
@@ -432,10 +458,6 @@ plt.show()</code></pre>
 <figure>
 <img src="../assets/slides/dl12-p25.png" alt="Lecture 12 หน้า 25: Load a Dataset: DatasetDict" loading="lazy">
 <figcaption>Lecture 12 หน้า 25 — Load a Dataset: DatasetDict</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl12-p26.png" alt="Lecture 12 หน้า 26: Explore the Dataset" loading="lazy">
-<figcaption>Lecture 12 หน้า 26 — Explore the Dataset</figcaption>
 </figure>
 </div></details>
 
@@ -592,7 +614,7 @@ emotions_hidden = emotions_encoded.map(extract_hidden_states, batched=True, batc
 <tr><td><code>.cpu().numpy()</code></td><td>กลับ CPU เป็น NumPy ให้ scikit-learn ใช้</td></tr>
 </table>
 
-<p class="num">[CLS] ผ่าน self-attention ที่เห็นทุก token จึงสรุปทั้งประโยคใน 768 ค่า · train set กลายเป็น matrix 16,000 × 768 · logistic regression ได้ val accuracy 0.635 macro F1 0.531 ดีกว่า baseline แต่อ่อนกับคลาสเล็ก F1 ของ love 0.371 surprise 0.361</p>
+<p class="num">[CLS] ผ่าน self-attention ที่เห็นทุก token จึงสรุปทั้งประโยคใน 768 ค่า · train set กลายเป็น matrix 16,000 × 768 · ผลใน notebook ของอาจารย์ logistic regression ได้ val accuracy 0.635 macro F1 0.531 ดีกว่า baseline แต่อ่อนกับคลาสเล็ก F1 ของ love 0.371 surprise 0.361</p>
 
 <p class="trap">[:, 0] คือ token แรกของทุกตัวอย่าง ไม่ใช่ตัวอย่างแรก · AutoModel ไม่มี head ใช้ classify เองไม่ได้</p>
 
@@ -633,7 +655,7 @@ model = (AutoModelForSequenceClassification
          .from_pretrained(model_ckpt, num_labels=num_labels)
          .to(device))</code></pre>
 
-<p class="num">head: pre_classifier 768 → 768 = 590,592 · classifier 768 → 6 = 4,614 · รวม 595,206 · ทั้งโมเดล 66,362,880 + 595,206 = 66,958,086 trainable 100% · batch 32: 500 step ต่อ epoch × 5 = 2,500 step · learning rate 2e-5 · EarlyStopping ตาม macro F1 · val acc 0.9425 F1 0.921 · test acc 0.9235 F1 0.8754</p>
+<p class="num">head: pre_classifier 768 → 768 = 590,592 · classifier 768 → 6 = 4,614 · รวม 595,206 · ทั้งโมเดล 66,362,880 + 595,206 = 66,958,086 trainable 100% · batch 32: 500 step ต่อ epoch × 5 = 2,500 step · learning rate 2e-5 · EarlyStopping ตาม macro F1 · ผลใน notebook val acc 0.9425 F1 0.921 · test acc 0.9235 F1 0.8754</p>
 
 <p class="trap">fine-tuning ใช้ learning rate ต่ำมากเพื่อไม่ทำลายความรู้เดิม แบบเดียวกับ CNN ใน Lesson 8 · num_labels กำหนดขนาด output ของ head ไม่ใช่จำนวน layer</p>
 

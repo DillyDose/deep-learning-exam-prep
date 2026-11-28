@@ -58,7 +58,7 @@
 
 <p class="trap">ข้อสอบมักถามว่าส่วนไหนของ diffusion model มี parameter ที่เรียนรู้ คำตอบคือ reverse process เท่านั้น forward process เติม noise ตาม schedule ที่กำหนดไว้ก่อน ไม่มีอะไรให้เรียน</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 2–3, 23)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 2–3, 23)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl14-p02.png" alt="Lecture14 หน้า 2: Agenda: Diffusion Models, Flowers Dataset, Multimodal, Stable Diffusion" loading="lazy">
 <figcaption>Lecture14 หน้า 2 — Agenda: Diffusion Models, Flowers Dataset, Multimodal, Stable Diffusion</figcaption>
@@ -131,7 +131,7 @@
 <p>รูปเดิมคูณ √(1 − 0.19) = √0.81 = 0.9 noise ใหม่คูณ √0.19 ≈ 0.436 ตรวจ: 0.81 + 0.19 = 1</p>
 </details>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 6–9)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 6–9)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl14-p06.png" alt="Lecture14 หน้า 6: Derive it step by step: ทำไมใช้ √β" loading="lazy">
 <figcaption>Lecture14 หน้า 6 — Derive it step by step: ทำไมใช้ √β</figcaption>
@@ -161,7 +161,7 @@
 
 <p>ที่มาคือแทน \(x_{t-1}\) ลงในสมการของ \(x_t\) จะได้ noise สองก้อน คือ \(\sqrt{\alpha_t(1-\alpha_{t-1})}\,\varepsilon_{t-2}\) กับ \(\sqrt{1-\alpha_t}\,\varepsilon_{t-1}\) Gaussian สองก้อนที่เป็นอิสระกันบวกกันได้ Gaussian ก้อนเดียว variance รวมคือ \(\alpha_t(1-\alpha_{t-1})+(1-\alpha_t)=1-\alpha_t\alpha_{t-1}\) ทำซ้ำไปเรื่อยๆ จนถึง \(x_0\) ก็ได้สูตรข้างบน</p>
 
-<p class="num">α₁ = 0.9 และ α₂ = 0.8 ได้ ᾱ₂ = 0.9 × 0.8 = 0.72 noise รวมมี variance 0.8(1 − 0.9) + (1 − 0.8) = 0.08 + 0.2 = 0.28 = 1 − 0.72 ตรงกัน ถ้าพิกเซลของ \(x_0\) เป็น 2, ᾱ = 0.64 และ ε = 1 จะได้ \(x_t = 0.8(2) + 0.6(1) = 2.2\) ทันทีโดยไม่ต้องผ่านขั้นกลาง</p>
+<p class="num">สมมติ α₁ = 0.9 และ α₂ = 0.8 ได้ ᾱ₂ = 0.9 × 0.8 = 0.72 noise รวมมี variance 0.8(1 − 0.9) + (1 − 0.8) = 0.08 + 0.2 = 0.28 = 1 − 0.72 ตรงกัน ถ้าพิกเซลของ \(x_0\) เป็น 2, ᾱ = 0.64 และ ε = 1 จะได้ \(x_t = 0.8(2) + 0.6(1) = 2.2\) ทันทีโดยไม่ต้องผ่านขั้นกลาง</p>
 
 <figure class="viz"><img src="../assets/viz/l14-forward.svg" alt="สัดส่วน variance ของรูปเดิมกับ noise ที่เวลา t ต่างๆ"></figure>
 <p>แท่งแต่ละแท่งสูงเท่ากัน (variance รวม 1) ส่วนสีเขียวคือ ᾱ ของรูปเดิม ส่วนสีฟ้าคือ noise เมื่อ t เพิ่ม สีเขียวหดและสีฟ้าโต ที่ t = 0.5 รูปเดิมเหลือแค่ 0.08 และที่ t = 1 เหลือเกือบ 0</p>
@@ -297,7 +297,7 @@ diffusion_times = [x / T for x in range(T)]</code></pre>
 
 <p class="trap">skip connection ใน ResidualBlock ใช้ <b>บวก</b> (Add) ส่วน skip connection ข้ามฝั่งของ U-Net ใช้ <b>ต่อกัน</b> (Concatenate) ที่ UpBlock channel จึงเพิ่มชั่วคราว เช่น 16×16×128 ต่อกับ skip 16×16×96 ได้ 16×16×224 แล้ว ResidualBlock(96) ลดเหลือ 16×16×96 และ DownBlock ลดขนาดด้วย AveragePooling2D ไม่ใช่ stride</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 16–17)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 16–17)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl14-p16.png" alt="Lecture14 หน้า 16: Residual Blocks: BatchNorm → Conv2D → Conv2D + skip" loading="lazy">
 <figcaption>Lecture14 หน้า 16 — Residual Blocks: BatchNorm → Conv2D → Conv2D + skip</figcaption>
@@ -318,7 +318,7 @@ diffusion_times = [x / T for x in range(T)]</code></pre>
 <div class="eq">\[\hat x_0=\frac{x_t-\text{noise\_rate}\cdot\net{\hat\varepsilon}}{\text{signal\_rate}},\qquad x_{t-1}=\text{next\_signal}\cdot\hat x_0+\text{next\_noise}\cdot\net{\hat\varepsilon}\]</div>
 <p class="say">① ทาย noise แล้วถอดออกจาก x_t ได้รูปสะอาดที่ประมาณ ② ผสมรูปสะอาดกับ noise ที่ทายกลับเข้าไปใหม่ แต่ใช้สัดส่วนของเวลาที่ถอยหลังไปหนึ่งขั้น จึงได้รูปที่ noise น้อยกว่าเดิมนิดหนึ่ง</p>
 
-<p class="num">ที่เวลานี้ signal_rate = 0.6 และ noise_rate = 0.8 รูป \(x_t\) มีพิกเซลหนึ่งเป็น 1.0 โมเดลทาย ε̂ = 0.5 จะได้ \(\hat x_0 = (1.0 − 0.8 × 0.5)/0.6 = 0.6/0.6 = 1.0\) ขั้นถัดไป signal 0.8 และ noise 0.6 จะได้ \(x_{t-1} = 0.8 × 1.0 + 0.6 × 0.5 = 1.1\) สัดส่วนของรูปเพิ่มจาก 0.6 เป็น 0.8</p>
+<p class="num">สมมติที่เวลานี้ signal_rate = 0.6 และ noise_rate = 0.8 รูป \(x_t\) มีพิกเซลหนึ่งเป็น 1.0 โมเดลทาย ε̂ = 0.5 จะได้ \(\hat x_0 = (1.0 − 0.8 × 0.5)/0.6 = 0.6/0.6 = 1.0\) ขั้นถัดไป signal 0.8 และ noise 0.6 จะได้ \(x_{t-1} = 0.8 × 1.0 + 0.6 × 0.5 = 1.1\) สัดส่วนของรูปเพิ่มจาก 0.6 เป็น 0.8</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl14-p18.png" alt="Lecture14 หน้า 18: One step of the sampling process: ทาย ε_t จาก x_t เพื่อประมาณ x₀ แล้วใส่ ε_t กลับเฉพาะถึงเวลา t−1" loading="lazy">
@@ -393,19 +393,21 @@ diffusion_times = [x / T for x in range(T)]</code></pre>
 
 <h3 id="s6-multi">6.1 จากข้อความเป็นรูป</h3>
 
+<figure class="thumb">
+<img src="../assets/slides/dl14-p24.png" alt="Lecture14 หน้า 24: Multimodal Learning: text-to-image และ image inpainting" loading="lazy">
+<figcaption>Lecture14 หน้า 24 — Multimodal Learning: text-to-image และ image inpainting</figcaption>
+</figure>
+
 <p><mark class="src" data-p="24" title="Multimodal learning">Multimodal learning</mark> ฝึก <mark class="src" data-p="24" title="generative models">generative model</mark> ให้ <mark class="src" data-p="24" title="transform">แปลง</mark>ระหว่าง <mark class="src" data-p="24" title="different types of data">ข้อมูลต่างชนิดกัน</mark> เช่นป้อนข้อความ <mark class="src" data-p="24" title="&quot;photograph of an astronaut riding a horse&quot;">"photograph of an astronaut riding a horse"</mark> แล้วได้รูปนักบินอวกาศขี่ม้า หรือ image inpainting ที่สร้างรายละเอียดใหม่เฉพาะส่วนที่เลือกตามข้อความ</p>
 
 <p><mark class="src" data-p="25" title="Text-to-Image generation">Text-to-image generation</mark> มุ่งสร้าง <mark class="src" data-p="25" title="images">รูป</mark> จาก <mark class="src" data-p="25" title="given text prompts">ข้อความ prompt ที่ให้มา</mark> ต้องทั้งเข้าใจความหมายของ prompt และสร้างรูปที่สมจริงและตรงกับเนื้อหา ความท้าทายหลักคือทำให้ข้อมูลข้อความกับรูปสอดคล้องกัน (align) โมเดลตัวอย่างคือ DALL·E 2, Imagen, Stable Diffusion และโมเดลใหม่อย่าง DALL·E 3 และ FLUX</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 24–26)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl14-p24.png" alt="Lecture14 หน้า 24: Multimodal Learning: text-to-image และ image inpainting" loading="lazy">
-<figcaption>Lecture14 หน้า 24 — Multimodal Learning: text-to-image และ image inpainting</figcaption>
-</figure>
-<figure>
+<figure class="thumb">
 <img src="../assets/slides/dl14-p25.png" alt="Lecture14 หน้า 25: Text-to-Image Generation: timeline ของโมเดล" loading="lazy">
 <figcaption>Lecture14 หน้า 25 — Text-to-Image Generation: timeline ของโมเดล</figcaption>
 </figure>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 26)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl14-p26.png" alt="Lecture14 หน้า 26: Stable Diffusion: ตัวอย่างรูปจาก Stable Diffusion 2.1" loading="lazy">
 <figcaption>Lecture14 หน้า 26 — Stable Diffusion: ตัวอย่างรูปจาก Stable Diffusion 2.1</figcaption>
@@ -518,7 +520,12 @@ diffusion_times = [x / T for x in range(T)]</code></pre>
 <figure class="viz"><img src="../assets/viz/l14-crossattn.svg" alt="ตาราง cross-attention ระหว่างตำแหน่งในรูปกับคำใน prompt"></figure>
 <p>ตัวเลขเป็นค่าสมมติเพื่อแสดงหลักการ แถวของตำแหน่งตาให้น้ำหนักกับ "blue" และ "eyes" รวมกัน 0.85 แถวของตำแหน่งเสื้อให้น้ำหนัก "blue" แค่ 0.08 สีฟ้าจึงไปอยู่ที่ตา ไม่ใช่ที่เสื้อ</p>
 
-<p>ตัวอย่าง prompt "A man with blue eyes" มีสองกลไกทำงานต่อกัน</p>
+<figure class="thumb">
+<img src="../assets/slides/dl14-p35.png" alt="Lecture14 หน้า 35: Cross-attention: " loading="lazy">
+<figcaption>Lecture14 หน้า 35 — Cross-attention: "A man with blue eyes"</figcaption>
+</figure>
+
+<p>สไลด์หน้า 35 ยกตัวอย่าง prompt "A man with blue eyes" มีสองกลไกทำงานต่อกัน</p>
 <table>
 <tr><th>กลไก</th><th>Q มาจาก</th><th>K, V มาจาก</th><th>ทำอะไร</th></tr>
 <tr><td>Self-attention ใน text encoder</td><td>ข้อความ</td><td>ข้อความ</td><td>จับคู่ "blue" กับ "eyes" ให้รู้ว่าสีฟ้าเป็นของตา</td></tr>
@@ -527,7 +534,7 @@ diffusion_times = [x / T for x in range(T)]</code></pre>
 
 <p class="trap">ใน cross-attention ของ Stable Diffusion Query มาจากรูป และ Key กับ Value มาจากข้อความ ถ้าสลับกัน (Q จากข้อความ) output จะมีขนาดตามจำนวน token ไม่ใช่ตามตำแหน่งในรูป U-Net จะเอาไปใช้ทาย noise ทุกพิกเซลไม่ได้</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 30–31, 34–36)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 30–31, 34, 36)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl14-p30.png" alt="Lecture14 หน้า 30: The VAE Autoencoder" loading="lazy">
 <figcaption>Lecture14 หน้า 30 — The VAE Autoencoder</figcaption>
@@ -539,10 +546,6 @@ diffusion_times = [x / T for x in range(T)]</code></pre>
 <figure>
 <img src="../assets/slides/dl14-p34.png" alt="Lecture14 หน้า 34: U-Net: inputs, output, architecture" loading="lazy">
 <figcaption>Lecture14 หน้า 34 — U-Net: inputs, output, architecture</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl14-p35.png" alt="Lecture14 หน้า 35: Cross-attention: "A man with blue eyes"" loading="lazy">
-<figcaption>Lecture14 หน้า 35 — Cross-attention: "A man with blue eyes"</figcaption>
 </figure>
 <figure>
 <img src="../assets/slides/dl14-p36.png" alt="Lecture14 หน้า 36: Cross-attention: Q จาก U-Net, K และ V จาก text embedding" loading="lazy">

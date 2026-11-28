@@ -371,7 +371,7 @@ seq2seq_rnn.summary()</code></pre>
 
 <p>ตัวอย่างง่าย: "the ball is blue" เทียบ "the ball has a blue color" ได้ 1-gram precision 3/4 คือ the, ball, blue อีก metric คือ <mark class="src" data-p="18" title="ROUGE =>">ROUGE</mark> นิยมใช้กับ summarization</p>
 
-<p class="num">predicted 8 คำ: p₁ = 5/8 = 0.625 · p₂ = 4/7 = 0.571 · p₃ = 3/6 = 0.5 · p₄ = 2/5 = 0.4 · geometric mean (0.0714)^(1/4) = 0.517 · c = r = 8 จึง BP = e⁰ = 1 · BLEU ≈ 0.52</p>
+<p class="num">ใช้คู่ประโยคในสไลด์หน้า 18 target "The guard arrived late because it was raining" กับ predicted "The guard arrived late because of the rain" ยาว 8 คำเท่ากัน: p₁ = 5/8 = 0.625 · p₂ = 4/7 = 0.571 · p₃ = 3/6 = 0.5 · p₄ = 2/5 = 0.4 · geometric mean (0.0714)^(1/4) = 0.517 · c = r = 8 จึง BP = e⁰ = 1 · BLEU ≈ 0.52</p>
 
 <p class="trap">precision ลดลงเมื่อ n โต เพราะต้องตรงต่อเนื่องหลายคำ · BP = 1 เมื่อคำแปลยาวกว่าเป้าหมาย ไม่ใช่สั้นกว่า</p>
 
@@ -384,6 +384,11 @@ seq2seq_rnn.summary()</code></pre>
 
 <h3 id="s3-beam">3.2 ปัญหาของ encoder–decoder และ beam search</h3>
 
+<figure class="thumb">
+<img src="../assets/slides/dl11-p19.png" alt="Lecture 11 หน้า 19: Problems of Encoder-Decoder: not go back" loading="lazy">
+<figcaption>Lecture 11 หน้า 19 — Problems of Encoder-Decoder: not go back</figcaption>
+</figure>
+
 <p>encoder–decoder แบบ RNN มีปัญหาสองข้อ ข้อแรก: โมเดล <mark class="src" data-p="19" title="not go back">ย้อนกลับไปแก้ไม่ได้</mark> สร้างคำที่น่าจะเป็นสุดทุก step แล้วพยายามเติมประโยคให้ดีที่สุด ได้ <mark class="src" data-p="19" title="suboptimal translation">คำแปลที่ไม่ดีที่สุด</mark> เลือก am ที่ step 2 ก็ถูกบังคับเป็น "I am going to school now" ทั้งที่บริบทเป็นอนาคตควรเป็น will ทางแก้หนึ่งคือ <mark class="src" data-p="19" title="beam search">beam search</mark></p>
 
 <p><mark class="src" data-p="20" title="Beam search">Beam search</mark> เก็บ <mark class="src" data-p="20" title="short list of the k most promising sentences">รายชื่อสั้นของ k ประโยคที่น่าจะเป็นที่สุด</mark> ทุก step ขยายแต่ละประโยคด้วยคำอีก 1 คำ แล้วเก็บ k ตัวที่ดีสุด k เรียก <mark class="src" data-p="20" title="beam width">beam width</mark> ความน่าจะเป็นของประโยคคือผลคูณตาม chain rule</p>
@@ -395,7 +400,12 @@ seq2seq_rnn.summary()</code></pre>
 
 <p>ในรูป step 1 เก็บ I, My, We · step 2 ขยายทั้งหมดแล้วเหลือ I am, I will, My parents ประโยคที่ขึ้นต้นด้วย We หลุดเพราะผลคูณต่ำกว่าสามอันดับแรก</p>
 
-<p class="num">vocab 10,000 k = 3: candidate ต่อ step 3 × 10,000 = 30,000 เก็บไว้ 3 · greedy k = 1 ดู 10,000 · k = 10 ดู 100,000 · ผลสุดท้ายในตัวอย่าง: 0.56 "I am going to meet my parents in India" · 0.49 · 0.39 · เลือก 0.56</p>
+<p class="num">vocab 10,000 k = 3: candidate ต่อ step 3 × 10,000 = 30,000 เก็บไว้ 3 · greedy k = 1 ดู 10,000 · k = 10 ดู 100,000 · ผลสุดท้ายของตัวอย่างแปลฮินดีในสไลด์หน้า 21: "I am going to meet my parents in India" 0.56 · "I am visiting my parents in India" 0.49 · "I will visit India to meet my parents" 0.39 · เลือก 0.56</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl11-p21.png" alt="Lecture 11 หน้า 21: Beam Search (2): ผลลัพธ์และข้อจำกัด" loading="lazy">
+<figcaption>Lecture 11 หน้า 21 — Beam Search (2): ผลลัพธ์และข้อจำกัด</figcaption>
+</figure>
 
 <p>สรุปเรื่อง beam search: beam width สูงแปลดีขึ้น แต่ใช้ <mark class="src" data-p="21" title="a lot of memory and computational power">memory และการคำนวณมาก</mark> ทำงานดี <mark class="src" data-p="21" title="for fairly short sentences">กับประโยคค่อนข้างสั้น</mark> แต่ยังแปล <mark class="src" data-p="21" title="long sentences">ประโยคยาว</mark> ไม่ดี</p>
 
@@ -405,15 +415,7 @@ seq2seq_rnn.summary()</code></pre>
 
 <p class="trap">beam search แก้ปัญหาเลือกพลาดแต่ต้น ไม่ได้แก้ประโยคยาว · ประโยคยาวแก้ด้วย attention</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 19, 21–22)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl11-p19.png" alt="Lecture 11 หน้า 19: Problems of Encoder-Decoder: not go back" loading="lazy">
-<figcaption>Lecture 11 หน้า 19 — Problems of Encoder-Decoder: not go back</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl11-p21.png" alt="Lecture 11 หน้า 21: Beam Search (2): ผลลัพธ์และข้อจำกัด" loading="lazy">
-<figcaption>Lecture 11 หน้า 21 — Beam Search (2): ผลลัพธ์และข้อจำกัด</figcaption>
-</figure>
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 22)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl11-p22.png" alt="Lecture 11 หน้า 22: Problems (2): คอขวดของ vector เดียว" loading="lazy">
 <figcaption>Lecture 11 หน้า 22 — Problems (2): คอขวดของ vector เดียว</figcaption>
@@ -436,7 +438,12 @@ seq2seq_rnn.summary()</code></pre>
 
 <p>ในแผนภาพ alignment model รับ state ของ decoder กับ encoder output แต่ละตัว ได้คะแนน e แล้วผ่าน softmax เป็น α ใช้ถ่วงก่อนทายคำที่ 3 คือ lait</p>
 
-<p><mark class="src" data-p="24" title="Weights">น้ำหนัก</mark> มาจาก network เล็กชื่อ alignment model ที่ <mark class="src" data-p="24" title="trained jointly">เทรนร่วมกัน</mark> กับ encoder–decoder ให้คะแนนว่า encoder output แต่ละตัวเข้ากับ state ปัจจุบันของ decoder แค่ไหน แล้วผ่าน softmax น้ำหนักของ step หนึ่งรวมเป็น 1 ตัวอย่างในรูป state ของ decoder <mark class="src" data-p="24" title="[23, 54, 31……] 23, 55, 33, ……]">[23, 55, 33, …] ใกล้ vector ของ milk [23, 54, 31, …]</mark> attention จึงให้น้ำหนัก milk สูง</p>
+<figure class="thumb">
+<img src="../assets/slides/dl11-p24.png" alt="Lecture 11 หน้า 24: Attention Weights Computation: alignment model" loading="lazy">
+<figcaption>Lecture 11 หน้า 24 — Attention Weights Computation: alignment model</figcaption>
+</figure>
+
+<p><mark class="src" data-p="24" title="Weights">น้ำหนัก</mark> มาจาก network เล็กชื่อ alignment model ที่ <mark class="src" data-p="24" title="trained jointly">เทรนร่วมกัน</mark> กับ encoder–decoder ให้คะแนนว่า encoder output แต่ละตัวเข้ากับ state ปัจจุบันของ decoder แค่ไหน แล้วผ่าน softmax น้ำหนักของ step หนึ่งรวมเป็น 1 ตัวอย่างในสไลด์หน้า 24 แปล "I drink milk" เป็น "Je bois du lait" state ของ decoder <mark class="src" data-p="24" title="[23, 54, 31……] 23, 55, 33, ……]">[23, 55, 33, …] ใกล้ vector ของ milk [23, 54, 31, …]</mark> attention จึงให้น้ำหนัก milk สูง</p>
 
 <p class="num">คะแนน [0, 0, 2] ผ่าน softmax ได้ [0.107, 0.107, 0.787] · encoder outputs [1, 0], [0, 1], [1, 1] · context = 0.107[1, 0] + 0.107[0, 1] + 0.787[1, 1] = [0.894, 0.894] ใกล้ตัวที่สามที่สุด</p>
 
@@ -447,16 +454,14 @@ seq2seq_rnn.summary()</code></pre>
 
 <p>เมื่อ<mark class="src" data-p="25" title="visualize the attention weights">ดู attention weight เป็นภาพ</mark> heatmap ส่วนใหญ่อยู่บนเส้นทแยง แต่ช่วงกลางกลับทิศ เพราะ European Economic Area กับ zone économique européenne เรียงคำกลับกัน attention ก็ยัง align zone กับ Area ได้ถูก แม้ attention ช่วยมาก แต่ยังมี<mark class="src" data-p="25" title="major shortcoming">ข้อเสียใหญ่</mark> เพราะยังใช้ RNN การคำนวณจึงเป็น<mark class="src" data-p="25" title="sequential">ลำดับ</mark> ต้องรอ step ก่อนหน้าเสร็จ จึง<mark class="src" data-p="25" title="parallelized">ทำขนาน</mark>ไม่ได้ ข้อนี้นำไปสู่ Transformer</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 24)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl11-p24.png" alt="Lecture 11 หน้า 24: Attention Weights Computation: alignment model" loading="lazy">
-<figcaption>Lecture 11 หน้า 24 — Attention Weights Computation: alignment model</figcaption>
-</figure>
-</div></details>
-
 <h3 id="s4-tf">4.2 Transformer</h3>
 
 <p>Vaswani และคณะเผยแพร่ <mark class="src" data-p="26" title="Attention Is All Your Need">"Attention Is All You Need"</mark> ปี 2017 ดีกว่า RNN ทั้งคุณภาพแปลและต้นทุนการเทรน ต่อด้วย GPT, BERT ปี 2018 · GPT-2, RoBERTa, DistilBERT ปี 2019 · GPT-3, T5 ปี 2020</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl11-p27.png" alt="Lecture 11 หน้า 27: Transformer Architecture: encoder และ decoder" loading="lazy">
+<figcaption>Lecture 11 หน้า 27 — Transformer Architecture: encoder และ decoder</figcaption>
+</figure>
 
 <p><mark class="src" data-p="27" title="Transformer Encoder">Transformer encoder</mark> แปลงลำดับ token เป็น embedding ที่ <mark class="src" data-p="27" title="context-aware">รู้บริบท</mark> · <mark class="src" data-p="27" title="Transformer Decoder">Transformer decoder</mark> ใช้ hidden state ของ encoder สร้าง output ทีละ token ตัวอย่าง "Time flies like an arrow" กับ decoder ที่อ่าน "Die Zeit fliegt wie ein" แล้วทาย Pfeil เหมือน encoder–decoder RNN ทุกส่วน ต่างแค่ RNN ถูกแทนด้วย <mark class="src" data-p="28" title="self attention layers">self-attention layer</mark></p>
 
@@ -472,24 +477,21 @@ seq2seq_rnn.summary()</code></pre>
 <tr><td><mark class="src" data-p="29" title="Explainability">อธิบายได้</mark></td><td>plot ได้ว่าโมเดลมองตรงไหน</td><td>attention เป็น matrix n × n วาดเป็น heatmap</td></tr>
 </table>
 
-<p>Transformer มีข้อดีสามข้อเหนือ RNN คือเชื่อมคำที่อยู่ไกลกันได้ตรงๆ ผ่าน attention ไม่ต้องส่งต่อทีละ step · คำนวณทุกตำแหน่งขนานกันได้บน GPU · ดู attention weight ได้ว่าโมเดลสนใจอะไร ข้อดีเหล่านี้ทำให้ Transformer มี <mark class="src" data-p="29" title="significant impact in natural language processing">ผลกระทบใหญ่ต่อ NLP</mark> ใน encoder–decoder ความต่างเดียวคือ RNN ถูกแทนด้วย <mark class="src" data-p="29" title="self attention layers in transformer">self-attention layer ใน Transformer</mark> ชิ้นส่วนมีสามกลุ่ม: embedding + positional encoding · encoder = self-attention + feed forward · decoder = causal self-attention + cross attention + feed forward รูป 4-layer Transformer ซ้อนอย่างละ 4 ชั้น output ของ encoder ชั้นสุดท้ายเข้า cross attention ของ decoder ทุกชั้น</p>
+<p>Transformer มีข้อดีสามข้อเหนือ RNN คือเชื่อมคำที่อยู่ไกลกันได้ตรงๆ ผ่าน attention ไม่ต้องส่งต่อทีละ step · คำนวณทุกตำแหน่งขนานกันได้บน GPU · ดู attention weight ได้ว่าโมเดลสนใจอะไร ข้อดีเหล่านี้ทำให้ Transformer มี <mark class="src" data-p="29" title="significant impact in natural language processing">ผลกระทบใหญ่ต่อ NLP</mark> ใน encoder–decoder ความต่างเดียวคือ RNN ถูกแทนด้วย <mark class="src" data-p="29" title="self attention layers in transformer">self-attention layer ใน Transformer</mark> ชิ้นส่วนมีสามกลุ่ม: embedding + positional encoding · encoder = self-attention + feed forward · decoder = causal self-attention + cross attention + feed forward รูป 4-layer Transformer ทางขวาของสไลด์หน้า 30 ข้างล่างซ้อนอย่างละ 4 ชั้น output ของ encoder ชั้นสุดท้ายเข้า cross attention ของ decoder ทุกชั้น</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 26–28, 30)</summary><div class="gallery">
+<figure class="thumb">
+<img src="../assets/slides/dl11-p30.png" alt="Lecture 11 หน้า 30: Transformer Components" loading="lazy">
+<figcaption>Lecture 11 หน้า 30 — Transformer Components</figcaption>
+</figure>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 26, 28)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl11-p26.png" alt="Lecture 11 หน้า 26: Transformers: timeline" loading="lazy">
 <figcaption>Lecture 11 หน้า 26 — Transformers: timeline</figcaption>
 </figure>
 <figure>
-<img src="../assets/slides/dl11-p27.png" alt="Lecture 11 หน้า 27: Transformer Architecture: encoder และ decoder" loading="lazy">
-<figcaption>Lecture 11 หน้า 27 — Transformer Architecture: encoder และ decoder</figcaption>
-</figure>
-<figure>
 <img src="../assets/slides/dl11-p28.png" alt="Lecture 11 หน้า 28: Compared to Encoder-Decoder RNNs" loading="lazy">
 <figcaption>Lecture 11 หน้า 28 — Compared to Encoder-Decoder RNNs</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl11-p30.png" alt="Lecture 11 หน้า 30: Transformer Components" loading="lazy">
-<figcaption>Lecture 11 หน้า 30 — Transformer Components</figcaption>
 </figure>
 </div></details>
 
@@ -520,7 +522,19 @@ seq2seq_rnn.summary()</code></pre>
 
 <p class="trap">ในสไลด์ ตัวอย่างคำนวณเขียนตัวหาร 10000^0.5 ถูก แต่พิมพ์ผลมิติ 2 เป็น 0.0001 และ 0.0002 ค่าที่ถูกคือ 0.0100 และ 0.0200 ถ้าข้อสอบใช้ตัวเลขจากสไลด์ ให้รู้ด้วยว่าสไลด์พิมพ์ [0.8415, 0.5403, 0.0001, 1]</p>
 
-<p class="num">บวกกับ token embedding [0.5, 0.3, −0.6, 0.8] ตามค่าบนสไลด์ได้ [1.3415, 0.8403, −0.5999, 1.8] · ใช้ค่าที่ถูกได้ [1.3415, 0.8403, −0.5900, 1.79995] · ระยะระหว่างตำแหน่ง 0–1 และ 1–2 ≈ 0.96 เท่ากัน · 0–2 ≈ 1.68</p>
+<figure class="thumb">
+<img src="../assets/slides/dl11-p34.png" alt="Lecture 11 หน้า 34: Positional Embeddings (4): บวกกับ token embedding" loading="lazy">
+<figcaption>Lecture 11 หน้า 34 — Positional Embeddings (4): บวกกับ token embedding</figcaption>
+</figure>
+
+<p class="num">บวกกับ token embedding [0.5, 0.3, −0.6, 0.8] ตามค่าบนสไลด์หน้า 34 ได้ [1.3415, 0.8403, −0.5999, 1.8] · ใช้ค่าที่ถูกได้ [1.3415, 0.8403, −0.5900, 1.79995] </p>
+
+<p class="num">สไลด์หน้า 35 หาระยะ Euclidean ระหว่าง positional encoding ของตำแหน่ง 0, 1, 2 จากตัวอย่างหน้า 33: ตำแหน่ง 0–1 และ 1–2 ≈ 0.96 เท่ากัน · 0–2 ≈ 1.68</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl11-p35.png" alt="Lecture 11 หน้า 35: Positional Embeddings (5): ระยะห่างระหว่างตำแหน่ง" loading="lazy">
+<figcaption>Lecture 11 หน้า 35 — Positional Embeddings (5): ระยะห่างระหว่างตำแหน่ง</figcaption>
+</figure>
 
 <p>ระยะของคู่ที่ติดกันเท่ากันทุกคู่ ระยะจึงขึ้นกับระยะห่างสัมพัทธ์ ไม่ใช่ตำแหน่งสัมบูรณ์ sinusoidal encoding จึงมีข้อดีสามข้อ: position invariance คือเรียนตำแหน่งสัมพัทธ์ง่าย · fixed pattern ไม่ต้องเทรน ลดเสี่ยง overfitting · flexibility in length ใช้กับลำดับยาวกว่าตอนเทรนได้</p>
 
@@ -565,7 +579,7 @@ plt.show()</code></pre>
 
 <p class="trap">position embedding บวกกับ token embedding ไม่ใช่ต่อ มิติจึงเท่าเดิม · PositionalEmbedding ใน notebook เป็นแบบเรียนได้ Embedding(20, 256) มี 5,120 parameter และรับประโยคยาวเกิน 20 ไม่ได้</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 31–32, 34–35, 37)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 31–32, 37)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl11-p31.png" alt="Lecture 11 หน้า 31: Embedding และ Positional Encoding Layer" loading="lazy">
 <figcaption>Lecture 11 หน้า 31 — Embedding และ Positional Encoding Layer</figcaption>
@@ -573,14 +587,6 @@ plt.show()</code></pre>
 <figure>
 <img src="../assets/slides/dl11-p32.png" alt="Lecture 11 หน้า 32: Positional Embeddings (2): สูตร sinusoidal" loading="lazy">
 <figcaption>Lecture 11 หน้า 32 — Positional Embeddings (2): สูตร sinusoidal</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl11-p34.png" alt="Lecture 11 หน้า 34: Positional Embeddings (4): บวกกับ token embedding" loading="lazy">
-<figcaption>Lecture 11 หน้า 34 — Positional Embeddings (4): บวกกับ token embedding</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl11-p35.png" alt="Lecture 11 หน้า 35: Positional Embeddings (5): ระยะห่างระหว่างตำแหน่ง" loading="lazy">
-<figcaption>Lecture 11 หน้า 35 — Positional Embeddings (5): ระยะห่างระหว่างตำแหน่ง</figcaption>
 </figure>
 <figure>
 <img src="../assets/slides/dl11-p37.png" alt="Lecture 11 หน้า 37: Positional Embeddings (7): สามข้อดี" loading="lazy">
@@ -661,7 +667,12 @@ outputs = mha_layer(inputs, inputs, inputs)</code></pre>
 
 <p class="pic">ค้นรูปในคลังด้วยคำว่า "dogs on the beach" คลังเทียบคำค้นกับป้ายของแต่ละรูป ป้ายไหนตรงมากก็ดึงรูปนั้นขึ้นมาเยอะ คำค้นคือ query ป้ายคือ key รูปคือ value</p>
 
-<p>ในตอน 5.2 vector ของคำตัวเดียวทำสามหน้าที่ คือเป็นตัวถาม ตัวที่ถูกเทียบ และตัวที่ถูกนำไปผสม รูปทั่วไปแยกสามหน้าที่นี้ออกจากกันด้วย weight ที่เรียนได้ เขียนเป็น outputs = sum(values × pairwise_scores(query, keys)) ตัวอย่างคลังรูป: ป้าย {Beach, Tree, Boat} match 0.5 · {Beach, Dog, Tree} 1.0 · {Dog} 0.5</p>
+<p>ในตอน 5.2 vector ของคำตัวเดียวทำสามหน้าที่ คือเป็นตัวถาม ตัวที่ถูกเทียบ และตัวที่ถูกนำไปผสม รูปทั่วไปแยกสามหน้าที่นี้ออกจากกันด้วย weight ที่เรียนได้ เขียนเป็น outputs = sum(values × pairwise_scores(query, keys)) ตัวอย่างคลังรูปในสไลด์หน้า 41 ค้นด้วย query "dogs on the beach": ป้าย {Beach, Tree, Boat} match 0.5 · {Beach, Dog, Tree} 1.0 · {Dog} 0.5</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl11-p41.png" alt="Lecture 11 หน้า 41: The Query-Key-Value Model" loading="lazy">
+<figcaption>Lecture 11 หน้า 41 — The Query-Key-Value Model</figcaption>
+</figure>
 
 <table>
 <tr><th>ใน machine translation</th><th>query</th><th>keys, values</th></tr>
@@ -681,11 +692,7 @@ outputs = sum(values * pairwise_scores(query, keys))</code></pre>
 
 <p class="trap">หาร √d_k ไม่ใช่ d_k · ไม่ scale แล้ว softmax แหลมเกินจน gradient หาย · cross-attention ใช้ target เป็น query ไม่ใช่ key</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 41–42)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl11-p41.png" alt="Lecture 11 หน้า 41: The Query-Key-Value Model" loading="lazy">
-<figcaption>Lecture 11 หน้า 41 — The Query-Key-Value Model</figcaption>
-</figure>
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 42)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl11-p42.png" alt="Lecture 11 หน้า 42: Generalized Self-attention: scaled dot-product" loading="lazy">
 <figcaption>Lecture 11 หน้า 42 — Generalized Self-attention: scaled dot-product</figcaption>

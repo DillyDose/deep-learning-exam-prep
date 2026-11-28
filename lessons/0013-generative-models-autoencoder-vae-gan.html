@@ -72,7 +72,7 @@
 <p>รูปมี 28 × 28 = 784 ค่า latent มี 2 ค่า ย่อลง 392 เท่า ที่ทำได้เพราะรูปเสื้อผ้ามีแบบแผน (เสื้อ กางเกง รองเท้า) ไม่ใช่พิกเซลสุ่ม</p>
 </details>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 2, 4, 19)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 2, 4, 19)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl13-p02.png" alt="Lecture13 หน้า 2: Agenda: Autoencoder, VAE, GANs, DCGANs" loading="lazy">
 <figcaption>Lecture13 หน้า 2 — Agenda: Autoencoder, VAE, GANs, DCGANs</figcaption>
@@ -137,7 +137,7 @@
 <tr><td colspan="2">รวม</td><td>25,090</td></tr>
 </table>
 
-<p class="num">รูปกางเกงหนึ่งรูปเข้า encoder ได้ latent = [6.3, −0.9] คือจุดหนึ่งบนระนาบสองมิติ decoder นำจุดนี้ไปสร้างรูปกางเกงกลับมาได้คล้ายเดิม ตัวเลขสองตัวนี้ไม่ได้มีความหมายที่ตั้งชื่อได้ (ไม่ใช่ "ความยาว" หรือ "สี") โมเดลเลือกเองว่าจะใช้แกนแต่ละแกนเก็บอะไร</p>
+<p class="num">สไลด์หน้า 7 ข้างล่างยกตัวอย่างรูปกางเกงหนึ่งรูปเข้า encoder ได้ latent = [6.3, −0.9] คือจุดหนึ่งบนระนาบสองมิติ decoder นำจุดนี้ไปสร้างรูปกางเกงกลับมาได้คล้ายเดิม ตัวเลขสองตัวนี้ไม่ได้มีความหมายที่ตั้งชื่อได้ (ไม่ใช่ "ความยาว" หรือ "สี") โมเดลเลือกเองว่าจะใช้แกนแต่ละแกนเก็บอะไร</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl13-p07.png" alt="Lecture13 หน้า 7: Example of Fashion MNIST: encoding และ decoding ใน latent space 2 มิติ" loading="lazy">
@@ -235,7 +235,7 @@
 <tr><td>\(\rnd{\varepsilon}\)</td><td>ตัวเลขสุ่มจาก normal distribution มาตรฐาน (mean 0, sd 1) สุ่มใหม่ทุกครั้ง</td></tr>
 </table>
 
-<p class="num">มิติหนึ่งของ latent encoder ให้ μ = 0.5 และ σ² = 0.04 จึงได้ σ = 0.2 ถ้าสุ่มได้ ε = −1.5 จะได้ z = 0.5 + 0.2 × (−1.5) = 0.5 − 0.3 = 0.2 รอบถัดไปสุ่ม ε ใหม่ได้ +1.0 ก็จะได้ z = 0.7 รูปเดิมจึงได้ z ต่างกันทุกครั้ง แต่ส่วนใหญ่อยู่ในช่วง μ ± 2σ = 0.1 ถึง 0.9</p>
+<p class="num">สมมติมิติหนึ่งของ latent encoder ให้ μ = 0.5 และ σ² = 0.04 จึงได้ σ = 0.2 ถ้าสุ่มได้ ε = −1.5 จะได้ z = 0.5 + 0.2 × (−1.5) = 0.5 − 0.3 = 0.2 รอบถัดไปสุ่ม ε ใหม่ได้ +1.0 ก็จะได้ z = 0.7 รูปเดิมจึงได้ z ต่างกันทุกครั้ง แต่ส่วนใหญ่อยู่ในช่วง μ ± 2σ = 0.1 ถึง 0.9</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl13-p12.png" alt="Lecture13 หน้า 12: Variational Autoencoder: encoder ของ autoencoder ให้จุด ส่วนของ VAE ให้การแจกแจง" loading="lazy">
@@ -404,7 +404,7 @@ total_loss = reconstruction_loss + kl_loss</code></pre>
 <tr><td>รูปที่ได้</td><td>คมเมื่อ reconstruct</td><td>เบลอกว่า</td></tr>
 </table>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 11, 15)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 11, 15)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl13-p11.png" alt="Lecture13 หน้า 11: The Problems of Autoencoder" loading="lazy">
 <figcaption>Lecture13 หน้า 11 — The Problems of Autoencoder</figcaption>
@@ -470,7 +470,7 @@ total_loss = reconstruction_loss + kl_loss</code></pre>
 <figcaption>Lecture13 หน้า 23 — Training the Discriminator: batch ปลอม label 0 และ batch จริง label 1</figcaption>
 </figure>
 
-<p class="num">batch ปลอม discriminator ทำนาย 0.2, 0.1, 0.3, 0.6 ทั้งหมดมี label 0 ค่าที่ห่างจาก 0 มากที่สุดคือ 0.6 จึงถูกลงโทษมากที่สุด (−log(1 − 0.6) = −log 0.4 ≈ 0.92 เทียบกับ −log 0.8 ≈ 0.22 ของค่า 0.2) batch จริงทำนาย 0.8, 0.9, 0.4, 0.7 มี label 1 ค่า 0.4 ถูกลงโทษมากที่สุด</p>
+<p class="num">ใช้ตัวเลขในตาราง predictions กับ label ของรูปข้างบน batch ปลอม discriminator ทำนาย 0.2, 0.1, 0.3, 0.6 ทั้งหมดมี label 0 ค่าที่ห่างจาก 0 มากที่สุดคือ 0.6 จึงถูกลงโทษมากที่สุด (−log(1 − 0.6) = −log 0.4 ≈ 0.92 เทียบกับ −log 0.8 ≈ 0.22 ของค่า 0.2) batch จริงทำนาย 0.8, 0.9, 0.4, 0.7 มี label 1 ค่า 0.4 ถูกลงโทษมากที่สุด</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl13-p24.png" alt="Lecture13 หน้า 24: Discriminator: โค้ด keras.Sequential และ summary (input 64×64×3)" loading="lazy">
@@ -507,7 +507,7 @@ total_loss = reconstruction_loss + kl_loss</code></pre>
 <figcaption>Lecture13 หน้า 26 — Training the Generator: generator → batch ปลอม → discriminator (weights are frozen) → loss กับ label 1</figcaption>
 </figure>
 
-<p class="num">D ให้คะแนนรูปปลอม 0.4, 0.5, 0.6, 0.2 label ทั้งหมดเป็น 1 รูปที่ได้ 0.2 ถูกลงโทษมากที่สุด (−log 0.2 ≈ 1.61) gradient จึงดัน G ให้แก้รูปแบบนี้มากที่สุด ถ้า D ให้ 0.9 ทุกรูป loss ของ G จะต่ำ แปลว่า G หลอก D ได้แล้ว</p>
+<p class="num">ตาราง predictions ในรูปข้างบน D ให้คะแนนรูปปลอม 0.4, 0.5, 0.6, 0.2 label ทั้งหมดเป็น 1 รูปที่ได้ 0.2 ถูกลงโทษมากที่สุด (−log 0.2 ≈ 1.61) gradient จึงดัน G ให้แก้รูปแบบนี้มากที่สุด ถ้า D ให้ 0.9 ทุกรูป loss ของ G จะต่ำ แปลว่า G หลอก D ได้แล้ว</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl13-p27.png" alt="Lecture13 หน้า 27: Generator: โค้ด keras.Sequential (latent_dim = 128) และ summary" loading="lazy">
@@ -582,6 +582,11 @@ grads = tape.gradient(g_loss, self.generator.trainable_weights)</code></pre>
 
 <p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> GAN ค่อยๆ สร้างหน้าคนที่ดูออกได้ ต้องใช้หลาย epoch</p>
 
+<figure class="thumb">
+<img src="../assets/slides/dl13-p30.png" alt="Lecture13 หน้า 30: Example on DCGAN: CelebA 64×64" loading="lazy">
+<figcaption>Lecture13 หน้า 30 — Example on DCGAN: CelebA 64×64</figcaption>
+</figure>
+
 <p>dataset CelebA มีหน้าดารา 200,000 รูป ย่อเป็น 64 × 64 เพื่อให้ train เร็วขึ้น discriminator แปลงรูป (64, 64, 3) เป็นคะแนนว่าจริงแค่ไหน ฝึกด้วยรูปจริงและปลอมพร้อม label เหมือน image classification ทั่วไป generator แปลง vector shape (latent_dim,) เป็นรูป (64, 64, 3) และฝึกด้วย gradient ของ weight generator เทียบกับ loss ของโมเดล gan ทั้งตัว</p>
 
 <figure class="thumb">
@@ -591,14 +596,10 @@ grads = tape.gradient(g_loss, self.generator.trainable_weights)</code></pre>
 
 <p>หลัง 1 epoch รูปเป็นเพียงก้อนสีเบลอที่พอเห็นตำแหน่งหน้า หลัง 30 epoch เห็นตา จมูก ปาก และทรงผมชัด แต่บางรูปยังมีส่วนบิดเบี้ยว</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 22, 30)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 22)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl13-p22.png" alt="Lecture13 หน้า 22: Discriminator Architecture" loading="lazy">
 <figcaption>Lecture13 หน้า 22 — Discriminator Architecture</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl13-p30.png" alt="Lecture13 หน้า 30: Example on DCGAN: CelebA 64×64" loading="lazy">
-<figcaption>Lecture13 หน้า 30 — Example on DCGAN: CelebA 64×64</figcaption>
 </figure>
 </div></details>
 
@@ -652,7 +653,7 @@ grads = tape.gradient(g_loss, self.generator.trainable_weights)</code></pre>
 <tr><td>ฝึก</td><td>เสถียร loss ลดลงชัดเจน</td><td>ยาก loss บอกความก้าวหน้าไม่ได้</td></tr>
 </table>
 
-<details class="fold"><summary>สไลด์ต้นฉบับของตอนนี้ (หน้า 32–33)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 32–33)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl13-p32.png" alt="Lecture13 หน้า 32: Challenges" loading="lazy">
 <figcaption>Lecture13 หน้า 32 — Challenges</figcaption>

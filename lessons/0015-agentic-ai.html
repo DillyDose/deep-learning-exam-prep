@@ -248,16 +248,17 @@
 <tr><td>งานที่เหมาะ</td><td>งานที่นิยามชัด</td><td>งานซับซ้อนที่แยกย่อยได้</td></tr>
 </table>
 
-<p>ตัวอย่าง: single-agent มี Customer Support Agent ตัวเดียวถือ invoice, refund, order, technical tool · multi-agent มี coordinator agent กระจายงานให้ billing, refund, order, technical agent</p>
+<p>ตัวอย่าง customer support ในรูปขวาของสไลด์หน้า 18: single-agent มี Customer Support Agent ตัวเดียวถือ invoice, refund, order, technical tool · multi-agent มี coordinator agent กระจายงานให้ billing, refund, order, technical agent</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 17–18)</summary><div class="gallery">
+<figure class="thumb">
+<img src="../assets/slides/dl15-p18.png" alt="Lecture 15 หน้า 18: Single-Agent vs. Multi-Agent Architecture" loading="lazy">
+<figcaption>Lecture 15 หน้า 18 — Single-Agent vs. Multi-Agent Architecture</figcaption>
+</figure>
+
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 17)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl15-p17.png" alt="Lecture 15 หน้า 17: Orchestration in Agentic Systems" loading="lazy">
 <figcaption>Lecture 15 หน้า 17 — Orchestration in Agentic Systems</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl15-p18.png" alt="Lecture 15 หน้า 18: Single-Agent vs. Multi-Agent Architecture" loading="lazy">
-<figcaption>Lecture 15 หน้า 18 — Single-Agent vs. Multi-Agent Architecture</figcaption>
 </figure>
 </div></details>
 
@@ -327,7 +328,12 @@
 
 <h3 id="s3-select">3.3 เลือก tool และสร้าง argument</h3>
 
-<p>tool ยิ่งมาก ยิ่งเลือกยาก โดยเฉพาะ tool ที่คำอธิบายคล้ายกัน ตัวอย่าง 8 tool: get_invoice, get_refund_status, get_order_status, calculate_refund, cancel_order, reset_password, get_service_logs, create_ticket ลูกค้าถาม "I returned my product last week. Has my money been sent back?" agent ต้องตัดสินว่า ต้องใช้ tool ไหม: ใช่ · tool ไหน: get_refund_status · argument อะไร: customer ID · ต้องถามเพิ่มไหม: ถามหา customer ID ถ้ายังไม่มี</p>
+<p>สไลด์หน้า 23 ข้างล่างแสดงตัวอย่างนี้เป็นตาราง tool ยิ่งมาก ยิ่งเลือกยาก โดยเฉพาะ tool ที่คำอธิบายคล้ายกัน ตัวอย่าง 8 tool: get_invoice, get_refund_status, get_order_status, calculate_refund, cancel_order, reset_password, get_service_logs, create_ticket ลูกค้าถาม "I returned my product last week. Has my money been sent back?" agent ต้องตัดสินว่า ต้องใช้ tool ไหม: ใช่ · tool ไหน: get_refund_status · argument อะไร: customer ID · ต้องถามเพิ่มไหม: ถามหา customer ID ถ้ายังไม่มี</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p23.png" alt="Lecture 15 หน้า 23: Tool Selection" loading="lazy">
+<figcaption>Lecture 15 หน้า 23 — Tool Selection</figcaption>
+</figure>
 
 <table>
 <tr><th></th><th>Standard</th><th>Semantic</th><th>Hierarchical</th></tr>
@@ -378,11 +384,7 @@ print(validate_customer_id("1234")) # False</code></pre>
 <p>"U12345" มีเลข 5 หลัก fullmatch ไม่ตรง ได้ False · 1234 ไม่ใช่ str ได้ False ตั้งแต่ isinstance</p>
 </details>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 23–25)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl15-p23.png" alt="Lecture 15 หน้า 23: Tool Selection" loading="lazy">
-<figcaption>Lecture 15 หน้า 23 — Tool Selection</figcaption>
-</figure>
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 24–25)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl15-p24.png" alt="Lecture 15 หน้า 24: Three Approaches to Tool Selection" loading="lazy">
 <figcaption>Lecture 15 หน้า 24 — Three Approaches to Tool Selection</figcaption>
@@ -630,7 +632,7 @@ print(response.content)</code></pre>
 <figcaption>Lecture 15 หน้า 38 — Parallel Tool Execution: Benefits and Trade-offs</figcaption>
 </figure>
 
-<p class="num">invoice 2s refund 3s order 4s: sequential 2 + 3 + 4 = 9s · parallel max(2, 3, 4) = 4s · ลดลง 5/9 = 55.6% · lab ใส่ sleep 1s ให้ทั้งสาม tool ได้ sequential 3.0s concurrent 1.0s</p>
+<p class="num">invoice 2s refund 3s order 4s: sequential 2 + 3 + 4 = 9s · parallel max(2, 3, 4) = 4s · ลดลง 5/9 = 55.6% · notebook Lab_02 ใส่ sleep 1s ให้ทั้งสาม tool ได้ sequential 3.0s concurrent 1.0s</p>
 
 <table>
 <tr><th>ข้อดี</th><th>ข้อจำกัด</th></tr>
@@ -664,7 +666,12 @@ print(response.content)</code></pre>
 
 <p>chain คือลำดับ operation ที่ output ของขั้นหนึ่งเป็น input ของขั้นถัดไป ต่างจาก parallel ตรงที่มี dependency ลักษณะ: รันเรียงลำดับ · ขั้นหลังพึ่งผลขั้นก่อน · ลำดับสำคัญ · ส่งผลระหว่างกลางต่อกัน · error ลามต่อได้</p>
 
-<p>ตัวอย่าง: "Can I get a refund for my latest order? My customer ID is U1234." ต้องหา order ID ล่าสุดก่อน แล้วดึงรายละเอียด order แล้วจึงตัดสินสิทธิ์ refund รันพร้อมกันไม่ได้เพราะขั้นหลังต้องใช้ผลขั้นก่อน</p>
+<p>ตัวอย่างในสไลด์หน้า 40: "Can I get a refund for my latest order? My customer ID is U1234." ต้องหา order ID ล่าสุดก่อน แล้วดึงรายละเอียด order แล้วจึงตัดสินสิทธิ์ refund รันพร้อมกันไม่ได้เพราะขั้นหลังต้องใช้ผลขั้นก่อน</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl15-p40.png" alt="Lecture 15 หน้า 40: Chains: Customer Support Example" loading="lazy">
+<figcaption>Lecture 15 หน้า 40 — Chains: Customer Support Example</figcaption>
+</figure>
 
 <p>LangChain Expression Language หรือ LCEL ประกอบ operation เป็น chain ด้วย pipe <code>chain = component_a | component_b | component_c</code> ทุก component เป็น Runnable จึงประกอบและรันแบบเดียวกันได้</p>
 
@@ -677,14 +684,10 @@ print(response.content)</code></pre>
 <tr><td></td><td></td><td>RunnableSequence</td><td>รันหลาย Runnable ตามลำดับ</td></tr>
 </table>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 39–41)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 39, 41)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl15-p39.png" alt="Lecture 15 หน้า 39: Chains" loading="lazy">
 <figcaption>Lecture 15 หน้า 39 — Chains</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl15-p40.png" alt="Lecture 15 หน้า 40: Chains: Customer Support Example" loading="lazy">
-<figcaption>Lecture 15 หน้า 40 — Chains: Customer Support Example</figcaption>
 </figure>
 <figure>
 <img src="../assets/slides/dl15-p41.png" alt="Lecture 15 หน้า 41: Chains: LangChain Expression Language (LCEL)" loading="lazy">
