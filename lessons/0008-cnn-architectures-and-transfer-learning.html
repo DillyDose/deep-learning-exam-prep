@@ -59,6 +59,13 @@
 <tr><td>MobileNet · EfficientNet · ConvNeXt</td><td>ประสิทธิภาพ · scale อย่างมีหลัก · CNN ที่ได้แรงบันดาลใจจาก Transformer</td><td>4</td></tr>
 </table>
 
+<figure class="thumb">
+<img src="../assets/slides/dl8-p02.png" alt="Lecture 8 หน้า 2: Evolution of CNN Architectures: What Problem Did Each Architecture Solve?" loading="lazy">
+<figcaption>Lecture 8 หน้า 2 — Evolution of CNN Architectures: What Problem Did Each Architecture Solve?</figcaption>
+</figure>
+
+<p>ตารางข้างบนมาจากสไลด์หน้า 2 ซึ่งเรียงทีละรุ่นว่าแต่ละรุ่นแก้ปัญหาอะไร ลูกศรลงคือรุ่นถัดไปต่อยอดจากรุ่นก่อน</p>
+
 <p>ImageNet คือ benchmark มาตรฐานของการจำแนกภาพ แข่งช่วงปี 2010–2017 ปี 2012 มีภาพ 1.2 ล้านภาพขนาด 224×224×3 แบ่ง 1,000 class บาง class ต่างกันน้อยมาก เช่นสุนัข 120 สายพันธุ์ ภายในหกปี top-5 error ลดจากเกิน 26% เหลือต่ำกว่า 2.3%</p>
 
 <figure class="thumb">
@@ -72,13 +79,6 @@
 <p>แท่งซ้ายยาวขึ้นทุกรุ่น แท่งขวาสั้นลงทุกรุ่น ข้อสอบชอบจับคู่ตัวเลขสองชุดนี้: AlexNet 8 กับ 15.3%, VGG 16 กับ 7.3%, GoogLeNet 22 กับ 6.67%, ResNet-152 152 กับ 4.49%</p>
 
 <p class="trap">VGGNet เป็นแค่ runner up ปี 2014 ผู้ชนะปีนั้นคือ GoogLeNet</p>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 2)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl8-p02.png" alt="Lecture 8 หน้า 2: Evolution of CNN Architectures: What Problem Did Each Architecture Solve?" loading="lazy">
-<figcaption>Lecture 8 หน้า 2 — Evolution of CNN Architectures: What Problem Did Each Architecture Solve?</figcaption>
-</figure>
-</div></details>
 
 <h3 id="s1-lenet">1.2 LeNet-5 (1998): convolution ใช้ได้จริง</h3>
 
@@ -370,7 +370,7 @@ model.add(Dense(units=1000,activation='softmax'))</code></pre>
 <tr><td>ConvNeXt ปี 2020</td><td>ConvNet ล้วนที่ปรับ ResNet-50 ตามแนวคิด Transformer ทีละขั้น จนชนะ Swin</td></tr>
 </table>
 
-<p class="num">DenseNet: input ของ block 64 channel ทุก layer ให้ output 32 channel · layer 4 รับ concatenation ของ input กับ output layer 1, 2, 3 = 64 + 32 + 32 + 32 = 160 channel</p>
+<p class="num">สมมติ DenseNet: input ของ block 64 channel ทุก layer ให้ output 32 channel · layer 4 รับ concatenation ของ input กับ output layer 1, 2, 3 = 64 + 32 + 32 + 32 = 160 channel</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 17, 19)</summary><div class="gallery">
 <figure>
@@ -474,7 +474,12 @@ model.add(Dense(units=1000,activation='softmax'))</code></pre>
 <tr><td><mark class="src" data-p="23" title="The output layer">output layer</mark></td><td>มักต้องแทนที่ เพราะจำนวน class ไม่ตรงและไม่มีประโยชน์กับงานใหม่</td></tr>
 </table>
 
-<p>รูปบนสไลด์ หน้า 23: DNN ของ task A มี Hidden 1–5 DNN ของ task B นำ Hidden 1–4 มาใช้ Hidden 1–2 ล็อก Hidden 3–4 เทรนได้ ทิ้ง Hidden 5 กับ output เดิม แล้วใส่ output ใหม่</p>
+<figure class="thumb">
+<img src="../assets/slides/dl8-p23.png" alt="Lecture 8 หน้า 23: Transfer Learning Guidelines: input, hidden, output" loading="lazy">
+<figcaption>Lecture 8 หน้า 23 — Transfer Learning Guidelines: input, hidden, output</figcaption>
+</figure>
+
+<p>รูปขวาของสไลด์หน้า 23 ข้างบน: DNN ของ task A มี Hidden 1–5 DNN ของ task B นำ Hidden 1–4 มาใช้ Hidden 1–2 ล็อก Hidden 3–4 เทรนได้ ทิ้ง Hidden 5 กับ output เดิม แล้วใส่ output ใหม่</p>
 
 <p><mark class="src" data-p="24" title="Choose the appropriate levels of tuning based on">เลือกระดับการ tune ที่เหมาะโดยดูจาก</mark> <mark class="src" data-p="24" title="two important factors">สองปัจจัยสำคัญ</mark>: <mark class="src" data-p="24" title="similarity">ความคล้าย</mark> ของ <mark class="src" data-p="24" title="domain">domain</mark> <mark class="src" data-p="24" title="source">ต้นทาง</mark> กับ <mark class="src" data-p="24" title="target">ปลายทาง</mark> และ <mark class="src" data-p="24" title="amount of data">ปริมาณข้อมูล</mark> ว่า <mark class="src" data-p="24" title="small">น้อย</mark> หรือ <mark class="src" data-p="24" title="large">มาก</mark></p>
 
@@ -488,7 +493,12 @@ model.add(Dense(units=1000,activation='softmax'))</code></pre>
 
 <p>ตัวเลขที่ต้องจำบนสไลด์: scenario #2 large + similar ให้ freeze ราว 60%–80% · scenario #3 small + different ให้ freeze ราว 33%–50% · #1 ใช้เป็น feature extractor · #4 fine tune ทั้งโมเดล</p>
 
-<p>สไลด์หน้า 25: <mark class="src" data-p="25" title="Use smaller learning rate when">ใช้ learning rate เล็กลงเมื่อ</mark> <mark class="src" data-p="25" title="fine tuning">fine tuning</mark> เพราะ weight เดิมดีอยู่แล้ว <mark class="src" data-p="25" title="Some strategies to help convergence (if any problem)">กลยุทธ์ช่วยให้ converge ถ้ามีปัญหา</mark>:</p>
+<figure class="thumb">
+<img src="../assets/slides/dl8-p25.png" alt="Lecture 8 หน้า 25: Transfer Learning Guidelines (3): learning rate และลำดับการเทรน" loading="lazy">
+<figcaption>Lecture 8 หน้า 25 — Transfer Learning Guidelines (3): learning rate และลำดับการเทรน</figcaption>
+</figure>
+
+<p>สไลด์หน้า 25 ข้างบน: <mark class="src" data-p="25" title="Use smaller learning rate when">ใช้ learning rate เล็กลงเมื่อ</mark> <mark class="src" data-p="25" title="fine tuning">fine tuning</mark> เพราะ weight เดิมดีอยู่แล้ว <mark class="src" data-p="25" title="Some strategies to help convergence (if any problem)">กลยุทธ์ช่วยให้ converge ถ้ามีปัญหา</mark>:</p>
 
 <table>
 <tr><th>ขั้น</th><th>ทำอะไร</th></tr>
@@ -503,17 +513,6 @@ model.add(Dense(units=1000,activation='softmax'))</code></pre>
 <details class="check"><summary>ภาพเอกซเรย์ปอด 500 ภาพ ใช้โมเดลที่เทรนบน ImageNet ควรทำแบบไหน</summary>
 <p>ข้อมูลน้อย + domain ต่าง คือ scenario #3 fine tune จาก activation ช่วงต้น freeze ราว 33%–50% และใช้ learning rate เล็ก</p>
 </details>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 23, 25)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl8-p23.png" alt="Lecture 8 หน้า 23: Transfer Learning Guidelines: input, hidden, output" loading="lazy">
-<figcaption>Lecture 8 หน้า 23 — Transfer Learning Guidelines: input, hidden, output</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl8-p25.png" alt="Lecture 8 หน้า 25: Transfer Learning Guidelines (3): learning rate และลำดับการเทรน" loading="lazy">
-<figcaption>Lecture 8 หน้า 25 — Transfer Learning Guidelines (3): learning rate และลำดับการเทรน</figcaption>
-</figure>
-</div></details>
 
 <h3 id="s5-dogcat">5.3 ตัวอย่าง Dog-Cat ด้วย VGG16 ใน Keras</h3>
 
@@ -604,7 +603,7 @@ label = decode_predictions(pred)</code></pre>
 <figcaption>Lecture 8 หน้า 28 — Dog-Cat Approach#2: Pretrained model as feature detector</figcaption>
 </figure>
 
-<p>วิธี A เทรนเร็วมาก ราว 1 วินาทีต่อ epoch เพราะเทรนแค่ dense สองชั้นบน feature ที่คำนวณไว้ แต่ augment ไม่ได้ เพราะ feature มาจากภาพเดิมครั้งเดียว วิธี B ช้ากว่าเพราะทุก batch ต้องผ่าน conv base test accuracy ที่อาจารย์รันได้: A 0.974 · B 0.980</p>
+<p>วิธี A เทรนเร็วมาก ราว 1 วินาทีต่อ epoch เพราะเทรนแค่ dense สองชั้นบน feature ที่คำนวณไว้ แต่ augment ไม่ได้ เพราะ feature มาจากภาพเดิมครั้งเดียว วิธี B ช้ากว่าเพราะทุก batch ต้องผ่าน conv base test accuracy ใน notebook Dog_cat_69.ipynb ของอาจารย์ ไม่อยู่บนสไลด์: A 0.974 · B 0.980</p>
 
 <pre><code># instantiate the VGG16 model.
 conv_base = VGG16(weights='imagenet',include_top=False,input_shape=(224,224,3))
@@ -669,7 +668,7 @@ def build_model_feature_extractor2():
 <figcaption>Lecture 8 หน้า 29 — Dog-Cat Approach#3: Fine Tuning</figcaption>
 </figure>
 
-<p>ผลของลูป print: input ถึง block4_pool เป็น False ส่วน block5_conv1, block5_conv2, block5_conv3, block5_pool เป็น True อาจารย์ compile ด้วย Adam(learning_rate=0.00001) เล็กกว่า 0.001 ของ approach #2 ถึง 100 เท่า test accuracy: ไม่มี augmentation 0.972 · มี 0.980</p>
+<p>ผลของลูป print: input ถึง block4_pool เป็น False ส่วน block5_conv1, block5_conv2, block5_conv3, block5_pool เป็น True อาจารย์ compile ด้วย Adam(learning_rate=0.00001) เล็กกว่า 0.001 ของ approach #2 ถึง 100 เท่า test accuracy ใน notebook: ไม่มี augmentation 0.972 · มี 0.980</p>
 
 <pre><code>#instantiate the VGG16 model.
 conv_base = VGG16(weights='imagenet',include_top=False,input_shape=(224,224,3))
@@ -705,6 +704,16 @@ def build_model_fine_tuning2():
 </table>
 
 <p class="num">conv หนึ่งชั้นของ block5: (3·3·512 + 1)·512 = 2,359,808 · สามชั้น 7,079,424 · trainable = 7,079,424 + 6,423,041 = 13,502,465 · non-trainable = 14,714,688 − 7,079,424 = 7,635,264 · total 21,137,729 เท่า approach #2 · ปลด 4 จาก 19 layer ของ conv base คือ freeze ราว 79% ตรงกับ scenario #2 เพราะสุนัขแมวคล้าย ImageNet</p>
+
+<p>ผลทั้งหมดใน notebook เรียงไว้ให้เทียบ เทรนเองจากศูนย์ได้ราว 0.65–0.72 ส่วนทุกแบบที่ยืม VGG16 ได้เกิน 0.97 นี่คือเหตุผลที่ใช้ transfer learning กับ dataset เล็ก</p>
+
+<table class="compact">
+<tr><th>วิธีใน notebook</th><th>test accuracy</th></tr>
+<tr><td>CNN เทรนเองจากศูนย์ ไม่มี augmentation · มี augmentation</td><td>0.652 · 0.715</td></tr>
+<tr><td>Approach #2 feature detector วิธี A · วิธี B</td><td>0.974 · 0.980</td></tr>
+<tr><td>Approach #3 fine tuning ไม่มี augmentation · มี</td><td>0.972 · 0.980</td></tr>
+<tr><td>ViT · Swin ตอน 6</td><td>0.998 · 0.998</td></tr>
+</table>
 
 <p class="trap">include_top=False ตัด head ออก ไม่ได้ freeze อะไร freeze ทำด้วย trainable = False · total parameter ของ approach #2 และ #3 เท่ากัน ต่างแค่ trainable</p>
 
@@ -811,18 +820,19 @@ def build_model_fine_tuning2():
 <p>224/32 = 7 ได้ 7 × 7 = 49 patch · 49² = 2,401 คู่</p>
 </details>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 33, 37)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 33)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl8-p33.png" alt="Lecture 8 หน้า 33: Swin Transformer: Why Modify ViT?" loading="lazy">
 <figcaption>Lecture 8 หน้า 33 — Swin Transformer: Why Modify ViT?</figcaption>
 </figure>
-<figure>
+</div></details>
+
+<figure class="thumb">
 <img src="../assets/slides/dl8-p37.png" alt="Lecture 8 หน้า 37: Architecture Summary: ImageNet-1K accuracy" loading="lazy">
 <figcaption>Lecture 8 หน้า 37 — Architecture Summary: ImageNet-1K accuracy</figcaption>
 </figure>
-</div></details>
 
-<p>สไลด์สรุปท้ายบทแบ่งสองสาย: CNN ปรับทีละขั้นจาก LeNet ถึง ResNet แล้วต่อด้วย Xception, MobileNet, DenseNet, EfficientNet, ConvNeXt · Transformer เริ่มที่ ViT ถามว่า convolution จำเป็นไหม แล้ว Swin พาไปสู่ locality และ hierarchy กราฟ ImageNet-1K บนสไลด์: รุ่นที่เทรนบน ImageNet-1K อยู่ช่วง 78–84% รุ่นที่ pretrain บน ImageNet-22K ขึ้นไป 85–88% และ ConvNeXt ยังแข่งได้</p>
+<p>สไลด์สรุปท้ายบทหน้า 37 ข้างบนแบ่งสองสาย: CNN ปรับทีละขั้นจาก LeNet ถึง ResNet แล้วต่อด้วย Xception, MobileNet, DenseNet, EfficientNet, ConvNeXt · Transformer เริ่มที่ ViT ถามว่า convolution จำเป็นไหม แล้ว Swin พาไปสู่ locality และ hierarchy กราฟ ImageNet-1K บนสไลด์: รุ่นที่เทรนบน ImageNet-1K อยู่ช่วง 78–84% รุ่นที่ pretrain บน ImageNet-22K ขึ้นไป 85–88% และ ConvNeXt ยังแข่งได้</p>
 
 <p class="nextpage">ลองฝึกต่อใน<a href="0008-cnn-architectures-and-transfer-learning-exercises.html">แบบฝึก Lesson 8</a> หรืออ่านต่อ <a href="0009-functional-api-and-object-detection.html">Lesson 9 — Functional API และ Object Detection</a></p>
 

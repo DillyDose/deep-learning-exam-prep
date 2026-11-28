@@ -237,7 +237,7 @@ model = Model(inputs=[input_A, input_B],
 <figcaption>Lecture 9 หน้า 10 — compile, fit, evaluate, predict ของโมเดลสอง output</figcaption>
 </figure>
 
-<p class="num">loss_weights = [0.9, 0.1] · main loss 0.40 aux loss 0.50: total = 0.9 × 0.40 + 0.1 × 0.50 = 0.36 + 0.05 = 0.41 · gradient จาก aux ไหลเข้าเฉพาะ hidden1 และ hidden2</p>
+<p class="num">ใช้ loss_weights = [0.9, 0.1] ตามโค้ด สมมติ main loss 0.40 aux loss 0.50: total = 0.9 × 0.40 + 0.1 × 0.50 = 0.36 + 0.05 = 0.41 · gradient จาก aux ไหลเข้าเฉพาะ hidden1 และ hidden2</p>
 
 <pre><code>model.compile(loss=["mse", "mse"], loss_weights=[0.9, 0.1], optimizer="sgd")
 
@@ -259,18 +259,19 @@ y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])</code></pre>
 
 <p>ตัวอย่างที่รวมทุกอย่างคือทำนาย<mark class="src" data-p="11" title="price">ราคา</mark>บ้าน<mark class="src" data-p="11" title="Input features (examples = 535)">จาก 535 ตัวอย่าง</mark> input มีสามชนิด คือ<mark class="src" data-p="11" title="numeric (bedrooms, number of bathrooms, area of the house),">ตัวเลข: ห้องนอน ห้องน้ำ พื้นที่</mark> <mark class="src" data-p="11" title="categorical (zip code)">categorical: zip code</mark> และ<mark class="src" data-p="11" title="images">ภาพ</mark>สี่ภาพ ได้แก่<mark class="src" data-p="11" title="Bedroom">ห้องนอน</mark> <mark class="src" data-p="11" title="Bathroom">ห้องน้ำ</mark> <mark class="src" data-p="11" title="kitchen">ครัว</mark> และ<mark class="src" data-p="11" title="frontal image of the house">ด้านหน้าบ้าน</mark> โมเดลมีกิ่ง CNN อ่านภาพ กิ่ง Dense อ่านตาราง แล้ว concatenate ก่อนทายราคา วัดผลด้วย<mark class="src" data-p="11" title="Metrics – mean percentage error"> mean percentage error</mark></p>
 
+<figure class="thumb">
+<img src="../assets/slides/dl9-p11.png" alt="Lecture 9 หน้า 11: Housing Price Prediction: ตัวเลข + ภาพ" loading="lazy">
+<figcaption>Lecture 9 หน้า 11 — Housing Price Prediction: ตัวเลข + ภาพ</figcaption>
+</figure>
+
 <details class="check"><summary>compile ด้วย loss="mse" ตัวเดียวและ loss_weights=[0.5, 0.5] main loss 0.2 aux loss 0.6 ได้ total เท่าใด</summary>
 <p>loss เดียวถูกใช้กับทั้งสอง output · 0.5 × 0.2 + 0.5 × 0.6 = 0.4</p>
 </details>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 8, 11)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 8)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl9-p08.png" alt="Lecture 9 หน้า 8: Multi-output Models: genre และ date" loading="lazy">
 <figcaption>Lecture 9 หน้า 8 — Multi-output Models: genre และ date</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl9-p11.png" alt="Lecture 9 หน้า 11: Housing Price Prediction: ตัวเลข + ภาพ" loading="lazy">
-<figcaption>Lecture 9 หน้า 11 — Housing Price Prediction: ตัวเลข + ภาพ</figcaption>
 </figure>
 </div></details>
 
@@ -365,7 +366,17 @@ model.summary()</code></pre>
 
 <p>เทคนิคที่สามถามว่า<mark class="src" data-p="18" title="specific regions">บริเวณไหน</mark>ของ<mark class="src" data-p="18" title="a given image">ภาพที่ให้มา</mark>ทำให้โมเดล<mark class="src" data-p="18" title="final classification decision">ตัดสิน class สุดท้าย</mark>แบบนั้น เช่นโมเดลทายว่าเป็นสุนัขพันธุ์ Saint Bernard แล้ว heatmap สว่างตรงหน้าสุนัข ไม่ใช่พื้นหรือชามข้างหลัง แปลว่าโมเดลดูถูกที่</p>
 
+<figure class="thumb">
+<img src="../assets/slides/dl9-p18.png" alt="Lecture 9 หน้า 18: Heatmaps of Class Activation: Saint Bernard" loading="lazy">
+<figcaption>Lecture 9 หน้า 18 — Heatmaps of Class Activation: Saint Bernard</figcaption>
+</figure>
+
 <p>Grad-CAM เป็นวิธีหนึ่งในกลุ่ม class activation map (CAM) คือสร้าง heatmap สองมิติที่บอกว่าแต่ละตำแหน่งในภาพสำคัญต่อ class หนึ่งแค่ไหน จึงใช้บอกตำแหน่งวัตถุได้ด้วย และเป็นเทคนิค post-training คือใช้หลังเทรนเสร็จ ไม่แก้ parameter ใดๆ heatmap ขึ้นกับ class ที่ถาม ภาพที่มีทั้งหมาและแมว ถ้าถาม 'Cat' จะสว่างที่แมว ถ้าถาม 'Dog' จะสว่างที่หมา</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl9-p19.png" alt="Lecture 9 หน้า 19: Grad-CAM: class activation map, หมากับแมว" loading="lazy">
+<figcaption>Lecture 9 หน้า 19 — Grad-CAM: class activation map, หมากับแมว</figcaption>
+</figure>
 
 <table>
 <tr><th>ขั้น</th><th>ทำอะไร</th></tr>
@@ -391,6 +402,11 @@ model.summary()</code></pre>
 
 <p>สูตรนี้คล้าย CAM แบบเดิม \(\text{CAM} = \sum_k w_k A^k\) ต่างกันตรงที่ Grad-CAM หาน้ำหนักจาก gradient และผ่าน ReLU เพื่อเก็บเฉพาะส่วนที่ช่วยเพิ่มคะแนน feature map มักเล็กกว่าภาพ จึงต้อง up-sample heatmap ให้ขนาดเท่าภาพก่อนนำไปซ้อน</p>
 
+<figure class="thumb">
+<img src="../assets/slides/dl9-p22.png" alt="Lecture 9 หน้า 22: Grad-CAM: up-sample heatmap" loading="lazy">
+<figcaption>Lecture 9 หน้า 22 — Grad-CAM: up-sample heatmap</figcaption>
+</figure>
+
 <pre><code># Generate class activation heatmap
 heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></pre>
 
@@ -404,22 +420,10 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 <p>(0.6 + 0.2 + 0.0 − 0.4)/4 = 0.4/4 = 0.1</p>
 </details>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 18–20, 22)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl9-p18.png" alt="Lecture 9 หน้า 18: Heatmaps of Class Activation: Saint Bernard" loading="lazy">
-<figcaption>Lecture 9 หน้า 18 — Heatmaps of Class Activation: Saint Bernard</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl9-p19.png" alt="Lecture 9 หน้า 19: Grad-CAM: class activation map, หมากับแมว" loading="lazy">
-<figcaption>Lecture 9 หน้า 19 — Grad-CAM: class activation map, หมากับแมว</figcaption>
-</figure>
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 20)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl9-p20.png" alt="Lecture 9 หน้า 20: Grad-CAM Steps: สามขั้นแรก" loading="lazy">
 <figcaption>Lecture 9 หน้า 20 — Grad-CAM Steps: สามขั้นแรก</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl9-p22.png" alt="Lecture 9 หน้า 22: Grad-CAM: up-sample heatmap" loading="lazy">
-<figcaption>Lecture 9 หน้า 22 — Grad-CAM: up-sample heatmap</figcaption>
 </figure>
 </div></details>
 
@@ -438,6 +442,11 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <p>ตัวอย่างงานจริงคือ<mark class="src" data-p="24" title="self-driving technology">เทคโนโลยีรถขับเอง</mark> ซึ่งต้อง<mark class="src" data-p="24" title="identifying">ระบุ</mark><mark class="src" data-p="24" title="vehicles">รถ</mark> <mark class="src" data-p="24" title="pedestrians">คนเดินถนน</mark> <mark class="src" data-p="24" title="roads">ถนน</mark> และ<mark class="src" data-p="24" title="obstacles">สิ่งกีดขวาง</mark>จากภาพกล้องหน้ารถเพื่อวางเส้นทาง ตัวอย่างนี้<mark class="src" data-p="24" title="Autonomous driving application (suppose 80 classes)">สมมติว่ามี 80 class</mark> ซึ่งจะกลายเป็น K ของ YOLO ในตอน 6</p>
 
+<figure class="thumb">
+<img src="../assets/slides/dl9-p24.png" alt="Lecture 9 หน้า 24: Motivation: Self-driving Cars" loading="lazy">
+<figcaption>Lecture 9 หน้า 24 — Motivation: Self-driving Cars</figcaption>
+</figure>
+
 <p>Object detection คือการ<mark class="src" data-p="25" title="localizing">หาตำแหน่ง</mark><mark class="src" data-p="25" title="one or more objects">วัตถุหนึ่งชิ้นหรือมากกว่า</mark>ในภาพ และ<mark class="src" data-p="25" title="classifying">จำแนก</mark>ว่าแต่ละชิ้นคืออะไร ส่วน localization ทายกรอบ \((b_x, b_y, b_w, b_h)\) ส่วน classification ทาย class คำตอบของวัตถุหนึ่งชิ้นจึงเป็น vector นี้</p>
 
 <div class="eq">\[y = [\,p_c,\ b_x,\ b_y,\ b_h,\ b_w,\ c_1,\ \ldots,\ c_K\,] \quad \text{ยาว } 5 + K\]</div>
@@ -454,14 +463,10 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <p class="trap">semantic segmentation ไม่แยกวัตถุ class เดียวกัน instance segmentation แยก · target ยาว 5 + K ไม่ใช่ 4 + K เพราะมี p_c</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 23–24, 26)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 23, 26)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl9-p23.png" alt="Lecture 9 หน้า 23: Applications of Computer Vision: สี่งาน" loading="lazy">
 <figcaption>Lecture 9 หน้า 23 — Applications of Computer Vision: สี่งาน</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl9-p24.png" alt="Lecture 9 หน้า 24: Motivation: Self-driving Cars" loading="lazy">
-<figcaption>Lecture 9 หน้า 24 — Motivation: Self-driving Cars</figcaption>
 </figure>
 <figure>
 <img src="../assets/slides/dl9-p26.png" alt="Lecture 9 หน้า 26: Object Detection Challenges" loading="lazy">
@@ -521,7 +526,7 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 <div class="eq">\[\text{mAP} = \frac{1}{C}\sum_{c=1}^{C} AP_c\]</div>
 <p class="say">C คือจำนวน class เฉลี่ย AP ของทุก class</p>
 
-<p class="num">3 class AP = 0.80, 0.60, 0.70: mAP = 2.10/3 = 0.70 · การทายนับเป็น true positive เมื่อ class ถูกและ IoU กับ ground truth ถึงเกณฑ์</p>
+<p class="num">สมมติ 3 class AP = 0.80, 0.60, 0.70: mAP = 2.10/3 = 0.70 · การทายนับเป็น true positive เมื่อ class ถูกและ IoU กับ ground truth ถึงเกณฑ์</p>
 
 <details class="check"><summary>กรอบ A จาก (0,0) ถึง (4,2) กรอบ B จาก (2,0) ถึง (6,2) IoU เท่าใด</summary>
 <p>A = 8 · B = 8 · ซ้อน x 2 ถึง 4 y 0 ถึง 2 ได้ 4 · union 8 + 8 − 4 = 12 · IoU = 4/12 ≈ 0.33</p>
@@ -709,7 +714,7 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 <div class="eq">\[\text{confidence} = p_c \times \text{class score}\]</div>
 <p class="say"><mark class="src" data-p="43" title="Confident score = P(containing an object) x class score">ความมั่นใจสุดท้าย = ความน่าจะเป็นที่มีวัตถุ × ความน่าจะเป็นว่าเป็น class นั้น</mark></p>
 
-<p class="num">p_c = 0.9 class score car 0.8 pedestrian 0.1: car = 0.72 · pedestrian = 0.09 · p_c ต่ำทำให้ confidence ต่ำทุก class แม้ class score สูง</p>
+<p class="num">สมมติ p_c = 0.9 class score car 0.8 pedestrian 0.1: car = 0.72 · pedestrian = 0.09 · p_c ต่ำทำให้ confidence ต่ำทุก class แม้ class score สูง</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p44.png" alt="Lecture 9 หน้า 44: Non-max Suppression: ตัวอย่างบนภาพถนน" loading="lazy">

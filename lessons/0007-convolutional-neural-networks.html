@@ -50,20 +50,19 @@
 
 <p><mark class="src" data-p="2" title="Computer vision">Computer vision</mark> คือสาขาที่ทำให้เครื่อง <mark class="src" data-p="2" title="understand visual input">เข้าใจข้อมูลภาพ</mark> เช่นภาพและวิดีโอ แบบที่มนุษย์เข้าใจ สไลด์เทียบ <mark class="src" data-p="2" title="Human Vision and Computer Vision System">ระบบการมองของมนุษย์กับของคอมพิวเตอร์</mark> ซึ่งให้ผลเดียวกัน คือ "bowl, oranges, bananas, lemons, peaches" <mark class="src" data-p="2" title="Applications of Computer Vision">งานประยุกต์ของ computer vision</mark> ได้แก่ image classification และ image captioning, object detection และ semantic segmentation (<a href="0009-functional-api-and-object-detection.html">Lesson 9</a>), ระบบอัตโนมัติ (รถ หุ่นยนต์) และการสร้างงานศิลปะใหม่</p>
 
-<p>ภาพ grayscale ขนาด 28×28 คือ matrix 28 แถว 28 คอลัมน์ แต่ละช่องเก็บความสว่าง (0 = ดำ, 255 = ขาว) ภาพสีเก็บ 3 matrix ซ้อนกัน (R, G, B) จึงมี shape (สูง, กว้าง, 3) มิติที่สามเรียกว่า channel หรือ depth pixel ที่มีค่า (R, G, B) = (11, 102, 35) คือสี forest green สไลด์แสดง <mark class="src" data-p="3" title="Color Image Grey Scale Image">ภาพสีกับภาพ grayscale</mark> ในรูปตารางตัวเลขแบบนี้</p>
-
-<p><mark class="src" data-p="3" title="Deep learning has been applied in various fields of computer vision">Deep learning ถูกใช้ในงาน computer vision หลายด้าน</mark> วิธีแรกที่ทำได้ด้วยความรู้เดิมคือ <mark class="src" data-p="3" title="Image Classification using Densely Connected Neural Networks">จำแนกภาพด้วย dense network</mark>: flatten ภาพเป็น vector แล้วป้อนเข้า dense layer เช่นจำแนกว่าภาพเป็น <mark class="src" data-p="3" title="Motorcycle">มอเตอร์ไซค์</mark>หรือไม่ (output เดียวผ่าน sigmoid) จำนวน input feature = สูง × กว้าง × channel</p>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 2–3)</summary><div class="gallery">
-<figure>
+<figure class="thumb">
 <img src="../assets/slides/dl7-p02.png" alt="Lecture7 หน้า 2: The Area of Computer Vision" loading="lazy">
 <figcaption>Lecture7 หน้า 2 — The Area of Computer Vision</figcaption>
 </figure>
-<figure>
+
+<p>ภาพ grayscale ขนาด 28×28 คือ matrix 28 แถว 28 คอลัมน์ แต่ละช่องเก็บความสว่าง (0 = ดำ, 255 = ขาว) ภาพสีเก็บ 3 matrix ซ้อนกัน (R, G, B) จึงมี shape (สูง, กว้าง, 3) มิติที่สามเรียกว่า channel หรือ depth pixel ที่มีค่า (R, G, B) = (11, 102, 35) คือสี forest green สไลด์หน้า 3 ข้างล่างแสดง <mark class="src" data-p="3" title="Color Image Grey Scale Image">ภาพสีกับภาพ grayscale</mark> ในรูปตารางตัวเลขแบบนี้ วงกลมสี่วงมุมขวาล่างคือ R 11, G 102, B 35 ที่ผสมกันเป็น forest green</p>
+
+<figure class="thumb">
 <img src="../assets/slides/dl7-p03.png" alt="Lecture7 หน้า 3: Deep Learning for Computer Vision: จำแนกภาพด้วย dense network" loading="lazy">
 <figcaption>Lecture7 หน้า 3 — Deep Learning for Computer Vision: จำแนกภาพด้วย dense network</figcaption>
 </figure>
-</div></details>
+
+<p><mark class="src" data-p="3" title="Deep learning has been applied in various fields of computer vision">Deep learning ถูกใช้ในงาน computer vision หลายด้าน</mark> วิธีแรกที่ทำได้ด้วยความรู้เดิมคือ <mark class="src" data-p="3" title="Image Classification using Densely Connected Neural Networks">จำแนกภาพด้วย dense network</mark>: flatten ภาพเป็น vector แล้วป้อนเข้า dense layer เช่นจำแนกว่าภาพเป็น <mark class="src" data-p="3" title="Motorcycle">มอเตอร์ไซค์</mark>หรือไม่ (output เดียวผ่าน sigmoid) จำนวน input feature = สูง × กว้าง × channel</p>
 
 <h3 id="s1-dense">1.2 สองปัญหาของ dense network กับภาพ</h3>
 
@@ -161,14 +160,14 @@
 
 <p>feature map "ขยายขอบ" ให้เด่น: แถบ 240 ตรงกลางคือเส้นแนวตั้งที่แยกฝั่งสว่างกับฝั่งมืด</p>
 
-<p>filter แบบอื่นใช้ตรวจ feature ชนิดอื่นได้ เช่น blur, sharpen หรือขอบแนวทแยง (สไลด์อ้างตาราง kernel ใน Wikipedia)</p>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 9)</summary><div class="gallery">
-<figure>
+<figure class="thumb">
 <img src="../assets/slides/dl7-p09.png" alt="Lecture7 หน้า 9: Why is This Doing Edge Detection? (2) horizontal edge" loading="lazy">
 <figcaption>Lecture7 หน้า 9 — Why is This Doing Edge Detection? (2) horizontal edge</figcaption>
 </figure>
-</div></details>
+
+<p>หน้า 9 ข้างบนคือแถวที่สองของตาราง ใช้ filter แนวนอน ภาพมีสองมุมสว่าง ขอบจึงมีทั้งแนวนอนและแนวตั้ง แถว 240, 80, −80, −240 คือค่าที่คิดไว้ในกล่องลองตัวเลข</p>
+
+<p>filter แบบอื่นใช้ตรวจ feature ชนิดอื่นได้ เช่น blur, sharpen หรือขอบแนวทแยง (สไลด์อ้างตาราง kernel ใน Wikipedia)</p>
 
 <h3 id="s2-filter">2.3 filter คือ weight ที่เรียนได้</h3>
 
@@ -195,18 +194,16 @@
 <h3 id="s3-problem">3.1 ปัญหาของ convolution พื้นฐาน</h3>
 
 <p><mark class="src" data-p="11" title="Two downside of basic convolutional">ข้อเสียสองข้อของ convolution พื้นฐาน</mark></p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p11.png" alt="Lecture7 หน้า 11: Convolution Operator Problems" loading="lazy">
+<figcaption>Lecture7 หน้า 11 — Convolution Operator Problems</figcaption>
+</figure>
 <table>
 <tr><th>ข้อเสีย</th><th>ตัวอย่าง</th></tr>
 <tr><td><mark class="src" data-p="11" title="Image shrink down">ภาพหดทุกครั้ง</mark></td><td>ภาพ 5×5 กับ filter 3×3 ได้ 3×3 · ภาพ 32×32 ผ่าน filter 3×3 ซ้ำ ด้านลดครั้งละ 2 เหลือ 2×2 หลัง 15 layer</td></tr>
 <tr><td><mark class="src" data-p="11" title="Throw away a lot of information from edge">ทิ้งข้อมูลที่ขอบไปมาก</mark></td><td>pixel มุมถูกหน้าต่างคลุม 1 ครั้ง pixel กลางภาพ 5×5 ถูกคลุม 9 ครั้ง</td></tr>
 </table>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 11)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl7-p11.png" alt="Lecture7 หน้า 11: Convolution Operator Problems" loading="lazy">
-<figcaption>Lecture7 หน้า 11 — Convolution Operator Problems</figcaption>
-</figure>
-</div></details>
 
 <h3 id="s3-pad">3.2 Padding</h3>
 
@@ -388,7 +385,21 @@
 
 <h3 id="s5-summary">5.3 ประกอบเป็น CNN: ตาราง parameter</h3>
 
-<p>หน้า 17 ต่อ convolution สองชั้นเข้ากับ dense layer โดยยังไม่มี pooling ภาพ 32×32×3 ผ่าน f = 3, 10 filter ได้ 30×30×10 แล้วผ่าน f = 5, 20 filter, s = 2 ได้ ⌊(30 − 5)/2⌋ + 1 = ⌊12.5⌋ + 1 = 13 คือ 13×13×20 flatten ได้ 3,380 ค่า หน้า 20 เพิ่ม max pooling (f = 2, s = 2) หลัง convolution แต่ละชั้น และนับ convolution + pooling เป็น 1 layer (Layer 1, Layer 2) เพราะ pooling ไม่มี parameter dense layer จึงเริ่มที่ Layer 3</p>
+<p>ตัวอย่างนี้ประกอบ CNN ทั้งตัวสองรอบ รอบแรกไม่มี pooling รอบสองมี pooling แล้วเทียบว่า pooling ช่วยลด parameter ได้แค่ไหน ใช้กฎแค่สามข้อซ้ำทุกชั้น คือขนาดจากสูตร ⌊(n + 2p − f)/s⌋ + 1 · channel หลัง conv เท่าจำนวน filter ส่วน pooling คง channel เดิม · parameter ตามสูตรของ conv, pooling และ dense</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p17.png" alt="Lecture7 หน้า 17: Put Together: Convolution &amp; Densely Connected Layer (ยังไม่มี pooling)" loading="lazy">
+<figcaption>Lecture7 หน้า 17 — Put Together: Convolution &amp; Densely Connected Layer (ยังไม่มี pooling)</figcaption>
+</figure>
+
+<p>รอบแรกตามหน้า 17 ข้างบน ต่อ convolution สองชั้นเข้ากับ dense layer โดยยังไม่มี pooling ภาพ 32×32×3 ผ่าน f = 3, 10 filter ได้ 30×30×10 แล้วผ่าน f = 5, 20 filter, s = 2 ได้ ⌊(30 − 5)/2⌋ + 1 = ⌊12.5⌋ + 1 = 13 คือ 13×13×20 flatten ได้ 3,380 ค่า</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl7-p20.png" alt="Lecture7 หน้า 20: Convolution Neural Network: เพิ่ม pooling หลัง conv แต่ละชั้น" loading="lazy">
+<figcaption>Lecture7 หน้า 20 — Convolution Neural Network: เพิ่ม pooling หลัง conv แต่ละชั้น</figcaption>
+</figure>
+
+<p>รอบสองตามหน้า 20 ข้างบน เพิ่ม max pooling f = 2, s = 2 หลัง convolution แต่ละชั้น กล่องสีส้มในรูปคือ pooling สไลด์นับ convolution + pooling เป็น 1 layer คือ Layer 1, Layer 2 เพราะ pooling ไม่มี parameter dense layer จึงเริ่มที่ Layer 3</p>
 
 <figure class="viz"><img src="../assets/viz/l7-shapes.svg" alt="ขนาดและ parameter ทุกชั้นของตารางหน้า 21"></figure>
 <p>ไล่ทีละแถว: ขนาดจาก ⌊(n + 2p − f)/s⌋ + 1 → channel = จำนวน filter (pooling คง channel) → parameter ของ conv = (f·f·n_C + 1)·n_C', ของ pooling = 0, ของ dense = n_in·n_out + n_out</p>
@@ -420,17 +431,6 @@
 <details class="check"><summary>ภาพ 28×28×1 → Conv 6 filter f=5 → MaxPool 2 → Conv 16 filter f=5 → MaxPool 2 → Flatten ได้กี่ค่า และ conv ชั้นที่สองมี parameter เท่าใด</summary>
 <p>28 → 24 → 12 → 8 → 4 จึง flatten ได้ 4 × 4 × 16 = 256 · conv ชั้นสองมี (5 · 5 · 6 + 1) × 16 = 151 × 16 = 2,416</p>
 </details>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 17, 20)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl7-p17.png" alt="Lecture7 หน้า 17: Put Together: Convolution &amp; Densely Connected Layer (ยังไม่มี pooling)" loading="lazy">
-<figcaption>Lecture7 หน้า 17 — Put Together: Convolution &amp; Densely Connected Layer (ยังไม่มี pooling)</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl7-p20.png" alt="Lecture7 หน้า 20: Convolution Neural Network: เพิ่ม pooling หลัง conv แต่ละชั้น" loading="lazy">
-<figcaption>Lecture7 หน้า 20 — Convolution Neural Network: เพิ่ม pooling หลัง conv แต่ละชั้น</figcaption>
-</figure>
-</div></details>
 
 <!-- ===================================================== -->
 <h2 id="s6">6. ออกแบบ เขียนด้วย Keras และ data augmentation</h2>
