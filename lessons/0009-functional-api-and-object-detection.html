@@ -22,7 +22,7 @@
 <h1>Functional API, การมองเข้าไปใน ConvNet และ Object Detection</h1>
 <p class="readmeta">อ่านประมาณ 25 นาที · ข้อความ<mark class="src" title="highlighted slide text">ไฮไลต์</mark>คือคำแปลของถ้อยคำที่อาจารย์ทำสีบนสไลด์ ชี้เมาส์หรือแตะค้างเพื่อดูภาษาอังกฤษต้นฉบับ · รูปสไลด์กดเพื่อขยาย</p>
 
-<p>บทนี้มีสามส่วนที่ต่อกัน ส่วนแรกคือ Functional API วิธีเขียน Keras ที่มีหลาย input หลาย output หรือแตกกิ่ง ซึ่งมีโค้ดเติมคำในข้อสอบ ส่วนที่สองคือการดูว่า CNN เรียนอะไร ด้วย feature map, filter และ Grad-CAM ส่วนที่สามคือ object detection ตั้งแต่ IoU, NMS, R-CNN จนถึง YOLO object detector คือโมเดลสอง output คือ class กับตำแหน่ง จึงต้องเขียนด้วย Functional API</p>
+<p>บทนี้มีสามเรื่องที่ต่อกัน เรื่องแรกคือ Functional API วิธีเขียน Keras เมื่อโมเดลไม่ได้เรียงเป็นเส้นตรง เช่นมีหลาย input หลาย output หรือแตกกิ่ง ข้อสอบมีโค้ดเติมคำเรื่องนี้ เรื่องที่สองคือการเปิดดูว่า CNN เรียนอะไรไป ด้วย feature map, filter และ Grad-CAM เรื่องที่สามคือ object detection ซึ่งต้องตอบทั้ง "เป็นอะไร" และ "อยู่ตรงไหน" จึงเป็นโมเดลสอง output ที่ต้องเขียนด้วย Functional API จากเรื่องแรก</p>
 
 <table class="map">
 <tr><th>คำถาม</th><th>คำตอบสั้น</th><th>อ่านที่</th></tr>
@@ -49,14 +49,14 @@
 
 <p class="pic">Sequential เหมือนสายพานโรงงานเส้นเดียว ของเข้าทางหนึ่ง ออกทางหนึ่ง Functional เหมือนผังท่อน้ำ ทุกจุดต่อมีชื่อ แยกท่อ รวมท่อ หรือมีทางออกหลายทางก็ได้</p>
 
-<p>Sequential API มี 1 input และ 1 output เท่านั้น Functional API ให้ <mark class="src" data-p="1" title="more flexibility">ความยืดหยุ่นมากกว่า</mark> รองรับหลาย input หลาย output แตกกิ่ง และ layer ที่ใช้ร่วมกัน มีสองขั้น: <mark class="src" data-p="1" title="Creating instances of layers">สร้าง instance ของ layer</mark> แล้วเชื่อมกันเป็นคู่ โดยเรียก layer เหมือนฟังก์ชันบน tensor และ <mark class="src" data-p="1" title="Defining a Model">กำหนด Model</mark> โดยระบุ <mark class="src" data-p="1" title="input">input</mark> และ <mark class="src" data-p="1" title="output">output</mark></p>
+<p>Sequential API ใช้ได้เมื่อโมเดลมี 1 input, 1 output และ layer เรียงต่อกันเป็นเส้นเดียว ถ้าต้องการ<mark class="src" data-p="1" title="more flexibility">ความยืดหยุ่นมากกว่า</mark> เช่นหลาย input หลาย output แตกกิ่ง หรือใช้ layer ร่วมกัน ต้องใช้ Functional API ซึ่งเขียนสองขั้น ขั้นแรก<mark class="src" data-p="1" title="Creating instances of layers">สร้าง instance ของ layer</mark> แล้วเรียกมันเหมือนฟังก์ชันกับ tensor เพื่อต่อ layer เข้าด้วยกันทีละคู่ ขั้นที่สอง<mark class="src" data-p="1" title="Defining a Model">กำหนด Model</mark> โดยบอกว่า tensor ไหนคือ <mark class="src" data-p="1" title="input">input</mark> และ tensor ไหนคือ <mark class="src" data-p="1" title="output">output</mark></p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p01.png" alt="Lecture 9 หน้า 1: Functional API: Sequential เทียบกับ functional" loading="lazy">
 <figcaption>Lecture 9 หน้า 1 — Functional API: Sequential เทียบกับ functional</figcaption>
 </figure>
 
-<p>สองโมเดลบนสไลด์เหมือนกันทุกประการ ทั้งคู่มี 64·32 + 32 = 2,080, 32·32 + 32 = 1,056 และ 32·10 + 10 = 330 รวม 3,466 parameter ต่างแค่วิธีเขียน</p>
+<p>โค้ดข้างล่างสร้างโมเดลเดียวกันสองแบบ ทั้งคู่มี parameter 64·32 + 32 = 2,080, 32·32 + 32 = 1,056 และ 32·10 + 10 = 330 รวม 3,466 ตัว ต่างกันแค่วิธีเขียน</p>
 
 <pre><code>from keras.models import Sequential, Model
 from keras import layers
@@ -81,7 +81,7 @@ model.summary()</code></pre>
 <tr><td><code>model = Model(input_tensor, output_tensor)</code></td><td>Keras ไล่ย้อนจาก output หา layer ทุกตัวระหว่างทาง</td></tr>
 </table>
 
-<p>สถาปัตยกรรมใหม่หลายตัวเป็น <mark class="src" data-p="4" title="directed acyclic graphs.">directed acyclic graph</mark> คือกราฟมีทิศและไม่มีวงวน ตัวอย่างจาก Lesson 8: inception module แตก 4 กิ่งแล้ว concatenate · residual block ส่ง input ข้ามไปบวก output ทั้งคู่เขียนด้วย Sequential ไม่ได้ เพราะ tensor หนึ่งตัวถูกใช้มากกว่าหนึ่งครั้ง</p>
+<p>เหตุที่ต้องมีวิธีเขียนแบบนี้ คือสถาปัตยกรรมใหม่หลายตัวเป็น <mark class="src" data-p="4" title="directed acyclic graphs.">directed acyclic graph</mark> คือกราฟที่มีทิศทางและไม่วนกลับ ตัวอย่างจาก Lesson 8 คือ inception module ที่แตก 4 กิ่งแล้วนำมาต่อกัน และ residual block ที่ส่ง input ข้ามไปบวกกับ output ทั้งสองแบบเขียนด้วย Sequential ไม่ได้ เพราะ tensor ตัวเดียวถูกใช้มากกว่าหนึ่งที่</p>
 
 <p class="trap">Sequential ไม่ได้ "เขียนโมเดลลึกไม่ได้" ข้อจำกัดคือ 1 input 1 output และไม่มีกิ่ง · ใน <code>Dense(32)(x)</code> วงเล็บที่สองคือ tensor ที่ป้อน ไม่ใช่ argument ของ layer</p>
 
@@ -94,17 +94,17 @@ model.summary()</code></pre>
 
 <h3 id="s1-multi">1.2 หลาย input และ Wide &amp; Deep</h3>
 
-<p>งานบางอย่างต้องการ <mark class="src" data-p="2" title="multi-inputs">หลาย input</mark> เช่นทำนายราคาจาก metadata ผ่าน Dense, ข้อความผ่าน RNN และรูปผ่าน ConvNet แล้วรวมกัน แม่นกว่าการทำโมเดลแยก เพราะเห็นข้อมูลทุกแหล่งพร้อมกัน</p>
+<p>บางงานมีข้อมูลหลายชนิด เช่นทำนายราคาสินค้าจากข้อมูลตาราง (metadata) ข้อความคำอธิบาย และรูป ข้อมูลแต่ละชนิดเหมาะกับ layer ต่างกัน ตารางใช้ Dense ข้อความใช้ RNN รูปใช้ ConvNet แล้วนำผลมารวมกัน ได้โมเดลที่มี<mark class="src" data-p="2" title="multi-inputs">หลาย input</mark> ซึ่งแม่นกว่าการแยกเป็นหลายโมเดล เพราะโมเดลเดียวเห็นข้อมูลทุกแหล่งพร้อมกัน</p>
 
 <figure class="viz"><img src="../assets/viz/l9-wide-deep.svg" alt="Wide and Deep สอง input และ auxiliary output"></figure>
-<p>input_A วิ่งตรงไป concat คือ wide path ส่วน input_B ผ่าน hidden สองชั้นคือ deep path หลัง concat ยาว 5 + 30 = 35 ค่า กล่องขวาล่างคือ auxiliary output ของตอน 2.2</p>
+<p>ในรูป input_A วิ่งตรงไปที่ concat เรียกว่าทาง wide ส่วน input_B ผ่าน hidden สองชั้นเรียกว่าทาง deep ทาง wide ส่งความสัมพันธ์ง่ายๆ ไปถึง output ตรงๆ ทาง deep เรียน pattern ที่ซับซ้อน หลัง concat ได้ 5 + 30 = 35 ค่า กล่องขวาล่างคือ auxiliary output ซึ่งอธิบายในตอน 2.2</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p05.png" alt="Lecture 9 หน้า 5: Wide and Deep Neural Network: California housing input เดียว" loading="lazy">
 <figcaption>Lecture 9 หน้า 5 — Wide and Deep Neural Network: California housing input เดียว</figcaption>
 </figure>
 
-<p>แบบ input เดียวบนสไลด์: input 8 feature เข้า deep path และ concat ตรงๆ ด้วย ได้ 8·30 + 30 = 270, 30·30 + 30 = 930 และ concat 38 ค่าเข้า Dense(1) ได้ 39 รวม 1,239</p>
+<p>เริ่มจากแบบ input เดียวก่อน ข้อมูลบ้าน California มี 8 feature ทั้ง 8 ตัวเข้าทาง deep และวิ่งตรงไป concat ด้วย parameter คือ 8·30 + 30 = 270, 30·30 + 30 = 930 และ concat ได้ 38 ค่าเข้า Dense(1) อีก 39 รวม 1,239</p>
 
 <pre><code>from keras.layers import Input, Dense, concatenate
 from keras import Model
@@ -121,7 +121,7 @@ model = Model(inputs=[input], outputs=[output])</code></pre>
 <figcaption>Lecture 9 หน้า 3 — สอง input: wide path 5 feature, deep path 6 feature</figcaption>
 </figure>
 
-<p>แบบสอง input ส่ง feature 0–4 ทาง wide และอีก 6 ตัวทาง deep ตอน fit ต้องส่งข้อมูลเป็น list ตามลำดับ inputs คือ <code>model.fit([X_train_A, X_train_B], y_train)</code></p>
+<p>ถ้าอยากให้สองทางเห็น feature ต่างกัน ให้แยกเป็นสอง input เช่นส่ง feature 0–4 ทาง wide และอีก 6 ตัวทาง deep ตอน fit ต้องส่งข้อมูลเป็น list เรียงตามลำดับใน inputs คือ <code>model.fit([X_train_A, X_train_B], y_train)</code></p>
 
 <pre><code>input_A = Input(shape=[5])
 input_B = Input(shape=[6])
@@ -148,14 +148,16 @@ model = Model(inputs=[input_A, input_B], outputs=[output])</code></pre>
 
 <h3 id="s1-share">1.3 ใช้ input ร่วมกัน: โค้ดเว้นช่อง</h3>
 
-<p>หลาย layer <mark class="src" data-p="6" title="share">ใช้ร่วมกัน</mark>ซึ่ง output ของ layer เดียวได้ เช่นมี feature extractor สองแบบจาก input เดียว ตัวอย่างคือภาพ <mark class="src" data-p="6" title="64 x 64 pixels">64×64 pixel</mark> เข้าสอง convolution พร้อมกัน: <mark class="src" data-p="6" title="f = 4x4, # f = 32">f = 4×4, #f = 32</mark> จับรายละเอียด และ <mark class="src" data-p="6" title="f = 8x8, # f = 16">f = 8×8, #f = 16</mark> จับโครงกว้าง</p>
+<p>บางครั้งอยากให้ layer หลายตัว<mark class="src" data-p="6" title="share">ใช้ร่วมกัน</mark>ซึ่ง output ของ layer เดียว เช่นมี feature extractor สองแบบอ่านจาก input เดียวกัน ตัวอย่างคือภาพ <mark class="src" data-p="6" title="64 x 64 pixels">64×64 pixel</mark> ที่เข้าสอง convolution พร้อมกัน กิ่งแรก <mark class="src" data-p="6" title="f = 4x4, # f = 32">f = 4×4, #f = 32</mark> ใช้ filter เล็กจับรายละเอียด กิ่งที่สอง <mark class="src" data-p="6" title="f = 8x8, # f = 16">f = 8×8, #f = 16</mark> ใช้ filter ใหญ่จับโครงกว้าง แล้วนำผลมารวมกัน</p>
+
+<p class="pic">ให้คนสองคนดูรูปเดียวกัน คนหนึ่งใช้แว่นขยายดูรายละเอียด อีกคนยืนไกลดูภาพรวม แล้วเอาความเห็นมารวมกัน</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p07.png" alt="Lecture 9 หน้า 7: โค้ดเว้นช่อง: สอง feature extractor จาก input เดียว" loading="lazy">
 <figcaption>Lecture 9 หน้า 7 — โค้ดเว้นช่อง: สอง feature extractor จาก input เดียว</figcaption>
 </figure>
 
-<p>หน้า 7 คือรูปแบบข้อสอบเติมโค้ด ป้ายบนกราฟซ้ำว่า <mark class="src" data-p="7" title="f = 4x4, # f = 32">f = 4×4, #f = 32</mark> และ <mark class="src" data-p="7" title="f = 8x8, # f = 16">f = 8×8, #f = 16</mark> โค้ดที่เติมครบอยู่ข้างล่าง ช่องที่ต้องเติมคือ 32, input, conv1, 16, 8, input, conv2, Dense, merge, activation, input, output</p>
+<p>โจทย์แบบนี้ออกสอบเป็นโค้ดเว้นช่อง ให้ดูกราฟแล้วเติมโค้ด ช่องที่ต้องเติมคือ 32, input, conv1, 16, 8, input, conv2, Dense, merge, activation, input, output โค้ดที่เติมครบแล้วอยู่ข้างล่าง</p>
 
 <pre><code>from keras.utils import plot_model
 from keras import Model
@@ -200,20 +202,20 @@ model = Model(inputs=input, outputs=output)</code></pre>
 
 <h3 id="s2-multi">2.1 ทำนายหลาย target</h3>
 
-<p>บางงานต้องทำนาย <mark class="src" data-p="8" title="multiple target">หลาย target</mark> จาก input เดียว เช่นจากข้อความนิยาย ทำนาย genre ซึ่งเป็น classification และปีที่เขียนซึ่งเป็น regression เทรนสองโมเดลแยกก็ได้ แต่ target เหล่านี้ไม่อิสระต่อกัน สิ่งที่ช่วยทาย target หนึ่งมักช่วยอีกตัว โมเดลที่เรียน shared representation ทายทั้งคู่พร้อมกันจึงดีกว่า</p>
+<p>บางงานต้องทำนาย<mark class="src" data-p="8" title="multiple target">หลาย target</mark>จาก input เดียว เช่นอ่านข้อความนิยายแล้วทายทั้ง genre ซึ่งเป็น classification และปีที่แต่งซึ่งเป็น regression จะเทรนสองโมเดลแยกกันก็ได้ แต่สองอย่างนี้เกี่ยวข้องกัน สิ่งที่ช่วยทาย genre มักช่วยทายปีด้วย โมเดลเดียวที่มีส่วนอ่านข้อความร่วมกัน (shared representation) แล้วแตกเป็นสองหัวจึงทายได้ดีกว่า</p>
 
 <h3 id="s2-aux">2.2 Auxiliary output เพื่อ regularization</h3>
 
 <p class="pic">ครูให้นักเรียนส่งการบ้านย่อยระหว่างทาง ไม่ใช่ดูแค่ข้อสอบปลายภาค นักเรียนต้องเข้าใจเนื้อหาช่วงกลางจริง ไม่ใช่ท่องคำตอบสุดท้าย</p>
 
-<p>อีกการใช้คือเป็น <mark class="src" data-p="9" title="regularization technique">เทคนิค regularization</mark>: เพิ่ม auxiliary output เพื่อบังคับให้ส่วนล่างของ network เรียนสิ่งที่มีประโยชน์ด้วยตัวเอง ไม่ใช่แค่จำ training data เพื่อ main output</p>
+<p>อีกเหตุผลที่ใส่หลาย output คือใช้เป็น<mark class="src" data-p="9" title="regularization technique">เทคนิค regularization</mark> โดยเพิ่ม output เสริมที่เรียกว่า auxiliary output ต่อจาก layer กลางของ network ส่วนล่างของ network จึงต้องเรียนสิ่งที่ใช้ทายได้ด้วยตัวเอง ไม่ใช่แค่จำ training data ไว้ส่งต่อให้ output หลัก</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p09.png" alt="Lecture 9 หน้า 9: Auxiliary Output for Regularization" loading="lazy">
 <figcaption>Lecture 9 หน้า 9 — Auxiliary Output for Regularization</figcaption>
 </figure>
 
-<p>โค้ดเหมือนโมเดลสอง input เดิม เพิ่มบรรทัด <code>aux_output = Dense(1)(hidden2)</code> และใส่สอง output ใน list hidden2 ถูกใช้สองครั้ง aux เห็นเฉพาะ deep path 30 ค่า ได้ 31 parameter total จึงเป็น 1,176 + 31 = 1,207</p>
+<p>โค้ดเหมือนโมเดลสอง input ในตอน 1.2 เพิ่มแค่บรรทัด <code>aux_output = Dense(1)(hidden2)</code> และใส่ output สองตัวใน list hidden2 จึงถูกใช้สองที่ aux เห็นแค่ 30 ค่าจากทาง deep ได้ 31 parameter รวมทั้งโมเดล 1,176 + 31 = 1,207</p>
 
 <pre><code>input_A = Input(shape=[5])
 input_B = Input(shape=[6])
@@ -225,7 +227,7 @@ aux_output = Dense(1)(hidden2)
 model = Model(inputs=[input_A, input_B],
               outputs=[output, aux_output])</code></pre>
 
-<p>แต่ละ output ต้องมี loss ของตัวเอง ส่ง list ของ loss ตอน compile ถ้าส่ง loss เดียว Keras ใช้ loss นั้นกับทุก output ตอนเทรนต้องให้ label ทุก output ตัวอย่างนี้ main กับ aux ทายสิ่งเดียวกัน จึงใช้ label เดียวกัน</p>
+<p>output แต่ละตัวต้องมี loss ของตัวเอง ตอน compile จึงส่ง loss เป็น list ถ้าส่ง loss ตัวเดียว Keras จะใช้ตัวนั้นกับทุก output ตอนเทรนก็ต้องให้ label ครบทุก output ตัวอย่างนี้ main กับ aux ทายสิ่งเดียวกัน จึงใช้ label ชุดเดียวกัน</p>
 
 <div class="eq">\[\text{total loss} = w_{\text{main}} \cdot L_{\text{main}} + w_{\text{aux}} \cdot L_{\text{aux}}\]</div>
 <p class="say">loss รวมคือผลรวมถ่วงน้ำหนักตาม loss_weights นี่คือค่าที่ optimizer ลด</p>
@@ -255,7 +257,7 @@ y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])</code></pre>
 
 <p class="trap">evaluate คืน 3 ค่า แต่ predict คืน 2 ค่า · aux_output ต่อจาก hidden2 ไม่ใช่จาก concat</p>
 
-<p>ตัวอย่างรวมบนสไลด์ หน้า 11: ทำนายราคาบ้าน <mark class="src" data-p="11" title="Input features (examples = 535)">จาก 535 ตัวอย่าง</mark> input มี <mark class="src" data-p="11" title="numeric (bedrooms, number of bathrooms, area of the house),">ตัวเลข คือห้องนอน ห้องน้ำ พื้นที่</mark> <mark class="src" data-p="11" title="categorical (zip code)">categorical คือ zip code</mark> และ <mark class="src" data-p="11" title="images">ภาพ</mark> สี่ภาพ <mark class="src" data-p="11" title="Bedroom">ห้องนอน</mark> <mark class="src" data-p="11" title="Bathroom">ห้องน้ำ</mark> <mark class="src" data-p="11" title="kitchen">ครัว</mark> <mark class="src" data-p="11" title="frontal image of the house">ด้านหน้าบ้าน</mark> · <mark class="src" data-p="11" title="Output">output</mark> คือ <mark class="src" data-p="11" title="price">ราคา</mark> · <mark class="src" data-p="11" title="Metrics – mean percentage error">metric คือ mean percentage error</mark> โมเดลมีกิ่ง CNN สำหรับภาพ และกิ่ง Dense สำหรับตาราง แล้ว concatenate</p>
+<p>ตัวอย่างที่รวมทุกอย่างคือทำนาย<mark class="src" data-p="11" title="price">ราคา</mark>บ้าน<mark class="src" data-p="11" title="Input features (examples = 535)">จาก 535 ตัวอย่าง</mark> input มีสามชนิด คือ<mark class="src" data-p="11" title="numeric (bedrooms, number of bathrooms, area of the house),">ตัวเลข: ห้องนอน ห้องน้ำ พื้นที่</mark> <mark class="src" data-p="11" title="categorical (zip code)">categorical: zip code</mark> และ<mark class="src" data-p="11" title="images">ภาพ</mark>สี่ภาพ ได้แก่<mark class="src" data-p="11" title="Bedroom">ห้องนอน</mark> <mark class="src" data-p="11" title="Bathroom">ห้องน้ำ</mark> <mark class="src" data-p="11" title="kitchen">ครัว</mark> และ<mark class="src" data-p="11" title="frontal image of the house">ด้านหน้าบ้าน</mark> โมเดลมีกิ่ง CNN อ่านภาพ กิ่ง Dense อ่านตาราง แล้ว concatenate ก่อนทายราคา วัดผลด้วย<mark class="src" data-p="11" title="Metrics – mean percentage error"> mean percentage error</mark></p>
 
 <details class="check"><summary>compile ด้วย loss="mse" ตัวเดียวและ loss_weights=[0.5, 0.5] main loss 0.2 aux loss 0.6 ได้ total เท่าใด</summary>
 <p>loss เดียวถูกใช้กับทั้งสอง output · 0.5 × 0.2 + 0.5 × 0.6 = 0.4</p>
@@ -277,7 +279,7 @@ y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])</code></pre>
 
 <h3 id="s3-act">3.1 Intermediate activations</h3>
 
-<p><mark class="src" data-p="12" title="Deep learning">Deep learning</mark> มักถูกมองเป็น <mark class="src" data-p="12" title="black boxes">กล่องดำ</mark> แต่ไม่จริงกับ <mark class="src" data-p="12" title="ConvNets">ConvNet</mark> เพราะ ConvNet เรียน <mark class="src" data-p="12" title="visual concepts">แนวคิดเชิงภาพ</mark> ที่วาดออกมาดูได้ สามเทคนิค:</p>
+<p><mark class="src" data-p="12" title="Deep learning">Deep learning</mark> มักถูกมองว่าเป็น<mark class="src" data-p="12" title="black boxes">กล่องดำ</mark> ที่ไม่รู้ว่าข้างในคิดอะไร แต่สำหรับ <mark class="src" data-p="12" title="ConvNets">ConvNet</mark> ไม่จริง เพราะสิ่งที่ ConvNet เรียนคือ<mark class="src" data-p="12" title="visual concepts">แนวคิดเชิงภาพ</mark> ซึ่งวาดออกมาดูได้ มีสามเทคนิค แต่ละเทคนิคตอบคนละคำถาม</p>
 
 <table>
 <tr><th>เทคนิค</th><th>ตอบคำถาม</th></tr>
@@ -286,14 +288,16 @@ y_pred_main, y_pred_aux = model.predict([X_new_A, X_new_B])</code></pre>
 <tr><td>heatmap of class activation</td><td>บริเวณไหนของภาพทำให้โมเดลตัดสินเป็น class นั้น</td></tr>
 </table>
 
-<p>เทคนิคแรกแสดง <mark class="src" data-p="13" title="intermediate representations">representation ระหว่างทาง</mark> คือ <mark class="src" data-p="13" title="feature maps">feature map</mark> ขั้นตอน: สร้าง visualization model ที่รับภาพและให้ output เป็น feature map ทุก layer → โหลดภาพ → แปลงเป็น NumPy → normalize เช่นเป็น [0, 1] → ส่งภาพผ่าน visualization model</p>
+<p class="pic">เหมือนย่อเรื่องยาวทีละรอบ รอบแรกยังเห็นรายละเอียดครบ รอบหลังๆ เหลือแค่ใจความว่า "นี่คือแมว" ส่วนหน้าตาเดิมหายไป</p>
+
+<p>เทคนิคแรกดู<mark class="src" data-p="13" title="intermediate representations">representation ระหว่างทาง</mark> คือ<mark class="src" data-p="13" title="feature maps">feature map</mark>ที่แต่ละ layer สร้างจากภาพ ขั้นตอนคือ สร้าง visualization model ที่รับภาพแล้วให้ output เป็น feature map ของทุก layer → โหลดภาพ → แปลงเป็น NumPy array → normalize เช่นให้อยู่ใน [0, 1] → ส่งภาพเข้า visualization model</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p13.png" alt="Lecture 9 หน้า 13: Visualizing Intermediate Activations: ขั้นตอนและ model.summary()" loading="lazy">
 <figcaption>Lecture 9 หน้า 13 — Visualizing Intermediate Activations: ขั้นตอนและ model.summary()</figcaption>
 </figure>
 
-<p>โมเดลที่โหลดคือ cats_and_dogs_small_2.h5 conv 4 ชั้น 32, 64, 128, 128 filter ขนาดตามความลึกคือ 150 → 148 → 74 → 72 → 36 → 34 → 17 → 15 → 7 feature map ที่จะวาดมีจำนวนเท่าจำนวน filter แต่ละชั้น</p>
+<p>ตัวอย่างใช้โมเดลแยกหมากับแมว cats_and_dogs_small_2.h5 ซึ่งมี conv 4 ชั้น จำนวน filter 32, 64, 128, 128 ภาพเล็กลงตามความลึกเป็น 150 → 148 → 74 → 72 → 36 → 34 → 17 → 15 → 7 แต่ละชั้นมี feature map เท่ากับจำนวน filter</p>
 
 <pre><code>!pip install gdown
 !gdown --id 18ixz_2j_BJe6vhgbmcgxoN6m9EV-P7D-
@@ -309,7 +313,7 @@ model.summary()</code></pre>
 <figcaption>Lecture 9 หน้า 14 — Visualizing Feature Maps: สี่ข้อสังเกต</figcaption>
 </figure>
 
-<p>แถวบนสุดของรูปคือ layer แรก 148×148 ยังเห็นโครงแมวทุกช่อง แถวล่างสุดคือ layer ที่สี่ 15×15 เป็นช่องทึบเกือบหมด มีจุดสว่างไม่กี่จุด สี่ข้อสังเกตอ่านจากรูปนี้:</p>
+<p>ในรูป แถวบนสุดคือ layer แรกขนาด 148×148 ทุกช่องยังเห็นโครงแมว แถวล่างสุดคือ layer ที่สี่ขนาด 15×15 เกือบทุกช่องมืด มีจุดสว่างไม่กี่จุด จากรูปนี้สรุปได้สี่ข้อ</p>
 
 <table>
 <tr><th>ข้อสังเกต</th><th>ความหมาย</th></tr>
@@ -330,7 +334,7 @@ model.summary()</code></pre>
 
 <h3 id="s3-filter">3.2 Visualizing filters</h3>
 
-<p>CNN ใช้ <mark class="src" data-p="15" title="learned filters">filter ที่เรียนมา</mark> ทำ convolution กับ feature map ก่อนหน้า filter คือ weight สองมิติที่ค่าติดกันมีความสัมพันธ์เชิงตำแหน่ง จึงวาดเป็นภาพได้ ขั้นตอน: วน model.layers → ถ้าเป็น conv ดึง weight กับ bias ด้วย get_weights() → normalize เป็น 0–1 → plot ทุก channel ภาพสีมี 3 channel</p>
+<p>CNN ทำ convolution ด้วย<mark class="src" data-p="15" title="learned filters">filter ที่เรียนมา</mark> filter คือ weight สองมิติที่ค่าติดกันสัมพันธ์กันตามตำแหน่ง จึงวาดเป็นภาพได้ ขั้นตอนคือวนทุก layer ใน model.layers → ถ้าเป็น conv ให้ดึง weight กับ bias ด้วย get_weights() → normalize ให้อยู่ระหว่าง 0–1 → plot ทุก channel (ภาพสีมี 3 channel ภาพขาวดำมี 1)</p>
 
 <p class="num">get_weights() ของ Conv2D คืน weight shape (f, f, n_C, n_C') และ bias shape (n_C',) · conv แรกของโมเดลตอน 3.1 คือ (3, 3, 3, 32) กับ (32,) รวม 864 + 32 = 896</p>
 
@@ -339,14 +343,14 @@ model.summary()</code></pre>
 <figcaption>Lecture 9 หน้า 16 — Filter patterns: block1_conv1 และ block2_conv1</figcaption>
 </figure>
 
-<p>ภาพหน้า 16–17 คือ pattern ที่ทำให้ filter ของ VGG16 ตอบสนองแรงสุด block1_conv1 เป็นสีพื้นและขอบตามทิศ block2_conv1 เริ่มเป็น texture ง่ายๆ จากขอบผสมสี</p>
+<p>รูปข้างล่างคือ pattern ที่ทำให้ filter ของ VGG16 ตอบสนองแรงที่สุด block1_conv1 เป็นสีพื้นและเส้นขอบตามทิศต่างๆ block2_conv1 เริ่มเป็น texture ง่ายๆ ที่เกิดจากขอบผสมสี</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p17.png" alt="Lecture 9 หน้า 17: Filter patterns: block3_conv1 และ block4_conv1" loading="lazy">
 <figcaption>Lecture 9 หน้า 17 — Filter patterns: block3_conv1 และ block4_conv1</figcaption>
 </figure>
 
-<p>block3 และ block4 เป็น texture ซับซ้อนคล้ายของในธรรมชาติ เช่นลายจุด ลายคลื่น ขน ใบไม้ ลำดับ block1 ถึง block4 คือหลักฐานว่า layer ลึกรวม feature ง่ายเป็น feature ซับซ้อน และเป็นเหตุที่ transfer learning ยืม layer ต้นไปใช้ได้</p>
+<p>block3 และ block4 เป็น texture ซับซ้อนขึ้น คล้ายของในธรรมชาติ เช่นลายจุด ลายคลื่น ขนสัตว์ ใบไม้ ไล่จาก block1 ถึง block4 จะเห็นว่า layer ลึกเอา feature ง่ายมาประกอบเป็น feature ซับซ้อน นี่คือเหตุผลที่ transfer learning ใน Lesson 8 ยืม layer ต้นไปใช้กับงานอื่นได้</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 15)</summary><div class="gallery">
 <figure>
@@ -359,9 +363,9 @@ model.summary()</code></pre>
 
 <p class="pic">ถามโมเดลว่าทำไมทายว่าเป็นหมา แล้วให้มันระบายสีภาพตรงจุดที่ทำให้มันตัดสินใจ ถ้าระบายที่หน้าหมาแปลว่าดูถูกที่ ถ้าระบายที่พื้นหญ้าแปลว่าโกง</p>
 
-<p>เทคนิคที่สามตรวจว่า <mark class="src" data-p="18" title="specific regions">บริเวณไหน</mark> ของ <mark class="src" data-p="18" title="a given image">ภาพที่ให้มา</mark> มีผลต่อ <mark class="src" data-p="18" title="final classification decision">การตัดสิน class สุดท้าย</mark> ตัวอย่างบนสไลด์ โมเดลทาย Saint Bernard heatmap สว่างตรงหน้าสุนัข ไม่ใช่พื้นหรือชามข้างหลัง</p>
+<p>เทคนิคที่สามถามว่า<mark class="src" data-p="18" title="specific regions">บริเวณไหน</mark>ของ<mark class="src" data-p="18" title="a given image">ภาพที่ให้มา</mark>ทำให้โมเดล<mark class="src" data-p="18" title="final classification decision">ตัดสิน class สุดท้าย</mark>แบบนั้น เช่นโมเดลทายว่าเป็นสุนัขพันธุ์ Saint Bernard แล้ว heatmap สว่างตรงหน้าสุนัข ไม่ใช่พื้นหรือชามข้างหลัง แปลว่าโมเดลดูถูกที่</p>
 
-<p>Grad-CAM อยู่ในกลุ่ม class activation map: สร้าง heatmap 2 มิติบอกว่าแต่ละตำแหน่งสำคัญต่อ class หนึ่งแค่ไหน ใช้หาตำแหน่งวัตถุได้ด้วย และเป็นเทคนิค post-training ใช้หลังเทรนเสร็จ parameter คงที่ ภาพที่มีทั้งหมาและแมว heatmap 'Cat' สว่างที่แมว heatmap 'Dog' สว่างที่หมา heatmap ขึ้นกับ class ที่ถาม</p>
+<p>Grad-CAM เป็นวิธีหนึ่งในกลุ่ม class activation map (CAM) คือสร้าง heatmap สองมิติที่บอกว่าแต่ละตำแหน่งในภาพสำคัญต่อ class หนึ่งแค่ไหน จึงใช้บอกตำแหน่งวัตถุได้ด้วย และเป็นเทคนิค post-training คือใช้หลังเทรนเสร็จ ไม่แก้ parameter ใดๆ heatmap ขึ้นกับ class ที่ถาม ภาพที่มีทั้งหมาและแมว ถ้าถาม 'Cat' จะสว่างที่แมว ถ้าถาม 'Dog' จะสว่างที่หมา</p>
 
 <table>
 <tr><th>ขั้น</th><th>ทำอะไร</th></tr>
@@ -371,6 +375,8 @@ model.summary()</code></pre>
 <tr><td>4</td><td><mark class="src" data-p="21" title="Weight the feature map">ถ่วงน้ำหนัก feature map</mark> แต่ละ channel ด้วย <mark class="src" data-p="21" title="alpha values">ค่า alpha</mark> คือค่าเฉลี่ยของ gradient ทั้งแผ่น</td></tr>
 <tr><td>5</td><td>รวมแล้วผ่าน ReLU ได้ <mark class="src" data-p="21" title="Heatmap">heatmap</mark></td></tr>
 </table>
+
+<p>หัวใจของสูตรคือ gradient บอกว่าถ้า channel นั้นสว่างขึ้นนิดหนึ่ง คะแนนของ class จะเพิ่มหรือลด channel ที่ gradient เฉลี่ยเป็นบวกจึงช่วยให้โมเดลตอบ class นั้น และได้น้ำหนักมาก</p>
 
 <div class="eq">\[\alpha_k^c = \frac{1}{Z}\sum_{i,j} \frac{\partial y^c}{\partial A^k_{ij}} \qquad \text{heatmap} = \text{ReLU}\Big(\sum_k \alpha_k^c A^k\Big)\]</div>
 <p class="say">alpha ของ channel k คือ gradient เฉลี่ยทั้งแผ่น Z คือจำนวนช่อง heatmap คือผลรวมของทุก channel คูณ alpha แล้วตัดค่าลบทิ้ง</p>
@@ -383,7 +389,7 @@ model.summary()</code></pre>
 <figcaption>Lecture 9 หน้า 21 — Grad-CAM Steps (2): alpha values และ heatmap</figcaption>
 </figure>
 
-<p>สูตรนี้คล้าย CAM เดิม \(\text{CAM} = \sum_k w_k A^k\) ต่างตรง Grad-CAM ได้น้ำหนักจาก gradient และมี ReLU feature map ส่วนใหญ่เล็กกว่าภาพ ต้อง up-sample heatmap ให้เท่าภาพก่อนซ้อน</p>
+<p>สูตรนี้คล้าย CAM แบบเดิม \(\text{CAM} = \sum_k w_k A^k\) ต่างกันตรงที่ Grad-CAM หาน้ำหนักจาก gradient และผ่าน ReLU เพื่อเก็บเฉพาะส่วนที่ช่วยเพิ่มคะแนน feature map มักเล็กกว่าภาพ จึงต้อง up-sample heatmap ให้ขนาดเท่าภาพก่อนนำไปซ้อน</p>
 
 <pre><code># Generate class activation heatmap
 heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></pre>
@@ -430,9 +436,9 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 <tr><td>instance segmentation</td><td>class ต่อ pixel และแยกวัตถุแต่ละชิ้น</td></tr>
 </table>
 
-<p>ใน <mark class="src" data-p="24" title="self-driving technology">เทคโนโลยีรถขับเอง</mark> การวางเส้นทางต้อง <mark class="src" data-p="24" title="identifying">ระบุ</mark> <mark class="src" data-p="24" title="vehicles">รถ</mark> <mark class="src" data-p="24" title="pedestrians">คนเดินถนน</mark> <mark class="src" data-p="24" title="roads">ถนน</mark> และ <mark class="src" data-p="24" title="obstacles">สิ่งกีดขวาง</mark> สไลด์ตั้งโจทย์ <mark class="src" data-p="24" title="Autonomous driving application (suppose 80 classes)">งานรถขับเอง สมมติ 80 class</mark> ซึ่งเป็น K ของ YOLO ตอน 6</p>
+<p>ตัวอย่างงานจริงคือ<mark class="src" data-p="24" title="self-driving technology">เทคโนโลยีรถขับเอง</mark> ซึ่งต้อง<mark class="src" data-p="24" title="identifying">ระบุ</mark><mark class="src" data-p="24" title="vehicles">รถ</mark> <mark class="src" data-p="24" title="pedestrians">คนเดินถนน</mark> <mark class="src" data-p="24" title="roads">ถนน</mark> และ<mark class="src" data-p="24" title="obstacles">สิ่งกีดขวาง</mark>จากภาพกล้องหน้ารถเพื่อวางเส้นทาง ตัวอย่างนี้<mark class="src" data-p="24" title="Autonomous driving application (suppose 80 classes)">สมมติว่ามี 80 class</mark> ซึ่งจะกลายเป็น K ของ YOLO ในตอน 6</p>
 
-<p>Object detection คือ <mark class="src" data-p="25" title="localizing">หาตำแหน่ง</mark> <mark class="src" data-p="25" title="one or more objects">วัตถุหนึ่งชิ้นหรือมากกว่า</mark> และ <mark class="src" data-p="25" title="classifying">จำแนก</mark> แต่ละชิ้น localization ทาย \((b_x, b_y, b_w, b_h)\) classification ทาย class</p>
+<p>Object detection คือการ<mark class="src" data-p="25" title="localizing">หาตำแหน่ง</mark><mark class="src" data-p="25" title="one or more objects">วัตถุหนึ่งชิ้นหรือมากกว่า</mark>ในภาพ และ<mark class="src" data-p="25" title="classifying">จำแนก</mark>ว่าแต่ละชิ้นคืออะไร ส่วน localization ทายกรอบ \((b_x, b_y, b_w, b_h)\) ส่วน classification ทาย class คำตอบของวัตถุหนึ่งชิ้นจึงเป็น vector นี้</p>
 
 <div class="eq">\[y = [\,p_c,\ b_x,\ b_y,\ b_h,\ b_w,\ c_1,\ \ldots,\ c_K\,] \quad \text{ยาว } 5 + K\]</div>
 <p class="say">ค่าแรกบอกว่ามีวัตถุไหม สี่ค่าถัดไปคือกรอบ ที่เหลือคือ one-hot ของ class</p>
@@ -444,7 +450,7 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <p class="num">3 class วัตถุ class 2 อยู่กลางภาพ ขนาดครึ่งภาพทั้งสองด้าน: y = [1, 0.5, 0.5, 0.5, 0.5, 0, 1, 0] · ไม่มีวัตถุ: p_c = 0 และอีก 7 ค่าไม่นำมาคิด loss</p>
 
-<p>ความท้าทาย: ต้องทำ <mark class="src" data-p="26" title="object localization">localization</mark> ควบคู่ <mark class="src" data-p="26" title="object classification">classification</mark> · วัตถุ <mark class="src" data-p="26" title="not perfectly cropped">ไม่ได้ครอบพอดี</mark> · ภาพมี <mark class="src" data-p="26" title="multiple objects">หลายวัตถุ</mark> และบางที <mark class="src" data-p="26" title="overlap">ซ้อนกัน</mark> · ต้องการ <mark class="src" data-p="26" title="speed">ความเร็ว</mark> โดยเฉพาะ <mark class="src" data-p="26" title="self-driving cars">รถขับเอง</mark> ที่ต้อง <mark class="src" data-p="26" title="real-time processing">ประมวลผลแบบ real-time</mark></p>
+<p>งานนี้ยากกว่า classification สามเรื่อง ต้องทำ<mark class="src" data-p="26" title="object localization">localization</mark>ควบคู่กับ<mark class="src" data-p="26" title="object classification">classification</mark> วัตถุ<mark class="src" data-p="26" title="not perfectly cropped">ไม่ได้ครอบพอดี</mark>เหมือนภาพใน classification และภาพหนึ่งมี<mark class="src" data-p="26" title="multiple objects">หลายวัตถุ</mark>ที่บางทีก็<mark class="src" data-p="26" title="overlap">ซ้อนกัน</mark> สุดท้ายต้องการ<mark class="src" data-p="26" title="speed">ความเร็ว</mark> โดยเฉพาะ<mark class="src" data-p="26" title="self-driving cars">รถขับเอง</mark>ที่ต้อง<mark class="src" data-p="26" title="real-time processing">ประมวลผลแบบ real-time</mark></p>
 
 <p class="trap">semantic segmentation ไม่แยกวัตถุ class เดียวกัน instance segmentation แยก · target ยาว 5 + K ไม่ใช่ 4 + K เพราะมี p_c</p>
 
@@ -477,9 +483,11 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 <figcaption>Lecture 9 หน้า 28 — Pipeline (2): สุนัขตัวเดียวมี 5 กรอบ</figcaption>
 </figure>
 
-<p>คำถามของสไลด์: ถ้าทำระบบนับสุนัขจะเกิดอะไร คำตอบคือนับได้ 5 ทั้งที่มีตัวเดียว นี่คือเหตุที่ต้องมีขั้น NMS</p>
+<p>ลองคิดว่าถ้าเอาผลแบบนี้ไปทำระบบนับสุนัข จะนับได้ 5 ตัวทั้งที่มีตัวเดียว ขั้น NMS จึงจำเป็น</p>
 
-<p><mark class="src" data-p="30" title="Non-maximum suppression (NMS) (continue)">อัลกอริทึม NMS</mark>: ทิ้งกรอบที่ต่ำกว่า <mark class="src" data-p="30" title="confidence threshold">confidence threshold</mark> → วนทีละ class: เลือกกรอบคะแนนสูงสุด → suppress กรอบที่ IoU กับกรอบนี้เกิน NMS threshold เช่น 0.5 → เลือกกรอบสูงสุดที่เหลือ ทำซ้ำจนหมด</p>
+<p class="pic">นักเรียนห้าคนวาดกรอบรอบหมาตัวเดียวกัน ครูเก็บกรอบของคนที่มั่นใจที่สุด แล้วทิ้งกรอบที่ทับกรอบนั้นมากเกินไป เพราะน่าจะเป็นหมาตัวเดิม กรอบที่อยู่ห่างออกไปเก็บไว้ เพราะอาจเป็นหมาอีกตัว</p>
+
+<p><mark class="src" data-p="30" title="Non-maximum suppression (NMS) (continue)">อัลกอริทึม NMS</mark>เริ่มจากทิ้งกรอบที่คะแนนต่ำกว่า<mark class="src" data-p="30" title="confidence threshold">confidence threshold</mark> จากนั้นทำทีละ class เลือกกรอบคะแนนสูงสุด แล้วทิ้ง (suppress) กรอบที่ทับกรอบนี้เกิน NMS threshold เช่น IoU 0.5 เพราะน่าจะเป็นวัตถุชิ้นเดิม (IoU คือตัววัดว่ากรอบทับกันแค่ไหน อยู่ในตอน 4.3) แล้วเลือกกรอบสูงสุดที่เหลือ ทำซ้ำจนหมด</p>
 
 <p class="trap">NMS มีสอง threshold คนละจังหวะ: confidence threshold กรองก่อน loop · NMS threshold ที่เป็น IoU ใช้ใน loop · NMS ทำแยกต่อ class</p>
 
@@ -500,15 +508,15 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <h3 id="s4-iou">4.3 IoU และ mAP</h3>
 
-<p><mark class="src" data-p="31" title="Evaluation metrics">Evaluation metric</mark> ตัวแรกคือ IoU วัดการซ้อนกันของกรอบที่ทายกับ ground truth มีค่า 0 คือไม่ซ้อน ถึง 1 คือซ้อน 100%</p>
+<p>เมื่อทายกรอบแล้ว ต้องมี<mark class="src" data-p="31" title="Evaluation metrics">evaluation metric</mark>บอกว่าดีแค่ไหน ตัวแรกคือ IoU วัดว่ากรอบที่ทายทับกับกรอบจริง (ground truth) มากแค่ไหน ค่าอยู่ระหว่าง 0 คือไม่ทับเลย ถึง 1 คือทับกันพอดี</p>
 
 <div class="eq">\[\text{IoU} = \frac{B_1 \cap B_2}{B_1 \cup B_2}\]</div>
 <p class="say">พื้นที่ส่วนที่ซ้อนกัน หารด้วยพื้นที่รวมที่สองกรอบครอบ ส่วนซ้อนนับครั้งเดียว</p>
 
 <figure class="viz"><img src="../assets/viz/l9-iou.svg" alt="IoU ของกรอบ 4x4 สองกรอบ"></figure>
-<p>สองกรอบ 4×4 เหลื่อมกัน 2 หน่วยทั้งสองแกน ส่วนซ้อนคือ 2×2 = 4 union คือ 16 + 16 − 4 = 28 IoU จึงแค่ 0.14 แม้แต่ละกรอบซ้อนกันถึง 25%</p>
+<p>สองกรอบขนาด 4×4 เลื่อนเหลื่อมกัน 2 หน่วยทั้งแนวนอนและแนวตั้ง ส่วนที่ทับคือ 2×2 = 4 ส่วน union คือ 16 + 16 − 4 = 28 IoU จึงได้แค่ 0.14 ทั้งที่แต่ละกรอบถูกทับไป 25% IoU จึงเข้มกว่าที่ตาเห็น</p>
 
-<p><mark class="src" data-p="32" title="Evaluation metrics (continue)">Metric ต่อ</mark>: mAP คือ Mean Average Precision วัดผลรวม 0–100% · PR curve คำนวณต่อ class ได้จากการเปลี่ยน confidence threshold · AP คือพื้นที่ใต้ PR curve ต่อ class · mAP คือค่าเฉลี่ย AP ทุก class · FPS วัดความเร็ว</p>
+<p>IoU วัดได้ทีละกรอบ ถ้าอยากได้คะแนนรวมทั้งโมเดลใช้ mAP (Mean Average Precision) มีค่า 0–100% สร้างทีละชั้น ต่อหนึ่ง class ให้เปลี่ยน confidence threshold ไปเรื่อยๆ จะได้ precision กับ recall หลายคู่ วาดเป็น PR curve → พื้นที่ใต้ curve คือ AP ของ class นั้น → เฉลี่ย AP ทุก class ได้ mAP ส่วนความเร็ววัดด้วย FPS คือจำนวนภาพต่อวินาที</p>
 
 <div class="eq">\[\text{mAP} = \frac{1}{C}\sum_{c=1}^{C} AP_c\]</div>
 <p class="say">C คือจำนวน class เฉลี่ย AP ของทุก class</p>
@@ -533,11 +541,17 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 <!-- ===================================================== -->
 <h2 id="s5">5. Sliding windows, R-CNN และ convolutional implementation</h2>
 
+<p>ตอนนี้เล่าว่า detector เร็วขึ้นได้อย่างไร วิธีแรกรัน CNN เป็นพันครั้งต่อภาพ แต่ละรุ่นถัดมาตัดงานที่ทำซ้ำออกทีละส่วน จนเหลือ forward ครั้งเดียว</p>
+
 <h3 id="s5-slide">5.1 Sliding windows</h3>
 
-<p>วิธีดั้งเดิมใช้ <mark class="src" data-p="33" title="convnet">convnet</mark> ทำ <mark class="src" data-p="33" title="sliding windows detection">sliding windows detection</mark>: เทรน classifier จากภาพที่ครอบพอดีว่าเป็นรถหรือไม่ แล้ว <mark class="src" data-p="33" title="slide">เลื่อน</mark> หน้าต่างทั่วภาพตาม stride และจำแนกทุกบริเวณ ข้อเสียคือแพงและช้าจนใช้ไม่ได้</p>
+<p class="pic">หาเพื่อนในรูปรวมรุ่นด้วยกระดาษเจาะช่อง เลื่อนทีละนิดจนทั่วรูปแล้วถามทุกครั้งว่า "ใช่เพื่อนไหม" เจอแน่ แต่ช้ามาก</p>
 
-<p class="num">ภาพ 416 หน้าต่าง 64 stride 8: ต่อด้าน ⌊(416 − 64)/8⌋ + 1 = 45 · รวม 45 × 45 = 2,025 หน้าต่าง ต้อง forward 2,025 ครั้งต่อภาพต่อขนาดหน้าต่าง ใกล้ ~2,000 region ของ R-CNN</p>
+<p>วิธีแรกที่คิดได้คือ <mark class="src" data-p="33" title="sliding windows detection">sliding windows detection</mark> คือเทรน <mark class="src" data-p="33" title="convnet">convnet</mark> ให้ตอบว่าภาพที่ครอบพอดี "เป็นรถหรือไม่" แล้ววางหน้าต่างบนภาพจริงและ<mark class="src" data-p="33" title="slide">เลื่อน</mark>ไปทีละ stride ทุกตำแหน่งต้องส่งเข้า CNN หนึ่งครั้ง</p>
+
+<p>ปัญหามีสองเรื่อง หน้าต่างเยอะมาก และหน้าต่างติดกันซ้อนกันเกือบทั้งหมด แต่ CNN ต้องคำนวณส่วนที่ซ้อนใหม่ทุกรอบ จึงช้าจนใช้จริงไม่ได้</p>
+
+<p class="num">ภาพ 416 หน้าต่าง 64 stride 8: ต่อด้าน ⌊(416 − 64)/8⌋ + 1 = 45 · รวม 45 × 45 = 2,025 หน้าต่าง ต้อง forward 2,025 ครั้งต่อภาพต่อขนาดหน้าต่าง ใกล้ ~2,000 region ของ R-CNN ในหัวข้อถัดไป</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 33)</summary><div class="gallery">
 <figure>
@@ -548,7 +562,13 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <h3 id="s5-rcnn">5.2 R-CNN family</h3>
 
-<p>สามรุ่นหลักคือ <mark class="src" data-p="34" title="R-CNN">R-CNN</mark>, <mark class="src" data-p="34" title="Fast R-CNN">Fast R-CNN</mark> และ <mark class="src" data-p="34" title="Faster R-CNN">Faster R-CNN</mark> สองรุ่นแรกใช้ <mark class="src" data-p="34" title="Selective Search algorithm">อัลกอริทึม Selective Search</mark> ซึ่งไม่ใช่ neural network เสนอ ROI</p>
+<p class="pic">แทนที่จะเลื่อนกระดาษทั่วรูป ให้คนวงไว้ก่อนว่าตรงไหนน่าจะมีคน แล้วดูเฉพาะจุดที่วง</p>
+
+<p><mark class="src" data-p="34" title="R-CNN">R-CNN</mark> ไม่ตรวจทุกตำแหน่ง แต่ใช้ <mark class="src" data-p="34" title="Selective Search algorithm">อัลกอริทึม Selective Search</mark> (ไม่ใช่ neural network) เสนอบริเวณที่น่าจะมีวัตถุราว 2,000 บริเวณ เรียกว่า ROI แล้วส่งแต่ละ ROI เข้า CNN แยกกัน ยังต้องรัน CNN 2,000 ครั้งต่อภาพ</p>
+
+<p><mark class="src" data-p="34" title="Fast R-CNN">Fast R-CNN</mark> ส่งทั้งภาพเข้า CNN ครั้งเดียว แล้วตัดส่วนของแต่ละ ROI จาก feature map ที่ได้ convolution ซ้ำจึงหายไป เหลือ Selective Search เป็นส่วนที่ช้าที่สุด</p>
+
+<p><mark class="src" data-p="34" title="Faster R-CNN">Faster R-CNN</mark> เปลี่ยน Selective Search เป็น neural network ชื่อ Region Proposal Network (RPN) ทั้งระบบจึงเป็น network เดียวที่เทรนได้ end-to-end</p>
 
 <table>
 <tr><th></th><th>R-CNN</th><th>Fast R-CNN</th><th>Faster R-CNN</th></tr>
@@ -564,9 +584,9 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 <figcaption>Lecture 9 หน้า 35 — R-CNN Family: ตารางเปรียบเทียบ</figcaption>
 </figure>
 
-<p>Fast R-CNN เร็วเพราะ <mark class="src" data-p="35" title="convolution operation">convolution</mark> ทำ <mark class="src" data-p="35" title="only once per image">ครั้งเดียวต่อภาพ</mark> Faster R-CNN ใส่ <mark class="src" data-p="35" title="Region Proposal Network (RPN)">Region Proposal Network</mark> เข้าใน <mark class="src" data-p="35" title="end-to-end deep learning network">network แบบ end-to-end</mark> ผลบน <mark class="src" data-p="35" title="PASCAL VOC-2012">PASCAL VOC-2012</mark> ตามตาราง mAP แทบไม่เปลี่ยน แต่เร็วขึ้น 50/0.2 = 250 เท่า 0.2 วินาทีคือ 5 FPS ยังไม่ real-time</p>
+<p>ในตาราง mAP แทบไม่เปลี่ยน (66.0% → 66.9%) แต่เวลาต่อภาพลดจาก 50 เหลือ 0.2 วินาที เร็วขึ้น 250 เท่า สามรุ่นนี้พัฒนาความเร็ว ไม่ใช่ความแม่น แต่ 0.2 วินาทีคือ 5 FPS ยังช้าเกินไปสำหรับรถขับเอง</p>
 
-<p>R-CNN ทั้งตระกูล <mark class="src" data-p="36" title="computational expensive">คำนวณแพง</mark> เพราะเป็น <mark class="src" data-p="36" title="multi-stage detector">multi-stage detector</mark> เสนอ ROI ก่อนแล้วค่อยจำแนก <mark class="src" data-p="36" title="One-stage detector">One-stage detector</mark> ทายตำแหน่งและ class ตรงๆ ในครั้งเดียว ได้ real-time เช่น SSD, YOLO</p>
+<p>สาเหตุที่ยังช้าคือทั้งตระกูลเป็น <mark class="src" data-p="36" title="multi-stage detector">multi-stage detector</mark> เสนอบริเวณก่อนแล้วค่อยจำแนก ขั้นหลังต้องรอขั้นแรก <mark class="src" data-p="36" title="One-stage detector">One-stage detector</mark> เช่น SSD และ YOLO ตัดขั้นเสนอบริเวณทิ้ง แล้วทายตำแหน่งกับ class ตรงๆ ใน forward ครั้งเดียว จึงเร็วพอสำหรับ real-time</p>
 
 <p class="trap">Fast R-CNN ยังใช้ selective search · ตัวที่เลิกใช้คือ Faster R-CNN · R-CNN family ทั้งหมดเป็น multi-stage</p>
 
@@ -583,14 +603,14 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <h3 id="s5-conv">5.3 One-stage เริ่มต้น และ fully convolutional</h3>
 
-<p>โมเดลตั้งต้นสำหรับภาพวัตถุเดียว: layer สุดท้ายให้ 8 ค่า p_c บอกวัตถุหรือ <mark class="src" data-p="37" title="Background">พื้นหลัง</mark> b_x คือ <mark class="src" data-p="37" title="X coordinate">พิกัด X</mark> b_y คือ <mark class="src" data-p="37" title="Y coordinate">พิกัด Y</mark> b_h คือ <mark class="src" data-p="37" title="Height">ความสูง</mark> b_w คือ <mark class="src" data-p="37" title="Width">ความกว้าง</mark> และ c₁–c₃ คือ CAT, DOG, DUCK</p>
+<p>one-stage detector แบบง่ายที่สุดใช้กับภาพที่มีวัตถุชิ้นเดียว layer สุดท้ายให้ 8 ค่าตาม target vector ของตอน 4.1 คือ p_c บอกว่ามีวัตถุหรือเป็น<mark class="src" data-p="37" title="Background">พื้นหลัง</mark> b_x กับ b_y คือ<mark class="src" data-p="37" title="X coordinate">พิกัด X</mark> และ<mark class="src" data-p="37" title="Y coordinate">พิกัด Y</mark> ของจุดกลาง b_h คือ<mark class="src" data-p="37" title="Height">ความสูง</mark> b_w คือ<mark class="src" data-p="37" title="Width">ความกว้าง</mark> และ c₁–c₃ คือ CAT, DOG, DUCK</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p37.png" alt="Lecture 9 หน้า 37: Initial Convnet Model for One-stage Detector" loading="lazy">
 <figcaption>Lecture 9 หน้า 37 — Initial Convnet Model for One-stage Detector</figcaption>
 </figure>
 
-<p>โค้ดจาก Hands-on ML ใช้ของที่เรียนมาครบ: transfer learning, GlobalAveragePooling และโมเดลสอง output ข้อจำกัดคือได้กรอบเดียวต่อภาพ</p>
+<p>โค้ดจากหนังสือ Hands-on ML ประกอบจากของที่เรียนแล้วทั้งหมด คือ base ของ Xception ที่ pretrain แล้ว (transfer learning) ต่อ GlobalAveragePooling แล้วแตกเป็นสอง output แบบตอน 2 หัวหนึ่งทาย class อีกหัวทายกรอบ 4 ค่า ข้อจำกัดคือได้กรอบเดียวต่อภาพ</p>
 
 <pre><code>base_model = keras.applications.xception.Xception(weights="imagenet",
                                                   include_top=False)
@@ -611,24 +631,26 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 <tr><td><code>loss_weights=[0.8, 0.2]</code></td><td>ให้ classification สำคัญกว่า "depends on what you care most about"</td></tr>
 </table>
 
-<p>Detection network ควรเป็น <mark class="src" data-p="38" title="fully convolutional">fully convolutional</mark> ไม่มี FC ท้าย ผลคือ <mark class="src" data-p="38" title="Faster">เร็วกว่า</mark> เพราะมี <mark class="src" data-p="38" title="only convolution operations">แค่ convolution</mark> แทน FC ทั้งสามด้วย <mark class="src" data-p="38" title="filter 3x3 #filter=200 p = 0, s = 1 filter 1x1 #filter=200 p = 0, s = 1 filter 1x1 #filter=4 p = 0, s = 1">conv 3×3 200 filter → conv 1×1 200 filter → conv 1×1 4 filter ทุกตัว p = 0 s = 1</mark></p>
+<p>ถ้าอยากได้หลายกรอบโดยไม่กลับไปเลื่อนหน้าต่าง network ต้องเป็น <mark class="src" data-p="38" title="fully convolutional">fully convolutional</mark> คือไม่มี FC layer เลย มี<mark class="src" data-p="38" title="only convolution operations">แค่ convolution</mark> จึง<mark class="src" data-p="38" title="Faster">เร็วกว่า</mark> วิธีทำคือแทน FC สามชั้นท้ายด้วย <mark class="src" data-p="38" title="filter 3x3 #filter=200 p = 0, s = 1 filter 1x1 #filter=200 p = 0, s = 1 filter 1x1 #filter=4 p = 0, s = 1">conv 3×3 200 filter → conv 1×1 200 filter → conv 1×1 4 filter ทุกตัว p = 0 s = 1</mark></p>
 
 <figure class="viz"><img src="../assets/viz/l9-fc-conv.svg" alt="แทน FC ด้วย conv และ output 13x13x4"></figure>
-<p>FC ชั้นแรกเท่ากับ conv ที่ kernel เท่าขนาด feature map ชั้นถัดไปเท่ากับ conv 1×1 parameter ตรงกันทุกชั้น ความต่างอยู่ที่ภาพใหญ่ขึ้น FC รับได้แค่ 180 ค่า แต่ conv เลื่อนไปได้ทั่ว feature map</p>
+<p>FC ชั้นแรกเท่ากับ conv ที่ kernel ใหญ่เท่า feature map ชั้นถัดไปเท่ากับ conv 1×1 parameter ตรงกันทุกชั้น ความต่างเกิดตอนภาพใหญ่ขึ้น FC รับได้แค่ 180 ค่าตามที่ออกแบบไว้ แต่ conv เลื่อนต่อไปได้ทั่ว feature map</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p38.png" alt="Lecture 9 หน้า 38: Convolutional Implementation: แทน FC ด้วย convolution" loading="lazy">
 <figcaption>Lecture 9 หน้า 38 — Convolutional Implementation: แทน FC ด้วย convolution</figcaption>
 </figure>
 
-<p class="trap">แถวบนของสไลด์หน้า 38 พิมพ์ขนาดหลัง pooling ว่า 15×30×10 ค่าถูกคือ 15×15×10 ตามแถวล่าง</p>
+<p class="trap">แถวบนของรูปพิมพ์ขนาดหลัง pooling ว่า 15×30×10 ค่าถูกคือ 15×15×10 ตามแถวล่าง</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p39.png" alt="Lecture 9 หน้า 39: Convolutional Implementation: sliding windows ใน forward pass เดียว" loading="lazy">
 <figcaption>Lecture 9 หน้า 39 — Convolutional Implementation: sliding windows ใน forward pass เดียว</figcaption>
 </figure>
 
-<p>หน้า 39 ป้อน feature 15×15×10 ซึ่งใหญ่กว่าที่ classifier ออกแบบ ผ่าน <mark class="src" data-p="39" title="filter 3x3 #filter=200 p = 0, s = 1 filter 1x1 #filter=200 p = 0, s = 1 filter 1x1 #filter=4 p = 0, s = 1">สาม conv ชุดเดิม</mark> ได้ 13×13×4 แต่ละช่องคือผลของ classifier บนหน้าต่างหนึ่งตำแหน่ง ได้ 169 หน้าต่างจาก forward ครั้งเดียว สรุป: <mark class="src" data-p="39" title="implement an entire image convolutionally">ทำทั้งภาพแบบ convolution</mark> ด้วย <mark class="src" data-p="39" title="one forward pass through the convnet">forward ผ่าน convnet ครั้งเดียว</mark> จึง <mark class="src" data-p="39" title="computational efficient">คำนวณได้มีประสิทธิภาพ</mark></p>
+<p>ถ้า feature ที่เข้าหัว classifier ใหญ่กว่าที่ออกแบบไว้ เช่น 15×15×10 พอผ่าน<mark class="src" data-p="39" title="filter 3x3 #filter=200 p = 0, s = 1 filter 1x1 #filter=200 p = 0, s = 1 filter 1x1 #filter=4 p = 0, s = 1">สาม conv ชุดเดิม</mark> จะได้ 13×13×4 แต่ละช่องคือคำตอบของ classifier ที่หน้าต่างหนึ่งตำแหน่ง รวมเป็น 169 หน้าต่างจาก forward ครั้งเดียว</p>
+
+<p>หน้าต่างที่ซ้อนกันใช้ผลคำนวณร่วมกัน ไม่ต้องคำนวณซ้ำแบบตอน 5.1 นี่คือการ<mark class="src" data-p="39" title="implement an entire image convolutionally">ทำทั้งภาพแบบ convolution</mark>ด้วย<mark class="src" data-p="39" title="one forward pass through the convnet">forward ผ่าน convnet ครั้งเดียว</mark> จึง<mark class="src" data-p="39" title="computational efficient">คำนวณได้มีประสิทธิภาพ</mark> และเป็นแนวคิดที่ YOLO ในตอน 6 นำไปใช้</p>
 
 <details class="check"><summary>feature 5×5×20 → conv 5×5 จำนวน 100 filter แทน FC 100 node parameter เท่ากันไหม</summary>
 <p>FC: 500·100 + 100 = 50,100 · conv: (5·5·20 + 1)·100 = 50,100 เท่ากัน output conv คือ 1×1×100</p>
@@ -641,24 +663,24 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 
 <p class="pic">แบ่งภาพเป็นตาราง ให้นักเรียนหนึ่งคนประจำหนึ่งช่อง ถ้าจุดกลางของวัตถุตกในช่องไหน คนประจำช่องนั้นต้องรายงานว่ามีอะไร อยู่ตรงไหน ขนาดเท่าไร ทุกคนรายงานพร้อมกันในรอบเดียว</p>
 
-<p><mark class="src" data-p="40" title="Yolo">YOLO</mark> เป็น one-stage detector ที่ <mark class="src" data-p="40" title="fast">เร็ว</mark> และ <mark class="src" data-p="40" title="accurate">แม่น</mark> แบ่งภาพเป็น grid แล้วรัน <mark class="src" data-p="40" title="algorithm">อัลกอริทึม</mark> <mark class="src" data-p="40" title="convolutionally">แบบ convolution</mark> บน <mark class="src" data-p="40" title="each grid">ทุกช่อง</mark> ตอน test มองครั้งเดียว ต่างจาก sliding windows ที่กรอบขนาดตายตัว YOLO ทาย b_x, b_y, b_h, b_w เป็นตัวเลข กรอบจึงขนาดใดก็ได้</p>
+<p><mark class="src" data-p="40" title="Yolo">YOLO</mark> เป็น one-stage detector ที่ทั้ง<mark class="src" data-p="40" title="fast">เร็ว</mark>และ<mark class="src" data-p="40" title="accurate">แม่น</mark> แบ่งภาพเป็นตาราง (grid) แล้วรัน<mark class="src" data-p="40" title="algorithm">อัลกอริทึม</mark><mark class="src" data-p="40" title="convolutionally">แบบ convolution</mark>บน<mark class="src" data-p="40" title="each grid">ทุกช่อง</mark>พร้อมกันตามแนวคิดในตอน 5.3 ตอนใช้งานจึง "มองภาพครั้งเดียว" (You Only Look Once) อีกข้อที่ต่างจาก sliding windows คือ sliding windows ได้กรอบขนาดเท่าหน้าต่างเสมอ แต่ YOLO ทาย b_x, b_y, b_h, b_w เป็นตัวเลข กรอบจึงมีขนาดเท่าไรก็ได้</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p40.png" alt="Lecture 9 หน้า 40: YOLO: ภาพ 224×224 ได้ output 5×5×8" loading="lazy">
 <figcaption>Lecture 9 หน้า 40 — YOLO: ภาพ 224×224 ได้ output 5×5×8</figcaption>
 </figure>
 
-<p>ตัวอย่างบนสไลด์ grid 5×5 3 class คือ car, traffic sign, pedestrian แต่ละ cell มี 8 ค่า รวม 5 × 5 × 8 = 200 ค่า ground truth ตอนเทรนมี shape เดียวกัน</p>
+<p>ตัวอย่างในรูป ภาพ 224×224 แบ่งเป็น grid 5×5 มี 3 class คือ car, traffic sign, pedestrian แต่ละช่องมี 8 ค่าตาม target vector รวม 5 × 5 × 8 = 200 ค่า ground truth ตอนเทรนก็มี shape เดียวกัน</p>
 
-<p>ถ้า <mark class="src" data-p="41" title="center of the ground truth box">จุดกลางของกรอบ ground truth</mark> ตกใน cell ไหน <mark class="src" data-p="41" title="that cell">cell นั้น</mark> รับผิดชอบ <mark class="src" data-p="41" title="detecting the existence of that object">ตรวจว่ามีวัตถุนั้น</mark> แต่ละ cell ทาย <mark class="src" data-p="41" title="B">B</mark> กรอบ แต่ละกรอบมี objectness และความน่าจะเป็นของ <mark class="src" data-p="41" title="K">K</mark> class</p>
+<p>ช่องไหนรับผิดชอบวัตถุไหน ตัดสินจาก<mark class="src" data-p="41" title="center of the ground truth box">จุดกลางของกรอบ ground truth</mark> ถ้าจุดกลางตกในช่องไหน<mark class="src" data-p="41" title="that cell">ช่องนั้น</mark>รับผิดชอบ<mark class="src" data-p="41" title="detecting the existence of that object">ตรวจว่ามีวัตถุนั้น</mark> แต่ละช่องทาย <mark class="src" data-p="41" title="B">B</mark> กรอบ แต่ละกรอบมี objectness และความน่าจะเป็นของ <mark class="src" data-p="41" title="K">K</mark> class จำนวนค่าที่ทายทั้งหมดจึงเป็น</p>
 
 <div class="eq">\[\text{output} = S \times S \times (5 + K) \times B\]</div>
-<p class="say">สไลด์เขียน <mark class="src" data-p="41" title="S*S*(5+K)*B">S·S·(5+K)·B</mark> คือจำนวนช่อง × ค่าต่อกรอบ × กรอบต่อช่อง</p>
+<p class="say">จำนวนช่อง × ค่าต่อกรอบ × จำนวนกรอบต่อช่อง (<mark class="src" data-p="41" title="S*S*(5+K)*B">S·S·(5+K)·B</mark>)</p>
 
 <figure class="viz"><img src="../assets/viz/l9-yolo.svg" alt="YOLO output tensor และ 3 scale"></figure>
-<p>cell สีเหลืองหนึ่งช่องเก็บ B กรอบ แต่ละกรอบ 5 + K ค่า YOLOv3 มี K = 80 B = 3 จึงได้ 255 channel และทำที่ grid สามขนาด</p>
+<p>ในรูป ช่องสีเหลืองหนึ่งช่องเก็บ B กรอบ แต่ละกรอบมี 5 + K ค่า YOLOv3 มี K = 80 และ B = 3 จึงได้ 255 channel และทำแบบนี้ที่ grid สามขนาด</p>
 
-<p class="num">S = 13, K = 80, B = 3: ต่อกรอบ 85 · ต่อ cell 255 · ทั้งภาพ 13 × 13 × 255 = 43,095 ค่า · 507 กรอบ · ตัวอย่างหน้า 40: 5 × 5 × (5 + 3) × 1 = 200</p>
+<p class="num">S = 13, K = 80, B = 3: ต่อกรอบ 85 · ต่อ cell 255 · ทั้งภาพ 13 × 13 × 255 = 43,095 ค่า · 507 กรอบ · ตัวอย่าง grid 5×5 ข้างบน: 5 × 5 × (5 + 3) × 1 = 200</p>
 
 <p class="trap">K คือจำนวน class ไม่ใช่จำนวน anchor · ต่อกรอบมี 5 + K ไม่ใช่ 4 + K</p>
 
@@ -671,19 +693,21 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 
 <h3 id="s6-anchor">6.2 Anchor box, confidence score และ NMS</h3>
 
-<p>ถ้า cell ทายได้กรอบเดียว รถกับคนที่จุดกลางตก cell เดียวกันจะถูกตรวจชิ้นเดียว anchor box คือ <mark class="src" data-p="42" title="pre-defined box">กรอบรูปทรงกำหนดไว้ก่อน</mark> ช่วย <mark class="src" data-p="42" title="capture the aspect ratio &amp; the size of objects">จับสัดส่วนและขนาดของวัตถุ</mark> ใน cell จับคู่ n การทายกับ n anchor วัตถุถูกกำหนดให้ cell ที่มีจุดกลาง และ anchor ที่ IoU กับ ground truth สูงสุด</p>
+<p class="pic">ช่องหนึ่งมีลิ้นชักสองแบบ ลิ้นชักแบนไว้ใส่รถ ลิ้นชักสูงไว้ใส่คน ของสองชิ้นอยู่ช่องเดียวกันก็ไม่ต้องแย่งที่</p>
+
+<p>ถ้าช่องหนึ่งทายได้แค่กรอบเดียว รถกับคนที่จุดกลางตกช่องเดียวกันจะถูกตรวจได้แค่ชิ้นเดียว anchor box แก้เรื่องนี้ anchor คือ<mark class="src" data-p="42" title="pre-defined box">กรอบรูปทรงที่กำหนดไว้ก่อน</mark> เช่นกรอบแนวนอนสำหรับรถ กรอบแนวตั้งสำหรับคน ช่วย<mark class="src" data-p="42" title="capture the aspect ratio &amp; the size of objects">จับสัดส่วนและขนาดของวัตถุ</mark> ถ้ามี n anchor แต่ละช่องจะทาย n กรอบคู่กับ anchor แต่ละตัว ตอนเทรน วัตถุจะถูกกำหนดให้ช่องที่มีจุดกลางของมัน และให้ anchor ที่ IoU กับกรอบจริงสูงสุด</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p42.png" alt="Lecture 9 หน้า 42: Anchor Boxes: grid 19×19 สอง anchor" loading="lazy">
 <figcaption>Lecture 9 หน้า 42 — Anchor Boxes: grid 19×19 สอง anchor</figcaption>
 </figure>
 
-<p>คำถามบนสไลด์ "What is the output dimension?" grid 19×19 สอง anchor 3 class ตอบได้ 19, 19, 2, 8 หรือ 19, 19, 16 ซึ่ง implement ง่ายกว่า รวม 19 × 19 × 16 = 5,776 ค่าเท่ากัน</p>
+<p>ลองหาขนาด output ของ grid 19×19 ที่มี 2 anchor และ 3 class แต่ละ anchor มี 5 + 3 = 8 ค่า จึงเขียนได้ทั้ง 19 × 19 × 2 × 8 หรือรวมสองมิติท้ายเป็น 19 × 19 × 16 ซึ่ง implement ง่ายกว่า จำนวนค่าเท่ากันคือ 5,776</p>
 
-<p>แต่ละกรอบมี <mark class="src" data-p="43" title="objectness score">objectness score</mark> บอกว่าโมเดลมั่นใจแค่ไหนว่ากรอบมีวัตถุ ตอน post-processing รวมกับ class score ได้ <mark class="src" data-p="43" title="confidence score">confidence score</mark> ต่อ class ใช้กรองและเรียงใน NMS</p>
+<p>แต่ละกรอบมี<mark class="src" data-p="43" title="objectness score">objectness score</mark>บอกว่าโมเดลมั่นใจแค่ไหนว่ากรอบนั้นมีวัตถุ ตอน post-processing นำไปคูณกับ class score ได้<mark class="src" data-p="43" title="confidence score">confidence score</mark>ของแต่ละ class แล้วใช้ค่านี้กรองและเรียงกรอบใน NMS เหตุที่ต้องคูณคือกรอบต้องผ่านสองด่าน ต้องมีวัตถุจริง และต้องเป็น class นั้นจริง</p>
 
 <div class="eq">\[\text{confidence} = p_c \times \text{class score}\]</div>
-<p class="say">สไลด์เขียน <mark class="src" data-p="43" title="Confident score = P(containing an object) x class score">confident score = P(มีวัตถุ) × class score</mark></p>
+<p class="say"><mark class="src" data-p="43" title="Confident score = P(containing an object) x class score">ความมั่นใจสุดท้าย = ความน่าจะเป็นที่มีวัตถุ × ความน่าจะเป็นว่าเป็น class นั้น</mark></p>
 
 <p class="num">p_c = 0.9 class score car 0.8 pedestrian 0.1: car = 0.72 · pedestrian = 0.09 · p_c ต่ำทำให้ confidence ต่ำทุก class แม้ class score สูง</p>
 
@@ -714,9 +738,9 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 
 <h3 id="s6-scale">6.3 หลายขนาด และ YOLOv3</h3>
 
-<p>วัตถุมี <mark class="src" data-p="45" title="varying scales">ขนาดต่างกัน</mark> cell เล็กเห็นแค่ขนของม้าตัวใหญ่ แต่พอดีกับม้าตัวเล็ก <mark class="src" data-p="45" title="YOLO">YOLO</mark> แก้ด้วย <mark class="src" data-p="45" title="using convolution layers of different sizes">ใช้ conv layer หลายขนาด</mark> คือ <mark class="src" data-p="45" title="strides">stride</mark> ต่างกันใน network เดียว</p>
+<p>วัตถุมี<mark class="src" data-p="45" title="varying scales">ขนาดต่างกัน</mark> ช่องเล็กๆ ของ grid ละเอียดเห็นแค่ขนของม้าตัวใหญ่ ทายไม่ออกว่าเป็นม้า แต่พอดีกับม้าตัวเล็กที่อยู่ไกล <mark class="src" data-p="45" title="YOLO">YOLO</mark> แก้ด้วยการ<mark class="src" data-p="45" title="using convolution layers of different sizes">ใช้ conv layer หลายขนาด</mark> คือดึง feature map ที่<mark class="src" data-p="45" title="strides">stride</mark>ต่างกันจาก network เดียวกันมาทายพร้อมกัน</p>
 
-<p>CNN <mark class="src" data-p="46" title="reduces spatial dimension gradually">ลดขนาดเชิงพื้นที่ทีละขั้น</mark> feature map ความละเอียดต่ำตรวจวัตถุใหญ่ <mark class="src" data-p="46" title="YOLOv3">YOLOv3</mark> มี 9 anchor สำหรับ 3 scale ตรวจที่ <mark class="src" data-p="46" title="strides 32, 16, 8">stride 32, 16, 8</mark> ภาพ 416 ได้ <mark class="src" data-p="46" title="13 x 13">13×13</mark>, <mark class="src" data-p="46" title="26 x 26">26×26</mark>, <mark class="src" data-p="46" title="52 x 52">52×52</mark> สำหรับวัตถุ <mark class="src" data-p="46" title="large">ใหญ่</mark> กลาง และเล็ก</p>
+<p>CNN <mark class="src" data-p="46" title="reduces spatial dimension gradually">ลดขนาดเชิงพื้นที่ทีละขั้น</mark> feature map ยิ่งลึกยิ่งหยาบ แต่ละช่องครอบพื้นที่ภาพกว้างขึ้น จึงเหมาะกับวัตถุใหญ่ <mark class="src" data-p="46" title="YOLOv3">YOLOv3</mark> มี 9 anchor แบ่งให้ 3 scale ตรวจที่<mark class="src" data-p="46" title="strides 32, 16, 8">stride 32, 16, 8</mark> ภาพ 416 จึงได้ grid <mark class="src" data-p="46" title="13 x 13">13×13</mark>, <mark class="src" data-p="46" title="26 x 26">26×26</mark>, <mark class="src" data-p="46" title="52 x 52">52×52</mark> สำหรับวัตถุ<mark class="src" data-p="46" title="large">ใหญ่</mark> กลาง และเล็กตามลำดับ</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p46.png" alt="Lecture 9 หน้า 46: Handling Objects of Different Scales: strides 32, 16, 8" loading="lazy">
@@ -725,23 +749,23 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 
 <p class="num">416/32 = 13 · 416/16 = 26 · 416/8 = 52 · cell 169 + 676 + 2,704 = 3,549 · คูณ 3 anchor ได้ 10,647 กรอบต่อภาพ กรอบละ 85 ค่า · NMS ลดเหลือไม่กี่กรอบ</p>
 
-<p>backbone ของ YOLOv3 ชื่อ <mark class="src" data-p="47" title="Darknet">Darknet</mark>-53 ได้แรงบันดาลใจจาก Inception คือผสม conv 1×1 และ 3×3 และจาก ResNet คือ skip connection เพิ่มอีก 53 layer สำหรับ detection รวม <mark class="src" data-p="47" title="106 layer fully convolutional">106 layer แบบ fully convolutional</mark> ลึกจึงช้ากว่า YOLOv2 แต่แม่นขึ้นมาก</p>
+<p>backbone ของ YOLOv3 คือ <mark class="src" data-p="47" title="Darknet">Darknet</mark>-53 ยืมไอเดียจาก Lesson 8 สองอย่าง จาก Inception คือผสม conv 1×1 กับ 3×3 และจาก ResNet คือ skip connection แล้วต่ออีก 53 layer สำหรับ detection รวมเป็น<mark class="src" data-p="47" title="106 layer fully convolutional">106 layer แบบ fully convolutional</mark> ลึกกว่าเดิมจึงช้ากว่า YOLOv2 แต่แม่นขึ้นมาก</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p47.png" alt="Lecture 9 หน้า 47: YOLOv3 Architecture: Darknet-53" loading="lazy">
 <figcaption>Lecture 9 หน้า 47 — YOLOv3 Architecture: Darknet-53</figcaption>
 </figure>
 
-<p>แผนภาพมีจุดตรวจสามจุดที่ layer 84, 94 และ 106 ตาม stride 32, 16, 8 ระหว่าง scale มี upsampling แล้ว concatenate กับ feature map ละเอียดกว่าจาก layer 61 และ 36 แหล่งอื่นหลายแห่งนับจุดแรกเป็น layer 82 ถ้าข้อสอบถามให้ยึดตัวเลขบนสไลด์</p>
+<p>ในแผนภาพ จุดตรวจทั้งสามอยู่ที่ layer 84, 94 และ 106 ตรงกับ stride 32, 16, 8 ระหว่าง scale มีการ upsampling แล้ว concatenate กับ feature map ที่ละเอียดกว่าจาก layer 61 และ 36 grid ละเอียดจึงได้ทั้งความหมายจากชั้นลึกและตำแหน่งจากชั้นตื้น แหล่งอื่นหลายแห่งนับจุดแรกเป็น layer 82 ถ้าข้อสอบถามให้ยึดตัวเลขในรูปนี้</p>
 
-<p>สรุป YOLOv3 ปี 2018 รุ่นสุดท้ายที่ Joseph Redmon ร่วมทำ: input (m, 416, 416, 3) → DEEP CNN → encoding (m, 13, 13, 255), (m, 26, 26, 255), (m, 52, 52, 255) · output ต่อกรอบ 6 ตัวเลข (p_c, b_x, b_y, b_h, b_w, c) หรือ 85 ถ้าขยาย c เป็น 80 · YOLO ไม่ทายกรอบตรงๆ แต่ <mark class="src" data-p="48" title="YOLOv3 but as displacements from anchors">ทายเป็นระยะเลื่อนจาก anchor</mark> · คัดกรอบด้วย NMS · กรอบแม่นกว่า YOLOv2 แต่ใช้ทรัพยากรมากกว่า</p>
+<p>สรุป YOLOv3 (2018) รุ่นสุดท้ายที่ Joseph Redmon ผู้สร้าง YOLO ร่วมทำ: input (m, 416, 416, 3) → DEEP CNN → encoding สามชุด (m, 13, 13, 255), (m, 26, 26, 255), (m, 52, 52, 255) · แต่ละกรอบมี 6 ตัวเลข (p_c, b_x, b_y, b_h, b_w, c) หรือ 85 ถ้าขยาย c เป็น one-hot 80 class · YOLO ไม่ได้ทายกรอบตรงๆ แต่<mark class="src" data-p="48" title="YOLOv3 but as displacements from anchors">ทายเป็นระยะเลื่อนจาก anchor</mark> · คัดกรอบด้วย NMS · กรอบแม่นกว่า YOLOv2 แต่ใช้ทรัพยากรมากกว่า</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p49.png" alt="Lecture 9 หน้า 49: Results: ตรวจคนบนชายหาด" loading="lazy">
 <figcaption>Lecture 9 หน้า 49 — Results: ตรวจคนบนชายหาด</figcaption>
 </figure>
 
-<p>ผลพิมพ์หนึ่งบรรทัดต่อกรอบที่ผ่าน NMS: มุมสองมุม class และ confidence ทุกกรอบเป็น person 0.910, 0.973, 0.904, 0.920 กรอบสูงราวสองเท่าของกว้างตามรูปคนยืน และเล็กกว่า 100 × 170 pixel บนภาพกว้างเกิน 2,500 pixel คนเล็กแบบนี้ถูกจับด้วย grid ละเอียด stride 8</p>
+<p>ผลลัพธ์พิมพ์หนึ่งบรรทัดต่อกรอบที่ผ่าน NMS ได้แก่มุมสองมุม class และ confidence ทุกกรอบเป็น person ที่ 0.910, 0.973, 0.904, 0.920 กรอบสูงราวสองเท่าของความกว้างตามรูปคนยืน และเล็กกว่า 100 × 170 pixel บนภาพที่กว้างเกิน 2,500 pixel คนที่เล็กขนาดนี้ถูกจับได้ด้วย grid ละเอียดของ stride 8</p>
 
 <p class="trap">stride ใหญ่ = grid หยาบ = วัตถุใหญ่ · 13×13 ตรวจวัตถุใหญ่ ไม่ใช่เล็ก</p>
 
@@ -770,7 +794,9 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 <tr><td>ออกแบบเพื่อ real-time</td><td>บางรุ่น anchor-free · trade-off ความแม่น ความเร็ว ขนาด ดีขึ้น</td></tr>
 </table>
 
-<p>โจทย์พื้นฐานยังเดิมสามข้อ: Where is the object? What is it? How confident are we? ตรงกับกรอบ class และ p_c</p>
+<p>แม้รายละเอียดเปลี่ยน โจทย์พื้นฐานยังเป็นสามข้อเดิม คือ Where is the object? What is it? How confident are we? ตรงกับกรอบ, class และ p_c</p>
+
+<p class="pic">detector รุ่นใหม่ทำงานเหมือนทีมสามคน คนแรกดูภาพแล้วจดสิ่งที่เห็นในหลายระยะ คนที่สองรวมโน้ตระยะใกล้กับระยะไกลเข้าด้วยกัน คนที่สามเขียนคำตอบว่าอะไรอยู่ตรงไหน</p>
 
 <table>
 <tr><th>ส่วน</th><th>หน้าที่</th><th>เทียบ YOLOv3</th></tr>
@@ -784,9 +810,9 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 <figcaption>Lecture 9 หน้า 52 — From YOLOv3 to Modern YOLO</figcaption>
 </figure>
 
-<p>สี่แถวแรกของตารางเหมือนกันทั้งสองฝั่ง ความต่างคือ anchor box ที่รุ่นใหม่ใช้ "Not always" และ NMS ที่ "Common, but not universal"</p>
+<p>ในตารางเทียบ YOLOv3 กับ detector รุ่นใหม่ สี่แถวแรกเหมือนกัน สิ่งที่เปลี่ยนคือ anchor box ที่รุ่นใหม่ใช้ "ไม่เสมอไป" (Not always) และ NMS ที่ "ใช้กันทั่วไป แต่ไม่ทุกรุ่น" (Common, but not universal)</p>
 
-<p>Transformer ใช้ทำ detection ได้ เช่น DETR ปี 2020: มองเป็น set prediction ทายเซตวัตถุครั้งเดียว · ใช้ object query หนึ่ง query ต่อวัตถุหนึ่งชิ้น · ทาย class + กรอบ · ใช้ attention จับความสัมพันธ์ทั้งภาพ · DETR ดั้งเดิมไม่ต้องมี anchor และ NMS CNN-based detector ยังสำคัญมากเมื่อต้องการความเร็ว Transformer เป็นอีกทาง ไม่ได้มาแทน รุ่นต่อมาคือ RT-DETR สำหรับ real-time</p>
+<p>detection ไม่จำเป็นต้องใช้ CNN อย่างเดียว Transformer ก็ทำได้ เช่น DETR (2020) มองโจทย์เป็น set prediction คือทายเซตของวัตถุทั้งหมดในครั้งเดียว ใช้ object query หนึ่งตัวต่อวัตถุหนึ่งชิ้น แต่ละ query ทาย class และกรอบ และใช้ attention จับความสัมพันธ์ทั่วทั้งภาพ DETR ดั้งเดิมไม่ต้องมี anchor และไม่ต้องใช้ NMS เพราะแต่ละ query จับคู่กับวัตถุคนละชิ้นอยู่แล้ว ถึงอย่างนั้น detector แบบ CNN ยังสำคัญมากเมื่อต้องการความเร็ว Transformer เป็นอีกทางเลือก ไม่ได้มาแทน รุ่นต่อมาคือ RT-DETR ที่ออกแบบให้ทำงาน real-time</p>
 
 <p class="trap">DETR ไม่ต้องใช้ NMS เพราะแต่ละ query จับคู่วัตถุไม่ซ้ำกัน · Transformer ไม่ได้แทน CNN detector ทั้งหมด</p>
 
