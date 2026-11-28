@@ -564,7 +564,7 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <p class="pic">แทนที่จะเลื่อนกระดาษทั่วรูป ให้คนวงไว้ก่อนว่าตรงไหนน่าจะมีคน แล้วดูเฉพาะจุดที่วง</p>
 
-<p><mark class="src" data-p="34" title="R-CNN">R-CNN</mark> ไม่ตรวจทุกตำแหน่ง แต่ใช้ <mark class="src" data-p="34" title="Selective Search algorithm">อัลกอริทึม Selective Search</mark> (ไม่ใช่ neural network) เสนอบริเวณที่น่าจะมีวัตถุราว 2,000 บริเวณ เรียกว่า ROI แล้วส่งแต่ละ ROI เข้า CNN แยกกัน ยังต้องรัน CNN 2,000 ครั้งต่อภาพ</p>
+<p><mark class="src" data-p="34" title="R-CNN">R-CNN</mark> ไม่ตรวจทุกตำแหน่ง แต่ใช้ <mark class="src" data-p="34" title="Selective Search algorithm">อัลกอริทึม Selective Search</mark> (ไม่ใช่ neural network) เสนอบริเวณที่น่าจะมีวัตถุราว 2,000 บริเวณ เรียกว่า ROI แล้วส่งแต่ละ ROI เข้า CNN แยกกัน ยังต้องรัน CNN 2,000 ครั้งต่อภาพ R-CNN เป็นงานยุคแรกที่ใช้ CNN ทำ detection ได้ผลดี ทำผลระดับ state-of-the-art บน PASCAL VOC-2012 และ ILSVRC-2013</p>
 
 <p><mark class="src" data-p="34" title="Fast R-CNN">Fast R-CNN</mark> ส่งทั้งภาพเข้า CNN ครั้งเดียว แล้วตัดส่วนของแต่ละ ROI จาก feature map ที่ได้ convolution ซ้ำจึงหายไป เหลือ Selective Search เป็นส่วนที่ช้าที่สุด</p>
 

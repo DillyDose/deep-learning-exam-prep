@@ -22,7 +22,7 @@
 <h1>Sequence Models: RNN, GRU, LSTM, Time Series และ Word Embeddings</h1>
 <p class="readmeta">อ่านประมาณ 25 นาที · ข้อความ<mark class="src" title="highlighted slide text">ไฮไลต์</mark>คือคำแปลของถ้อยคำที่อาจารย์ทำสีบนสไลด์ ชี้เมาส์หรือแตะค้างเพื่อดูภาษาอังกฤษต้นฉบับ · รูปสไลด์กดเพื่อขยาย</p>
 
-<p>Lesson 7–9 จัดการข้อมูลที่มีโครงสร้างเชิงพื้นที่คือภาพ บทนี้เปลี่ยนเป็นข้อมูลเชิงลำดับคืออนุกรมเวลาและข้อความ ตัวเลขที่ข้อสอบชอบถามคือ shape ของ input, จำนวน parameter ของ RNN, GRU, LSTM และค่าของ memory หลังผ่าน gate ซึ่งคิดด้วยมือได้ทั้งหมด</p>
+<p>Lesson 7–9 ทำงานกับภาพ ซึ่งสิ่งสำคัญคือตำแหน่งในพื้นที่ บทนี้เปลี่ยนเป็นข้อมูลที่สิ่งสำคัญคือลำดับ ได้แก่อนุกรมเวลาและข้อความ เรื่องเริ่มจาก RNN ที่อ่านทีละ step และจำสิ่งที่อ่านมาแล้ว ต่อด้วย GRU กับ LSTM ที่แก้ปัญหา RNN ลืมเรื่องที่อยู่ไกล แล้วจบที่การแปลงข้อความเป็นตัวเลขให้ RNN อ่านได้ ข้อสอบชอบถาม shape ของ input, จำนวน parameter ของ RNN, GRU, LSTM และค่า memory หลังผ่าน gate ซึ่งคิดด้วยมือได้ทั้งหมด</p>
 
 <table class="map">
 <tr><th>คำถาม</th><th>คำตอบสั้น</th><th>อ่านที่</th></tr>
@@ -52,7 +52,9 @@
 
 <p class="pic">อ่านนิยายทีละหน้าแล้วลืมหน้าก่อนทุกครั้ง จะไม่รู้ว่าใครเป็นใคร การอ่านลำดับต้องจำสิ่งที่อ่านมาแล้วติดตัวไปด้วย</p>
 
-<p><mark class="src" data-p="2" title="Sequential data">ข้อมูลเชิงลำดับ</mark> คือข้อมูลที่เรียงตาม <mark class="src" data-p="2" title="some index">index บางอย่าง</mark> เช่น time series ที่ index คือเวลา, ข้อความ, เสียงพูด ตัวอย่างงาน <mark class="src" data-p="2" title="natural language processing">natural language processing</mark>: sentiment รับคำหลายคำให้ดาวค่าเดียว · speech recognition รับเสียงให้ข้อความ · music generation รับแนวเพลงค่าเดียวให้ลำดับโน้ต</p>
+<p><mark class="src" data-p="2" title="Sequential data">ข้อมูลเชิงลำดับ</mark>คือข้อมูลที่เรียงตาม<mark class="src" data-p="2" title="some index">index บางอย่าง</mark> เช่น time series ที่เรียงตามเวลา ข้อความที่เรียงตามคำ และเสียงพูด งาน <mark class="src" data-p="2" title="natural language processing">natural language processing</mark> ที่ใช้ข้อมูลแบบนี้มีหลายรูป เช่น sentiment อ่านรีวิวหลายคำแล้วให้ดาวค่าเดียว speech recognition ฟังเสียงแล้วให้ข้อความ music generation รับแนวเพลงค่าเดียวแล้วสร้างลำดับโน้ต</p>
+
+<p>dense network ที่เรียนมาใน Lesson 2–6 ไม่เหมาะกับข้อมูลแบบนี้ด้วยเหตุผลสามข้อ</p>
 
 <table>
 <tr><th>เหตุผล</th><th>dense network ทำไม่ได้เพราะ</th></tr>
@@ -74,14 +76,14 @@
 
 <h3 id="s1-rnn">1.2 RNN และ shape ของ input</h3>
 
-<p>RNN ประมวลผล <mark class="src" data-p="4" title="step by step">ทีละ step</mark> แต่ละ step จัดการ <mark class="src" data-p="4" title="one element in the sequence">สมาชิกหนึ่งตัวของลำดับ</mark> และเก็บ <mark class="src" data-p="4" title="memory">ความจำ</mark> ของสิ่งที่เห็นแล้ว ลูกศรวนกลับในแผนภาพคือ output ของ hidden layer step นี้กลับมาเป็น input ของ step ถัดไป รับลำดับ <mark class="src" data-p="4" title="arbitrary lengths">ยาวเท่าใดก็ได้</mark> แต่ปกติใช้ <mark class="src" data-p="4" title="fixed-sized inputs">input ขนาดคงที่</mark> เพื่อจัดเป็น batch</p>
+<p>RNN แก้ทั้งสามข้อด้วยการอ่าน<mark class="src" data-p="4" title="step by step">ทีละ step</mark> แต่ละ step รับ<mark class="src" data-p="4" title="one element in the sequence">สมาชิกหนึ่งตัวของลำดับ</mark> แล้วเก็บ<mark class="src" data-p="4" title="memory">ความจำ</mark>ของสิ่งที่เห็นมาแล้วไว้ใน hidden state ลูกศรวนกลับในรูปคือ output ของ hidden layer ที่ step นี้ถูกส่งกลับมาเป็น input ของ step ถัดไป และเพราะใช้ weight ชุดเดิมทุก step จึงรับลำดับ<mark class="src" data-p="4" title="arbitrary lengths">ยาวเท่าใดก็ได้</mark> แม้ในทางปฏิบัติมักใช้<mark class="src" data-p="4" title="fixed-sized inputs">input ขนาดคงที่</mark>เพื่อจัดเป็น batch ให้คำนวณเร็ว</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p04.png" alt="Lecture 10 หน้า 4: Recurrent Neural Networks: recurrent connection และโค้ด SimpleRNN" loading="lazy">
 <figcaption>Lecture 10 หน้า 4 — Recurrent Neural Networks: recurrent connection และโค้ด SimpleRNN</figcaption>
 </figure>
 
-<p>โค้ดบนสไลด์ใช้ SimpleRNN 16 neuron กับข้อมูลอุณหภูมิ 14 feature จำนวน parameter ไม่ขึ้นกับความยาวลำดับ ลำดับยาว 3 หรือ 120 ใช้ชุดเดียวกัน</p>
+<p>โค้ดตัวอย่างใช้ SimpleRNN 16 neuron กับข้อมูลอากาศที่มี 14 feature สังเกตว่าจำนวน parameter ไม่ขึ้นกับความยาวลำดับ ลำดับยาว 3 หรือ 120 ก็ใช้ weight ชุดเดียวกัน</p>
 
 <pre><code>model = Sequential()
 model.add(layers.SimpleRNN(16, return_sequences=True,
@@ -101,27 +103,27 @@ model.summary()</code></pre>
 
 <p class="num">n = 16, m = 14: W_x 14·16 = 224 · W_a 16·16 = 256 · bias 16 · รวม 496 · Dense(1) 17 · ทั้งโมเดล 513 · ถ้าเป็น Dense 16 node จะได้ 240 ส่วนต่าง 256 คือ recurrent connection</p>
 
-<p>ตารางหน้า 5 คือ weather timeseries หนึ่งแถวต่อ 10 นาที 14 คอลัมน์ คำถามบนสไลด์: "What is the dimension of input to RNNs?"</p>
+<p>ข้อมูลที่ใช้ทั้งบทคือ weather timeseries หนึ่งแถวต่อ 10 นาที มี 14 คอลัมน์ คำถามแรกที่ต้องตอบได้คือ input ของ RNN มีกี่มิติ คำตอบคือสามมิติ</p>
 
 <div class="eq">\[\text{input ของ RNN} = (\text{batch size},\ \text{sequence},\ \text{feature})\]</div>
 <p class="say">กี่ตัวอย่างต่อ batch, แต่ละตัวอย่างยาวกี่ step, แต่ละ step มีกี่ตัวแปร</p>
 
 <figure class="viz"><img src="../assets/viz/l10-shapes.svg" alt="หน้าต่างเลื่อนบนคอลัมน์อุณหภูมิ"></figure>
-<p>หน้าต่างยาว 3 เลื่อนทีละแถว target คือค่าถัดจากหน้าต่าง batch บนสไลด์มี 7 หน้าต่าง ใช้แค่อุณหภูมิได้ (7, 3, 1) ใช้ทั้ง 14 คอลัมน์ได้ (7, 3, 14)</p>
+<p>หน้าต่างยาว 3 เลื่อนลงทีละแถว target คือค่าถัดจากหน้าต่าง batch ตัวอย่างนี้มี 7 หน้าต่าง ถ้าใช้แค่อุณหภูมิได้ (7, 3, 1) ถ้าใช้ทั้ง 14 คอลัมน์ได้ (7, 3, 14)</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p06.png" alt="Lecture 10 หน้า 6: RNNs Unrolled Through Time: univariate" loading="lazy">
 <figcaption>Lecture 10 หน้า 6 — RNNs Unrolled Through Time: univariate</figcaption>
 </figure>
 
-<p>รูปหน้า 6 คือ <mark class="src" data-p="6" title="Univariate Feature Sequence Target Example of 1 batch">univariate: feature, sequence, target ของ 1 batch</mark> ป้อน −8.02, −8.41, −8.51 แล้วทาย −8.31 แผนภาพ unrolled คือ RNN ตัวเดียววาดสามครั้ง ไม่ใช่สาม layer</p>
+<p>แบบ <mark class="src" data-p="6" title="Univariate Feature Sequence Target Example of 1 batch">univariate</mark> แต่ละ step มีค่าเดียวคืออุณหภูมิ ป้อน −8.02, −8.41, −8.51 แล้วทาย −8.31 รูปที่วาด RNN เรียงสามกล่องเรียกว่า unrolled คือ RNN ตัวเดียวกันวาดซ้ำสามครั้งตามเวลา ไม่ใช่สาม layer</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p07.png" alt="Lecture 10 หน้า 7: RNNs Unrolled Through Time (2): multivariate" loading="lazy">
 <figcaption>Lecture 10 หน้า 7 — RNNs Unrolled Through Time (2): multivariate</figcaption>
 </figure>
 
-<p>หน้า 7 คือ <mark class="src" data-p="7" title="Multivariate Feature Sequence Target Example of 1 batch">multivariate: feature, sequence, target ของ 1 batch</mark> แต่ละ step เป็น vector 14 ค่าเช่น [996.52, −8.02, …] target ยังเป็นอุณหภูมิ −8.31 ค่าเดียว</p>
+<p>แบบ <mark class="src" data-p="7" title="Multivariate Feature Sequence Target Example of 1 batch">multivariate</mark> แต่ละ step เป็น vector 14 ค่า เช่น [996.52, −8.02, …] แต่ target ยังเป็นอุณหภูมิค่าเดียว −8.31</p>
 
 <p class="trap">ความยาวลำดับไม่อยู่ในสูตร parameter · univariate คือ feature = 1 ไม่ใช่ sequence = 1</p>
 
@@ -148,10 +150,10 @@ model.summary()</code></pre>
 <tr><td>\(a^{\langle t \rangle}\)</td><td>\(m \times n_{neurons}\) เมื่อ m คือจำนวนตัวอย่างใน batch</td></tr>
 </table>
 
-<p>หมายเหตุบนสไลด์: W_a, W_x และ W_y ใช้ร่วมกันทุก time step ลด parameter ได้มาก แบบเดียวกับ filter ของ CNN ที่ใช้ร่วมกันทุกตำแหน่ง หน่วยที่วนนี้เรียก memory cell</p>
+<p>จุดสำคัญคือ W_a, W_x และ W_y ใช้ชุดเดียวกันทุก time step แบบเดียวกับที่ filter ของ CNN ใช้ซ้ำทุกตำแหน่ง parameter จึงน้อยลงมาก หน่วยที่ทำงานวนซ้ำนี้เรียกว่า memory cell</p>
 
 <figure class="viz"><img src="../assets/viz/l10-unroll.svg" alt="RNN unrolled สาม step"></figure>
-<p>W_a = 0.5, W_x = 1, bias 0, input 1, 0.5, −1 แต่ละกล่องคือ cell เดียวกันที่ step ต่างกัน state ของ step ก่อนถูกส่งเข้า step ถัดไปตามลูกศรฟ้า</p>
+<p>ตัวอย่างในรูปใช้ W_a = 0.5, W_x = 1, bias 0 และ input 1, 0.5, −1 แต่ละกล่องคือ cell เดียวกันที่ step ต่างกัน state ของ step ก่อนถูกส่งเข้า step ถัดไปตามลูกศรฟ้า</p>
 
 <p class="num">a⟨1⟩ = tanh(0.5·0 + 1) = 0.7616 · a⟨2⟩ = tanh(0.5·0.7616 + 0.5) = tanh(0.8808) = 0.7068 · a⟨3⟩ = tanh(0.5·0.7068 − 1) = tanh(−0.6466) = −0.5694</p>
 
@@ -173,8 +175,10 @@ model.summary()</code></pre>
 
 <h3 id="s2-types">2.1 สี่ชนิดของ RNN</h3>
 
+<p>RNN แบ่งได้สี่แบบตามความยาวของ input (\(T_x\)) และ output (\(T_y\))</p>
+
 <table>
-<tr><th>ชนิด</th><th>เงื่อนไข</th><th>ตัวอย่างบนสไลด์</th><th>Keras</th></tr>
+<tr><th>ชนิด</th><th>เงื่อนไข</th><th>ตัวอย่าง</th><th>Keras</th></tr>
 <tr><td>sequence-to-vector</td><td>\(T_x > 1,\ T_y = 1\)</td><td>sentiment: รีวิว → ดาว</td><td>return_sequences=False</td></tr>
 <tr><td>vector-to-sequence</td><td>\(T_x = 1,\ T_y > 1\)</td><td>music generation, language model สร้างชื่อทีละตัวอักษร output ป้อนกลับเป็น input</td><td></td></tr>
 <tr><td>sequence-to-sequence</td><td>\(T_x = T_y\)</td><td>named entity recognition ติดป้าย 0/1 ทุกคำ</td><td>return_sequences=True</td></tr>
@@ -186,7 +190,7 @@ model.summary()</code></pre>
 <figcaption>Lecture 10 หน้า 11 — Different Types of RNN (2): sequence-to-sequence และ encoder–decoder</figcaption>
 </figure>
 
-<p>การแปลภาษาใช้ seq-to-seq ตรงไม่ได้ เพราะจำนวนคำต้นทางกับปลายทางไม่เท่ากัน encoder อ่านทั้งประโยคเป็น vector แล้ว decoder สร้างลำดับใหม่ ใช้ต่อใน Lesson 11</p>
+<p>การแปลภาษาใช้ sequence-to-sequence ตรงๆ ไม่ได้ เพราะจำนวนคำต้นทางกับปลายทางไม่เท่ากัน encoder จึงอ่านทั้งประโยคเก็บเป็น vector ก่อน แล้ว decoder ค่อยสร้างประโยคใหม่ทีละคำ เรื่องนี้ใช้ต่อใน Lesson 11</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 10)</summary><div class="gallery">
 <figure>
@@ -197,20 +201,22 @@ model.summary()</code></pre>
 
 <h3 id="s2-bptt">2.2 BPTT</h3>
 
-<p>BPTT คือ backprop บน network ที่คลี่ตามเวลา ขั้นตอนบนสไลด์: <mark class="src" data-p="12" title="BPTT is done at each point in time where the cost function is based on all the loss at every time step">cost function รวม loss ของทุก time step</mark> · <mark class="src" data-p="12" title="First forward pass through the unrolled network">forward ผ่าน network ที่คลี่</mark> · <mark class="src" data-p="12" title="Then the output sequence is evaluated using a cost function">ประเมินลำดับ output ด้วย cost function</mark> · <mark class="src" data-p="12" title="Gradients of cost function are then propagated backward through the unrolled networks (backward over timesteps)">ส่ง gradient ย้อนผ่าน network ที่คลี่ ย้อนตามเวลา</mark> · <mark class="src" data-p="12" title="Model parameters are updated using the gradients computed during BPTT.">อัปเดต parameter ด้วย gradient จาก BPTT</mark> · <mark class="src" data-p="12" title="Because the weights are shared across the different time steps in the case of RNNs, we need to sum up the gradients across the various time steps in the case of BPTT.">weight ใช้ร่วมทุก step จึงต้องบวก gradient ของทุก step</mark> · <mark class="src" data-p="12" title="Note the loss may ignore some outputs such as in a sequence-to-vector RNN.">loss อาจไม่ใช้บาง output เช่น sequence-to-vector</mark></p>
+<p>BPTT คือ backpropagation บน network ที่คลี่ตามเวลา ขั้นแรก<mark class="src" data-p="12" title="First forward pass through the unrolled network">forward ผ่าน network ที่คลี่</mark> แล้ว<mark class="src" data-p="12" title="Then the output sequence is evaluated using a cost function">ประเมินลำดับ output ด้วย cost function</mark> ซึ่ง<mark class="src" data-p="12" title="BPTT is done at each point in time where the cost function is based on all the loss at every time step">รวม loss ของทุก time step</mark> จากนั้น<mark class="src" data-p="12" title="Gradients of cost function are then propagated backward through the unrolled networks (backward over timesteps)">ส่ง gradient ย้อนกลับตามเวลา</mark> และ<mark class="src" data-p="12" title="Model parameters are updated using the gradients computed during BPTT.">อัปเดต parameter</mark> จุดที่ต่างจาก backprop ปกติคือ<mark class="src" data-p="12" title="Because the weights are shared across the different time steps in the case of RNNs, we need to sum up the gradients across the various time steps in the case of BPTT.">weight ใช้ร่วมกันทุก step จึงต้องบวก gradient ของทุก step เข้าด้วยกัน</mark>ก่อนอัปเดต และ<mark class="src" data-p="12" title="Note the loss may ignore some outputs such as in a sequence-to-vector RNN.">loss อาจไม่ใช้บาง output</mark> เช่น sequence-to-vector ที่ใช้แค่ output สุดท้าย</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p12.png" alt="Lecture 10 หน้า 12: BPTT: Back Propagation through Time" loading="lazy">
 <figcaption>Lecture 10 หน้า 12 — BPTT: Back Propagation through Time</figcaption>
 </figure>
 
-<p>gradient ของ W_a จากสาม step บนรูปถูกรวมเป็นค่าเดียว เพราะ W_a มีตัวเดียว อัปเดตครั้งเดียว</p>
+<p>ในรูป gradient ของ W_a จากสาม step ถูกรวมเป็นค่าเดียว เพราะ W_a มีตัวเดียวและอัปเดตครั้งเดียว</p>
 
 <p class="num">gradient ของ W_a จาก 3 step = 0.20, 0.05, −0.10 รวม 0.15 · lr 0.1: W_a = 0.50 − 0.1 × 0.15 = 0.485</p>
 
 <h3 id="s2-vanish">2.3 ปัญหาของ simple RNN</h3>
 
-<p>Simple RNN จับ <mark class="src" data-p="13" title="long-range dependencies">ความสัมพันธ์ระยะไกล</mark> ได้ไม่ดี ตัวอย่าง "That man who met Tenjiro … is my neighbor." กริยา is ต้องสอดคล้องกับ man ที่อยู่ไกล สาเหตุคือความสัมพันธ์ <mark class="src" data-p="13" title="man is">man กับ is</mark> ถูกตัดด้วย <mark class="src" data-p="13" title="vanishing gradient problem">ปัญหา vanishing gradient</mark> gradient เป็นผลคูณที่ลดแบบ exponential ตามจำนวน step network ที่ยาวมากอาจ <mark class="src" data-p="13" title="untrainable">เทรนไม่ได้</mark> initialization, optimizer, dropout ช่วยได้บ้าง แต่แก้จริงต้องใช้ <mark class="src" data-p="13" title="better architectures">สถาปัตยกรรมที่ดีกว่า</mark></p>
+<p class="pic">เล่นกระซิบต่อกันสิบคน ข้อความของคนแรกเพี้ยนและจางลงทุกครั้งที่ส่งต่อ พอถึงคนสุดท้ายแทบไม่เหลือ</p>
+
+<p>Simple RNN จับ<mark class="src" data-p="13" title="long-range dependencies">ความสัมพันธ์ระยะไกล</mark>ได้ไม่ดี เช่นประโยค "That man who met Tenjiro … is my neighbor." กริยา is ต้องเป็นเอกพจน์ให้เข้ากับ man ที่อยู่ห่างออกไปหลายคำ ความสัมพันธ์<mark class="src" data-p="13" title="man is">man กับ is</mark>นี้หายไปเพราะ<mark class="src" data-p="13" title="vanishing gradient problem">ปัญหา vanishing gradient</mark> แบบเดียวกับ network ที่ลึกมากใน Lesson 5 ตอนส่ง gradient ย้อนเวลา gradient ถูกคูณซ้ำทุก step จึงเล็กลงแบบ exponential ตามจำนวน step ลำดับที่ยาวมากจึงอาจ<mark class="src" data-p="13" title="untrainable">เทรนไม่ได้</mark> initialization, optimizer หรือ dropout ช่วยได้บ้าง แต่จะแก้จริงต้องเปลี่ยนเป็น<mark class="src" data-p="13" title="better architectures">สถาปัตยกรรมที่ดีกว่า</mark> คือ GRU และ LSTM ในตอนถัดไป</p>
 
 <p class="num">ตัวคูณ 0.9 ย้อน 10 step: 0.349 · 50 step: 0.0052 · ตัวคูณ 0.5 ย้อน 10 step: 0.00098 · ตัวคูณ 1.1 ย้อน 50 step: 117.4 คือ exploding</p>
 
@@ -230,7 +236,7 @@ model.summary()</code></pre>
 
 <p class="pic">จดโน้ตลงสมุด เจอข้อมูลสำคัญก็เขียนทับ เจอเรื่องไม่สำคัญก็ไม่แตะสมุด หน้าที่จดไว้จึงอยู่รอดไปถึงตอนต้องใช้</p>
 
-<p>GRU ของ Cho et al. ปี 2014 ใน GRU memory cell คือ hidden state \(c^{\langle t \rangle} = a^{\langle t \rangle}\) แบบ simplified มี update gate ตัวเดียว ตัวอย่างบนสไลด์ประโยค "<mark class="src" data-p="14" title="Man is">Man … is</mark>" ให้ Γ_u = 1, 0, 0, 0 ที่ man, who, met, Tenjiro</p>
+<p>GRU (Cho et al., 2014) เพิ่มทางให้ข้อมูลข้ามหลาย step ได้โดยไม่จาง ใน GRU memory cell คือ hidden state เอง \(c^{\langle t \rangle} = a^{\langle t \rangle}\) แบบ simplified มี gate ตัวเดียวคือ update gate Γ_u ซึ่งตัดสินทุก step ว่าจะเขียน memory ใหม่หรือเก็บของเดิมไว้ ตัวอย่างประโยค "<mark class="src" data-p="14" title="Man is">Man … is</mark>" ให้ Γ_u = 1, 0, 0, 0 ที่คำ man, who, met, Tenjiro</p>
 
 <div class="eq">\[\tilde{c}^{\langle t \rangle} = \tanh(\net{W_c}[c^{\langle t-1 \rangle}, x^{\langle t \rangle}] + \net{b_c}) \qquad \net{\Gamma_u} = \sigma(\net{W_u}[c^{\langle t-1 \rangle}, x^{\langle t \rangle}] + \net{b_u})\]
 \[c^{\langle t \rangle} = \net{\Gamma_u} * \tilde{c}^{\langle t \rangle} + (1 - \net{\Gamma_u}) * c^{\langle t-1 \rangle}\]</div>
@@ -241,16 +247,16 @@ model.summary()</code></pre>
 <figcaption>Lecture 10 หน้า 15 — Example of How GRU Works: ไล่ทีละคำ</figcaption>
 </figure>
 
-<p>man ได้ Γ_u = 1 memory รับข้อมูล "ประธานเอกพจน์" เต็มที่ who, met, Tenjiro ได้ Γ_u = 0 memory ถูกคัดลอกต่อ c⟨4⟩ = c⟨1⟩ พอถึง is จึงยังรู้ว่าต้องใช้กริยาเอกพจน์</p>
+<p>man ได้ Γ_u = 1 memory จึงรับข้อมูล "ประธานเอกพจน์" เต็มที่ ส่วน who, met, Tenjiro ได้ Γ_u = 0 memory จึงถูกคัดลอกต่อไปเฉยๆ c⟨4⟩ = c⟨1⟩ พอถึง is จึงยังรู้ว่าต้องใช้กริยาเอกพจน์ การคัดลอกตรงๆ แบบนี้ยังเป็นทางลัดให้ gradient ไหลย้อนได้โดยไม่จาง คล้าย skip connection ของ ResNet</p>
 
 <p class="num">c̃ = −0.2 c⟨t−1⟩ = 0.8: Γ_u = 1 ได้ −0.2 · Γ_u = 0 ได้ 0.8 · Γ_u = 0.25 ได้ 0.25·(−0.2) + 0.75·0.8 = 0.55</p>
 
-<p>Full GRU เพิ่ม <mark class="src" data-p="16" title="Γr Γu">Γ_r</mark> คือ relevant หรือ reset gate ควบคุมว่า memory เดิมเกี่ยวข้องแค่ไหนตอนสร้าง candidate ถ้า Γ_r = 0 candidate มาจาก input ปัจจุบันอย่างเดียว</p>
+<p>Full GRU เพิ่ม gate ตัวที่สอง <mark class="src" data-p="16" title="Γr Γu">Γ_r</mark> เรียกว่า relevance หรือ reset gate คุมว่า memory เดิมเกี่ยวข้องแค่ไหนตอนสร้างค่าใหม่ ถ้า Γ_r = 0 ค่าใหม่จะมาจาก input ปัจจุบันอย่างเดียว เหมือนเริ่มเรื่องใหม่</p>
 
 <div class="eq">\[\tilde{c}^{\langle t \rangle} = \tanh(\net{W_c}[\net{\Gamma_r} * c^{\langle t-1 \rangle}, x^{\langle t \rangle}] + \net{b_c}) \qquad \net{\Gamma_r} = \sigma(\net{W_r}[c^{\langle t-1 \rangle}, x^{\langle t \rangle}] + \net{b_r})\]</div>
 <p class="say">ต่างจากแบบ simplified จุดเดียว: memory เดิมถูกคูณด้วย Γ_r ก่อนเข้าคำนวณค่าใหม่</p>
 
-<p>จุดสำคัญของ GRU หน้า 17: GRU เป็นรุ่นย่อของ LSTM ทำงานได้ดีพอกัน · gate ตัวเดียว <mark class="src" data-p="17" title="Γu • Γr">Γ_u</mark> คุมทั้ง update และ forget ถ้าเป็น 1 update เปิดเต็มและ forget ปิด คือจะเขียนใหม่ต้องลบตำแหน่งนั้นก่อน · gate เป็น vector ค่า 0 ถึง 1 · Γ_r ตัดสินว่าจะทิ้งข้อมูลก่อนหน้าไหม</p>
+<p>สรุป GRU: เป็นรุ่นย่อของ LSTM แต่ทำงานได้ดีพอกัน จึงนิยมมากขึ้น · gate ตัวเดียว <mark class="src" data-p="17" title="Γu • Γr">Γ_u</mark> คุมทั้ง update และ forget ถ้า Γ_u = 1 คือเขียนใหม่เต็มที่และลืมของเดิมหมด พูดอีกแบบคือจะเขียนของใหม่ลงตำแหน่งไหนต้องลบตำแหน่งนั้นก่อน · gate เป็น vector ค่าระหว่าง 0 ถึง 1 · Γ_r ตัดสินว่าจะทิ้งข้อมูลก่อนหน้าไหม</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 14, 16–17)</summary><div class="gallery">
 <figure>
@@ -269,15 +275,17 @@ model.summary()</code></pre>
 
 <h3 id="s3-lstm">3.2 LSTM</h3>
 
-<p>LSTM ของ Hochreiter &amp; Schmidhuber ปี 1997 มี state สองตัว gate สามตัว</p>
+<p>LSTM (Hochreiter &amp; Schmidhuber, 1997) เก่ากว่า GRU และละเอียดกว่า มี state สองตัวและ gate สามตัว</p>
 
 <div class="eq">\[c^{\langle t \rangle} = \net{\Gamma_u} * \tilde{c}^{\langle t \rangle} + \net{\Gamma_f} * c^{\langle t-1 \rangle} \qquad a^{\langle t \rangle} = \net{\Gamma_o} * \tanh(c^{\langle t \rangle})\]</div>
 <p class="say">long-term memory = update gate × ค่าใหม่ + forget gate × ค่าเดิม · short-term state = output gate × tanh ของ long-term · ทุก gate คำนวณจาก [a⟨t−1⟩, x⟨t⟩]</p>
 
-<p>LSTM เรียนว่าจะจำ input สำคัญ คือบทบาทของ <mark class="src" data-p="19" title="update gate">update gate</mark> เก็บไว้นานแค่ไหน คือบทบาทของ <mark class="src" data-p="19" title="forget gate">forget gate</mark> และดึงออกมาเมื่อไร state แบ่งเป็น 2 vector: <mark class="src" data-p="19" title="a <t>">a⟨t⟩</mark> คือ <mark class="src" data-p="19" title="short-term state">state ระยะสั้น</mark> และ <mark class="src" data-p="19" title="c <t>">c⟨t⟩</mark> คือ <mark class="src" data-p="19" title="long-term state">state ระยะยาว</mark> gate <mark class="src" data-p="19" title="Γu , Γf , Γo">Γ_u, Γ_f, Γ_o</mark> ใช้ <mark class="src" data-p="19" title="logistic activation function">logistic activation function</mark> คือ sigmoid output 0 ปิด 1 เปิด GRU เป็นรุ่นย่อ LSTM ทรงพลังกว่า</p>
+<p class="pic">LSTM มีสมุดสองเล่ม เล่มใหญ่เก็บเรื่องระยะยาว (c) เล่มเล็กเป็นโน้ตที่หยิบมาใช้ตอนนี้ (a) gate สามตัวคุมว่าจะเขียนอะไรเพิ่ม ลบอะไรทิ้ง และเปิดอะไรออกมาใช้</p>
+
+<p>LSTM เรียนว่า input ไหนสำคัญ (หน้าที่ของ <mark class="src" data-p="19" title="update gate">update gate</mark>) เก็บไว้นานแค่ไหน (หน้าที่ของ <mark class="src" data-p="19" title="forget gate">forget gate</mark>) และจะดึงออกมาใช้เมื่อไร (หน้าที่ของ output gate) state แบ่งเป็น 2 vector คือ <mark class="src" data-p="19" title="a <t>">a⟨t⟩</mark> เป็น<mark class="src" data-p="19" title="short-term state">state ระยะสั้น</mark> และ <mark class="src" data-p="19" title="c <t>">c⟨t⟩</mark> เป็น<mark class="src" data-p="19" title="long-term state">state ระยะยาว</mark> gate ทั้งสาม <mark class="src" data-p="19" title="Γu , Γf , Γo">Γ_u, Γ_f, Γ_o</mark> ใช้ <mark class="src" data-p="19" title="logistic activation function">logistic activation function</mark> คือ sigmoid ได้ค่า 0 ถึง 1 ค่า 0 คือปิด 1 คือเปิด เทียบกันแล้ว GRU เป็นรุ่นย่อ ส่วน LSTM ทรงพลังกว่า</p>
 
 <figure class="viz"><img src="../assets/viz/l10-gates.svg" alt="GRU เทียบ LSTM ในการอัปเดต memory"></figure>
-<p>ค่าใหม่ 0.4 ค่าเดิม 1.0 Γ_u = 0.5 ทั้งคู่ GRU บังคับน้ำหนักฝั่งค่าเดิมเป็น 1 − Γ_u จึงได้ 0.7 LSTM มี Γ_f แยก 0.9 ได้ 1.1 ซึ่งเกิน 1 ได้</p>
+<p>ตัวอย่างในรูป ค่าใหม่ 0.4 ค่าเดิม 1.0 และ Γ_u = 0.5 ทั้งคู่ GRU บังคับให้น้ำหนักของค่าเดิมเป็น 1 − Γ_u จึงได้ 0.7 แต่ LSTM มี Γ_f แยกเป็น 0.9 จึงได้ 1.1 ซึ่งเกิน 1 ได้ LSTM จึงเก็บของเก่าและรับของใหม่ได้พร้อมกัน ส่วน GRU ต้องแลกกัน</p>
 
 <table>
 <tr><th></th><th>Full GRU</th><th>LSTM</th></tr>
@@ -293,7 +301,7 @@ model.summary()</code></pre>
 <figcaption>Lecture 10 หน้า 20 — Full GRU vs LSTM: เทียบทีละสมการ</figcaption>
 </figure>
 
-<p>บทบาทบนสไลด์: Γ_f ลืมข้อมูลที่ไม่เกี่ยวใน carry dataflow · Γ_o กำหนดว่าจะเปิดเผยจาก cell แค่ไหน</p>
+<p>gate สองตัวที่ LSTM มีเพิ่มคือ Γ_f ทำหน้าที่ลืมข้อมูลที่ไม่เกี่ยวข้อง และ Γ_o กำหนดว่าจะเปิดเผยสิ่งที่อยู่ใน cell ออกไปแค่ไหน</p>
 
 <p class="num">LSTM ค่าใหม่ 0.4 ค่าเดิม 1.0 Γ_u 0.5 Γ_f 0.9 Γ_o 0.6: c = 0.2 + 0.9 = 1.1 · a = 0.6 × tanh(1.1) = 0.6 × 0.8005 = 0.4803 · parameter ที่ n = 16 m = 14: SimpleRNN 496 · GRU 3 × 496 = 1,488 · LSTM 4 × 496 = 1,984 · GRU ของ Keras ใช้ bias สองชุดจึงรายงาน 3 × 512 = 1,536</p>
 
@@ -319,7 +327,7 @@ model.summary()</code></pre>
 
 <h3 id="s4-explode">4.1 Exploding gradient และ clipping</h3>
 
-<p>อีกปัญหาคือ <mark class="src" data-p="21" title="exploding gradient problem (easily detectable, e.g. NaN)">exploding gradient ตรวจเจอง่าย เช่น loss เป็น NaN</mark> ReLU อาจไม่ช่วย เพราะ weight ชุดเดียวใช้ซ้ำทุก step ค่าไม่มีเพดานโตสะสมได้ ให้ใช้ activation อิ่มตัวอย่าง <mark class="src" data-p="21" title="hyperbolic tangent.">tanh</mark> และลดความเสี่ยงด้วย <mark class="src" data-p="21" title="smaller learning rate">learning rate เล็กลง</mark> หรือ <mark class="src" data-p="21" title="gradient clipping">gradient clipping</mark></p>
+<p>อีกปัญหาที่ตรงข้ามกันคือ<mark class="src" data-p="21" title="exploding gradient problem (easily detectable, e.g. NaN)">exploding gradient ซึ่งตรวจเจอง่าย เช่น loss กลายเป็น NaN</mark> เกิดเมื่อตัวคูณย้อนเวลามากกว่า 1 แล้วถูกคูณซ้ำจนพุ่ง ReLU อาจไม่ช่วยเพราะไม่มีเพดาน weight ชุดเดียวที่ใช้ซ้ำทุก step จึงขยายค่าต่อไปเรื่อยๆ ได้ ให้ใช้ activation ที่อิ่มตัวอย่าง <mark class="src" data-p="21" title="hyperbolic tangent.">tanh</mark> ซึ่งอยู่ในช่วง −1 ถึง 1 และลดความเสี่ยงด้วย<mark class="src" data-p="21" title="smaller learning rate">learning rate เล็กลง</mark>หรือ<mark class="src" data-p="21" title="gradient clipping">gradient clipping</mark> ซึ่งย่อ gradient ที่ใหญ่เกินเกณฑ์ลงโดยคงทิศเดิม</p>
 
 <p class="num">gradient [6, 8] norm 10 threshold 5: ย่อด้วย 5/10 ได้ [3, 4] norm 5 ทิศเดิม · Keras: Adam(clipnorm=5.0)</p>
 
@@ -334,6 +342,8 @@ model.summary()</code></pre>
 
 <h3 id="s4-impl">4.2 Recurrent dropout, bidirectional, deep RNN</h3>
 
+<p>นอกจากเลือก cell แล้ว ยังมีเทคนิคเสริมอีกสามอย่าง</p>
+
 <table>
 <tr><th>เทคนิค</th><th>ทำอะไร</th></tr>
 <tr><td>นอกจาก <mark class="src" data-p="22" title="dropout">dropout</mark> มี <mark class="src" data-p="22" title="recurrent dropout">recurrent dropout</mark></td><td>สุ่มตัด recurrent connection ระหว่างเทรน กัน overfitting</td></tr>
@@ -346,7 +356,7 @@ model.summary()</code></pre>
 <figcaption>Lecture 10 หน้า 22 — Other Implementation Issues: โค้ด bidirectional และ deep LSTM</figcaption>
 </figure>
 
-<p>ตัวอย่างบนสไลด์ของ bidirectional: สองประโยคเหมือนกันจนถึง "Donal" แล้วต่างกันที่คำถัดไป การตีความต้องอาศัยคำที่ตามมา ซึ่ง RNN ทิศเดียวยังไม่เห็น</p>
+<p>ตัวอย่างที่ต้องใช้ bidirectional: "That man, who met Donal Trump, is my neighbor." กับ "That man, who met Donal Duck, is my neighbor." เหมือนกันจนถึงคำว่า Donal จะรู้ว่า Donal คือใคร ต้องดูคำที่ตามมา RNN ที่อ่านจากซ้ายไปขวายังไม่เห็นคำนั้น แต่ RNN ที่อ่านจากขวาไปซ้ายเห็นก่อน</p>
 
 <pre><code>model = Sequential()
 model.add(Bidirectional(LSTM(16, recurrent_dropout=0.2),
@@ -374,7 +384,7 @@ model.add(layers.Dense(1))</code></pre>
 
 <h3 id="s4-temp">4.3 Temperature forecasting</h3>
 
-<p>Dataset จาก Max Planck Institute ที่ Jena มี 14 ตัวแปร บันทึกทุก 10 นาที ตัวอย่างใช้ปี 2009–2016 เป้าหมายคือรับข้อมูลย้อนหลังเช่น 5 วัน แล้วทายอุณหภูมิอีก 24 ชั่วโมง ใช้ RNN ไม่จำเป็นต้องตัด trend และ seasonality แต่บางครั้งช่วย</p>
+<p>ตัวอย่างใหญ่ของบทคือการทายอุณหภูมิ ข้อมูลมาจาก Max Planck Institute ที่เมือง Jena ประเทศเยอรมนี มี 14 ตัวแปร เช่นอุณหภูมิ ความกดอากาศ ความชื้น บันทึกทุก 10 นาที ตัวอย่างใช้ปี 2009–2016 เป้าหมายคือรับข้อมูลย้อนหลังเช่น 5 วัน แล้วทายอุณหภูมิอีก 24 ชั่วโมงข้างหน้า RNN ไม่จำเป็นต้องตัด trend และ seasonality ออกก่อน แต่บางครั้งตัดแล้วช่วยได้ เพราะโมเดลไม่ต้องเรียนส่วนนั้นเอง</p>
 
 <p class="num">ชั่วโมงละ 6 แถว วันละ 144 แถว · 420,451 แถว แบ่ง train 50% = 210,225 · val 25% = 105,112 · test 105,112 · แบ่งตามเวลา ไม่สุ่ม</p>
 
@@ -383,19 +393,21 @@ model.add(layers.Dense(1))</code></pre>
 <figcaption>Lecture 10 หน้า 24 — Plotting the Temperature Timeseries: ทั้งหมดเทียบ 10 วันแรก</figcaption>
 </figure>
 
-<p>กราฟทั้งช่วงเป็นคลื่นรายปีชัด 8 รอบ ทายระดับเดือนง่าย กราฟ 10 วันแรกขึ้นลงไม่เป็นจังหวะ อุณหภูมิรายวันวุ่นวายกว่า เป็นโจทย์ยากกว่า</p>
+<p>กราฟทั้งช่วงเป็นคลื่นรายปีชัดเจน 8 รอบ การทายอุณหภูมิเฉลี่ยรายเดือนจึงง่าย แต่กราฟ 10 วันแรกขึ้นลงไม่เป็นจังหวะ การทายอุณหภูมิรายวันจึงยากกว่ามาก</p>
+
+<p>ถ้าอยากทายหลาย step ข้างหน้า เช่น 10 step มีสี่วิธีจัด input กับ output</p>
 
 <figure class="viz"><img src="../assets/viz/l10-strategies.svg" alt="สี่กลยุทธ์การทำนาย"></figure>
-<p>สี่แถวต่างกันที่ว่าโมเดลทายครั้งละกี่ค่าและป้อนคำทายกลับหรือไม่ แถวแรกป้อนกลับ error จึงสะสม แถว 2–4 ทายจากข้อมูลจริงตรงๆ</p>
+<p>สี่แถวต่างกันที่ว่าโมเดลทายครั้งละกี่ค่า และป้อนคำทายของตัวเองกลับเข้าไปหรือไม่ แถวแรก (recursive) ทายทีละ step แล้วป้อนกลับ ง่ายแต่ error สะสม แถว 2–4 ทายจากข้อมูลจริงตรงๆ จึงไม่สะสม แถว 2 ทายทั้ง 10 ค่าในครั้งเดียว แถว 3 ทายเฉพาะ step ที่ต้องการ แถว 4 ทาย 10 ค่าข้างหน้าที่ทุก time step ได้สัญญาณเทรนมากกว่าแต่เตรียมข้อมูลยากกว่า แบบฝึกอุณหภูมิใช้แบบ 3</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p25.png" alt="Lecture 10 หน้า 25: Prediction Strategies: recursive forecasting" loading="lazy">
 <figcaption>Lecture 10 หน้า 25 — Prediction Strategies: recursive forecasting</figcaption>
 </figure>
 
-<p>กราฟ step 50–60 เส้นจริงกับเส้นทายซ้อนกันช่วงแรกแล้วถ่างออก ข้อความที่อาจารย์ทำสีคือ <mark class="src" data-p="25" title="Larger errors for later time steps!!">ยิ่ง step ไกล error ยิ่งใหญ่</mark></p>
+<p>กราฟของแบบ recursive ช่วง step 50–60 เส้นจริงกับเส้นทายซ้อนกันตอนแรกแล้วค่อยๆ ถ่างออก <mark class="src" data-p="25" title="Larger errors for later time steps!!">ยิ่ง step ไกล error ยิ่งใหญ่</mark> เพราะคำทายที่ผิดนิดหน่อยถูกป้อนกลับเป็น input ของ step ถัดไป ความผิดจึงทบกันไปเรื่อยๆ</p>
 
-<p class="trap">สไลด์หน้า 26 ตั้งชื่อกลยุทธ์ 3 ซ้ำกับ 2 ว่า Direct multi-output forecasting แต่เนื้อหาคือทาย horizon เดียว</p>
+<p class="trap">ในสไลด์ ชื่อกลยุทธ์ 3 พิมพ์ซ้ำกับ 2 ว่า Direct multi-output forecasting แต่เนื้อหาของกลยุทธ์ 3 คือทาย horizon เดียว</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 23, 26)</summary><div class="gallery">
 <figure>
@@ -415,7 +427,7 @@ model.add(layers.Dense(1))</code></pre>
 <figcaption>Lecture 10 หน้า 27 — Preparation: timeseries_dataset_from_array()</figcaption>
 </figure>
 
-<p>สไลด์ทดสอบกับเลข 0 ถึง 9 ก่อน หน้าต่างยาว 3 target คือค่าถัดไป ได้ 9 − 3 + 1 = 7 หน้าต่าง batch ละ 2 จึงมี 4 batch</p>
+<p>ก่อนใช้กับข้อมูลจริง ลองฟังก์ชันนี้กับเลข 0 ถึง 9 ก่อน หน้าต่างยาว 3 และ target คือค่าถัดจากหน้าต่าง data ใช้แค่ 0–8 จึงได้ 9 − 3 + 1 = 7 หน้าต่าง batch ละ 2 จึงมี 4 batch โดย batch สุดท้ายมีหน้าต่างเดียว</p>
 
 <pre><code># testing timeseries_dataset_from_array()
 int_sequence = np.arange(10)
@@ -440,6 +452,8 @@ for inputs, targets in dummy_dataset:
 [4, 5, 6] 7
 [5, 6, 7] 8
 [6, 7, 8] 9</code></pre>
+
+<p>ข้อมูลจริงใช้ฟังก์ชันเดียวกัน ต่างกันแค่ตั้ง sampling_rate ให้กลายเป็นรายชั่วโมง และตั้ง delay ให้ target อยู่ 24 ชั่วโมงหลังจุดสุดท้ายของหน้าต่าง</p>
 
 <pre><code># use timeseries_dataset_from_array() to instantiate 3 datasets (training, validation and test set)
 sampling_rate = 6 # now the data point will be in hourly scale
@@ -480,7 +494,7 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <h3 id="s5-nlp">5.1 NLP และความท้าทาย</h3>
 
-<p>NLP มุ่งให้คอมพิวเตอร์ <mark class="src" data-p="28" title="understand human language">เข้าใจภาษามนุษย์</mark> แล้ว <mark class="src" data-p="28" title="predict">ทำนาย</mark> หรือ <mark class="src" data-p="28" title="generate">สร้าง</mark> สิ่งที่มีประโยชน์ งานง่ายเช่น spell checking งานกลางเช่น text classification งานยากเช่น summarization, QA, machine translation</p>
+<p>NLP คือสาขาที่ทำให้คอมพิวเตอร์<mark class="src" data-p="28" title="understand human language">เข้าใจภาษามนุษย์</mark> แล้ว<mark class="src" data-p="28" title="predict">ทำนาย</mark>หรือ<mark class="src" data-p="28" title="generate">สร้าง</mark>สิ่งที่มีประโยชน์ งานมีตั้งแต่ง่ายเช่นตรวจคำผิด ระดับกลางเช่นจำแนกข้อความ ไปจนถึงยากเช่นสรุปความ ตอบคำถาม และแปลภาษา</p>
 
 <table>
 <tr><th>ช่วง</th><th>แนวทาง</th></tr>
@@ -491,9 +505,9 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 <tr><td>2017–2018</td><td><mark class="src" data-p="29" title="Transformers">Transformer</mark> ปฏิวัติ NLP</td></tr>
 </table>
 
-<p>ความท้าทายบนสไลด์ หน้า 30: <mark class="src" data-p="30" title="Words">คำ</mark> โดยลำพัง <mark class="src" data-p="30" title="no real meaning">ไม่มีความหมายจริง</mark> ความหมายมาจาก <mark class="src" data-p="30" title="context">บริบท</mark> · <mark class="src" data-p="30" title="order of words">ลำดับคำ</mark> สำคัญ และมี <mark class="src" data-p="30" title="long-term sequential dependencies">ความสัมพันธ์ระยะไกล</mark> · <mark class="src" data-p="30" title="Textual data">ข้อความ</mark> มี <mark class="src" data-p="30" title="rules-based grammatical structure">โครงสร้างไวยากรณ์ตามกฎ</mark> และต้องสมเหตุสมผล · <mark class="src" data-p="30" title="Textual data">ข้อความ</mark> ไวต่อการเปลี่ยนเล็กน้อย เพราะ <mark class="src" data-p="30" title="every word is vital to the overall meaning of the passage">ทุกคำสำคัญต่อความหมายทั้งข้อความ</mark> เปลี่ยน pixel 120 เป็น 121 ภาพยังเหมือนเดิม แต่เติม not คำเดียว ความหมายกลับ</p>
+<p>ข้อความยากกว่าภาพสี่เรื่อง: <mark class="src" data-p="30" title="Words">คำ</mark> โดยลำพัง <mark class="src" data-p="30" title="no real meaning">ไม่มีความหมายจริง</mark> ความหมายมาจาก <mark class="src" data-p="30" title="context">บริบท</mark> · <mark class="src" data-p="30" title="order of words">ลำดับคำ</mark> สำคัญ และมี <mark class="src" data-p="30" title="long-term sequential dependencies">ความสัมพันธ์ระยะไกล</mark> · <mark class="src" data-p="30" title="Textual data">ข้อความ</mark> มี <mark class="src" data-p="30" title="rules-based grammatical structure">โครงสร้างไวยากรณ์ตามกฎ</mark> และต้องสมเหตุสมผล · <mark class="src" data-p="30" title="Textual data">ข้อความ</mark> ไวต่อการเปลี่ยนเล็กน้อย เพราะ <mark class="src" data-p="30" title="every word is vital to the overall meaning of the passage">ทุกคำสำคัญต่อความหมายทั้งข้อความ</mark> เปลี่ยน pixel 120 เป็น 121 ภาพยังเหมือนเดิม แต่เติม not คำเดียว ความหมายกลับด้าน</p>
 
-<p>เตรียมข้อความคือ <mark class="src" data-p="31" title="transforming text into vectorized arrays">แปลงข้อความเป็น array ตัวเลข</mark> สามขั้น:</p>
+<p>ก่อนเข้าโมเดลต้อง <mark class="src" data-p="31" title="transforming text into vectorized arrays">แปลงข้อความเป็น array ตัวเลข</mark> ซึ่งมีสามขั้น:</p>
 
 <table>
 <tr><th>ขั้น</th><th>ทำอะไร</th></tr>
@@ -523,14 +537,18 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <h3 id="s5-onehot">5.2 One-hot และปัญหา</h3>
 
-<p>One-hot ให้ index ทุกคำ แล้วแทนคำด้วย vector ยาวเท่า vocabulary เป็น 0 ทั้งหมดยกเว้นตำแหน่งของคำ ปัญหาบนสไลด์: มองคำ <mark class="src" data-p="33" title="as atomic units">เป็นหน่วยเดี่ยว</mark> <mark class="src" data-p="33" title="not its context">ไม่ดูบริบท</mark> จึง generalize ข้าม <mark class="src" data-p="33" title="different words">คำที่ต่างกัน</mark> ไม่ได้ ถ้ารู้ <mark class="src" data-p="33" title="semantics representation">ความหมายของคำ</mark> จะเรียน feature ร่วมได้ และ vector ยาวตาม vocabulary จึง <mark class="src" data-p="33" title="computationally inefficient">คำนวณไม่มีประสิทธิภาพ</mark></p>
+<p class="pic">one-hot เหมือนให้ทุกคนในห้องมีเลขที่ประจำตัว รู้เลขที่ไม่ได้บอกว่าใครนิสัยคล้ายใคร embedding เหมือนให้แต่ละคนมีคะแนนหลายด้าน เช่นชอบกีฬาแค่ไหน ชอบดนตรีแค่ไหน คนที่คะแนนใกล้กันก็นิสัยคล้ายกัน</p>
+
+<p>วิธีง่ายที่สุดคือ one-hot ให้ index กับทุกคำ แล้วแทนคำด้วย vector ยาวเท่า vocabulary ที่เป็น 0 ทั้งหมด ยกเว้นตำแหน่งของคำนั้นเป็น 1 ปัญหาคือ one-hot มองคำ<mark class="src" data-p="33" title="as atomic units">เป็นหน่วยเดี่ยว</mark> <mark class="src" data-p="33" title="not its context">ไม่ดูบริบท</mark> ทุกคำห่างกันเท่ากันหมด โมเดลจึงเอาสิ่งที่เรียนจากคำหนึ่งไปใช้กับ<mark class="src" data-p="33" title="different words">คำที่ต่างกัน</mark>ไม่ได้ ถ้ารู้<mark class="src" data-p="33" title="semantics representation">ความหมายของคำ</mark> โมเดลจะเรียน feature ร่วมกันได้ อีกปัญหาคือ vector ยาวตาม vocabulary จึง<mark class="src" data-p="33" title="computationally inefficient">คำนวณไม่มีประสิทธิภาพ</mark></p>
 
 <figure class="viz"><img src="../assets/viz/l10-embedding.svg" alt="embedding space และ one-hot เทียบ dense"></figure>
-<p>ซ้ายคือ embedding 2 มิติจากสไลด์หน้า 35 Dog → Wolf ขยับขึ้น (0, 0.4) เลื่อน Cat ไปทิศเดียวกันได้ Tiger ขวาคือ one-hot ที่มี 1 ตัวเดียวใน 20,000 เทียบ embedding ที่ทุกค่ามีข้อมูล</p>
+<p>ซ้ายคือ embedding 2 มิติ จาก Dog ไป Wolf ขยับขึ้น (0, 0.4) ถ้าเลื่อน Cat ไปทิศเดียวกันจะได้ Tiger ทิศทางจึงแทนความสัมพันธ์ "สัตว์เลี้ยง → สัตว์ป่า" ขวาคือ one-hot ที่มีเลข 1 ตัวเดียวใน 20,000 เทียบกับ embedding ที่ทุกค่ามีข้อมูล</p>
 
 <p class="num">vocab 20,000 ประโยค 8 คำ: one-hot 160,000 ค่า ไม่เป็นศูนย์ 0.005% · embedding 8 มิติ 64 ค่า น้อยกว่า 2,500 เท่า · dot product ของ one-hot story กับ novel = 0 เท่าคู่อื่นทุกคู่</p>
 
-<p>ตัวอย่างหน้า 33: เห็น "story are short tales" แล้วต้องเติม "novel are ____ works of fictions" ถ้ารู้ว่า novel คล้าย story ก็เดาคำบอกความยาวได้ one-hot ทำไม่ได้</p>
+<p>ตัวอย่าง: ถ้าเคยเห็น "story are short tales" แล้วต้องเติม "novel are ____ works of fictions" คนที่รู้ว่า novel ความหมายใกล้ story จะเดาคำบอกความยาวได้ แต่ one-hot ไม่รู้ว่า novel ใกล้ story</p>
+
+<p>ทางแก้มีสองกลุ่ม</p>
 
 <table>
 <tr><th>กลุ่ม</th><th>เทคนิค</th><th>ลักษณะ</th></tr>
@@ -557,16 +575,16 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <h3 id="s5-emb">5.3 Word embeddings และการเรียน</h3>
 
-<p><mark class="src" data-p="35" title="Word embeddings">Word embeddings</mark> แทนคำด้วย vector ทศนิยม ต่างจาก one-hot ตรงที่ <mark class="src" data-p="35" title="dense, relatively low dimensional, which reduce">dense มิติค่อนข้างต่ำ ซึ่งลดขนาด</mark> ข้อมูลเทรน และเรียนเร็วจาก <mark class="src" data-p="35" title="semantic relationship of words.">ความสัมพันธ์เชิงความหมายของคำ</mark> การขยับเฉพาะทิศใน vector space แทนความสัมพันธ์ระหว่างคำ one-hot คือ sparse มิติสูง hardcoded · embedding คือ dense มิติต่ำ เรียนจากข้อมูล</p>
+<p><mark class="src" data-p="35" title="Word embeddings">Word embeddings</mark> แทนคำด้วย vector ทศนิยม ต่างจาก one-hot ตรงที่<mark class="src" data-p="35" title="dense, relatively low dimensional, which reduce">dense มิติค่อนข้างต่ำ ซึ่งลดขนาด</mark>ข้อมูลที่ต้องใช้เทรน และเรียนได้เร็วจาก<mark class="src" data-p="35" title="semantic relationship of words.">ความสัมพันธ์เชิงความหมายของคำ</mark> การขยับไปทิศใดทิศหนึ่งใน vector space แทนความสัมพันธ์ระหว่างคำ สรุปสั้นๆ: one-hot เป็น sparse มิติสูง กำหนดตายตัว · embedding เป็น dense มิติต่ำ เรียนจากข้อมูล</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p35.png" alt="Lecture 10 หน้า 35: Word Embeddings: Dog, Wolf, Cat และช่องว่าง" loading="lazy">
 <figcaption>Lecture 10 หน้า 35 — Word Embeddings: Dog, Wolf, Cat และช่องว่าง</figcaption>
 </figure>
 
-<p>คำที่เติมในช่องว่างของสไลด์คือ tiger เพราะ (0.6, 0.2) + (0, 0.4) = (0.6, 0.6) ตรงกับจุด Tiger</p>
+<p>คำที่ควรเติมในช่องว่างคือ tiger เพราะ (0.6, 0.2) + (0, 0.4) = (0.6, 0.6) ตรงกับจุด Tiger</p>
 
-<p>วิธีง่ายสุดคือเรียน embedding ไปพร้อมงานหลัก สไลด์เรียก <mark class="src" data-p="36" title="unsupervised way">แบบ unsupervised</mark> เพราะ label มาจากข้อความเอง <mark class="src" data-p="36" title="Embedding layer">Embedding layer</mark> แปลง index เป็น dense vector ตัวอย่าง vocab 10,000 ใช้ 3 คำก่อนหน้าทายคำถัดไป</p>
+<p>วิธีง่ายที่สุดในการได้ embedding คือเรียนไปพร้อมกับงานหลัก เรียกว่า<mark class="src" data-p="36" title="unsupervised way">แบบ unsupervised</mark> เพราะ label มาจากตัวข้อความเอง ไม่ต้องมีคนติดป้าย <mark class="src" data-p="36" title="Embedding layer">Embedding layer</mark> ทำหน้าที่แปลง index ของคำเป็น dense vector ตัวอย่างคือ vocab 10,000 คำ ใช้ 3 คำก่อนหน้าทายคำถัดไป</p>
 
 <div class="eq">\[e_{6222} = \net{E} \cdot O_{6222} \qquad (8 \times 10{,}000)\cdot(10{,}000 \times 1) = (8 \times 1)\]</div>
 <p class="say">คูณ embedding matrix กับ one-hot = หยิบคอลัมน์ที่ตรงตำแหน่งเลข 1 · Keras lookup ตาม index แทนการคูณจริง</p>
@@ -578,9 +596,9 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <p class="num">E มี 8 × 10,000 = 80,000 parameter · hidden layer รับ 3 × 8 = 24 ค่า แทน 3 × 10,000 = 30,000 ถ้าป้อน one-hot · output softmax 10,000 node · Keras: Embedding(input_dim=10000, output_dim=8)</p>
 
-<p>ใช้กับ text classification สองแบบ หน้า 37: Embedding + Flatten + Dense ตำแหน่งคำผูกกับ weight ต้องยาวเท่ากัน 5 คำ 8 มิติ dense รับ 40 ค่า · Embedding + RNN ป้อน vector ทีละคำ รับความยาวต่างกันได้</p>
+<p>เมื่อได้ embedding แล้ว นำไปจำแนกข้อความได้สองแบบ แบบแรก Embedding + Flatten + Dense ตำแหน่งคำผูกกับ weight จึงต้องยาวเท่ากันทุกประโยค เช่น 5 คำ 8 มิติ dense รับ 40 ค่า แบบที่สอง Embedding + RNN ป้อน vector ทีละคำ จึงรับความยาวต่างกันได้</p>
 
-<p>pretrained embedding มองเป็นคู่ key-value: key คือคำ value คือ vector ได้แก่ Word2Vec ของ Mikolov ที่ Google ปี 2013, GloVe ของ Stanford ปี 2014, fastText ของ Facebook Word2Vec เรียนแบบ self-supervised สองแบบ:</p>
+<p>ถ้าไม่อยากเรียนเอง ใช้ pretrained embedding ที่เรียนจากข้อความจำนวนมากไว้แล้ว มองเป็นคู่ key-value: key คือคำ value คือ vector ตัวที่นิยมคือ Word2Vec ของ Mikolov ที่ Google ปี 2013, GloVe ของ Stanford ปี 2014 และ fastText ของ Facebook Word2Vec เรียนแบบ self-supervised ได้สองแบบ:</p>
 
 <table>
 <tr><th>แบบ</th><th>ทาย</th><th>ลักษณะ</th></tr>
@@ -595,7 +613,7 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <p class="num">"The quick brown fox jumps …" หน้าต่าง 2 ข้าง: บริบทของ The, quick, brown, fox มี 2, 3, 4, 4 คำ · CBOW ได้ 4 sample · SkipGram ได้ 2 + 3 + 4 + 4 = 13 คู่ ราว 3 เท่า</p>
 
-<p class="trap">สไลด์หน้า 40 พิมพ์คู่หนึ่งว่า (blown, fox) หมายถึง (brown, fox) · CBOW ทายคำกลาง SkipGram ทายคำรอบข้าง อย่าสลับ</p>
+<p class="trap">ในรูป SkipGram มีคู่หนึ่งพิมพ์ว่า (blown, fox) หมายถึง (brown, fox) · CBOW ทายคำกลาง SkipGram ทายคำรอบข้าง อย่าสลับ</p>
 
 <details class="check"><summary>Embedding(input_dim=5000, output_dim=64) มี parameter เท่าใด และประโยค 20 คำได้ output shape อะไร</summary>
 <p>5,000 × 64 = 320,000 · output (20, 64) ต่อประโยค หรือ (batch, 20, 64)</p>
@@ -621,14 +639,14 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <h3 id="s6-load">6.1 โหลดข้อมูลและ TextVectorization</h3>
 
-<p>train/pos มีรีวิวบวก 12,500 ไฟล์ neg มีรีวิวลบ รวม train 25,000 test 25,000 ผลที่พิมพ์: Found 20000 files (train), 5000 (val), 25000 (test) · inputs.shape (32,) dtype string · targets.shape (32,) dtype int32</p>
+<p>ตัวอย่างสุดท้ายจำแนกรีวิวหนัง IMDB ว่าบวกหรือลบ โฟลเดอร์ train/pos มีรีวิวบวก 12,500 ไฟล์ train/neg มีรีวิวลบอีก 12,500 ไฟล์ รวม train 25,000 และ test อีก 25,000 โค้ดแยกส่วนหนึ่งของ train ไปเป็น val จึงพิมพ์ว่า Found 20000 files (train), 5000 (val), 25000 (test) · inputs.shape (32,) dtype string · targets.shape (32,) dtype int32</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p41.png" alt="Lecture 10 หน้า 41: IMDB Dataset: โหลดข้อมูล" loading="lazy">
 <figcaption>Lecture 10 หน้า 41 — IMDB Dataset: โหลดข้อมูล</figcaption>
 </figure>
 
-<p>input ยังเป็น string หนึ่งรีวิวต่อสมาชิก จึงมี shape (32,) มิติเดียว batch ต่อ epoch: train 20,000/32 = 625 · test ⌈25,000/32⌉ = 782</p>
+<p>input ยังเป็นข้อความดิบ หนึ่งรีวิวต่อสมาชิก จึงมี shape (32,) มิติเดียว ต้องผ่าน TextVectorization ก่อนเข้าโมเดล จำนวน batch ต่อ epoch: train 20,000/32 = 625 · test ⌈25,000/32⌉ = 782</p>
 
 <pre><code># These datasets yield inputs that are TensorFlow tf.string tensors and targets that are
 # int32 tensors encoding the value "0" or "1."
@@ -693,7 +711,7 @@ vocabulary</code></pre>
 <figcaption>Lecture 10 หน้า 43 — Bigrams with TF-IDF Encoding</figcaption>
 </figure>
 
-<p>แนวทางแรกเปลี่ยนรีวิวเป็น vector TF-IDF ยาว 20,000 ค่าเดียว ไม่ใช่ลำดับ แล้วเข้า dense model loss ลดจาก 0.4783 เหลือ 0.2232 ใน 10 epoch Test acc 0.892</p>
+<p>แนวทางแรกไม่สนลำดับคำ แต่ดูว่ามีคำและคู่คำ (bigram) อะไรบ้าง แล้วถ่วงน้ำหนักด้วย TF-IDF รีวิวหนึ่งเรื่องจึงกลายเป็น vector ยาว 20,000 ค่า ไม่ใช่ลำดับ แล้วเข้า dense model loss ลดจาก 0.4783 เหลือ 0.2232 ใน 10 epoch ได้ Test acc 0.892</p>
 
 <pre><code>text_vectorization = TextVectorization(
     ngrams=2,
@@ -732,7 +750,7 @@ print(f"Test acc: {model.evaluate(tfidf_2gram_test_ds)[1]:.3f}")</code></pre>
 <figcaption>Lecture 10 หน้า 44 — Sequence Model & Word embeddings: Embedding + Bidirectional LSTM</figcaption>
 </figure>
 
-<p>แนวทางที่สองใช้ output_mode="int" เข้า Embedding แล้ว Bi-LSTM เขียนด้วย Functional API ได้ Test acc 0.882 ต่ำกว่า bigram เล็กน้อย training loss ลงถึง 0.0200 แต่ test loss 0.2980 สัญญาณ overfitting</p>
+<p>แนวทางที่สองเก็บลำดับคำไว้ ใช้ output_mode="int" ได้ลำดับ index แล้วเข้า Embedding และ Bi-LSTM เขียนด้วย Functional API ได้ Test acc 0.882 ต่ำกว่า bigram เล็กน้อย training loss ลงถึง 0.0200 แต่ test loss อยู่ที่ 0.2980 เป็นสัญญาณ overfitting งานจำแนก sentiment หลายงานแค่รู้ว่ามีคำอะไรบ้างก็พอแล้ว</p>
 
 <pre><code>inputs = Input(shape=(None,), dtype="int64")
 # Instantiating an Embedding layer
@@ -757,7 +775,9 @@ model = Model(inputs, outputs)</code></pre>
 
 <h3 id="s6-mask">6.3 Padding และ masking</h3>
 
-<p>ประโยคใน batch ต้องยาวเท่ากัน ประโยคสั้นจึงถูก pad ด้วย 0 ท้ายประโยค ถ้ามี 0 เยอะ ข้อมูลใน state จางลงเมื่อ RNN ประมวลผลค่าที่ไม่มีความหมาย <mark class="src" data-p="45" title="Masking">Masking</mark> บอกโมเดลให้ <mark class="src" data-p="45" title="skip processing">ข้ามการประมวลผล</mark> ตำแหน่งเหล่านี้</p>
+<p class="pic">อ่านหนังสือที่มีหน้าว่างแทรกท้ายบท ถ้าต้องอ่านหน้าว่างทุกหน้าด้วย เนื้อเรื่องที่จำไว้จะเลือนไป masking คือบอกให้ข้ามหน้าว่างไปเลย</p>
+
+<p>ประโยคใน batch ต้องยาวเท่ากัน ประโยคที่สั้นกว่าจึงถูกเติม 0 ต่อท้าย (padding) ถ้ามี 0 เยอะ ข้อมูลใน state จะจางลงเพราะ RNN ต้องประมวลผลค่าที่ไม่มีความหมาย <mark class="src" data-p="45" title="Masking">Masking</mark> บอกโมเดลให้<mark class="src" data-p="45" title="skip processing">ข้ามการประมวลผล</mark>ตำแหน่งเหล่านี้</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p45.png" alt="Lecture 10 หน้า 45: Padding and Masking: compute_mask" loading="lazy">
