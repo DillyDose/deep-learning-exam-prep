@@ -2,472 +2,100 @@
  {
   "id": "L12-01",
   "lesson": 12,
-  "topic": "pipeline สามขั้น",
+  "topic": "LoRA parameter",
   "source": "lesson",
-  "type": "concept",
+  "type": "calc",
   "difficulty": "easy",
-  "stem": "pipeline() รวมสามขั้นใดตามลำดับ",
+  "stem": "LoRA rank r = 4 บน weight matrix 100 × 100 เทรนกี่ parameter",
   "options": [
-   "preprocessing → model inference → postprocessing",
-   "training → validation → testing",
-   "tokenization → fine-tuning → evaluation",
-   "embedding → attention → decoding"
+   "800",
+   "10,000",
+   "400",
+   "40,000"
   ],
   "answer": 0,
-  "explanation": "<p>tokenize ข้อความเป็นตัวเลข → ส่งเข้าโมเดลได้ logit → แปลงเป็นผลที่อ่านได้ เช่น softmax แล้วจับคู่ label pipeline ไม่ได้เทรน</p>",
+  "explanation": "<p>A ขนาด r × d = 4 × 100 = 400 และ B ขนาด d × r = 100 × 4 = 400 รวม 800 จาก 10,000 ของ matrix เต็ม คือ 8%</p>",
   "why_wrong": [
-   "pipeline ไม่เทรน",
-   "ไม่มี fine-tuning",
-   "นั่นคือภายในโมเดล"
+   "นั่นคือ matrix เต็มที่ล็อกไว้",
+   "นับแค่ A หรือ B ตัวเดียว",
+   "คูณ r กับ d²"
   ],
-  "ref": "Lesson 12 §2.1"
+  "link": "สัดส่วน 2r/d ยิ่ง d ใหญ่ยิ่งประหยัด ที่ d = 768 r = 8 เหลือแค่ราว 2%",
+  "ref": "Lesson 12 §4.1",
+  "terms": [
+   [
+    "LoRA",
+    "Low-Rank Adaptation เรียนการแก้ weight ด้วย matrix เล็กสองตัว"
+   ],
+   [
+    "rank r",
+    "ขนาดด้านแคบของ A และ B"
+   ]
+  ]
  },
  {
   "id": "L12-02",
   "lesson": 12,
-  "topic": "softmax จาก logit",
+  "topic": "LoRA สัดส่วน",
   "source": "lesson",
   "type": "calc",
-  "difficulty": "medium",
-  "stem": "logit [NEG, POS] = [−1.0, 1.0] ความน่าจะเป็นของ POSITIVE ประมาณเท่าใด",
+  "difficulty": "easy",
+  "stem": "matrix 400 × 400 ใช้ LoRA r = 2 สัดส่วนที่เทรนเทียบ matrix เต็มคือเท่าใด",
   "options": [
-   "0.88",
-   "0.73",
-   "0.50",
-   "0.99"
+   "1%",
+   "2%",
+   "0.5%",
+   "10%"
   ],
   "answer": 0,
-  "explanation": "<p>P(POS) = 1/(1 + e^(−2)) = 1/(1 + 0.135) ≈ 0.881 ผลต่าง logit 2</p>",
+  "explanation": "<p>2r/d = 4/400 = 0.01 คือ 1% ตรวจ: A กับ B รวม 2 × 2 × 400 = 1,600 จาก 160,000</p>",
   "why_wrong": [
-   "ใช้ผลต่าง 1",
-   "logit ต่างกันจึงไม่ใช่ 0.5",
-   "ผลต่างใหญ่กว่านี้"
+   "ใช้ r/d × 4",
+   "ใช้ r/d ไม่คูณ 2",
+   "หารผิดหลัก"
   ],
-  "ref": "Lesson 12 §2.1"
+  "link": "parameter ที่เทรนน้อยประหยัด memory ของ optimizer แต่เวลาไม่ได้ลดตามสัดส่วน",
+  "ref": "Lesson 12 §4.1",
+  "terms": []
  },
  {
   "id": "L12-03",
   "lesson": 12,
-  "topic": "สไลด์ 99.89%",
+  "topic": "cosine similarity",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "สไลด์หน้า 14 แสดง logit [−4.3630, 4.6859] และพิมพ์ POSITIVE 99.89% ข้อใดถูก",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "embedding ของคำถาม q = [1, 0] เอกสาร d = [0.6, 0.8] ทั้งคู่ยาว 1 cosine similarity เท่าใด",
   "options": [
-   "softmax ได้ราว 99.99% ตัวเลขบนสไลด์คลาดเคลื่อน",
-   "99.89% ถูกเพราะ softmax หารด้วยจำนวนคลาสด้วย",
-   "logit ต้องผ่าน sigmoid แยกตัวจึงได้ 99.89%",
-   "99.89% ถูกเพราะเป็นค่า score ก่อนผ่าน softmax"
+   "0.6",
+   "0.8",
+   "1.4",
+   "0.0"
   ],
   "answer": 0,
-  "explanation": "<p>ผลต่าง 9.0489 · P(NEG) = 1/(1 + e^9.0489) ≈ 0.000118 · P(POS) ≈ 99.99% ถ้าจะได้ 99.89% ผลต่างต้องราว 6.8 ข้อสอบให้ logit มาให้คำนวณเอง</p>",
+  "explanation": "<p>ถ้า normalize ให้ยาว 1 แล้ว cosine คือ dot product = 1 × 0.6 + 0 × 0.8 = 0.6</p>",
   "why_wrong": [
-   "softmax ไม่หารจำนวนคลาส",
-   "sigmoid ของ 4.6859 ได้ 0.991 ก็ไม่ใช่ 99.89%",
-   "logit ไม่ใช่ความน่าจะเป็น"
+   "ใช้มิติที่สองผิดตัว",
+   "บวกแทนคูณ",
+   "คิดว่าตั้งฉาก"
   ],
-  "ref": "Lesson 12 §2.1"
+  "link": "notebook ตั้ง normalize_embeddings=True จึงใช้ dot product แทน cosine ได้",
+  "ref": "Lesson 12 §4.2",
+  "terms": [
+   [
+    "cosine similarity",
+    "วัดว่าสอง vector ชี้ทางเดียวกันแค่ไหน 1 คือทางเดียวกัน 0 คือตั้งฉาก"
+   ]
+  ]
  },
  {
   "id": "L12-04",
   "lesson": 12,
-  "topic": "NER aggregation",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "<code>pipeline(\"ner\", aggregation_strategy=\"simple\")</code> ช่วยอะไร",
-  "options": [
-   "รวม token ย่อยที่ติดกันของ entity เดียวเป็นแถวเดียว",
-   "ลบ entity ที่มี score ต่ำกว่า 0.9 ออกจากผลลัพธ์",
-   "แปลง entity ทุกตัวในผลลัพธ์เป็นตัวพิมพ์เล็ก",
-   "รวมทุก entity ในประโยคเป็นผลลัพธ์แถวเดียว"
-  ],
-  "answer": 0,
-  "explanation": "<p>ผลบนสไลด์ Old Church ได้แถวเดียว start 98 end 108 ไม่แยกเป็นสองแถว</p>",
-  "why_wrong": [
-   "ไม่ได้กรอง score",
-   "ไม่เกี่ยวกับตัวพิมพ์",
-   "ยังแยก Apple, Russian"
-  ],
-  "ref": "Lesson 12 §2.2"
- },
- {
-  "id": "L12-05",
-  "lesson": 12,
-  "topic": "extractive QA",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "question-answering ใน pipeline แบบบนสไลด์ให้คำตอบอย่างไร",
-  "options": [
-   "เลือกช่วงข้อความใน context ที่ตอบ ไม่แต่งใหม่",
-   "สร้างคำตอบใหม่จากความรู้ที่ pretrain มาแล้ว",
-   "ค้นข้อมูลบนเว็บแล้วสรุปเป็นคำตอบให้",
-   "จัดหมวดคำถามเป็นหนึ่งใน label ที่กำหนดไว้"
-  ],
-  "answer": 0,
-  "explanation": "<p>extractive QA คืน answer เป็น span เช่น context[0:23] = The music was beautiful score 0.2515 ต่ำเพราะ context ไม่ได้พูดถึงหนังตรงๆ</p>",
-  "why_wrong": [
-   "นั่นคือ generative QA",
-   "pipeline ไม่ค้นเว็บ",
-   "นั่นคือ classification"
-  ],
-  "ref": "Lesson 12 §2.2"
- },
- {
-  "id": "L12-06",
-  "lesson": 12,
-  "topic": "ทิศการแปล",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "pipeline(\"translation_en_to_th\", model=\"Helsinki-NLP/opus-mt-th-en\") กับข้อความภาษาไทย ได้ผลภาษาใด",
-  "options": [
-   "อังกฤษ เพราะทิศการแปลมาจากโมเดลที่ระบุ",
-   "ไทย เพราะชื่องานคือ en_to_th",
-   "error เพราะชื่องานกับโมเดลไม่ตรงกัน",
-   "ข้อความเดิมเพราะโมเดลอ่านไทยไม่ได้"
-  ],
-  "answer": 0,
-  "explanation": "<p>โมเดล opus-mt-th-en แปลไทยเป็นอังกฤษ เมื่อระบุ model= ทิศมาจากโมเดล ผลบนสไลด์จึงเป็นอังกฤษ แม้ชื่องานเขียนกลับทิศ</p>",
-  "why_wrong": [
-   "ชื่องานไม่ได้บังคับทิศ",
-   "บนสไลด์รันได้",
-   "โมเดลอ่านไทยได้"
-  ],
-  "ref": "Lesson 12 §2.2"
- },
- {
-  "id": "L12-07",
-  "lesson": 12,
-  "topic": "BertViz",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "BERT base มี attention head ให้ดูทั้งหมดกี่ตัว",
-  "options": [
-   "144",
-   "12",
-   "768",
-   "64"
-  ],
-  "answer": 0,
-  "explanation": "<p>12 layer × 12 head = 144 แต่ละ head โฟกัสต่างกัน</p>",
-  "why_wrong": [
-   "นับแค่ layer หรือ head",
-   "นั่นคือ hidden size",
-   "นั่นคือมิติต่อ head"
-  ],
-  "ref": "Lesson 12 §2.3"
- },
- {
-  "id": "L12-08",
-  "lesson": 12,
-  "topic": "T5 cross-attention shape",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "<code>outputs.cross_attentions[layer][0, head]</code> ของ T5 ได้ matrix shape อะไร",
-  "options": [
-   "(target length, source length)",
-   "(source length, target length)",
-   "(number of heads, source length)",
-   "(batch size, target length)"
-  ],
-  "answer": 0,
-  "explanation": "<p>shape ต่อ layer คือ (batch, heads, target length, source length) เลือก batch 0 และ head หนึ่ง เหลือ (target, source) แถวคือ token ฝรั่งเศส คอลัมน์คือ token อังกฤษ</p>",
-  "why_wrong": [
-   "สลับ",
-   "เลือก head แล้ว",
-   "เลือก batch แล้ว"
-  ],
-  "ref": "Lesson 12 §2.3"
- },
- {
-  "id": "L12-09",
-  "lesson": 12,
-  "topic": "หกวิธีใช้ pretrained model",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "วิธีใดเปลี่ยน input แทน weight โดยเติมข้อมูลที่ค้นมา",
-  "options": [
-   "RAG เติมข้อมูลที่ค้นลงใน input",
-   "LoRA เทรน matrix rank ต่ำเพิ่ม",
-   "Full fine-tuning ทั้งโมเดล",
-   "Feature extraction + classifier"
-  ],
-  "answer": 0,
-  "explanation": "<p>RAG ค้นข้อมูลภายนอกแล้วเติมใน input ของ generator ปกติไม่เทรน LoRA กับ full fine-tuning เปลี่ยน weight feature extraction เทรน classifier</p>",
-  "why_wrong": [
-   "เทรน adapter",
-   "เทรนทุก weight",
-   "เทรน classifier"
-  ],
-  "ref": "Lesson 12 §3"
- },
- {
-  "id": "L12-10",
-  "lesson": 12,
-  "topic": "LoRA parameter",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "LoRA r = 4 บน matrix 512 × 512 เทรนกี่ parameter",
-  "options": [
-   "4,096",
-   "262,144",
-   "2,048",
-   "16,384"
-  ],
-  "answer": 0,
-  "explanation": "<p>A 4 × 512 + B 512 × 4 = 2,048 + 2,048 = 4,096 คือ 2r/d = 1.56% ของ 262,144</p>",
-  "why_wrong": [
-   "นั่นคือ full matrix",
-   "นับแค่ A",
-   "ใช้ r = 16"
-  ],
-  "ref": "Lesson 12 §4.1"
- },
- {
-  "id": "L12-11",
-  "lesson": 12,
-  "topic": "LoRA scale",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "easy",
-  "stem": "LoraConfig r=16 lora_alpha=32 scaling factor เท่าใด",
-  "options": [
-   "2",
-   "0.5",
-   "16",
-   "32"
-  ],
-  "answer": 0,
-  "explanation": "<p>α/r = 32/16 = 2</p>",
-  "why_wrong": [
-   "กลับเศษส่วน",
-   "คือ r",
-   "คือ α"
-  ],
-  "ref": "Lesson 12 §4.1"
- },
- {
-  "id": "L12-12",
-  "lesson": 12,
-  "topic": "LoRA เริ่มต้น",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "ตอนเริ่มเทรน LoRA ตั้ง B = 0 ผลคืออะไร",
-  "options": [
-   "BA = 0 โมเดลเริ่มทำงานเหมือน pretrained ทุกประการ",
-   "gradient ของ A เป็นศูนย์ตลอดจึงไม่ได้เรียนเลย",
-   "W₀ ถูกตั้งค่าเป็นศูนย์ไปพร้อมกับ B ด้วย",
-   "inference ช้าลงเพราะต้องคูณ matrix เพิ่มสองตัว"
-  ],
-  "answer": 0,
-  "explanation": "<p>h = W₀x + (α/r)BAx ถ้า B = 0 ส่วนเพิ่มเป็นศูนย์ โมเดลเริ่มเหมือนเดิม B ได้ gradient ก่อนแล้ว A ตามมา ตอน inference รวม W₀ + (α/r)BA เป็น matrix เดียว ไม่ช้า</p>",
-  "why_wrong": [
-   "B มี gradient จาก A ที่ไม่ศูนย์ แล้ว A เรียนตาม",
-   "W₀ ถูกล็อกไว้เดิม",
-   "รวม matrix ได้จึงไม่ช้า"
-  ],
-  "ref": "Lesson 12 §4.1"
- },
- {
-  "id": "L12-13",
-  "lesson": 12,
-  "topic": "trainable ใน workshop",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "hard",
-  "stem": "DistilBERT 6 layer d = 768 LoRA r = 8 ที่ q_lin และ v_lin บวก head pre_classifier 768→768 และ classifier 768→6 trainable รวมเท่าใด",
-  "options": [
-   "742,662",
-   "147,456",
-   "595,206",
-   "66,958,086"
-  ],
-  "answer": 0,
-  "explanation": "<p>adapter 6 × 2 × (8·768 + 768·8) = 147,456 · head 590,592 + 4,614 = 595,206 · รวม 742,662</p>",
-  "why_wrong": [
-   "นับแค่ adapter",
-   "นับแค่ head",
-   "นั่นคือ full fine-tuning"
-  ],
-  "ref": "Lesson 12 §4.1"
- },
- {
-  "id": "L12-14",
-  "lesson": 12,
-  "topic": "LoRA กับเวลาเทรน",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "LoRA เทรนแค่ 1.1% ของ parameter แต่ลดเวลาเทรนแค่ราว 26% เพราะอะไร",
-  "options": [
-   "forward/backward ยังผ่านทั้งโมเดล ประหยัดแค่ memory กับที่เก็บ",
-   "LoRA ต้องเทรนสองรอบ คือเทรน A ก่อนแล้วจึงเทรน B",
-   "LoRA ใช้ learning rate ต่ำกว่าจึงต้องใช้หลาย epoch",
-   "LoRA ปิดการใช้ GPU ระหว่างเทรนเพื่อประหยัดพลังงาน"
-  ],
-  "answer": 0,
-  "explanation": "<p>การคำนวณผ่าน W₀ ยังเกิดทุก step สิ่งที่ลดมากคือ optimizer state และไฟล์ adapter ต่องาน 10 งานเก็บ 7.4 ล้านแทน 670 ล้าน</p>",
-  "why_wrong": [
-   "เทรนพร้อมกัน",
-   "ไม่ใช่เหตุผลบนสไลด์",
-   "ยังใช้ GPU"
-  ],
-  "ref": "Lesson 12 §4.1"
- },
- {
-  "id": "L12-15",
-  "lesson": 12,
-  "topic": "target_modules",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "ใน config นี้ ส่วนใดของ DistilBERT ไม่ได้รับ LoRA และถูกล็อก",
-  "options": [
-   "Key, output projection และ feed-forward",
-   "Query และ Value ที่ได้รับ LoRA",
-   "pre_classifier และ classifier",
-   "embedding ของ token เท่านั้น"
-  ],
-  "answer": 0,
-  "explanation": "<p>target_modules ใส่ LoRA เฉพาะ q_lin v_lin · modules_to_save ทำให้ head เทรนเต็ม · ที่เหลือรวม Key, WO, FFN ล็อก</p>",
-  "why_wrong": [
-   "ได้ LoRA",
-   "เทรนเต็มผ่าน modules_to_save",
-   "ไม่ใช่ส่วนเดียวที่ล็อก"
-  ],
-  "ref": "Lesson 12 §4.1",
-  "code": "lora_config = LoraConfig(\n    task_type=TaskType.SEQ_CLS,\n    r=8,\n    lora_alpha=16,\n    lora_dropout=0.1,\n    target_modules=[\"q_lin\", \"v_lin\"],\n    modules_to_save=[\"pre_classifier\", \"classifier\"],\n)"
- },
- {
-  "id": "L12-16",
-  "lesson": 12,
-  "topic": "cosine similarity",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "q = [1, 0, 1] d₁ = [1, 0, 0] d₂ = [1, 1, 1] cosine ของ d₁ และ d₂ ประมาณเท่าใด",
-  "options": [
-   "0.707 และ 0.816",
-   "1 และ 2",
-   "0.5 และ 0.667",
-   "0.707 และ 0.577"
-  ],
-  "answer": 0,
-  "explanation": "<p>cos(q, d₁) = 1/(√2 · 1) = 0.707 · cos(q, d₂) = 2/(√2 · √3) = 0.816</p>",
-  "why_wrong": [
-   "ใช้ dot product ไม่ normalize",
-   "หารผิด",
-   "หาร √3 อย่างเดียว"
-  ],
-  "ref": "Lesson 12 §4.2"
- },
- {
-  "id": "L12-17",
-  "lesson": 12,
-  "topic": "RAG similarity",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ข้อใดตรงกับข้อความบนสไลด์เรื่อง similarity score ของ RAG",
-  "options": [
-   "วัดความเกี่ยวข้องของการค้น ไม่ใช่ความถูกต้อง",
-   "ยิ่งสูงยิ่งรับประกันว่าคำตอบที่ได้ถูกต้อง",
-   "ใช้แทน loss ตอน fine-tune generator",
-   "บอกความมั่นใจของ generator ต่อคำตอบ"
-  ],
-  "answer": 0,
-  "explanation": "<p>similarity scores measure retrieval relevance, not correctness ตัวอย่าง Workshop setup ได้ 0.420 แต่ FLAN-T5-small ตอบแค่ \"2.\"</p>",
-  "why_wrong": [
-   "ค้นถูกไม่ได้แปลว่าตอบถูก",
-   "RAG ไม่เทรน generator",
-   "ไม่ใช่ confidence ของ generator"
-  ],
-  "ref": "Lesson 12 §4.2"
- },
- {
-  "id": "L12-18",
-  "lesson": 12,
-  "topic": "emotion label",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "dataset emotion ที่ใช้ใน notebook มี label อะไรที่สไลด์หน้า 23 เขียนต่างไป",
-  "options": [
-   "love ซึ่งสไลด์เขียนเป็น disgust",
-   "neutral ซึ่งสไลด์ไม่ได้เขียน",
-   "surprise ซึ่งสไลด์เขียนเป็น fear",
-   "joy ซึ่งสไลด์เขียนเป็น happiness"
-  ],
-  "answer": 0,
-  "explanation": "<p>label จริงคือ sadness, joy, love, anger, fear, surprise สไลด์เขียน disgust แทน love</p>",
-  "why_wrong": [
-   "ไม่มี neutral",
-   "สไลด์มีทั้ง surprise และ fear",
-   "สไลด์เขียน joy"
-  ],
-  "ref": "Lesson 12 §5.1"
- },
- {
-  "id": "L12-19",
-  "lesson": 12,
-  "topic": "macro F1 baseline",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "hard",
-  "stem": "dataset 2 คลาส 80:20 ทายคลาสใหญ่ทุกข้อ accuracy และ macro F1 เท่าใด",
-  "options": [
-   "0.80 และ 0.44",
-   "0.80 และ 0.80",
-   "0.50 และ 0.44",
-   "0.80 และ 0.89"
-  ],
-  "answer": 0,
-  "explanation": "<p>คลาสใหญ่ P = 0.8 R = 1 F1 = 2·0.8/1.8 ≈ 0.889 · คลาสเล็ก F1 = 0 · macro = 0.889/2 ≈ 0.44 · accuracy 0.80</p>",
-  "why_wrong": [
-   "macro F1 ไม่ใช่ accuracy",
-   "accuracy ไม่ใช่ 0.5",
-   "นั่นคือ F1 ของคลาสใหญ่อย่างเดียว"
-  ],
-  "ref": "Lesson 12 §5.1"
- },
- {
-  "id": "L12-20",
-  "lesson": 12,
-  "topic": "subword",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "tokenizer ของ distilbert-base-uncased ตัด NLP เป็น nl และ ##p เครื่องหมาย ## หมายถึงอะไร",
-  "options": [
-   "ต่อกับ token ก่อนหน้าโดยไม่มีช่องว่าง",
-   "token พิเศษที่ถูก mask ตอน pretrain",
-   "คำที่ไม่อยู่ใน vocabulary ของโมเดล",
-   "ตัวพิมพ์ใหญ่ที่ถูกแปลงเป็นตัวเล็ก"
-  ],
-  "answer": 0,
-  "explanation": "<p>## คือ subword ที่ต่อท้ายชิ้นก่อน เมื่อแปลงกลับเป็น nlp คำไม่คุ้นถูกตัดเป็นชิ้นที่รู้จัก จึงไม่เกิด [UNK]</p>",
-  "why_wrong": [
-   "mask คือ [MASK] 103",
-   "OOV คือ [UNK] 100",
-   "uncased ทำให้เป็นตัวเล็กทั้งหมดอยู่แล้ว"
-  ],
-  "ref": "Lesson 12 §5.2"
- },
- {
-  "id": "L12-21",
-  "lesson": 12,
   "topic": "นับ token",
   "source": "lesson",
   "type": "calc",
-  "difficulty": "medium",
-  "stem": "\"I love deep learning\" ทุกคำอยู่ใน vocabulary ผ่าน tokenizer ของ DistilBERT ได้ input_ids กี่ตัว",
+  "difficulty": "easy",
+  "stem": "\"this is a test\" ผ่าน tokenizer ของ DistilBERT ทุกคำอยู่ใน vocabulary ได้ input_ids กี่ตัว",
   "options": [
    "6",
    "4",
@@ -475,219 +103,769 @@
    "8"
   ],
   "answer": 0,
-  "explanation": "<p>4 คำ + [CLS] + [SEP] = 6</p>",
+  "explanation": "<p>4 คำ บวก [CLS] ที่ต้นและ [SEP] ที่ท้าย ได้ 6 ตรงกับ torch.Size([1, 6]) ในตอน 6.1</p>",
   "why_wrong": [
    "ลืม special token",
-   "เติมแค่ตัวเดียว",
-   "คิดว่าแตก subword"
+   "ลืมตัวใดตัวหนึ่ง",
+   "นับ special token ซ้ำ"
   ],
-  "ref": "Lesson 12 §5.2"
+  "link": "[CLS] ตัวนี้คือ token ที่ใช้สรุปทั้งประโยคตอน classification",
+  "ref": "Lesson 12 §5.2",
+  "terms": [
+   [
+    "[CLS]",
+    "special token ต้นประโยค id 101"
+   ],
+   [
+    "[SEP]",
+    "special token ท้ายประโยค id 102"
+   ]
+  ]
  },
  {
-  "id": "L12-22",
-  "lesson": 12,
-  "topic": "special token ID",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "ใน tokenizer ของ DistilBERT ID 0 และ 101 คือ token ใด",
-  "options": [
-   "[PAD] และ [CLS]",
-   "[CLS] และ [SEP]",
-   "[UNK] และ [MASK]",
-   "[SEP] และ [PAD]"
-  ],
-  "answer": 0,
-  "explanation": "<p>[PAD] 0 · [UNK] 100 · [CLS] 101 · [SEP] 102 · [MASK] 103</p>",
-  "why_wrong": [
-   "[CLS] คือ 101",
-   "[UNK] 100 [MASK] 103",
-   "[SEP] 102"
-  ],
-  "ref": "Lesson 12 §5.2"
- },
- {
-  "id": "L12-23",
-  "lesson": 12,
-  "topic": "padding กับ batch_size=None",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "<code>emotions.map(tokenize, batched=True, batch_size=None)</code> ที่ tokenize ใช้ padding=True ผลคืออะไร",
-  "options": [
-   "ทุกแถวถูก pad ให้ยาวเท่าแถวยาวสุดของ split นั้น",
-   "ทุกแถวถูก pad ให้ยาว 512 ตาม model_max_length",
-   "แต่ละแถวไม่ถูก pad เพราะตั้ง batch_size=None",
-   "ทุกแถวถูกตัดเหลือ 64 token ตามค่า default"
-  ],
-  "answer": 0,
-  "explanation": "<p>batch_size=None ทำทั้ง split เป็น batch เดียว padding=True pad ถึงตัวยาวสุดใน batch</p>",
-  "why_wrong": [
-   "pad ถึง 512 ต้องใช้ padding='max_length'",
-   "ยังมี padding",
-   "ไม่ได้ตั้ง max_length 64 ในบรรทัดนี้"
-  ],
-  "ref": "Lesson 12 §5.2"
- },
- {
-  "id": "L12-24",
-  "lesson": 12,
-  "topic": "attention_mask",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "input_ids [101, 1045, 2514, 102, 0, 0] มี attention_mask อะไร",
-  "options": [
-   "[1, 1, 1, 1, 0, 0]",
-   "[0, 0, 0, 0, 1, 1]",
-   "[1, 1, 1, 1, 1, 1]",
-   "[0, 1, 1, 0, 0, 0]"
-  ],
-  "answer": 0,
-  "explanation": "<p>1 คือ token จริงรวม [CLS] และ [SEP] 0 คือ [PAD] ที่ให้ข้าม</p>",
-  "why_wrong": [
-   "กลับค่า",
-   "ไม่ได้ mask padding",
-   "special token ก็ต้องเห็น"
-  ],
-  "ref": "Lesson 12 §5.2"
- },
- {
-  "id": "L12-25",
-  "lesson": 12,
-  "topic": "last_hidden_state shape",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "batch 8 ข้อความ ยาวหลัง pad 20 token ผ่าน DistilBERT ได้ last_hidden_state และ [:, 0] shape อะไร",
-  "options": [
-   "(8, 20, 768) และ (8, 768)",
-   "(8, 768) และ (768,)",
-   "(20, 8, 768) และ (20, 768)",
-   "(8, 20, 768) และ (20, 768)"
-  ],
-  "answer": 0,
-  "explanation": "<p>[batch, n_tokens, hidden] = (8, 20, 768) · [:, 0] เลือก token แรกคือ [CLS] ของทุกตัวอย่าง ได้ (8, 768)</p>",
-  "why_wrong": [
-   "ลืมแกน token",
-   "สลับ batch กับ token",
-   "[:, 0] เลือก token ไม่ใช่ตัวอย่าง"
-  ],
-  "ref": "Lesson 12 §6.1"
- },
- {
-  "id": "L12-26",
-  "lesson": 12,
-  "topic": "torch.no_grad",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "easy",
-  "stem": "ทำไม extract_hidden_states ครอบด้วย <code>with torch.no_grad():</code>",
-  "options": [
-   "ไม่ได้เทรน จึงปิด gradient ประหยัด memory",
-   "เพื่อ freeze weight ของโมเดลแบบถาวร",
-   "เพื่อย้าย tensor ทั้งหมดไปไว้บน CPU",
-   "เพื่อเปิด dropout ระหว่างการดึง feature"
-  ],
-  "answer": 0,
-  "explanation": "<p>no_grad ปิดการเก็บกราฟสำหรับ backprop เฉพาะในบล็อก ไม่ได้เปลี่ยน requires_grad ถาวร .cpu() ต่างหากที่ย้ายไป CPU</p>",
-  "why_wrong": [
-   "ไม่ได้ freeze ถาวร",
-   "นั่นคือ .cpu()",
-   "ไม่เกี่ยวกับ dropout"
-  ],
-  "ref": "Lesson 12 §6.1"
- },
- {
-  "id": "L12-27",
-  "lesson": 12,
-  "topic": "AutoModel vs ForSequenceClassification",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "ข้อใดถูกเรื่อง AutoModel กับ AutoModelForSequenceClassification(num_labels=6)",
-  "options": [
-   "AutoModel ไม่มี head · อีกตัวมี head ที่เริ่มจากค่าสุ่ม",
-   "ทั้งสองมี head 6 คลาสที่โหลดมาจาก checkpoint",
-   "AutoModel โหลดเร็วกว่าเพราะไม่มี encoder ข้างใน",
-   "ForSequenceClassification ไม่ต้องใช้ tokenizer"
-  ],
-  "answer": 0,
-  "explanation": "<p>AutoModel โหลด body ได้ last_hidden_state ตัวที่สองเพิ่ม pre_classifier และ classifier ที่ไม่มีใน checkpoint จึงขึ้นเตือนว่า MISSING</p>",
-  "why_wrong": [
-   "head ไม่มีใน checkpoint",
-   "AutoModel มี encoder",
-   "ยังต้อง tokenize"
-  ],
-  "ref": "Lesson 12 §6.2"
- },
- {
-  "id": "L12-28",
+  "id": "L12-05",
   "lesson": 12,
   "topic": "head parameter",
   "source": "lesson",
   "type": "calc",
-  "difficulty": "medium",
-  "stem": "head ที่มี pre_classifier 768 → 768 และ classifier 768 → 4 มี parameter เท่าใด",
+  "difficulty": "easy",
+  "stem": "classification head รับ hidden state 100 มิติ ให้ logit 3 class ด้วย linear layer เดียว มี parameter เท่าใด",
   "options": [
-   "593,668",
-   "590,592",
-   "3,076",
-   "593,664"
+   "303",
+   "300",
+   "103",
+   "309"
   ],
   "answer": 0,
-  "explanation": "<p>(768·768 + 768) + (768·4 + 4) = 590,592 + 3,076 = 593,668</p>",
+  "explanation": "<p>linear layer = เข้า × ออก + bias = 100 × 3 + 3 = 303</p>",
   "why_wrong": [
-   "ลืม classifier",
-   "นับแค่ classifier",
-   "ลืม bias ของ classifier"
+   "ลืม bias",
+   "บวกแทนคูณ",
+   "คิด bias ผิด"
   ],
-  "ref": "Lesson 12 §6.2"
+  "link": "head ของ DistilBERT ใช้สูตรเดียวกัน 768 × 6 + 6 = 4,614 สำหรับชั้น classifier",
+  "ref": "Lesson 12 §6.2",
+  "terms": [
+   [
+    "logit",
+    "คะแนนดิบต่อ class ก่อนผ่าน softmax"
+   ]
+  ]
  },
  {
-  "id": "L12-29",
-  "lesson": 12,
-  "topic": "head differentiable",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ทำไม fine-tuning ใช้ logistic regression ของ scikit-learn เป็น head ไม่ได้",
-  "options": [
-   "gradient ต้องย้อนผ่าน head เข้า encoder ได้",
-   "logistic regression ทำ multiclass ไม่ได้",
-   "logistic regression รับ vector 768 มิติไม่ได้",
-   "scikit-learn เร็วเกินไปจนโมเดล overfit"
-  ],
-  "answer": 0,
-  "explanation": "<p>สไลด์หน้า 38: head ต้อง differentiable ให้ gradient ไหลกลับ logistic regression ของ scikit-learn ส่ง gradient เข้า PyTorch ไม่ได้ จึงใช้ได้แค่ feature extraction</p>",
-  "why_wrong": [
-   "ทำ multiclass ได้",
-   "รับได้ ใช้ใน feature extraction",
-   "ไม่เกี่ยว"
-  ],
-  "ref": "Lesson 12 §6.2"
- },
- {
-  "id": "L12-30",
+  "id": "L12-06",
   "lesson": 12,
   "topic": "step ต่อ epoch",
   "source": "lesson",
   "type": "calc",
   "difficulty": "easy",
-  "stem": "train 16,000 ข้อความ batch 64 เทรน 3 epoch มีกี่ step",
+  "stem": "train set 16,000 ข้อความ batch size 32 เทรน 5 epoch ได้กี่ step",
   "options": [
-   "750",
-   "250",
-   "1,500",
-   "48,000"
+   "2,500",
+   "500",
+   "80,000",
+   "3,200"
   ],
   "answer": 0,
-  "explanation": "<p>16,000/64 = 250 step ต่อ epoch × 3 = 750</p>",
+  "explanation": "<p>ต่อ epoch 16,000/32 = 500 step ห้า epoch ได้ 2,500</p>",
   "why_wrong": [
-   "epoch เดียว",
-   "ใช้ batch 32",
-   "คูณจำนวนข้อความ"
+   "นั่นคือ epoch เดียว",
+   "คูณแทนหาร",
+   "หาร 5 แทนคูณ"
   ],
-  "ref": "Lesson 12 §6.2"
+  "link": "ค่าเหล่านี้คือที่ workshop ใช้ fine-tune DistilBERT",
+  "ref": "Lesson 12 §6.2",
+  "terms": [
+   [
+    "step",
+    "การอัปเดต weight หนึ่งครั้งจากหนึ่ง batch"
+   ]
+  ]
+ },
+ {
+  "id": "L12-07",
+  "lesson": 12,
+  "topic": "สาม library",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "Hugging Face library ใดตัดข้อความเป็น token แปลงเป็น ID และเติม special token",
+  "options": [
+   "Tokenizers",
+   "Datasets",
+   "Transformers",
+   "Evaluate"
+  ],
+  "answer": 0,
+  "explanation": "<p>Datasets โหลดข้อมูล Tokenizers แปลงข้อความเป็น ID Transformers ให้โครงโมเดลและ weight สามตัวทำงานต่อกันตามลำดับ</p>",
+  "why_wrong": [
+   "Datasets โหลดข้อมูล",
+   "Transformers คือโมเดล",
+   "Evaluate เก็บ metric"
+  ],
+  "link": "tokenizer ไม่ได้เข้าใจความหมาย ความเข้าใจบริบทเรียนโดยโมเดล",
+  "ref": "Lesson 12 §1.1",
+  "terms": [
+   [
+    "Hub",
+    "ที่แบ่งปัน model, dataset และแอป"
+   ]
+  ]
+ },
+ {
+  "id": "L12-08",
+  "lesson": 12,
+  "topic": "pipeline",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "pipeline() รวมสามขั้นอะไรไว้ในคำสั่งเดียว",
+  "options": [
+   "preprocessing, model inference และ postprocessing",
+   "load dataset, train และ evaluate",
+   "tokenize, fine-tune และ save model",
+   "embedding, attention และ backprop"
+  ],
+  "answer": 0,
+  "explanation": "<p>ตัดข้อความเป็นตัวเลข ส่งเข้าโมเดลได้ logit แล้วแปลงเป็นผลที่อ่านได้ เช่น softmax แล้วจับคู่ชื่อ label</p>",
+  "why_wrong": [
+   "pipeline ไม่เทรน",
+   "ไม่ได้ fine-tune",
+   "เป็นขั้นข้างในโมเดล"
+  ],
+  "link": "pipeline เดียวกันใช้กับหลายงานด้วยการเปลี่ยนชื่องาน",
+  "ref": "Lesson 12 §2.1",
+  "terms": [
+   [
+    "postprocessing",
+    "แปลงผลดิบเป็นผลที่คนอ่านได้"
+   ]
+  ]
+ },
+ {
+  "id": "L12-09",
+  "lesson": 12,
+  "topic": "QA แบบ extractive",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "pipeline question-answering ในสไลด์ตอบคำถามอย่างไร",
+  "options": [
+   "คัดลอกช่วงข้อความจาก context มาตอบ",
+   "แต่งคำตอบใหม่จากความรู้ของโมเดล",
+   "ค้นเว็บแล้วสรุปคำตอบเป็นประโยค",
+   "เลือกคำตอบจากตัวเลือกที่กำหนด"
+  ],
+  "answer": 0,
+  "explanation": "<p>extractive QA หาช่วง start ถึง end ใน context ที่ให้มา คำตอบ The music was beautiful จึงเป็นข้อความเดิมทุกคำ score 0.2515 ต่ำเพราะ context ไม่ได้พูดถึงหนังตรงๆ</p>",
+  "why_wrong": [
+   "นั่นคือ generative QA",
+   "pipeline ไม่ได้ค้นเว็บ",
+   "ไม่ใช่ multiple choice"
+  ],
+  "link": "ถ้าอยากให้ตอบด้วยความรู้ภายนอกที่ไม่อยู่ใน context ต้องใช้ RAG",
+  "ref": "Lesson 12 §2.2",
+  "terms": [
+   [
+    "context",
+    "ข้อความที่ให้โมเดลอ่านเพื่อหาคำตอบ"
+   ]
+  ]
+ },
+ {
+  "id": "L12-10",
+  "lesson": 12,
+  "topic": "หกวิธีใช้ pretrained",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "วิธีใดไม่เปลี่ยน weight ของโมเดลเลย แต่เปลี่ยน input",
+  "options": [
+   "RAG และ prompting",
+   "full fine-tuning และ LoRA",
+   "feature extraction และ LoRA",
+   "full fine-tuning และ RAG"
+  ],
+  "answer": 0,
+  "explanation": "<p>prompting ใส่คำสั่งหรือตัวอย่างลงใน input RAG ค้นเอกสารมาเติม input ทั้งสองไม่เทรน generator full fine-tuning เทรนทุก parameter LoRA เทรน adapter</p>",
+  "why_wrong": [
+   "ทั้งสองเทรน weight",
+   "ทั้งสองเทรนบางส่วน",
+   "fine-tuning เทรนทุกตัว"
+  ],
+  "link": "อยากให้โมเดลรู้ข้อมูลใหม่ด้วย RAG แค่อัปเดต knowledge base",
+  "ref": "Lesson 12 §3",
+  "terms": [
+   [
+    "prompting",
+    "ชี้นำโมเดลด้วยข้อความใน input"
+   ]
+  ]
+ },
+ {
+  "id": "L12-11",
+  "lesson": 12,
+  "topic": "PEFT",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "PEFT แก้ปัญหาอะไรของ full fine-tuning",
+  "options": [
+   "ใช้ memory มากและเก็บโมเดลเต็มหนึ่งชุดต่องาน",
+   "accuracy ต่ำกว่าการไม่เทรนอะไรเลย",
+   "ใช้กับ encoder-only ไม่ได้ ต้องเป็น decoder",
+   "ต้องใช้ข้อมูลที่ไม่มี label เท่านั้น"
+  ],
+  "answer": 0,
+  "explanation": "<p>full fine-tuning อัปเดตทุก parameter ใช้ GPU memory และพื้นที่เก็บมาก สิบงานต้องเก็บสิบโมเดลเต็ม PEFT ล็อกส่วนใหญ่ เทรนชุดเล็ก เก็บโมเดลเดียวกับ adapter ต่องาน</p>",
+  "why_wrong": [
+   "full fine-tuning แม่นสุดในตาราง",
+   "ใช้ได้ทุกชนิด",
+   "ใช้ข้อมูลมี label"
+  ],
+  "link": "เหมือนแปะโพสต์อิทแทนพิมพ์หนังสือใหม่ทั้งเล่ม",
+  "ref": "Lesson 12 §4.1",
+  "terms": [
+   [
+    "PEFT",
+    "Parameter-Efficient Fine-Tuning เทรนแค่ส่วนเล็ก"
+   ],
+   [
+    "adapter",
+    "ชุด weight เล็กที่เติมเข้าไปเทรนแทนตัวเดิม"
+   ]
+  ]
+ },
+ {
+  "id": "L12-12",
+  "lesson": 12,
+  "topic": "LoRA เริ่มต้น",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ตอนเริ่มเทรน LoRA ตั้ง B = 0 ผลคืออะไร",
+  "options": [
+   "BA = 0 โมเดลเริ่มเท่าโมเดลเดิม",
+   "BA = I โมเดลเริ่มเป็น identity",
+   "W₀ = 0 ต้องเรียนใหม่ทั้งหมด",
+   "A = 0 ด้วย gradient จึงไม่ไหล"
+  ],
+  "answer": 0,
+  "explanation": "<p>h = W₀x + (α/r)BAx ถ้า B = 0 ส่วนที่เพิ่มเป็นศูนย์ โมเดลเริ่มเหมือนเดิมทุกประการ แล้วค่อยเรียนการแก้ ตอน inference รวม BA เข้า W₀ เป็น matrix เดียว ไม่ช้าลง</p>",
+  "why_wrong": [
+   "ผลคูณกับศูนย์คือศูนย์",
+   "W₀ ถูกล็อกไว้",
+   "A ยังสุ่ม gradient ไหลได้"
+  ],
+  "link": "แนวคิดเดียวกับ residual block ใน L8 ที่ f(x) = 0 แล้วได้ identity",
+  "ref": "Lesson 12 §4.1",
+  "terms": []
+ },
+ {
+  "id": "L12-13",
+  "lesson": 12,
+  "topic": "RAG similarity",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "similarity score ใน RAG วัดอะไร",
+  "options": [
+   "เอกสารที่ค้นได้เกี่ยวกับคำถามแค่ไหน",
+   "คำตอบที่สร้างถูกต้องแค่ไหน",
+   "โมเดลมั่นใจในคำตอบแค่ไหน",
+   "เอกสารยาวแค่ไหนเทียบคำถาม"
+  ],
+  "answer": 0,
+  "explanation": "<p>สไลด์บอกว่า similarity วัด retrieval relevance ไม่ได้วัด correctness หรือ confidence ใน notebook ค้นได้เอกสารถูกที่ 0.420 แต่ FLAN-T5-small ตอบแค่ 2.</p>",
+  "why_wrong": [
+   "ค้นถูกไม่ได้แปลว่าตอบถูก",
+   "ไม่ใช่ความมั่นใจของ generator",
+   "ไม่เกี่ยวกับความยาว"
+  ],
+  "link": "RAG เหมือนสอบเปิดหนังสือ เปิดถูกหน้าแต่อ่านไม่เก่งก็ยังตอบผิด",
+  "ref": "Lesson 12 §4.2",
+  "terms": [
+   [
+    "retrieval",
+    "ขั้นค้นเอกสาร"
+   ],
+   [
+    "generator",
+    "โมเดลที่สร้างคำตอบ"
+   ]
+  ]
+ },
+ {
+  "id": "L12-14",
+  "lesson": 12,
+  "topic": "DistilBERT",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "ข้อใดตรงกับ DistilBERT",
+  "options": [
+   "6 layer ราว 66 ล้าน parameter เล็กกว่า BERT",
+   "12 layer ราว 110 ล้าน parameter ใหญ่กว่า BERT",
+   "decoder-only ที่ใช้สร้างข้อความทีละ token",
+   "encoder-decoder สำหรับแปลภาษาโดยเฉพาะ"
+  ],
+  "answer": 0,
+  "explanation": "<p>DistilBERT เล็กกว่า BERT ที่มี 12 layer 110 ล้าน แต่แม่นใกล้เคียงกัน เป็น encoder-only เปลี่ยนเป็น BERT ได้แค่เปลี่ยนชื่อ checkpoint</p>",
+  "why_wrong": [
+   "นั่นคือ BERT base",
+   "นั่นคือ GPT",
+   "นั่นคือ T5"
+  ],
+  "link": "encoder-only เหมาะกับ classification ซึ่งคือ workshop emotion",
+  "ref": "Lesson 12 §5.1",
+  "terms": [
+   [
+    "checkpoint",
+    "ชื่อชุด weight บน Hub"
+   ]
+  ]
+ },
+ {
+  "id": "L12-15",
+  "lesson": 12,
+  "topic": "special token id",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ใน tokenizer ของ DistilBERT ข้อใดจับคู่ id ถูก",
+  "options": [
+   "[PAD] 0 · [CLS] 101 · [SEP] 102",
+   "[CLS] 0 · [PAD] 101 · [SEP] 102",
+   "[PAD] 100 · [CLS] 101 · [SEP] 103",
+   "[UNK] 0 · [CLS] 1 · [SEP] 2"
+  ],
+  "answer": 0,
+  "explanation": "<p>[PAD] 0 [UNK] 100 [CLS] 101 [SEP] 102 [MASK] 103 padding เป็น 0 ซึ่ง attention_mask เป็น 0 ด้วย</p>",
+  "why_wrong": [
+   "สลับ PAD กับ CLS",
+   "100 คือ UNK 103 คือ MASK",
+   "นั่นคือแบบ TextVectorization ใน L10"
+  ],
+  "link": "vocab_size 30,522 model_max_length 512",
+  "ref": "Lesson 12 §5.2",
+  "terms": [
+   [
+    "attention_mask",
+    "1 คือ token จริง 0 คือ padding ให้ข้าม"
+   ]
+  ]
+ },
+ {
+  "id": "L12-16",
+  "lesson": 12,
+  "topic": "subword",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ข้อดีของ subword tokenization เทียบกับ TextVectorization ใน L10",
+  "options": [
+   "คำที่ไม่รู้จักถูกตัดเป็นชิ้นย่อย จึงไม่ค่อยเกิด [UNK]",
+   "ทุกคำได้ token เดียวเสมอ ไม่ว่าคำจะยาวแค่ไหน",
+   "ไม่ต้องใช้ special token ใดๆ ทั้งต้นและท้าย",
+   "เก็บตัวพิมพ์ใหญ่ทุกตัวไว้ตามข้อความเดิม"
+  ],
+  "answer": 0,
+  "explanation": "<p>Tokenizing ถูกตัดเป็นสองชิ้น ## แปลว่าต่อกับชิ้นก่อนโดยไม่มีช่องว่าง คำหายากจึงยังแทนได้ ไม่หายไปเป็น [UNK]</p>",
+  "why_wrong": [
+   "คำหายากได้หลายชิ้น",
+   "ยังมี CLS SEP",
+   "uncased แปลงเป็นตัวเล็ก"
+  ],
+  "link": "ประโยค 8 หน่วยจึงได้ 13 token",
+  "ref": "Lesson 12 §5.2",
+  "terms": [
+   [
+    "subword",
+    "ชิ้นย่อยของคำ"
+   ]
+  ]
+ },
+ {
+  "id": "L12-17",
+  "lesson": 12,
+  "topic": "AutoModel",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "AutoModel ต่างจาก AutoModelForSequenceClassification อย่างไร",
+  "options": [
+   "AutoModel มีแค่ body คืน hidden states ไม่มี head",
+   "AutoModel มี head มาให้ classify ได้ทันที",
+   "AutoModel ใช้ได้กับโมเดลตระกูล GPT เท่านั้น",
+   "AutoModel โหลด weight แบบสุ่มเสมอทุกครั้ง"
+  ],
+  "answer": 0,
+  "explanation": "<p>AutoModel ให้ hidden state ต่อ token ใช้สกัด feature แบบที่ 1 AutoModelForSequenceClassification เติม head ตาม num_labels ซึ่งเริ่มสุ่ม notebook จึงเตือนว่า classifier.weight MISSING</p>",
+  "why_wrong": [
+   "สลับกัน",
+   "ใช้ได้หลายโมเดล",
+   "โหลด weight จาก checkpoint"
+  ],
+  "link": "body ไม่ขึ้นกับงาน head ขึ้นกับงาน เหมือน conv base กับ classifier ใน L8",
+  "ref": "Lesson 12 §6.1",
+  "terms": [
+   [
+    "body",
+    "ส่วน encoder ที่ไม่ขึ้นกับงาน"
+   ],
+   [
+    "hidden state",
+    "vector ต่อ token ที่ encoder ให้"
+   ]
+  ]
+ },
+ {
+  "id": "L12-18",
+  "lesson": 12,
+  "topic": "fine-tune ต้อง differentiable",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ทำไม fine-tuning ใช้ logistic regression ของ scikit-learn เป็น head ไม่ได้",
+  "options": [
+   "head ต้อง differentiable ให้ gradient ย้อนเข้า encoder",
+   "logistic regression ให้ได้แค่สอง class",
+   "scikit-learn อ่าน hidden state ไม่ได้",
+   "logistic regression ช้ากว่า neural network"
+  ],
+  "answer": 0,
+  "explanation": "<p>fine-tuning เทรน hidden state ไปด้วย gradient ต้องไหลจาก loss ผ่าน head ย้อนเข้า encoder logistic regression ของ scikit-learn อยู่นอก graph ของ PyTorch จึงส่ง gradient ไม่ได้ แต่ใช้กับ feature extraction ได้</p>",
+  "why_wrong": [
+   "ทำหลาย class ได้",
+   "อ่านได้ถ้าแปลงเป็น array",
+   "ความเร็วไม่ใช่เหตุผล"
+  ],
+  "link": "feature extraction ได้ 0.635 fine-tuning ได้ 0.9235",
+  "ref": "Lesson 12 §6.2",
+  "terms": [
+   [
+    "differentiable",
+    "หาอนุพันธ์ได้ จึงส่ง gradient ผ่านได้"
+   ]
+  ]
+ },
+ {
+  "id": "L12-19",
+  "lesson": 12,
+  "topic": "เลือกวิธีใช้ pretrained",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "บริษัทมี GPU น้อย ต้องปรับโมเดลให้ 10 งานลูกค้า แต่ละงานมีข้อมูลเฉพาะ ควรเลือกวิธีใด",
+  "options": [
+   "LoRA เก็บโมเดลเดิมชุดเดียวกับ adapter เล็กต่องาน",
+   "full fine-tuning แยกเก็บโมเดลเต็มสิบชุด",
+   "direct inference ใช้โมเดลเดิมไม่ปรับอะไร",
+   "เทรนโมเดลใหม่จากศูนย์ทั้งสิบงาน"
+  ],
+  "answer": 0,
+  "explanation": "<p>LoRA ประหยัด memory ตอนเทรนและพื้นที่เก็บ สิบงานเก็บราว 66 ล้าน + 10 × 0.74 ล้าน แทน 10 × 66 ล้าน accuracy ต่ำกว่า full fine-tuning เล็กน้อย 0.90 กับ 0.92</p>",
+  "why_wrong": [
+   "ใช้ memory และพื้นที่มาก",
+   "ไม่ได้ใช้ข้อมูลเฉพาะงาน",
+   "เปลืองที่สุด"
+  ],
+  "link": "เลือกวิธีจากทรัพยากรและความต้องการ ไม่ใช่เลือกตัวที่แม่นสุดเสมอ",
+  "ref": "Lesson 12 §4.1",
+  "terms": []
+ },
+ {
+  "id": "L12-20",
+  "lesson": 12,
+  "topic": "ข้อมูลอัปเดตบ่อย",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "chatbot ต้องตอบนโยบายบริษัทที่แก้ทุกเดือน ควรใช้วิธีใด",
+  "options": [
+   "RAG อัปเดต knowledge base โดยไม่เทรนใหม่",
+   "fine-tune ใหม่ทุกเดือนด้วยนโยบายล่าสุด",
+   "prompt สั้นๆ โดยไม่ให้ข้อมูลนโยบายเลย",
+   "LoRA ครั้งเดียวแล้วใช้ไปตลอดทุกเดือน"
+  ],
+  "answer": 0,
+  "explanation": "<p>RAG ค้นเอกสารที่เกี่ยวข้องมาเติม input แก้นโยบายแค่แก้เอกสาร ไม่ต้องเทรนโมเดลใหม่</p>",
+  "why_wrong": [
+   "เปลืองและช้า",
+   "โมเดลไม่รู้นโยบายของบริษัท",
+   "ความรู้จะเก่าหลังเดือนแรก"
+  ],
+  "link": "context engineering ใน L15 ใช้หลักเดียวกัน ส่งเฉพาะ policy ที่เกี่ยวให้ LLM",
+  "ref": "Lesson 12 §4.2",
+  "terms": [
+   [
+    "knowledge base",
+    "คลังเอกสารที่ให้ระบบค้น"
+   ]
+  ]
+ },
+ {
+  "id": "L12-21",
+  "lesson": 12,
+  "topic": "macro F1 กับ imbalance",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "dataset emotion มี joy 33.5% surprise 3.6% โมเดลที่ทาย joy ทุกข้อได้ accuracy 0.335 ทำไม workshop เลือก checkpoint ด้วย macro F1",
+  "options": [
+   "ให้ทุกคลาสน้ำหนักเท่ากัน คลาสเล็กที่พลาดจึงดึงคะแนนลง",
+   "macro F1 คำนวณได้เร็วกว่า accuracy หลายเท่า",
+   "accuracy ใช้กับงานที่มีหลาย class ไม่ได้เลย",
+   "macro F1 ให้น้ำหนักกับคลาสใหญ่มากกว่าคลาสเล็ก"
+  ],
+  "answer": 0,
+  "explanation": "<p>ทาย joy ทุกข้อ F1 ของ joy ราว 0.5 อีกห้าคลาสได้ 0 macro F1 จึงเหลือ 0.084 ทั้งที่ accuracy 0.335 ดูไม่แย่ macro F1 จึงจับได้ว่าโมเดลทิ้งคลาสเล็ก</p>",
+  "why_wrong": [
+   "ความเร็วไม่ใช่เหตุผล",
+   "accuracy ใช้ได้แต่หลอกตา",
+   "ตรงข้าม นั่นคือ weighted F1"
+  ],
+  "link": "หลักเดียวกับการเทียบ baseline ใน L10",
+  "ref": "Lesson 12 §5.1",
+  "terms": [
+   [
+    "macro F1",
+    "เฉลี่ย F1 ทุกคลาสด้วยน้ำหนักเท่ากัน"
+   ],
+   [
+    "imbalanced",
+    "บางคลาสมีตัวอย่างมากกว่าคลาสอื่นมาก"
+   ]
+  ]
+ },
+ {
+  "id": "L12-22",
+  "lesson": 12,
+  "topic": "tokenizer ผิด checkpoint",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ใช้ tokenizer ของ bert-base-uncased กับโมเดล roberta-base จะเกิดอะไร",
+  "options": [
+   "ID เดียวกันอาจเป็นคนละคำ โมเดลอ่านข้อความผิด",
+   "ไม่มีผลเพราะทุก tokenizer ใช้ vocabulary เดียวกัน",
+   "โมเดลแปลง ID กลับเป็นคำให้เองอัตโนมัติ",
+   "เร็วขึ้นเพราะ BERT tokenizer เล็กกว่า"
+  ],
+  "answer": 0,
+  "explanation": "<p>tokenizer ต้องมาจาก checkpoint เดียวกับโมเดลเสมอ แต่ละตัวมี vocabulary และ id ของตัวเอง AutoTokenizer.from_pretrained กับชื่อเดียวกันจึงปลอดภัย</p>",
+  "why_wrong": [
+   "vocabulary ต่างกัน",
+   "โมเดลไม่ได้แปลงกลับ",
+   "ความเร็วไม่ใช่ประเด็น"
+  ],
+  "link": "เปลี่ยน checkpoint แล้วโค้ดที่เหลือไม่ต้องแก้ ถ้าใช้ Auto class กับชื่อเดียวกันทั้งคู่",
+  "ref": "Lesson 12 §5.2",
+  "terms": []
+ },
+ {
+  "id": "L12-23",
+  "lesson": 12,
+  "topic": "อ่าน shape hidden state",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "batch 2 ข้อความ ข้อความละ 10 token ผ่าน DistilBERT ได้ last_hidden_state shape อะไร และใช้ตำแหน่งใดเป็น feature",
+  "options": [
+   "[2, 10, 768] ใช้ [:, 0] คือ [CLS]",
+   "[2, 768] ใช้ทุกตำแหน่งเฉลี่ย",
+   "[10, 2, 768] ใช้ [0, :] คือข้อความแรก",
+   "[2, 10] ใช้ [:, -1] คือ token สุดท้าย"
+  ],
+  "answer": 0,
+  "explanation": "<p>shape คือ batch, token, hidden_dim encoder รักษาจำนวน token ไว้ [:, 0] คือ token แรกของทุกตัวอย่าง ซึ่งเป็น [CLS] ที่สรุปทั้งประโยค</p>",
+  "why_wrong": [
+   "หาย token dimension",
+   "สลับแกน และ [0, :] คือข้อความแรก",
+   "ไม่มี hidden dimension"
+  ],
+  "link": "[:, 0] ไม่ใช่ตัวอย่างแรก ข้อสอบชอบหลอกจุดนี้",
+  "ref": "Lesson 12 §6.1",
+  "terms": []
+ },
+ {
+  "id": "L12-24",
+  "lesson": 12,
+  "topic": "LoRA เวลาเทรน",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "LoRA เทรนแค่ 1.1% ของ parameter แต่เวลาเทรนลดแค่ราว 26% เพราะอะไร",
+  "options": [
+   "forward และ backward ยังต้องผ่านทั้งโมเดล",
+   "LoRA ต้องเทรน W₀ ไปพร้อมกันด้วย",
+   "adapter ใหญ่กว่าโมเดลเดิมหลายเท่า",
+   "LoRA ใช้ learning rate เล็กกว่ามาก"
+  ],
+  "answer": 0,
+  "explanation": "<p>แม้ weight ส่วนใหญ่ล็อก ข้อมูลยังต้องผ่านทุก layer ทั้งไปและกลับ ส่วนที่ประหยัดจริงคือ memory ของ optimizer และพื้นที่เก็บต่องาน</p>",
+  "why_wrong": [
+   "W₀ ล็อกไว้",
+   "adapter เล็กมาก",
+   "learning rate ไม่ได้กำหนดเวลาต่อ step"
+  ],
+  "link": "trainable 742,662 จาก total 67,700,748 ใน notebook",
+  "ref": "Lesson 12 §4.1",
+  "terms": []
+ },
+ {
+  "id": "L12-25",
+  "lesson": 12,
+  "topic": "เลือกงาน pipeline",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "อยากหาชื่อบริษัท สถานที่ และคนในข่าว ควรใช้ pipeline งานใด",
+  "options": [
+   "ner",
+   "summarization",
+   "text-generation",
+   "question-answering"
+  ],
+  "answer": 0,
+  "explanation": "<p>NER หาชื่อเฉพาะและติดประเภทเช่น ORG, MISC aggregation_strategy=\"simple\" รวม token ย่อยที่ติดกันเป็นแถวเดียว</p>",
+  "why_wrong": [
+   "สรุปความไม่ได้ติดป้าย",
+   "สร้างข้อความใหม่",
+   "ต้องมีคำถาม"
+  ],
+  "link": "NER เป็นงานของ encoder-only แบบ BERT",
+  "ref": "Lesson 12 §2.2",
+  "terms": [
+   [
+    "NER",
+    "Named Entity Recognition หาชื่อเฉพาะในข้อความ"
+   ]
+  ]
+ },
+ {
+  "id": "L12-26",
+  "lesson": 12,
+  "topic": "ชื่องานกับ model",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "pipeline(\"translation_en_to_th\", model=\"Helsinki-NLP/opus-mt-th-en\") แปลไปทิศไหน",
+  "options": [
+   "ไทยเป็นอังกฤษ ตามโมเดลที่ระบุ",
+   "อังกฤษเป็นไทย ตามชื่องานที่ระบุ",
+   "error เพราะทิศของสองค่าไม่ตรงกัน",
+   "สลับทิศไปมาทีละประโยค"
+  ],
+  "answer": 0,
+  "explanation": "<p>เมื่อระบุ model= ทิศมาจากโมเดลที่เลือก opus-mt-th-en แปลไทยเป็นอังกฤษ ชื่องานจึงไม่มีผล</p>",
+  "why_wrong": [
+   "ชื่องานถูกแทนด้วยโมเดล",
+   "ไม่ error",
+   "ทิศคงที่"
+  ],
+  "link": "ผลในสไลด์ ชื่อเฉพาะเพี้ยน เชอร์คัสซอฟกลายเป็น Shercus Sof",
+  "ref": "Lesson 12 §2.2",
+  "terms": []
+ },
+ {
+  "id": "L12-27",
+  "lesson": 12,
+  "topic": "BertViz",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ใน T5 cross-attention ของ The house is wonderful กับ La maison est magnifique ช่องสว่างเป็นเส้นทแยง หมายความว่าอะไร",
+  "options": [
+   "คำปลายทางดูคำต้นทางที่ตรงกัน เพราะเรียงคำเหมือนกัน",
+   "โมเดลแปลผิดทุกคำ จึงต้องเทรนใหม่ทั้งหมด",
+   "เป็น self-attention ภายในประโยคฝรั่งเศสเท่านั้น",
+   "decoder มองเห็นอนาคตเพราะไม่ได้ใส่ mask"
+  ],
+  "answer": 0,
+  "explanation": "<p>แถวคือ token ฝรั่งเศส คอลัมน์คือ token อังกฤษ La คู่ The maison คู่ house เป็นเส้นทแยง cross-attention ใช้ query จาก target และ key value จาก source</p>",
+  "why_wrong": [
+   "การจับคู่ตรงคือแปลถูก",
+   "นี่คือสองประโยค",
+   "ไม่เกี่ยวกับ mask"
+  ],
+  "link": "เทียบกับ heatmap ใน L11 ที่บางช่วงกลับทิศเพราะภาษาเรียงคำต่างกัน",
+  "ref": "Lesson 12 §2.3",
+  "terms": []
+ },
+ {
+  "id": "L12-28",
+  "lesson": 12,
+  "topic": "feature extraction เร็ว",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ทำไม feature extraction เทรนเสร็จเร็วและไม่ต้องใช้ GPU ระหว่างเทรน classifier",
+  "options": [
+   "คำนวณ hidden state ครั้งเดียว แล้วเทรนแค่ classifier",
+   "เทรนทุก layer แต่ใช้ batch ใหญ่มากแทน",
+   "ไม่ต้อง tokenize ข้อความก่อนเข้าโมเดล",
+   "ใช้ข้อมูลเทรนเพียงร้อยแถวจากทั้งชุด"
+  ],
+  "answer": 0,
+  "explanation": "<p>body ล็อก ผ่านข้อมูลครั้งเดียวได้ matrix 16,000 × 768 แล้วเทรน logistic regression บน matrix นั้น แบบเดียวกับวิธี A ของ VGG16 ใน L8</p>",
+  "why_wrong": [
+   "ไม่ได้เทรนทุก layer",
+   "ยังต้อง tokenize",
+   "ใช้ train ทั้งชุด"
+  ],
+  "link": "แลกกับความแม่นที่ต่ำกว่า fine-tuning มาก 0.635 กับ 0.92",
+  "ref": "Lesson 12 §6.1",
+  "terms": []
+ },
+ {
+  "id": "L12-29",
+  "lesson": 12,
+  "topic": "learning rate fine-tune",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "fine-tune DistilBERT ด้วย learning rate 0.01 แทน 2e-5 น่าจะเกิดอะไร",
+  "options": [
+   "weight เดิมถูกทำลายเร็ว ความรู้ที่ pretrain มาหาย",
+   "เทรนเร็วขึ้นและแม่นขึ้นทุกครั้งที่ลอง",
+   "ไม่มีผล เพราะ body ถูกล็อกไว้ทั้งหมด",
+   "head ไม่ถูกเทรนเลยตลอดทุก epoch"
+  ],
+  "answer": 0,
+  "explanation": "<p>fine-tuning ใช้ learning rate ต่ำมากเพื่อไม่ทำลายความรู้เดิม หลักเดียวกับ fine-tune CNN ใน L8 ค่า 0.01 ใหญ่กว่า 2e-5 ถึง 500 เท่า</p>",
+  "why_wrong": [
+   "ใหญ่ไปทำลาย weight",
+   "fine-tuning ไม่ได้ล็อก body",
+   "head เทรนแน่นอน"
+  ],
+  "link": "ใน L8 approach #3 ใช้ 0.00001 เล็กกว่า approach #2 ถึง 100 เท่า",
+  "ref": "Lesson 12 §6.2",
+  "terms": []
+ },
+ {
+  "id": "L12-30",
+  "lesson": 12,
+  "topic": "เลือกชนิด Transformer",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "งานจำแนกอีเมลเป็นสแปมหรือไม่ ควรเลือก Transformer ชนิดใดตามตารางในสไลด์",
+  "options": [
+   "encoder-only เช่น BERT หรือ DistilBERT",
+   "decoder-only เช่น GPT หรือ LLaMA",
+   "encoder-decoder เช่น T5 หรือ BART",
+   "ชนิดใดก็ได้ ผลไม่ต่างกันเลย"
+  ],
+  "answer": 0,
+  "explanation": "<p>encoder เห็นทั้งประโยคไม่มี causal mask จึงเข้าใจข้อความดี เหมาะกับ classification decoder เด่นเรื่องสร้างข้อความ encoder-decoder เด่นเรื่องแปลงลำดับ</p>",
+  "why_wrong": [
+   "เด่นเรื่องสร้างข้อความ",
+   "เด่นเรื่องแปลและสรุป",
+   "จุดแข็งต่างกัน"
+  ],
+  "link": "workshop emotion ก็เป็น classification และใช้ DistilBERT",
+  "ref": "Lesson 12 §6.3",
+  "terms": []
  }
 ]

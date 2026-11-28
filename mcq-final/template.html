@@ -55,7 +55,13 @@ button.primary { background: var(--accent); color: #fff; border-color: var(--acc
 .q.done-bad { border-left: 5px solid var(--bad); }
 .meta { display: flex; flex-wrap: wrap; gap: 6px; font-size: .74rem; margin-bottom: 8px; }
 .tag { border-radius: 4px; padding: 1px 7px; background: var(--accent-soft); color: var(--accent); }
-.tag.t-code { background: #e7eef8; color: #2b5a91; }
+.tag.t-recall { background: #e7eef8; color: #2b5a91; }
+.tag.t-apply { background: #e6f3ee; color: #23684f; }
+.explain dl.terms { margin: 4px 0 8px; }
+.explain dl.terms dt { font-weight: 600; display: inline; }
+.explain dl.terms dt::after { content: " — "; font-weight: 400; }
+.explain dl.terms dd { display: inline; margin: 0; }
+.explain dl.terms dd::after { content: ""; display: block; margin-bottom: 3px; }
 .tag.t-calc { background: #efe8f6; color: #6a3d8f; }
 .tag.d-easy { background: #eaf3e8; color: #3d6b33; }
 .tag.d-medium { background: #f7f0dc; color: #7a5b12; }
@@ -122,11 +128,11 @@ code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-si
 <script>
 const QUESTIONS = __DATA__;
 const LESSON_NAMES = {7:"L7 CNN",8:"L8 Architectures & Transfer",9:"L9 Functional API & Detection",10:"L10 RNN/LSTM & Embeddings",11:"L11 Attention & Transformer",12:"L12 Hugging Face & LoRA",13:"L13 AE/VAE/GAN",14:"L14 Diffusion",15:"L15 Agentic AI"};
-const TYPE_NAMES = {concept:"แนวคิด", code:"code", calc:"คำนวณ"};
+const TYPE_NAMES = {recall:"ท่องจำ", apply:"ประยุกต์", calc:"คำนวณ"};
 const DIFF_NAMES = {easy:"ง่าย", medium:"กลาง", hard:"ยาก"};
 const SOURCE_NAMES = {lesson:"lesson", notebook:"notebook"};
 const LETTERS = ["A","B","C","D"];
-const KEY = "dl-mcq-final-v1";
+const KEY = "dl-mcq-final-v2";
 
 let answers = {};   // id -> {choice, correct, tries}
 try { answers = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { answers = {}; }
@@ -146,7 +152,7 @@ function buildFilters() {
     lf.insertAdjacentHTML("beforeend", `<label class="chip"><input type="checkbox" class="lf" value="${n}" checked> ${LESSON_NAMES[n]} <span style="color:var(--ink-soft)">(${c})</span></label>`);
   }
   const tf = document.getElementById("typeFilters");
-  for (const t of ["concept","calc","code"]) {
+  for (const t of ["recall","apply","calc"]) {
     const c = QUESTIONS.filter(q => q.type === t).length;
     tf.insertAdjacentHTML("beforeend", `<label class="chip"><input type="checkbox" class="tf" value="${t}" checked> ${TYPE_NAMES[t]} <span style="color:var(--ink-soft)">(${c})</span></label>`);
   }
@@ -190,7 +196,9 @@ function cardHTML(q, idx) {
     verdict += `<div class="actions"><button data-explain="${q.id}">${openExplain.has(q.id) ? "ซ่อนเฉลย" : "ดูเฉลย"}</button></div>`;
     if (openExplain.has(q.id)) {
       const ww = q.options.map((o, i) => i === q.answer ? "" : `<li><b>${LETTERS[i]}.</b> ${q.why_wrong_map[i]}</li>`).join("");
-      verdict += `<div class="explain"><h4>ทำไม ${LETTERS[q.answer]} ถูก</h4><div>${q.explanation}</div><h4>ตัวเลือกอื่นผิดเพราะ</h4><ul>${ww}</ul><div class="ref">ทบทวนที่: ${esc(q.ref)}</div></div>`;
+      const terms = (q.terms && q.terms.length) ? `<h4>ศัพท์ในข้อนี้</h4><dl class="terms">${q.terms.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>` : "";
+      const link = q.link ? `<h4>ต่อกับเรื่องไหน</h4><div>${q.link}</div>` : "";
+      verdict += `<div class="explain">${terms}<h4>คิดทีละขั้น: ทำไม ${LETTERS[q.answer]} ถูก</h4><div>${q.explanation}</div><h4>ตัวเลือกอื่นผิดเพราะ</h4><ul>${ww}</ul>${link}<div class="ref">ทบทวนที่: ${esc(q.ref)}</div></div>`;
     }
   }
   const code = q.code ? `<pre><code>${esc(q.code)}</code></pre>` : "";
@@ -248,7 +256,7 @@ function renderStats() {
     const c = qs.filter(q => answers[q.id].correct).length;
     html += `<div class="stat"><div class="k">${LESSON_NAMES[n]}</div><div class="v">${qs.length ? pct(c, qs.length) + "%" : "–"}</div><div class="k">${c}/${qs.length} ข้อที่ทำ</div><div class="bar"><i style="width:${pct(c, qs.length)}%"></i></div></div>`;
   }
-  for (const t of ["concept","calc","code"]) {
+  for (const t of ["recall","apply","calc"]) {
     const qs = QUESTIONS.filter(q => q.type === t && answers[q.id]);
     const c = qs.filter(q => answers[q.id].correct).length;
     html += `<div class="stat"><div class="k">ประเภท: ${TYPE_NAMES[t]}</div><div class="v">${qs.length ? pct(c, qs.length) + "%" : "–"}</div><div class="k">${c}/${qs.length}</div><div class="bar"><i style="width:${pct(c, qs.length)}%"></i></div></div>`;
@@ -288,13 +296,13 @@ function buildExport() {
     byLesson[LESSON_NAMES[n]] = { answered: qs.length, correct: qs.filter(i => i.isCorrect).length, total: QUESTIONS.filter(q => q.lesson === n).length };
   }
   const byType = {};
-  for (const t of ["concept","calc","code"]) {
+  for (const t of ["recall","apply","calc"]) {
     const qs = items.filter(i => i.type === t);
     byType[t] = { answered: qs.length, correct: qs.filter(i => i.isCorrect).length };
   }
   return {
     exportedAt: new Date().toISOString(),
-    source: "Deep Learning MCQ Review (Lessons 1-6 + ex1-3 + in-class notebooks)",
+    source: "Deep Learning MCQ Final (Lessons 7-15)",
     totals: { questionsInBank: QUESTIONS.length, answered: items.length, correct: items.filter(i => i.isCorrect).length },
     byLesson, byType,
     weakTopics: items.filter(i => !i.isCorrect).map(i => ({ id: i.id, lesson: i.lessonName, topic: i.topic, ref: i.ref })),

@@ -2,692 +2,805 @@
  {
   "id": "L13-01",
   "lesson": 13,
-  "topic": "generative model",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "โมเดลใดเป็น generative model",
-  "options": [
-   "โมเดลที่สุ่มสร้างรูปใบหน้าใหม่ได้หลายแบบ",
-   "โมเดลที่บอกว่ารูปเป็นแมว 0.9 ทุกครั้ง",
-   "โมเดลที่ทายราคาบ้านออกมาเป็นตัวเลข",
-   "โมเดลที่หากรอบของวัตถุในรูปภาพ"
-  ],
-  "answer": 0,
-  "explanation": "<p>generative ต้องให้ผลเป็นข้อมูลชนิดเดียวกับ training data และสุ่มได้หลายแบบ โมเดลจำแนก ทำนาย หรือ detection ไม่ได้สร้างข้อมูลใหม่</p>",
-  "why_wrong": [
-   "classification",
-   "regression",
-   "detection"
-  ],
-  "ref": "Lesson 13 §1.1"
- },
- {
-  "id": "L13-02",
-  "lesson": 13,
-  "topic": "latent space",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "latent space ของ autoencoder คืออะไร",
-  "options": [
-   "พื้นที่มิติต่ำที่เก็บเฉพาะส่วนสำคัญของข้อมูล",
-   "พื้นที่ของ pixel ทั้งหมดของภาพ input",
-   "ชุดของ label ทั้งหมดที่ใช้ในการเทรน",
-   "ค่า loss ที่บันทึกระหว่างเทรนแต่ละ epoch"
-  ],
-  "answer": 0,
-  "explanation": "<p>encoder ย่อภาพเป็นจุดในพื้นที่มิติต่ำ เช่น 2 มิติ decoder ขยายกลับ ตัวเลขแต่ละแกนไม่มีชื่อความหมายตายตัว</p>",
-  "why_wrong": [
-   "นั่นคือ input space",
-   "autoencoder ไม่ใช้ label",
-   "ไม่ใช่ loss"
-  ],
-  "ref": "Lesson 13 §1.2"
- },
- {
-  "id": "L13-03",
-  "lesson": 13,
-  "topic": "bottleneck ใหญ่เกิน",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ถ้าคอขวดของ autoencoder มีขนาดเท่า input จะเกิดอะไร",
-  "options": [
-   "ลอก pixel ตรงๆ ได้ loss ต่ำแต่ไม่ได้เรียน feature",
-   "reconstruct ไม่ได้เพราะข้อมูลหายไปมาก",
-   "กลายเป็น VAE ไปโดยอัตโนมัติทันที",
-   "decoder จะไม่มี parameter ให้เรียนเลย"
-  ],
-  "answer": 0,
-  "explanation": "<p>คอขวดเล็กบังคับให้เก็บแค่ส่วนสำคัญ ถ้าใหญ่เท่า input โมเดลคัดลอกได้เลย ไม่ต้องเรียนอะไร</p>",
-  "why_wrong": [
-   "ข้อมูลไม่หาย",
-   "ต้องมี μ σ และ KL",
-   "decoder ยังมี weight"
-  ],
-  "ref": "Lesson 13 §2.1"
- },
- {
-  "id": "L13-04",
-  "lesson": 13,
-  "topic": "Dense ก่อน Reshape",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "encoder flatten จาก 7×7×64 decoder ต้องใช้ Dense กี่ unit ก่อน <code>Reshape((7, 7, 64))</code>",
-  "options": [
-   "3,136",
-   "448",
-   "64",
-   "49"
-  ],
-  "answer": 0,
-  "explanation": "<p>7 × 7 × 64 = 3,136 จำนวนค่าต้องเท่ากันจึง reshape ได้</p>",
-  "why_wrong": [
-   "คูณแค่ 7 × 64",
-   "แค่ channel",
-   "แค่ 7 × 7"
-  ],
-  "ref": "Lesson 13 §2.3"
- },
- {
-  "id": "L13-05",
-  "lesson": 13,
-  "topic": "Conv2DTranspose",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "feature 7×7×64 ผ่าน <code>Conv2DTranspose(32, 3, strides=2, padding=\"same\")</code> ได้ shape อะไร",
-  "options": [
-   "14×14×32",
-   "7×7×32",
-   "14×14×64",
-   "13×13×32"
-  ],
-  "answer": 0,
-  "explanation": "<p>transpose conv stride 2 same ขยายกว้างสูงสองเท่า 7 → 14 channel = จำนวน filter 32</p>",
-  "why_wrong": [
-   "คิดว่า stride ไม่ขยาย",
-   "channel ต้องเป็น 32",
-   "สูตร valid ของ conv ปกติ"
-  ],
-  "ref": "Lesson 13 §2.3"
- },
- {
-  "id": "L13-06",
-  "lesson": 13,
-  "topic": "output layer AE",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "decoder ของ autoencoder Fashion MNIST ที่ pixel อยู่ในช่วง 0–1 ควรจบด้วยอะไร",
-  "options": [
-   "Conv2D(1, 3, sigmoid, same) กับ binary cross-entropy",
-   "Conv2D(1, 3, relu) กับ categorical cross-entropy",
-   "Dense(10, softmax) กับ sparse categorical",
-   "Conv2D(3, 3, tanh) กับ hinge loss ต่อ pixel"
-  ],
-  "answer": 0,
-  "explanation": "<p>sigmoid ให้ค่า 0–1 ตรงกับ pixel ที่ normalize ภาพ grayscale มี 1 channel loss เป็น binary cross-entropy ต่อ pixel</p>",
-  "why_wrong": [
-   "relu ไม่จำกัดบน และไม่ใช่ multiclass",
-   "ไม่ใช่การจำแนก",
-   "ภาพ grayscale 1 channel"
-  ],
-  "ref": "Lesson 13 §2.3"
- },
- {
-  "id": "L13-07",
-  "lesson": 13,
-  "topic": "ปัญหา AE",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "autoencoder reconstruct ได้ชัด แต่สุ่มจุดใน latent แล้วได้รูปเพี้ยน สาเหตุตามบทเรียนคืออะไร",
-  "options": [
-   "latent ไม่ต่อเนื่องและไม่มีการแจกแจงที่นิยามไว้",
-   "decoder มีจำนวน parameter น้อยเกินไป",
-   "encoder ใช้ stride มากเกินไปจนข้อมูลหาย",
-   "loss เป็น binary cross-entropy แทน MSE"
-  ],
-  "answer": 0,
-  "explanation": "<p>reconstruct ได้กับสร้างของใหม่ได้เป็นคนละเรื่อง จุดที่ไม่มีภาพเทรนแมปไปอาจไม่มีความหมาย VAE แก้ด้วยการบังคับ latent ให้ใกล้ N(0, 1)</p>",
-  "why_wrong": [
-   "ขนาด decoder ไม่ใช่ปัญหาหลัก",
-   "stride ไม่ใช่สาเหตุ",
-   "loss ไม่ใช่สาเหตุ"
-  ],
-  "ref": "Lesson 13 §2.5"
- },
- {
-  "id": "L13-08",
-  "lesson": 13,
   "topic": "reparameterization",
   "source": "lesson",
   "type": "calc",
   "difficulty": "easy",
-  "stem": "μ = 1.0 σ = 0.5 ε = −2 ค่า z เท่าใด",
+  "stem": "encoder ให้ μ = 1 และ variance σ² = 0.25 สุ่มได้ ε = 2 จุด z เท่าใด",
   "options": [
-   "0.0",
-   "2.0",
-   "−1.0",
-   "0.5"
-  ],
-  "answer": 0,
-  "explanation": "<p>z = μ + σε = 1.0 + 0.5 × (−2) = 0.0</p>",
-  "why_wrong": [
-   "บวกแทนลบ",
-   "ลืม μ",
-   "ไม่คูณ ε"
-  ],
-  "ref": "Lesson 13 §3.1"
- },
- {
-  "id": "L13-09",
-  "lesson": 13,
-  "topic": "variance กับ σ",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "encoder ให้ μ = 0.3 และ variance σ² = 0.09 สุ่ม ε = 2 ค่า z เท่าใด",
-  "options": [
-   "0.9",
-   "0.48",
-   "0.21",
-   "0.6"
-  ],
-  "answer": 0,
-  "explanation": "<p>σ = √0.09 = 0.3 · z = 0.3 + 0.3 × 2 = 0.9 ถ้าใช้ variance คูณตรงได้ 0.48 ซึ่งผิด</p>",
-  "why_wrong": [
-   "ใช้ σ² แทน σ",
-   "ลบแทนบวก",
-   "ลืม μ"
-  ],
-  "ref": "Lesson 13 §3.1"
- },
- {
-  "id": "L13-10",
-  "lesson": 13,
-  "topic": "log variance",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "z_log_var = −2 ได้ σ เท่าใด",
-  "options": [
-   "e⁻¹ ≈ 0.37",
-   "e⁻² ≈ 0.14",
-   "−1",
-   "e¹ ≈ 2.72"
-  ],
-  "answer": 0,
-  "explanation": "<p>σ = exp(0.5 × log σ²) = e^(−1) ≈ 0.37 ค่า exp เป็นบวกเสมอ</p>",
-  "why_wrong": [
-   "ลืม 0.5 ได้ σ²",
-   "σ ติดลบไม่ได้",
-   "เครื่องหมายผิด"
-  ],
-  "ref": "Lesson 13 §3.2"
- },
- {
-  "id": "L13-11",
-  "lesson": 13,
-  "topic": "Sampling code",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "บรรทัด return ของ Sampling layer ถ้าเขียนเป็น <code>z_mean + ops.exp(z_log_var) * epsilon</code> ผิดอย่างไร",
-  "options": [
-   "ได้ σ² แทน σ ความกว้างของการสุ่มผิด",
-   "z จะติดลบไม่ได้อีกต่อไปเลย",
-   "Sampling จะมี weight ให้เรียนเพิ่ม",
-   "epsilon จะไม่ถูกสุ่มใหม่ทุก batch"
-  ],
-  "answer": 0,
-  "explanation": "<p>exp(log σ²) = σ² ต้องใช้ exp(0.5 × log σ²) = σ</p>",
-  "why_wrong": [
-   "z ยังติดลบได้",
-   "ยังไม่มี weight",
-   "ไม่เกี่ยวกับการสุ่ม ε"
-  ],
-  "ref": "Lesson 13 §3.2"
- },
- {
-  "id": "L13-12",
-  "lesson": 13,
-  "topic": "Sampling parameter",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "Sampling layer ใน model.summary() มี parameter กี่ตัว",
-  "options": [
-   "0",
    "2",
-   "เท่ากับมิติ latent",
-   "เท่ากับ z_mean รวม z_log_var"
+   "1.5",
+   "3",
+   "1.25"
   ],
   "answer": 0,
-  "explanation": "<p>Sampling แค่คำนวณ μ + σε ไม่มี weight ที่เรียนได้</p>",
+  "explanation": "<p>σ = √0.25 = 0.5 แล้ว z = μ + σε = 1 + 0.5 × 2 = 2 ต้องถอดรากก่อนเพราะสูตรใช้ standard deviation</p>",
   "why_wrong": [
-   "ไม่มี weight",
-   "ไม่มี weight",
-   "parameter อยู่ที่ Dense ก่อนหน้า"
+   "ใช้ σ² = 0.25 แทน σ ได้ 1.5",
+   "ลืมคูณ σ",
+   "ใช้ σ² คูณ ε ไม่ถอดราก"
   ],
-  "ref": "Lesson 13 §3.2"
+  "link": "การแยกความสุ่มออกเป็น ε ทำให้ gradient ไหลผ่าน μ และ σ ได้ เรียกว่า reparameterization trick",
+  "ref": "Lesson 13 §3.1",
+  "terms": [
+   [
+    "μ",
+    "จุดกลางของก้อนใน latent"
+   ],
+   [
+    "σ",
+    "standard deviation ความกว้างของก้อน"
+   ],
+   [
+    "ε",
+    "ตัวเลขสุ่มจาก normal มาตรฐาน"
+   ]
+  ]
  },
  {
-  "id": "L13-13",
+  "id": "L13-02",
   "lesson": 13,
-  "topic": "z_mean z_log_var",
+  "topic": "σ จาก log variance",
   "source": "lesson",
   "type": "calc",
-  "difficulty": "medium",
-  "stem": "layer ก่อนหน้าให้ 16 ค่า latent 2 มิติ Dense z_mean และ z_log_var มี parameter รวมเท่าใด",
+  "difficulty": "easy",
+  "stem": "z_log_var = 0 ได้ σ เท่าใด",
   "options": [
-   "68",
-   "34",
-   "136",
-   "64"
+   "1",
+   "0",
+   "0.5",
+   "e"
   ],
   "answer": 0,
-  "explanation": "<p>แต่ละตัว 16·2 + 2 = 34 · สองตัวแยกกัน 68</p>",
+  "explanation": "<p>σ = e^(½ × log σ²) = e^(½ × 0) = e⁰ = 1</p>",
   "why_wrong": [
-   "นับตัวเดียว",
-   "คูณซ้ำ",
-   "ลืม bias"
+   "e⁰ ไม่ใช่ 0",
+   "ครึ่งของ log ไม่ใช่ครึ่งของ σ",
+   "ลืมคูณ ½ และใส่ 1 แทน 0"
   ],
-  "ref": "Lesson 13 §3.3"
+  "link": "exp ให้ค่าบวกเสมอ σ จึงไม่ติดลบแม้ z_log_var ติดลบ นี่คือเหตุผลที่ encoder ส่งออก log variance",
+  "ref": "Lesson 13 §3.2",
+  "terms": [
+   [
+    "z_log_var",
+    "ลอการิทึมของ variance ที่ encoder ส่งออก"
+   ]
+  ]
  },
  {
-  "id": "L13-14",
-  "lesson": 13,
-  "topic": "z_log_var activation",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ทำไม Dense ของ z_log_var ไม่มี activation",
-  "options": [
-   "log σ² ต้องติดลบได้ เมื่อ σ น้อยกว่า 1",
-   "เพื่อให้ σ มีค่าเป็นศูนย์ได้พอดี",
-   "เพื่อลดจำนวน parameter ของ layer",
-   "เพราะ Sampling ใส่ relu ให้อยู่แล้ว"
-  ],
-  "answer": 0,
-  "explanation": "<p>σ &lt; 1 ทำให้ log σ² &lt; 0 ถ้าใส่ relu จะตัดค่าลบทิ้ง σ จะไม่ต่ำกว่า 1</p>",
-  "why_wrong": [
-   "σ = 0 ไม่ต้องการ",
-   "activation ไม่เพิ่ม parameter",
-   "Sampling ไม่มี relu"
-  ],
-  "ref": "Lesson 13 §3.3"
- },
- {
-  "id": "L13-15",
+  "id": "L13-03",
   "lesson": 13,
   "topic": "KL ต่อมิติ",
   "source": "lesson",
   "type": "calc",
-  "difficulty": "medium",
-  "stem": "KL ต่อมิติ = ½(σ² + μ² − 1 − log σ²) ถ้า μ = 1 σ = 1 มีค่าเท่าใด",
+  "difficulty": "easy",
+  "stem": "มิติหนึ่งของ latent มี μ = 2 และ σ = 1 latent loss ของมิตินี้เท่าใด ใช้ L = ½(σ² + μ² − 1 − log σ²)",
   "options": [
-   "0.5",
+   "2",
    "0",
-   "1",
-   "2"
+   "4",
+   "2.5"
   ],
   "answer": 0,
-  "explanation": "<p>½(1 + 1 − 1 − 0) = 0.5</p>",
+  "explanation": "<p>½(1 + 4 − 1 − 0) = ½ × 4 = 2 ก้อนที่อยู่ห่างจาก 0 ถูกลงโทษ ถ้า μ = 0 σ = 1 จะได้ 0 ซึ่งต่ำสุด</p>",
   "why_wrong": [
    "นั่นคือ μ = 0",
-   "ลืม ½",
-   "μ = 2"
+   "ลืมคูณ ½",
+   "ลืมลบ 1"
   ],
-  "ref": "Lesson 13 §3.4"
+  "link": "KL ดึงทุกก้อนเข้ามารอบ 0 ด้วยความกว้างราว 1 ก้อนจึงซ้อนกันไม่มีช่องว่าง",
+  "ref": "Lesson 13 §3.4",
+  "terms": [
+   [
+    "KL divergence",
+    "วัดว่าการแจกแจงสองแบบต่างกันแค่ไหน"
+   ]
+  ]
+ },
+ {
+  "id": "L13-04",
+  "lesson": 13,
+  "topic": "Conv2DTranspose shape",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "input (7, 7, 64) ผ่าน Conv2DTranspose(32, 3, strides=2, padding=\"same\") ได้ shape อะไร",
+  "options": [
+   "(14, 14, 32)",
+   "(14, 14, 64)",
+   "(5, 5, 32)",
+   "(3, 3, 32)"
+  ],
+  "answer": 0,
+  "explanation": "<p>padding same กับ Conv2DTranspose ให้ขนาดใหม่ = ขนาดเดิม × strides = 7 × 2 = 14 channel เท่าจำนวน filter คือ 32</p>",
+  "why_wrong": [
+   "channel เท่าจำนวน filter",
+   "นั่นคือ Conv2D แบบ valid ที่ย่อ",
+   "นั่นคือ Conv2D stride 2 ที่ย่อ"
+  ],
+  "link": "Conv2DTranspose คือตัวขยายใน decoder ทำย้อนกลับกับ Conv2D ที่ย่อใน encoder",
+  "ref": "Lesson 13 §2.3",
+  "terms": [
+   [
+    "Conv2DTranspose",
+    "layer ที่ขยายรูปด้วยการแทรกศูนย์ระหว่าง pixel แล้วทำ convolution"
+   ]
+  ]
+ },
+ {
+  "id": "L13-05",
+  "lesson": 13,
+  "topic": "อัตราย่อ",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "รูป 28×28 ขาวดำถูกย่อเป็น latent 2 มิติ ย่อลงกี่เท่า",
+  "options": [
+   "392 เท่า",
+   "14 เท่า",
+   "784 เท่า",
+   "28 เท่า"
+  ],
+  "answer": 0,
+  "explanation": "<p>28 × 28 = 784 ค่า หาร 2 ค่าได้ 392 ทำได้เพราะรูปเสื้อผ้ามีแบบแผน ไม่ใช่ pixel สุ่ม</p>",
+  "why_wrong": [
+   "หารด้านเดียว",
+   "ลืมหาร 2",
+   "ใช้แค่ด้านเดียว"
+  ],
+  "link": "เหมือนลำดับ 50, 48, …, 14 ที่จำแค่สามตัวเลขก็สร้างกลับได้",
+  "ref": "Lesson 13 §1.2",
+  "terms": [
+   [
+    "latent",
+    "ตัวแทนแบบย่อที่เก็บแค่ส่วนสำคัญ"
+   ]
+  ]
+ },
+ {
+  "id": "L13-06",
+  "lesson": 13,
+  "topic": "parameter ของ encoder",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "Conv2D(32, 3, strides=2, padding=\"same\") รับรูป (28, 28, 1) มี parameter เท่าใด",
+  "options": [
+   "320",
+   "288",
+   "9,248",
+   "32"
+  ],
+  "answer": 0,
+  "explanation": "<p>(3 × 3 × 1 + 1) × 32 = 10 × 32 = 320 stride กับ padding ไม่อยู่ในสูตร</p>",
+  "why_wrong": [
+   "ลืม bias",
+   "ใช้ channel 32 แทน 1",
+   "นับแค่ bias"
+  ],
+  "link": "สูตรเดียวกับ L7 ใช้ได้ทั้ง Conv2D และ Conv2DTranspose",
+  "ref": "Lesson 13 §2.2",
+  "terms": []
+ },
+ {
+  "id": "L13-07",
+  "lesson": 13,
+  "topic": "generative คืออะไร",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "โมเดลจะเป็น generative ได้ต้องมีคุณสมบัติใด",
+  "options": [
+   "ผลเป็นข้อมูลชนิดเดียวกับ training data และสุ่มได้หลายแบบ",
+   "ผลเป็นความน่าจะเป็นของ class เดียวทุกครั้ง",
+   "เป็นโมเดลภาษาขนาดใหญ่ที่มีพันล้าน parameter",
+   "ป้อนค่าเดิมแล้วได้ผลเดิมทุกครั้งแน่นอน"
+  ],
+  "answer": 0,
+  "explanation": "<p>generative model สร้างข้อมูลใหม่ที่คล้าย training data แต่ไม่เคยมีมาก่อน ต้องเป็นแบบความน่าจะเป็น ทุกโมเดลในบทนี้ป้อน random noise เพื่อให้ผลไม่ซ้ำ</p>",
+  "why_wrong": [
+   "นั่นคือ classifier",
+   "ขนาดไม่ใช่เกณฑ์",
+   "deterministic คือเครื่องจำรูป"
+  ],
+  "link": "สองขั้นคือ training ดูรูปจริง และ sampling รับ noise แล้วสร้างรูปใหม่",
+  "ref": "Lesson 13 §1.1",
+  "terms": [
+   [
+    "deterministic",
+    "ป้อนเหมือนเดิมได้ผลเหมือนเดิมเสมอ"
+   ]
+  ]
+ },
+ {
+  "id": "L13-08",
+  "lesson": 13,
+  "topic": "autoencoder",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "autoencoder ถูกบังคับให้เก็บเฉพาะ feature สำคัญด้วยอะไร",
+  "options": [
+   "คอขวดตรงกลางที่มี unit น้อยกว่า input มาก",
+   "label ที่คนติดให้ทุกรูปใน training set",
+   "discriminator ที่คอยตรวจรูปที่สร้างออกมา",
+   "noise ที่ป้อนเข้า decoder ทุกครั้งที่เทรน"
+  ],
+  "answer": 0,
+  "explanation": "<p>ถ้าคอขวดใหญ่เท่า input โมเดลจะลอก pixel ตรงๆ ได้ คอขวดเล็กบังคับให้เรียน feature สำคัญ autoencoder ใช้ input ตัวเองเป็น target คือ fit(x, x) จึงไม่ต้องมี label</p>",
+  "why_wrong": [
+   "autoencoder ไม่ใช้ label",
+   "discriminator คือ GAN",
+   "autoencoder ธรรมดาไม่ได้ป้อน noise"
+  ],
+  "link": "นี่คือ self-supervised learning แบบเดียวกับ language model ใน L11",
+  "ref": "Lesson 13 §2.1",
+  "terms": [
+   [
+    "self-supervised",
+    "สร้าง target จากข้อมูลเอง"
+   ]
+  ]
+ },
+ {
+  "id": "L13-09",
+  "lesson": 13,
+  "topic": "ปัญหา autoencoder",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ทำไม autoencoder ใช้สร้างรูปใหม่ไม่ดี",
+  "options": [
+   "latent มีช่องว่าง ไม่สมมาตร ไม่มีการแจกแจงที่นิยาม",
+   "reconstruct รูปเดิมกลับมาไม่ได้เลยสักรูป",
+   "decoder ไม่มี parameter ให้เรียนจากข้อมูลเลย",
+   "encoder ต้องใช้ label ของทุกรูปตอนเทรน"
+  ],
+  "answer": 0,
+  "explanation": "<p>autoencoder reconstruct ได้ชัด แต่ loss สนแค่สร้างรูปเดิมกลับได้ ไม่สนพื้นที่ระหว่างจุด สุ่มจุดในช่องว่างจึง decode ออกมาไม่เป็นเสื้อผ้า</p>",
+  "why_wrong": [
+   "reconstruct ได้ดี",
+   "decoder มี 65,089 parameter",
+   "ไม่ใช้ label"
+  ],
+  "link": "reconstruct ได้กับสร้างของใหม่ได้เป็นคนละเรื่อง VAE แก้ด้วย KL",
+  "ref": "Lesson 13 §2.5",
+  "terms": []
+ },
+ {
+  "id": "L13-10",
+  "lesson": 13,
+  "topic": "VAE encoder",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "encoder ของ VAE ส่งออกอะไร",
+  "options": [
+   "mean และ log variance แล้วสุ่ม z จากการแจกแจงนั้น",
+   "จุด z จุดเดียวต่อรูปแบบ autoencoder ธรรมดา",
+   "รูปที่ reconstruct กลับมาแล้วทันทีหลัง encode",
+   "ความน่าจะเป็นว่ารูปนั้นจริงหรือปลอม"
+  ],
+  "answer": 0,
+  "explanation": "<p>VAE แปลงรูปเป็นการแจกแจงด้วย μ และ log σ² แล้วสุ่ม z = μ + σε รูปเดิมจึงได้ z ต่างกันทุกครั้งแต่ส่วนใหญ่อยู่ใกล้ μ</p>",
+  "why_wrong": [
+   "นั่นคือ autoencoder ธรรมดา",
+   "นั่นคือ decoder",
+   "นั่นคือ discriminator ของ GAN"
+  ],
+  "link": "VAE สมมติว่ามิติไม่สัมพันธ์กัน latent 2 มิติจึงให้ 2 + 2 = 4 ตัวเลข",
+  "ref": "Lesson 13 §3.1",
+  "terms": []
+ },
+ {
+  "id": "L13-11",
+  "lesson": 13,
+  "topic": "ทำไม log variance",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ทำไม encoder ของ VAE ส่งออก log σ² แทน σ²",
+  "options": [
+   "Dense ให้ค่าติดลบได้ log σ² รับได้ แล้ว exp คืน σ บวก",
+   "log ทำให้คำนวณ KL ไม่ได้ จึงต้องเลี่ยงใช้ σ²",
+   "σ² ต้องติดลบได้ จึงต้องแปลงผ่าน log ก่อนใช้",
+   "log σ² มีจำนวน parameter น้อยกว่า σ² ครึ่งหนึ่ง"
+  ],
+  "answer": 0,
+  "explanation": "<p>variance ต้องมากกว่า 0 แต่ Dense ที่ไม่มี activation ให้ค่าติดลบได้ log σ² อยู่ในช่วง −∞ ถึง ∞ ตรงกับ output ของ neuron แล้ว e^(½ log σ²) ได้ σ เป็นบวกเสมอ</p>",
+  "why_wrong": [
+   "KL ใช้ log σ² ตรงๆ",
+   "variance ติดลบไม่ได้",
+   "จำนวน parameter เท่ากัน"
+  ],
+  "link": "z_log_var จึงไม่มี activation",
+  "ref": "Lesson 13 §3.2",
+  "terms": []
+ },
+ {
+  "id": "L13-12",
+  "lesson": 13,
+  "topic": "KL ต่ำสุดที่ไหน",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "latent loss ดัน σ ของแต่ละมิติไปที่ค่าใด",
+  "options": [
+   "1",
+   "0",
+   "∞",
+   "μ"
+  ],
+  "answer": 0,
+  "explanation": "<p>KL ต่ำสุดที่ μ = 0 และ σ = 1 σ = 0 คือทุกอย่างหดเป็นจุด ซึ่งทำให้ VAE กลับเป็น autoencoder และ −log σ² พุ่งเป็นอนันต์</p>",
+  "why_wrong": [
+   "σ = 0 ถูกลงโทษหนัก",
+   "σ ใหญ่ก็ถูกลงโทษ",
+   "σ ไม่ได้ผูกกับ μ"
+  ],
+  "link": "ก้อนที่หดเล็กก็ถูกลงโทษ ไม่ใช่แค่ก้อนที่อยู่ไกล",
+  "ref": "Lesson 13 §3.4",
+  "terms": []
+ },
+ {
+  "id": "L13-13",
+  "lesson": 13,
+  "topic": "β-VAE",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ถ้าให้น้ำหนัก KL มากเกินไปใน β-VAE จะเกิดอะไร",
+  "options": [
+   "รูปที่ reconstruct ได้เบลอและซ้ำกันหลายแถว",
+   "latent มีช่องว่างระหว่างกลุ่มแบบ autoencoder",
+   "รูปคมขึ้นและหลากหลายขึ้นกว่าเดิมมาก",
+   "loss รวมเป็นศูนย์ทันทีหลัง epoch แรก"
+  ],
+  "answer": 0,
+  "explanation": "<p>KL หนักเกินทำให้ทุกรูปถูกดึงไปรอบ 0 จนแยกกันไม่ออก ตาราง 0.1 reconstruction + 0.9 kl ตัวเลขเบลอและหลายแถวเหมือนกัน ถ้า reconstruction หนักเกินจะกลับไปมีปัญหาแบบ autoencoder</p>",
+  "why_wrong": [
+   "นั่นคือ reconstruction หนักเกิน",
+   "ตรงข้าม",
+   "loss ไม่เป็นศูนย์"
+  ],
+  "link": "ต้องจูน β ให้สมดุลสองฝั่ง",
+  "ref": "Lesson 13 §3.5",
+  "terms": []
+ },
+ {
+  "id": "L13-14",
+  "lesson": 13,
+  "topic": "GAN สอง network",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "generator ของ GAN รับอะไรและให้อะไร",
+  "options": [
+   "รับ random latent vector ให้รูป",
+   "รับรูปให้ความน่าจะเป็นว่าจริง",
+   "รับรูปให้ latent μ และ σ",
+   "รับ label ให้รูปของ class นั้น"
+  ],
+  "answer": 0,
+  "explanation": "<p>generator คือช่างปลอม แปลง noise เป็นรูป discriminator คือตำรวจ รับรูปแล้วบอกว่าจริงแค่ไหน</p>",
+  "why_wrong": [
+   "นั่นคือ discriminator",
+   "นั่นคือ encoder ของ VAE",
+   "GAN ในบทไม่ใช้ label แบบนี้"
+  ],
+  "link": "generator ทำหน้าที่เดียวกับ decoder ของ VAE คือแปลง latent เป็นรูป",
+  "ref": "Lesson 13 §4.1",
+  "terms": []
+ },
+ {
+  "id": "L13-15",
+  "lesson": 13,
+  "topic": "ฝึก generator",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "จังหวะฝึก generator ทำอะไรกับ discriminator และใช้ label อะไร",
+  "options": [
+   "freeze weight ของ D แล้วบอกว่ารูปปลอมคือรูปจริง",
+   "เทรน D ไปพร้อมกันด้วย label ปลอม",
+   "ถอด D ออกแล้วใช้ MSE กับรูปจริง",
+   "freeze G แล้วบอกว่ารูปจริงคือรูปปลอม"
+  ],
+  "answer": 0,
+  "explanation": "<p>gradient ต้องไหลผ่าน D จึงไปถึง G แต่ weight ของ D ไม่ถูกแตะ loss ของ G คือ binary cross-entropy กับเวกเตอร์ที่เป็นจริงทั้งหมด G จึงปรับให้ D คิดว่าเป็นของจริง</p>",
+  "why_wrong": [
+   "D ต้องถูก freeze",
+   "ต้องผ่าน D",
+   "นั่นคือจังหวะฝึก D"
+  ],
+  "link": "generator ไม่เคยเห็นรูปจริง สิ่งที่รู้มาจาก D ทั้งหมด",
+  "ref": "Lesson 13 §4.4",
+  "terms": [
+   [
+    "freeze",
+    "ล็อก weight ไม่ให้อัปเดต"
+   ]
+  ]
  },
  {
   "id": "L13-16",
   "lesson": 13,
-  "topic": "KL ต่ำสุด",
+  "topic": "mode collapse",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "KL loss ของ VAE ดัน μ และ σ ของแต่ละมิติไปที่ใด",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "mode collapse เกิดเมื่อใด",
   "options": [
-   "μ = 0 และ σ = 1",
-   "μ = 0 และ σ = 0",
-   "μ = 1 และ σ = 1",
-   "μ = 0 และ σ ใหญ่ที่สุด"
+   "generator เก่งเกิน D หลอกได้ด้วยรูปไม่กี่แบบ",
+   "discriminator เก่งเกิน G จน gradient อ่อนมาก",
+   "KL หนักเกินไปจนรูปที่ได้เบลอทั้งหมด",
+   "latent มีจำนวนมิติสูงเกินกว่าที่ต้องใช้"
   ],
   "answer": 0,
-  "explanation": "<p>ค่าต่ำสุด 0 เกิดที่ μ = 0 σ = 1 ถ้า σ → 0 พจน์ −log σ² พุ่งเป็นอนันต์ VAE จะกลายเป็น autoencoder ธรรมดา</p>",
+  "explanation": "<p>D อ่อนเกิน G จึงไม่ต้องพยายามหลากหลาย รูปที่สร้างซ้ำกันมากขึ้นเรื่อยๆ ถ้า D ชนะ ผลคือ G ไม่พัฒนาเพราะสัญญาณอ่อน</p>",
   "why_wrong": [
-   "σ = 0 ถูกลงโทษหนัก",
-   "μ ต้องเป็น 0",
-   "σ ใหญ่ก็ถูกลงโทษจาก σ²"
+   "นั่นคือปัญหาอีกด้าน",
+   "นั่นคือ β-VAE",
+   "ไม่ใช่สาเหตุ"
   ],
-  "ref": "Lesson 13 §3.4"
+  "link": "ตาราง L14 ให้ GAN ความหลากหลายไม่ดี ส่วนหนึ่งมาจาก mode collapse",
+  "ref": "Lesson 13 §5.1",
+  "terms": []
  },
  {
   "id": "L13-17",
   "lesson": 13,
-  "topic": "KL code",
+  "topic": "วัดผล GAN",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "โค้ดนี้ z_mean = 0 z_log_var = 0 ทุกมิติ ได้ kl_loss เท่าใด",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "ข้อใดถูกเกี่ยวกับตัวชี้วัด GAN",
   "options": [
-   "0",
-   "−0.5",
-   "0.5",
-   "1"
+   "Inception score สูงดี · FID ต่ำดี",
+   "Inception score ต่ำดี · FID สูงดี",
+   "ทั้งสองค่ายิ่งสูงยิ่งดี",
+   "ทั้งสองค่ายิ่งต่ำยิ่งดี"
   ],
   "answer": 0,
-  "explanation": "<p>−0.5 × (1 + 0 − 0 − e⁰) = −0.5 × 0 = 0 ตรงกับ μ = 0 σ = 1</p>",
+  "explanation": "<p>FID เป็นระยะห่างจากรูปจริง จึงยิ่งน้อยยิ่งใกล้ Inception score เป็นคะแนน ยิ่งมากยิ่งดี loss ของ GAN เองบอกคุณภาพไม่ได้</p>",
   "why_wrong": [
-   "คิดเครื่องหมายผิด",
-   "ลืม −1 จาก exp",
-   "ลืม 1"
+   "สลับกัน",
+   "FID เป็นระยะ",
+   "Inception score เป็นคะแนน"
   ],
-  "ref": "Lesson 13 §3.4",
-  "code": "kl_loss = -0.5 * (1 + z_log_var - ops.square(z_mean) - ops.exp(z_log_var))\nkl_loss = ops.mean(ops.sum(kl_loss, axis=1))"
+  "link": "ยังไม่มีข้อตกลงว่าวัด GAN แบบไหนถูกที่สุด",
+  "ref": "Lesson 13 §5.2",
+  "terms": [
+   [
+    "FID",
+    "Fréchet Inception Distance ระยะระหว่างรูปที่สร้างกับรูปจริง"
+   ]
+  ]
  },
  {
   "id": "L13-18",
   "lesson": 13,
-  "topic": "β-VAE",
+  "topic": "VAE เทียบ GAN",
   "source": "lesson",
-  "type": "concept",
+  "type": "recall",
   "difficulty": "medium",
-  "stem": "เพิ่ม β ของ KL loss ให้มากขึ้นมีผลอย่างไร",
+  "stem": "ข้อใดเปรียบเทียบ VAE กับ GAN ได้ถูก",
   "options": [
-   "latent เรียบ สุ่มสร้างดีขึ้น แต่ reconstruct คมน้อยลง",
-   "reconstruct คมขึ้น แต่ latent ขาดเป็นช่วงๆ มากขึ้น",
-   "ไม่มีผลอะไรเลย เพราะ KL เป็นค่าคงที่เสมอ",
-   "เทรนเร็วขึ้นโดยไม่มีผลต่อคุณภาพของรูปเลย"
+   "VAE latent ต่อเนื่องแก้ไขรูปได้ · GAN รูปเดี่ยวคมกว่า",
+   "VAE รูปคมกว่า · GAN latent ต่อเนื่องกว่า VAE",
+   "VAE ฝึกยากกว่า · GAN ฝึกเสถียรกว่า VAE มาก",
+   "VAE กับ GAN ใช้ loss แบบเดียวกันทุกประการ"
   ],
   "answer": 0,
-  "explanation": "<p>β ชั่งน้ำหนักสอง loss KL มากขึ้นดัน latent ให้ใกล้ N(0, 1) มากขึ้น reconstruction ถูกลดความสำคัญลง</p>",
+  "explanation": "<p>VAE ให้ latent มีโครงสร้าง เหมาะกับการบวกเวกเตอร์ยิ้มหรือเปลี่ยนหน้าทีละน้อย GAN สร้างรูปเดี่ยวคม แต่ latent อาจไม่ต่อเนื่องและฝึกยาก</p>",
   "why_wrong": [
-   "นั่นคือ β ต่ำ",
-   "KL ไม่คงที่",
-   "ไม่ใช่เรื่องความเร็ว"
+   "สลับกัน",
+   "สลับกัน",
+   "VAE ใช้ reconstruction + KL GAN ใช้ BCE แข่งกัน"
   ],
-  "ref": "Lesson 13 §3.5"
+  "link": "diffusion ใน L14 ได้ทั้งคมและหลากหลาย แลกกับความช้า",
+  "ref": "Lesson 13 §5.3",
+  "terms": []
  },
  {
   "id": "L13-19",
   "lesson": 13,
-  "topic": "GAN สองฝ่าย",
+  "topic": "reshape decoder",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "ใน GAN generator พยายามทำอะไร",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "encoder flatten จาก (7, 7, 64) ฝั่ง decoder ต้องมี Dense ตัวแรกกี่ unit ก่อน Reshape((7, 7, 64))",
   "options": [
-   "สร้างรูปปลอมที่หลอก discriminator ว่าเป็นของจริง",
-   "แยกรูปจริงกับรูปปลอมให้แม่นยำที่สุด",
-   "ย่อรูปลง latent แล้วขยายกลับให้เหมือนเดิม",
-   "ลด KL divergence ของ latent ให้ใกล้ศูนย์"
+   "3,136",
+   "64",
+   "49",
+   "448"
   ],
   "answer": 0,
-  "explanation": "<p>generator คือช่างปลอม discriminator คือคนตรวจ ทั้งสองแข่งกัน</p>",
+  "explanation": "<p>Reshape ต้องได้ค่าจำนวนเท่า 7 × 7 × 64 = 3,136 ถ้าเลขไม่ตรง Reshape จะ error</p>",
   "why_wrong": [
-   "นั่นคือ discriminator",
-   "นั่นคือ autoencoder",
-   "นั่นคือ VAE"
+   "นั่นคือ channel",
+   "นั่นคือกว้าง × สูง",
+   "นั่นคือ 7 × 64"
   ],
-  "ref": "Lesson 13 §4.1"
+  "link": "decoder คลี่ย้อนลำดับ encoder Flatten ย้อนด้วย Reshape Conv2D ย้อนด้วย Conv2DTranspose",
+  "ref": "Lesson 13 §2.3",
+  "terms": []
  },
  {
   "id": "L13-20",
   "lesson": 13,
-  "topic": "discriminator loss",
+  "topic": "activation ท้าย decoder",
   "source": "lesson",
-  "type": "calc",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "รูปปลอม label 0 discriminator ทาย 0.75 binary cross-entropy เท่าใด",
+  "stem": "pixel ถูกปรับให้อยู่ระหว่าง 0–1 และใช้ binary cross-entropy layer สุดท้ายของ decoder ควรใช้ activation ใด",
   "options": [
-   "−log 0.25 ≈ 1.39",
-   "−log 0.75 ≈ 0.29",
-   "0.75",
-   "−log 0.5 ≈ 0.69"
+   "sigmoid",
+   "ReLU",
+   "softmax",
+   "tanh"
   ],
   "answer": 0,
-  "explanation": "<p>label 0 ใช้ −log(1 − p) = −log 0.25 ≈ 1.386 ทายผิดมากจึงถูกลงโทษมาก</p>",
+  "explanation": "<p>sigmoid ให้ค่า 0 ถึง 1 ตรงกับช่วงของ pixel และเข้ากับ binary cross-entropy ReLU ไม่มีเพดาน tanh ให้ −1 ถึง 1</p>",
   "why_wrong": [
-   "ใช้สูตรของ label 1",
-   "ไม่ใช่ loss",
-   "ค่าสุ่ม"
+   "ไม่มีเพดาน",
+   "ใช้กับหลาย class ที่รวมกันเป็น 1",
+   "ช่วง −1 ถึง 1 ไม่ตรงกับ pixel"
   ],
-  "ref": "Lesson 13 §4.3"
+  "link": "generator ของ GAN หน้าดาราก็จบด้วย Conv2D(3) sigmoid ด้วยเหตุผลเดียวกัน",
+  "ref": "Lesson 13 §2.3",
+  "terms": []
  },
  {
   "id": "L13-21",
   "lesson": 13,
-  "topic": "generator loss",
+  "topic": "ลืม 0.5",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ตอนเทรน generator label ของรูปปลอมที่ส่งเข้า discriminator ตั้งเป็นอะไร",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "ถ้าเขียน Sampling layer เป็น z = z_mean + exp(z_log_var) × ε ลืม 0.5 จะผิดอย่างไร",
   "options": [
-   "label เดียวกับรูปจริง เพื่อดันให้ D ทายว่าจริง",
-   "label ของรูปปลอม เพื่อให้ D แยกได้แม่นขึ้น",
-   "label สุ่มครึ่งจริงครึ่งปลอมในแต่ละ batch",
-   "ไม่ใช้ label เพราะ G เรียนแบบ unsupervised"
+   "ได้ σ² แทน σ ก้อนกว้างผิดขนาด",
+   "ได้ σ ถูกต้องเหมือนเดิมทุกครั้ง",
+   "z จะติดลบทุกครั้งที่สุ่ม",
+   "gradient ไหลผ่าน μ ไม่ได้เลย"
   ],
   "answer": 0,
-  "explanation": "<p>misleading labels บอกว่าทุกรูปเป็นของจริง gradient จึงดัน G ไปทางที่ D เชื่อ ในโค้ดของอาจารย์รูปจริงคือ 0 จึงใช้ zeros</p>",
+  "explanation": "<p>exp(log σ²) = σ² ไม่ใช่ σ ต้อง exp(0.5 × log σ²) จึงได้ σ ถ้า σ² = 0.04 จะคูณ 0.04 แทน 0.2 ก้อนแคบเกินห้าเท่า</p>",
   "why_wrong": [
-   "นั่นคือการเทรน D",
-   "ไม่สุ่ม",
-   "ยังใช้ loss ของ D กับ label"
+   "ผิดเพราะลืมถอดราก",
+   "z ขึ้นกับ ε",
+   "gradient ยังไหลได้"
   ],
-  "ref": "Lesson 13 §4.5"
+  "link": "Sampling layer ไม่มี weight parameter ใน summary จึงเป็น 0",
+  "ref": "Lesson 13 §3.2",
+  "terms": [],
+  "code": "z = z_mean + ops.exp(z_log_var) * epsilon"
  },
  {
   "id": "L13-22",
   "lesson": 13,
-  "topic": "label กลับด้าน",
+  "topic": "ใช้ VAE แก้รูป",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "ในโค้ด DCGAN ของอาจารย์ <code>misleading_labels = ops.zeros((batch_size, 1))</code> เป็นศูนย์เพราะอะไร",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "อยากทำแอนิเมชันหน้า A ค่อยๆ เปลี่ยนเป็นหน้า B ควรเลือก VAE หรือ GAN",
   "options": [
-   "โหลดแบบโฟลเดอร์เดียว รูปจริงเป็น 0 ศูนย์จึงหมายถึงจริง",
-   "generator ต้องการให้ discriminator ทายว่าเป็นของปลอม",
-   "ศูนย์ทำให้ gradient ของ discriminator เป็นศูนย์ไปด้วย",
-   "ใช้ศูนย์เพื่อปิดการทำ label smoothing ในจังหวะนี้"
+   "VAE เพราะ latent ต่อเนื่อง เลื่อนนิดรูปเปลี่ยนนิด",
+   "GAN เพราะสร้างรูปเดี่ยวได้คมที่สุดในบทนี้",
+   "autoencoder ธรรมดาเพราะ reconstruct ได้ชัดที่สุด",
+   "ใช้แบบใดก็ได้ ผลลัพธ์ออกมาเหมือนกันทุกแบบ"
   ],
   "answer": 0,
-  "explanation": "<p>โค้ดนี้กลับด้านจากทฤษฎี combined labels ให้รูปปลอมเป็น ones รูปจริงเป็น zeros หลักการเดิม: label ของ G คือ label ของรูปจริง</p>",
+  "explanation": "<p>VAE เดินเส้นตรงจากจุดของ A ไปจุดของ B ใน latent ได้รูปกลางทางที่สมเหตุสมผล GAN latent อาจไม่ต่อเนื่อง autoencoder มีช่องว่างระหว่างกลุ่ม</p>",
   "why_wrong": [
-   "G อยากให้ทายว่าจริง",
-   "อัปเดตเฉพาะ weight ของ G อยู่แล้ว",
-   "smoothing อยู่ที่บรรทัด +0.05 noise"
+   "คมแต่ latent อาจกระโดด",
+   "ช่องว่างทำให้รูปกลางทางพัง",
+   "latent ต่างกันมาก"
   ],
-  "ref": "Lesson 13 §4.5"
+  "link": "นี่คือหนึ่งในงานที่สไลด์บอกว่า VAE เก่ง",
+  "ref": "Lesson 13 §5.3",
+  "terms": []
  },
  {
   "id": "L13-23",
   "lesson": 13,
-  "topic": "label noise",
+  "topic": "D loss ไหนสูง",
   "source": "lesson",
-  "type": "code",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "<code>labels += 0.05 * tf.random.uniform(tf.shape(labels))</code> ทำอะไร",
+  "stem": "batch รูปปลอม label 0 D ทาย 0.1, 0.2, 0.6 ค่าใดถูกลงโทษมากที่สุด",
   "options": [
-   "เติม noise เล็กน้อยให้ label ช่วยให้เทรนเสถียร",
-   "สลับ label ของรูปจริงกับรูปปลอมราว 5%",
-   "ลด learning rate ของทั้งสอง network ลง 5%",
-   "เพิ่มจำนวนรูปปลอมอีก 5% ในทุก batch"
+   "0.6 เพราะห่างจาก label 0 มากที่สุด",
+   "0.1 เพราะใกล้ label 0 มากที่สุด",
+   "ทั้งสามเท่ากัน เพราะ label เดียวกัน",
+   "0.2 เพราะอยู่ตรงกลางของทั้งสามค่า"
   ],
   "answer": 0,
-  "explanation": "<p>comment ในโค้ดเรียกว่า important trick ทำให้ D ไม่มั่นใจเกินไป ไม่ได้สลับ label</p>",
+  "explanation": "<p>binary cross-entropy ของ label 0 คือ −log(1 − p) p ยิ่งเข้าใกล้ 1 ยิ่งโทษมาก 0.6 จึงโดนหนักที่สุด D จะเรียนให้ทายรูปแบบนั้นต่ำลง</p>",
   "why_wrong": [
-   "ไม่ได้สลับ",
-   "ไม่เกี่ยวกับ lr",
-   "ไม่เพิ่มรูป"
+   "ใกล้ label คือถูก",
+   "โทษขึ้นกับค่าที่ทาย",
+   "ไม่ใช่ค่าที่ห่างที่สุด"
   ],
-  "ref": "Lesson 13 §4.5"
+  "link": "จังหวะฝึก G กลับข้าง label เป็น 1 ค่าที่ต่ำสุดจะโดนหนักสุด",
+  "ref": "Lesson 13 §4.3",
+  "terms": []
  },
  {
   "id": "L13-24",
   "lesson": 13,
-  "topic": "discriminator layer",
+  "topic": "misleading_labels",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "discriminator ของ DCGAN ในบทลดขนาดภาพด้วยอะไร",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "ในโค้ด GAN ดารา รูปจริงได้ label 0 ตาม flow from directory ถ้าแก้ให้รูปจริงได้ label 1 ตามทฤษฎี ต้องแก้ misleading_labels อย่างไร",
   "options": [
-   "Conv2D strides=2",
-   "MaxPooling2D",
-   "Conv2DTranspose",
-   "Dropout"
+   "เปลี่ยนเป็น ops.ones เพราะ G อยากให้ D ตอบว่าจริง",
+   "คงเป็น ops.zeros เพราะ G ต้องการ label 0 เสมอ",
+   "เปลี่ยนเป็นค่าสุ่ม 0 หรือ 1 ในแต่ละ batch",
+   "ลบทิ้งแล้วใช้ label ของรูปจริงแทนทั้งหมด"
   ],
   "answer": 0,
-  "explanation": "<p>64 → 32 → 16 → 8 ด้วย strides=2 ไม่ใช้ pooling LeakyReLU และ Dropout ไม่มี parameter</p>",
+  "explanation": "<p>label ของ G คือ label เดียวกับรูปจริงเสมอ เดิมรูปจริงเป็น 0 จึงใช้ zeros ถ้ารูปจริงเปลี่ยนเป็น 1 ก็ต้องใช้ ones</p>",
   "why_wrong": [
-   "ไม่ได้ใช้",
-   "ใช้ขยายใน generator",
-   "ไม่ลดขนาด"
+   "0 ตอนนี้แปลว่าปลอม",
+   "ไม่ใช่การสุ่ม",
+   "G ไม่มีรูปจริงในจังหวะนี้"
   ],
-  "ref": "Lesson 13 §4.3"
+  "link": "หลักการไม่เปลี่ยน มีแค่ความหมายของตัวเลขที่สลับ",
+  "ref": "Lesson 13 §4.5",
+  "terms": []
  },
  {
   "id": "L13-25",
   "lesson": 13,
-  "topic": "generator ขนาด",
+  "topic": "generator ใหญ่กว่า",
   "source": "lesson",
-  "type": "calc",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "generator เริ่ม 8×8 ใช้ Conv2DTranspose stride 2 กี่ครั้งจึงได้ 64×64",
+  "stem": "generator ของ DCGAN หน้าดาราใหญ่กว่า discriminator เกือบ 10 เท่า ส่วนใหญ่มาจากไหน",
   "options": [
-   "3",
-   "2",
-   "4",
-   "8"
+   "Conv2DTranspose(512) ที่ขยายถึง 64×64",
+   "Dense ตัวสุดท้ายของ discriminator",
+   "Dropout ที่ใส่ใน generator",
+   "LeakyReLU ที่ใช้ทุกชั้น"
   ],
   "answer": 0,
-  "explanation": "<p>8 → 16 → 32 → 64 คือ 3 ครั้ง</p>",
+  "explanation": "<p>Conv2DTranspose(512) มี (4 × 4 × 256 + 1) × 512 ราว 2.1 ล้าน จากทั้งหมดราว 4 ล้าน Dropout และ LeakyReLU ไม่มี parameter</p>",
   "why_wrong": [
-   "ได้ 32",
-   "ได้ 128",
-   "หารผิด"
+   "อยู่คนละ network",
+   "ไม่มี parameter",
+   "ไม่มี parameter"
   ],
-  "ref": "Lesson 13 §4.4"
+  "link": "ขนาดที่ต่างกันนี้ไม่ได้ทำให้ G ชนะ D เสมอ ความสมดุลยังขึ้นกับการฝึก",
+  "ref": "Lesson 13 §4.4",
+  "terms": []
  },
  {
   "id": "L13-26",
   "lesson": 13,
-  "topic": "mode collapse",
+  "topic": "D ลดขนาดอย่างไร",
   "source": "lesson",
-  "type": "concept",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "mode collapse คืออะไร",
+  "stem": "discriminator ของ DCGAN ลดขนาด 64 → 32 → 16 → 8 ด้วยอะไร",
   "options": [
-   "generator สร้างได้แค่ไม่กี่แบบที่หลอก D ได้",
-   "discriminator ชนะจน generator ไม่ได้ gradient",
-   "loss ของทั้งสอง network เป็นศูนย์พร้อมกัน",
-   "latent space ของ VAE หดลงเหลือจุดเดียว"
+   "Conv2D strides=2",
+   "MaxPooling2D",
+   "Global Average Pooling",
+   "Conv2DTranspose"
   ],
   "answer": 0,
-  "explanation": "<p>mode collapse เกิดตอน generator ชนะด้วยรูปแบบเดิมๆ ถ้า discriminator ชนะ ปัญหาคือ gradient อ่อน</p>",
+  "explanation": "<p>DCGAN ใช้ stride 2 แทน pooling ทั้งฝั่งย่อในตัว D และฝั่งขยายในตัว G</p>",
   "why_wrong": [
-   "นั่นคือ D ชนะ",
-   "ไม่ใช่นิยาม",
-   "เป็นเรื่องของ VAE"
+   "ไม่ได้ใช้ pooling",
+   "ใช้ Flatten ท้าย",
+   "นั่นคือตัวขยาย"
   ],
-  "ref": "Lesson 13 §5.1"
+  "link": "stride ใหญ่ใช้แทน pooling ได้ แบบเดียวกับ ResNet ใน L7 L8",
+  "ref": "Lesson 13 §4.3",
+  "terms": []
  },
  {
   "id": "L13-27",
   "lesson": 13,
-  "topic": "FID IS",
+  "topic": "loss GAN ไม่บอกคุณภาพ",
   "source": "lesson",
-  "type": "concept",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "ทิศของตัวชี้วัด GAN ข้อใดถูก",
+  "stem": "ทีมดู loss ของ generator ตอน epoch 30 สูงกว่าตอน epoch 5 แล้วสรุปว่าแย่ลง ผิดตรงไหน",
   "options": [
-   "FID ยิ่งต่ำยิ่งดี · Inception score ยิ่งสูงยิ่งดี",
-   "FID ยิ่งสูงยิ่งดี · Inception score ยิ่งต่ำยิ่งดี",
-   "FID และ Inception score ยิ่งต่ำยิ่งดี",
-   "FID และ Inception score ยิ่งสูงยิ่งดี"
+   "G ถูกวัดกับ D ที่เก่งขึ้นตลอด loss ต่างเวลาเทียบไม่ได้",
+   "loss ที่สูงขึ้นแปลว่ารูปดีขึ้นเสมอในทุกกรณี",
+   "GAN ไม่มี loss ของ generator ให้ดูตั้งแต่แรก",
+   "ต้องดู KL divergence แทน loss ของ generator"
   ],
   "answer": 0,
-  "explanation": "<p>FID เป็นระยะห่างจากรูปจริง ยิ่งน้อยยิ่งใกล้ · IS เป็นคะแนน ยิ่งมากยิ่งดี</p>",
+  "explanation": "<p>คู่แข่งของ G เปลี่ยนไปทุก epoch loss จึงไม่ใช่มาตรวัดคงที่ ต้องดูรูปที่สร้างหรือใช้ FID และ Inception score</p>",
   "why_wrong": [
-   "กลับทิศ",
-   "IS ยิ่งสูงยิ่งดี",
-   "FID เป็น distance"
+   "ไม่ได้แปลว่าดีขึ้นเสมอ",
+   "G มี loss เป็น BCE",
+   "GAN ไม่มี KL"
   ],
-  "ref": "Lesson 13 §5.2"
+  "link": "ต่างจาก VAE ที่ loss ลดลงชัดเจนและเชื่อได้",
+  "ref": "Lesson 13 §5.1",
+  "terms": []
  },
  {
   "id": "L13-28",
   "lesson": 13,
-  "topic": "VAE vs GAN",
+  "topic": "latent ของ autoencoder",
   "source": "lesson",
-  "type": "concept",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "ข้อใดเทียบ VAE กับ GAN ได้ถูก",
+  "stem": "หลังเทรน autoencoder บน Fashion MNIST แล้วระบายสีจุดใน latent ตาม label พบว่ารองเท้าทุกแบบอยู่ใกล้กัน สรุปอะไรได้",
   "options": [
-   "VAE เสถียรแต่รูปเบลอ · GAN รูปคมแต่เทรนยาก",
-   "VAE รูปคมกว่า และเทรนยากกว่า GAN",
-   "GAN มี encoder และ KL loss เหมือน VAE",
-   "ทั้ง VAE และ GAN ไม่มี latent space"
+   "จัดกลุ่มของที่คล้ายกันได้เองโดยไม่เห็น label",
+   "autoencoder ใช้ label ของรูปตอนเทรนด้วย",
+   "latent แบบนี้พร้อมสร้างรูปใหม่ได้ดีแล้ว",
+   "รองเท้าถูกจำแนกผิดเป็นเสื้อเกือบทั้งหมด"
   ],
   "answer": 0,
-  "explanation": "<p>VAE มี loss ชัด latent เรียบ รูปมักเบลอ GAN แข่งสองฝ่าย รูปคมกว่า เสี่ยง mode collapse และ non-convergence</p>",
+  "explanation": "<p>label ไม่เคยถูกใช้ตอนเทรน แต่ encoder วางของคล้ายกันไว้ใกล้กัน แต่ช่องว่างระหว่างกลุ่มยังทำให้สุ่มจุดแล้วได้รูปพัง</p>",
   "why_wrong": [
-   "กลับกัน",
-   "GAN ไม่มี encoder หรือ KL",
-   "ทั้งสองเริ่มจาก latent"
+   "ไม่ได้ใช้ label",
+   "ยังมีช่องว่าง",
+   "อยู่ในกลุ่มของตัวเอง"
   ],
-  "ref": "Lesson 13 §5.3"
+  "link": "การจัดกลุ่มได้กับการสร้างของใหม่ได้เป็นคนละเรื่อง",
+  "ref": "Lesson 13 §2.4",
+  "terms": []
  },
  {
   "id": "L13-29",
   "lesson": 13,
-  "topic": "train D ก่อน",
+  "topic": "เลือกโมเดลสร้างรูป",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "ในจังหวะเทรน discriminator gradient ถูกนำไปอัปเดต weight ของใคร",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ต้องสร้างรูปหน้าคนเดี่ยวที่คมสมจริงที่สุด ไม่สนการแก้ไขใน latent ควรเลือกแบบใดในบทนี้",
   "options": [
-   "discriminator.trainable_weights เท่านั้น",
-   "generator.trainable_weights เท่านั้น",
-   "weight ของทั้งสอง network พร้อมกัน",
-   "ไม่มีใครเพราะใช้ label noise อยู่"
+   "GAN",
+   "VAE",
+   "autoencoder ธรรมดา",
+   "β-VAE ที่ให้ KL หนัก"
   ],
   "answer": 0,
-  "explanation": "<p>สองจังหวะแยกกัน: เทรน D ด้วย combined images และ label แล้วอัปเดตแค่ D · เทรน G ด้วย misleading labels แล้วอัปเดตแค่ G</p>",
+  "explanation": "<p>GAN ให้รูปคมสมจริงที่สุดในสามแบบ VAE เบลอกว่า autoencoder สร้างของใหม่ไม่ดี β-VAE ที่ KL หนักยิ่งเบลอ</p>",
   "why_wrong": [
-   "นั่นคือจังหวะของ G",
-   "อัปเดตแยกกัน",
-   "noise ไม่ได้หยุดการอัปเดต"
+   "เบลอกว่า",
+   "สร้างของใหม่ไม่ดี",
+   "ยิ่งเบลอ"
   ],
-  "ref": "Lesson 13 §4.5"
+  "link": "ราคาคือฝึกยากและเสี่ยง mode collapse",
+  "ref": "Lesson 13 §5.3",
+  "terms": []
  },
  {
   "id": "L13-30",
   "lesson": 13,
-  "topic": "VAE loss",
+  "topic": "VAE สุ่มรูปใหม่",
   "source": "lesson",
-  "type": "calc",
-  "difficulty": "hard",
-  "stem": "reconstruction loss 120 KL ของ latent 2 มิติคือ 0.5 และ 1.5 ใช้ β = 1 total loss เท่าใด",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "หลังเทรน VAE แล้วอยากสร้างรูปใหม่ ควรสุ่ม z จากไหน",
   "options": [
-   "122",
-   "121",
-   "120",
-   "240"
+   "normal มาตรฐาน N(0, 1) แล้วส่งเข้า decoder",
+   "สุ่มจุดจากช่องว่างระหว่างกลุ่ม",
+   "ใช้ μ ของรูปใน training set เท่านั้น",
+   "สุ่มจากช่วง 0 ถึง 255 แบบ pixel"
   ],
   "answer": 0,
-  "explanation": "<p>KL รวมทุกมิติ 0.5 + 1.5 = 2 · total = 120 + 2 = 122</p>",
+  "explanation": "<p>KL ดันให้ latent มีการแจกแจงแบบ normal มาตรฐาน สุ่มจาก N(0, 1) แล้วจุดมักตกในบริเวณที่ decoder เคยเห็น</p>",
   "why_wrong": [
-   "เฉลี่ย KL แทนรวม",
-   "ลืม KL",
-   "คูณผิด"
+   "ช่องว่างเป็นปัญหาของ autoencoder",
+   "ได้แค่รูปเดิม",
+   "latent ไม่ใช่ pixel"
   ],
-  "ref": "Lesson 13 §3.4"
+  "link": "นี่คือเหตุผลที่ต้องมี KL ถ้าไม่มีก็ไม่รู้ว่าจะสุ่มจากไหน",
+  "ref": "Lesson 13 §3.4",
+  "terms": []
  }
 ]

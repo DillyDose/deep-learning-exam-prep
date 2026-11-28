@@ -6,7 +6,7 @@ SP = os.path.dirname(os.path.abspath(__file__))
 OUT = sys.argv[1] if len(sys.argv) > 1 else os.path.join(SP, "..", "dl-mcq-final.html")
 random.seed(20261127)
 
-TYPES = {"concept", "code", "calc"}
+TYPES = {"recall", "apply", "calc"}
 DIFFS = {"easy", "medium", "hard"}
 SOURCES = {"lesson", "notebook"}
 LESSONS = list(range(7, 16))
@@ -45,6 +45,8 @@ for q in qs:
     if qid in seen_ids:
         errors.append(f"{qid}: duplicate id")
     seen_ids.add(qid)
+    if not q.get("link"):
+        errors.append(f"{qid}: missing link")
     if q.get("type") not in TYPES:
         errors.append(f"{qid}: bad type {q.get('type')!r}")
     if q.get("difficulty") not in DIFFS:
@@ -78,6 +80,10 @@ for q in qs:
         seen_stems[key] = qid
 
 per_lesson = collections.Counter(q["lesson"] for q in qs)
+for n in LESSONS:
+    c = collections.Counter(q["type"] for q in qs if q["lesson"] == n)
+    if (c["calc"], c["recall"], c["apply"]) != (6, 12, 12):
+        errors.append(f"Lesson {n}: type mix calc/recall/apply = {c['calc']}/{c['recall']}/{c['apply']} (need 6/12/12)")
 for n in LESSONS:
     if per_lesson[n] < 20:
         errors.append(f"Lesson {n}: only {per_lesson[n]} questions (min 20)")

@@ -2,149 +2,240 @@
  {
   "id": "L15-01",
   "lesson": 15,
-  "topic": "นิยาม agentic AI",
+  "topic": "latency parallel",
   "source": "lesson",
-  "type": "concept",
+  "type": "calc",
   "difficulty": "easy",
-  "stem": "ข้อใดไม่อยู่ในนิยาม agentic AI บนสไลด์",
+  "stem": "tool สามตัวใช้เวลา 1, 2, 3 วินาที ไม่พึ่งกัน รันทีละตัวกับรันพร้อมกันใช้เวลาเท่าใด",
   "options": [
-   "ต้องทำงานโดยไม่มีคนดูแลเลยทุกกรณี",
-   "ให้เหตุผล วางแผน ตัดสินใจ และลงมือทำเพื่อเป้าหมาย",
-   "ใช้ tool และระบบภายนอกแล้วปรับ action ตามผล",
-   "มีความอิสระระดับหนึ่ง ลดการสั่งทุกขั้น"
+   "ทีละตัว 6 วินาที พร้อมกัน 3 วินาที",
+   "ทีละตัว 3 วินาที พร้อมกัน 1 วินาที",
+   "ทีละตัว 6 วินาที พร้อมกัน 2 วินาที",
+   "ทีละตัว 6 วินาที พร้อมกัน 6 วินาที"
   ],
   "answer": 0,
-  "explanation": "<p>สไลด์ย้ำว่า agent มีระดับความอิสระต่างกันได้ not every AI agent needs to operate independently of human supervision</p>",
+  "explanation": "<p>ทีละตัวต้องรอครบ 1 + 2 + 3 = 6 พร้อมกันจบเมื่อตัวที่ช้าที่สุดจบ คือ max(1, 2, 3) = 3</p>",
   "why_wrong": [
-   "เป็นข้อแรกของนิยาม",
-   "เป็นข้อสอง",
-   "เป็นข้อสาม"
+   "ใช้ค่าน้อยสุดและไม่บวก",
+   "ใช้ค่าเฉลี่ยแทนค่าสูงสุด",
+   "ไม่ได้ประหยัดอะไรเลย"
   ],
-  "ref": "Lesson 15 §1.1"
+  "link": "parallel ใช้ได้เมื่อ tool ไม่พึ่ง output ของกัน ถ้าพึ่งกันต้องเป็น chain",
+  "ref": "Lesson 15 §4.3",
+  "terms": [
+   [
+    "latency",
+    "เวลารอจนได้ผล"
+   ],
+   [
+    "parallel",
+    "รันหลายงานพร้อมกัน"
+   ]
+  ]
  },
  {
   "id": "L15-02",
   "lesson": 15,
-  "topic": "ระดับ agency",
+  "topic": "ลดเวลากี่เปอร์เซ็นต์",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ระบบที่ใช้ LLM จัดหมวดคำขอแล้วเดินตาม branch ที่นักพัฒนาเขียนไว้ จัดอยู่ระดับใด",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "tool สี่ตัวใช้เวลา 1, 1, 2, 4 วินาที รันพร้อมกันลดเวลาได้กี่เปอร์เซ็นต์เทียบรันทีละตัว",
   "options": [
-   "AI workflow",
-   "rule-based system",
-   "tool-using agent",
-   "autonomous agent"
+   "50%",
+   "25%",
+   "75%",
+   "4%"
   ],
   "answer": 0,
-  "explanation": "<p>มี LLM ช่วยตัดสินแค่การจัดหมวด ลำดับงานยังกำหนดโดยนักพัฒนา rule-based ไม่มีโมเดล tool-using agent เลือก tool เอง autonomous วางแผนและปรับแผน</p>",
+  "explanation": "<p>ทีละตัว 1 + 1 + 2 + 4 = 8 พร้อมกัน max = 4 ลดไป 4 จาก 8 คือ 50%</p>",
   "why_wrong": [
-   "rule-based ไม่ใช้ LLM",
-   "workflow นี้ไม่ได้เลือก tool เอง",
-   "ไม่ได้วางแผนหลายขั้น"
+   "คิด 2/8",
+   "คิด 6/8",
+   "สับสนวินาทีกับเปอร์เซ็นต์"
   ],
-  "ref": "Lesson 15 §1.1"
+  "link": "lab ใส่ sleep 1 วินาทีทั้งสาม tool ได้ 3.0 กับ 1.0 วินาที",
+  "ref": "Lesson 15 §4.3",
+  "terms": []
  },
  {
   "id": "L15-03",
   "lesson": 15,
-  "topic": "ML เดิมใน agent",
+  "topic": "นับ LLM call",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "โมเดล ML เดิมที่ทายความเสี่ยง refund ใช้กับ agentic system ได้อย่างไร",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "workflow single tool แบบในบทเรียก LLM กี่ครั้งต่อคำขอหนึ่งข้อ",
   "options": [
-   "ใส่เป็น tool ให้ agent เรียกใช้",
-   "ใช้ไม่ได้ ต้องเทรน foundation model ใหม่",
-   "ใช้แทน orchestration layer ของระบบ",
-   "ใช้แทน memory ของ agent ได้เลย"
+   "2 ครั้ง",
+   "1 ครั้ง",
+   "3 ครั้ง",
+   "0 ครั้ง"
   ],
   "answer": 0,
-  "explanation": "<p>สไลด์หน้า 4: traditional ML models can also be integrated into agentic systems as tools</p>",
+  "explanation": "<p>ครั้งแรก LLM เลือก tool และสร้าง argument Python รัน tool ครั้งที่สอง LLM รับผลแล้วสร้างคำตอบสุดท้าย</p>",
   "why_wrong": [
-   "ใช้ได้",
-   "orchestration คนละหน้าที่",
-   "memory คนละหน้าที่"
+   "ลืมครั้งสรุปคำตอบ",
+   "นับการรัน tool เป็น LLM call",
+   "LLM ต้องเลือก tool"
   ],
-  "ref": "Lesson 15 §1.1"
+  "link": "chain refund ใน §5.2 เรียก LLM ครั้งเดียวตอนท้าย เพราะสิทธิ์คิดด้วยกฎ",
+  "ref": "Lesson 15 §4.2",
+  "terms": [
+   [
+    "tool call",
+    "คำขอแบบมีโครงสร้างที่ LLM สร้าง บอกชื่อ tool และ argument"
+   ]
+  ]
  },
  {
   "id": "L15-04",
   "lesson": 15,
-  "topic": "chatbot vs agent",
+  "topic": "กฎ refund",
   "source": "lesson",
-  "type": "concept",
+  "type": "calc",
   "difficulty": "easy",
-  "stem": "ทำไม chatbot ทั่วไปตอบ \"What is the status of my order A123?\" ได้แค่ให้ไปดูที่เว็บ",
+  "stem": "กฎคือ order_status ต้องเป็น Delivered และส่งมาไม่เกิน 14 วัน order ใดได้ refund_eligible True",
   "options": [
-   "ไม่มีสิทธิ์เข้าถึงข้อมูล order จริง",
-   "โมเดลภาษาไม่เข้าใจความหมายคำว่า order",
-   "temperature ของโมเดลตั้งไว้สูงเกินไป",
-   "prompt ยาวเกินกว่าที่โมเดลจะรับได้"
+   "Delivered 14 วัน",
+   "Delivered 15 วัน",
+   "Shipped 3 วัน",
+   "Shipped 14 วัน"
   ],
   "answer": 0,
-  "explanation": "<p>tool-using agent เรียก lookup_order(\"A123\") ได้ Shipped แล้วตอบอิงข้อมูลจริง Key Takeaway: tool ทำให้ agent ไปไกลกว่าการสร้างข้อความ</p>",
+  "explanation": "<p>14 ≤ 14 เป็นจริง และสถานะ Delivered จึงได้ True 15 วันเกินกำหนด Shipped ยังไม่ส่งถึงจึงได้ False ไม่ว่ากี่วัน</p>",
   "why_wrong": [
-   "เข้าใจได้",
-   "ไม่เกี่ยว temperature",
-   "prompt สั้น"
+   "15 > 14",
+   "ยังไม่ Delivered",
+   "ยังไม่ Delivered"
   ],
-  "ref": "Lesson 15 §1.1"
+  "link": "สิทธิ์คิดด้วยกฎใน Python ไม่ให้ LLM ตัดสิน LLM แค่อธิบายผล",
+  "ref": "Lesson 15 §5.2",
+  "terms": []
  },
  {
   "id": "L15-05",
   "lesson": 15,
-  "topic": "เลือกวิธี",
+  "topic": "hierarchical ลด token",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "เช็คสถานะ order ก่อนอนุญาตยกเลิกตามกฎที่กำหนดไว้ชัด วิธีใดเหมาะที่สุด",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "มี 100 tool แบ่ง 10 กลุ่ม กลุ่มละ 10 tool แบบ hierarchical ส่งนิยามให้ LLM รวมกี่รายการเทียบ standard",
   "options": [
-   "deterministic workflow",
-   "autonomous agent",
-   "chatbot / RAG",
-   "multi-agent"
+   "20 รายการ เทียบ 100",
+   "10 รายการ เทียบ 100",
+   "100 รายการ เทียบ 100",
+   "110 รายการ เทียบ 100"
   ],
   "answer": 0,
-  "explanation": "<p>ตาราง หน้า 6: Check order status before cancellation คือ deterministic workflow ขั้นตอนและเงื่อนไขกำหนดไว้ คาดเดาได้สูง</p>",
+  "explanation": "<p>ครั้งแรกส่ง 10 กลุ่มให้เลือกกลุ่ม ครั้งที่สองส่ง 10 tool ในกลุ่มนั้น รวม 20 standard ส่งทั้ง 100 ในครั้งเดียว hierarchical จึงใช้ LLM สองครั้ง</p>",
   "why_wrong": [
-   "ซับซ้อนเกินจำเป็น",
-   "RAG อธิบายนโยบาย ไม่ทำ action",
-   "ซับซ้อนเกินจำเป็น"
+   "ลืมขั้นเลือก tool ในกลุ่ม",
+   "ไม่ได้ลดอะไร",
+   "ส่งทุก tool บวกทุกกลุ่ม"
   ],
-  "ref": "Lesson 15 §1.2"
+  "link": "ข้อเสียคือถ้าเลือกกลุ่มผิด จะหา tool ที่ถูกไม่เจอ",
+  "ref": "Lesson 15 §3.3",
+  "terms": [
+   [
+    "hierarchical selection",
+    "เลือกกลุ่ม tool ก่อน แล้วเลือก tool ในกลุ่ม"
+   ]
+  ]
  },
  {
   "id": "L15-06",
   "lesson": 15,
-  "topic": "predictability",
+  "topic": "นับเส้นทาง graph",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ตามตารางเปรียบเทียบ วิธีใดคาดเดาผลได้สูงทั้งคู่",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "graph มี categorize_issue แล้ว route_issue เลือก handler หนึ่งในสี่ตัว ทุกตัวไป summarize_response แล้ว END มีเส้นทางจาก START ถึง END กี่แบบ",
   "options": [
-   "traditional code และ workflow",
-   "chatbot/RAG และ autonomous agent",
-   "workflow และ autonomous agent",
-   "traditional code และ chatbot/RAG"
+   "4 แบบ",
+   "1 แบบ",
+   "2 แบบ",
+   "16 แบบ"
   ],
   "answer": 0,
-  "explanation": "<p>predictability: code High workflow High RAG Variable agent Variable</p>",
+  "explanation": "<p>ทุกเส้นทางผ่าน categorize_issue เหมือนกัน แยกที่ handler 4 ตัว แล้วรวมกันที่ summarize_response จึงมี 4 แบบ คำขอหนึ่งเดินแค่ทางเดียว</p>",
   "why_wrong": [
-   "ทั้งสองเป็น Variable",
-   "agent Variable",
-   "RAG Variable"
+   "มีทางแยก",
+   "นับแค่ billing กับ technical",
+   "ไม่ได้ผ่านหลาย handler"
   ],
-  "ref": "Lesson 15 §1.2"
+  "link": "conditional edge เลือกทางเดียว ไม่ใช่รันทุก handler พร้อมกันแบบ parallel",
+  "ref": "Lesson 15 §6.1",
+  "terms": [
+   [
+    "conditional edge",
+    "เส้นที่เลือก node ถัดไปจาก state"
+   ]
+  ]
  },
  {
   "id": "L15-07",
   "lesson": 15,
+  "topic": "agent คืออะไร",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "AI agent ต่างจาก automation ปกติตรงไหน",
+  "options": [
+   "เลือก action ตามสถานการณ์ ไม่ต้องเดินลำดับตายตัว",
+   "ทำงานได้โดยไม่ต้องมีโมเดลภาษาใดๆ อยู่เบื้องหลัง",
+   "ต้องทำงานโดยไม่มีคนดูแลเลยในทุกกรณี",
+   "ใช้ได้กับงานคำนวณตัวเลขที่มีสูตรแน่นอนเท่านั้น"
+  ],
+  "answer": 0,
+  "explanation": "<p>agent ตีความสภาพแวดล้อม ตัดสินใจ และลงมือทำเพื่อเป้าหมาย ใช้ tool และปรับ action ตามผลที่ได้ ระดับความอิสระต่างกันได้</p>",
+  "why_wrong": [
+   "agent ในบทใช้ foundation model",
+   "ไม่จำเป็นต้องอิสระเต็มที่",
+   "ใช้กับงานหลายแบบ"
+  ],
+  "link": "Agentic AI คือคลื่นที่สาม จากทำนาย สู่สร้าง สู่ลงมือทำ",
+  "ref": "Lesson 15 §1.1",
+  "terms": [
+   [
+    "autonomy",
+    "ระดับที่ระบบตัดสินใจเองโดยไม่ต้องรอคนสั่ง"
+   ]
+  ]
+ },
+ {
+  "id": "L15-08",
+  "lesson": 15,
+  "topic": "chatbot กับ agent",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "ถาม What is the status of my order A123 chatbot เดิมกับ agent ตอบต่างกันอย่างไร",
+  "options": [
+   "chatbot ให้ไปดูที่เว็บ · agent เรียก tool ดูสถานะจริง",
+   "chatbot ดูข้อมูลจริงได้ · agent เดาคำตอบจากความจำ",
+   "ทั้งสองดูข้อมูลสถานะจริงได้เหมือนกันทุกประการ",
+   "ทั้งสองตอบว่าไม่รู้สถานะเหมือนกันทั้งคู่"
+  ],
+  "answer": 0,
+  "explanation": "<p>chatbot ไม่มีสิทธิ์เห็นข้อมูลจริงจึงตอบแนวทาง agent เรียก lookup_order(\"A123\") ได้ Shipped แล้วตอบจากข้อมูลจริง</p>",
+  "why_wrong": [
+   "สลับกัน",
+   "chatbot ไม่มี tool",
+   "agent มี tool"
+  ],
+  "link": "Key Takeaway: tool ทำให้ agent ไปไกลกว่าการสร้างข้อความ",
+  "ref": "Lesson 15 §1.1",
+  "terms": []
+ },
+ {
+  "id": "L15-09",
+  "lesson": 15,
   "topic": "ห้าส่วนประกอบ",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "ส่วนใดของ agentic system ทำหน้าที่ประสานว่าเรียก model tool memory เมื่อไร",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ส่วนใดของ agentic system ประสานว่าเรียก model, tool และ memory เมื่อไรอย่างไร",
   "options": [
    "orchestration",
    "knowledge base",
@@ -152,542 +243,564 @@
    "foundation model"
   ],
   "answer": 0,
-  "explanation": "<p>Key Takeaway: tools define what the agent can do. Orchestration determines when and how</p>",
+  "explanation": "<p>orchestration ทำ planning, tool selection, execution, state management, monitoring และ replanning tool กำหนดว่า agent ทำอะไรได้ orchestration กำหนดว่าใช้เมื่อไร</p>",
   "why_wrong": [
    "เก็บความรู้โดเมน",
-   "เก็บ interaction เดิม",
-   "ตีความและเลือก action แต่ไม่รัน"
+   "เก็บข้อมูลจาก interaction ก่อน",
+   "ตีความและตัดสินใจ แต่ไม่ได้รันฟังก์ชัน"
   ],
-  "ref": "Lesson 15 §2.4"
- },
- {
-  "id": "L15-08",
-  "lesson": 15,
-  "topic": "foundation model ทำอะไร",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ข้อใดไม่ใช่หน้าที่ของ foundation model ใน agent ตามตารางหน้า 12",
-  "options": [
-   "รัน get_refund_status() และอ่านฐานข้อมูลเอง",
-   "เข้าใจเจตนาของคำขอที่ลูกค้าพิมพ์มา",
-   "เลือก tool ที่เหมาะกับคำขอจากรายการ",
-   "สร้าง parameter เช่นดึง customer ID"
-  ],
-  "answer": 0,
-  "explanation": "<p>โมเดลสร้าง tool call แบบมีโครงสร้าง orchestration layer ตีความแล้วรันฟังก์ชันจริง</p>",
-  "why_wrong": [
-   "เป็นหน้าที่",
-   "เป็นหน้าที่",
-   "เป็นหน้าที่"
-  ],
-  "ref": "Lesson 15 §2.1"
- },
- {
-  "id": "L15-09",
-  "lesson": 15,
-  "topic": "local vs API tool",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "tool ใดเป็น API-based tool",
-  "options": [
-   "lookup_order ที่เรียก requests.get ไป backend ภายนอก",
-   "calculate_refund ที่คำนวณยอดในโปรแกรม",
-   "get_invoice ที่คืน dict ข้อมูลจำลอง",
-   "validate_customer_id ที่ใช้ regex"
-  ],
-  "answer": 0,
-  "explanation": "<p>API-based tool คุยกับบริการภายนอกผ่าน API local tool ทำงานในแอปเอง</p>",
-  "why_wrong": [
-   "local",
-   "local",
-   "local"
-  ],
-  "ref": "Lesson 15 §2.2"
+  "link": "ในบทนี้ LangGraph ทำหน้าที่ orchestration แบบกราฟ",
+  "ref": "Lesson 15 §2.4",
+  "terms": [
+   [
+    "orchestration",
+    "ส่วนที่ประสานทุกส่วนให้ทำงานต่อกัน"
+   ]
+  ]
  },
  {
   "id": "L15-10",
   "lesson": 15,
-  "topic": "tool แก้ข้อจำกัด LLM",
+  "topic": "ใครรันฟังก์ชัน",
   "source": "lesson",
-  "type": "concept",
+  "type": "recall",
   "difficulty": "medium",
-  "stem": "LLM คำนวณตัวเลขไม่น่าเชื่อถือ ตารางหน้า 14 แนะนำให้แก้อย่างไร",
+  "stem": "ใน tool calling ใครรันฟังก์ชัน Python จริง",
   "options": [
-   "รันฟังก์ชัน Python แบบ deterministic เป็น tool",
-   "เพิ่ม temperature ให้โมเดลลองหลายคำตอบ",
-   "ดึงข้อมูลปัจจุบันจากระบบภายนอกผ่าน API",
-   "query ฐานข้อมูลลูกค้าด้วย tool เฉพาะ"
+   "orchestration layer คือโค้ด Python ของเรา",
+   "LLM รันเองทันทีหลังจากเลือก tool ได้",
+   "bind_tools รันฟังก์ชันให้อัตโนมัติทุกครั้ง",
+   "tool เรียกตัวเองตอนที่ LLM ตอบกลับมา"
   ],
   "answer": 0,
-  "explanation": "<p>numerical calculations may be unreliable → execute deterministic Python functions</p>",
+  "explanation": "<p>LLM แค่สร้าง tool call บอกชื่อและ argument Python หยิบ tool จาก tool_map แล้ว invoke ได้ ToolMessage ส่งกลับให้ LLM สรุป</p>",
   "why_wrong": [
-   "ไม่ได้ช่วยความแม่นยำ",
-   "แก้ความรู้ที่เก่า",
-   "แก้การเข้าถึงข้อมูลส่วนตัว"
+   "LLM ไม่ได้รัน",
+   "bind_tools แค่ให้นิยาม",
+   "tool ไม่ได้เรียกตัวเอง"
   ],
-  "ref": "Lesson 15 §2.2"
+  "link": "เหมือนหัวหน้าเขียนใบสั่งงาน ลูกน้องเป็นคนทำ",
+  "ref": "Lesson 15 §3.2",
+  "terms": []
  },
  {
   "id": "L15-11",
   "lesson": 15,
-  "topic": "tool ที่แก้ไขระบบ",
+  "topic": "bind_tools",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "cancel_order ต่างจาก get_order_status ในแง่การออกแบบอย่างไร",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ข้อใดถูกเกี่ยวกับ bind_tools",
   "options": [
-   "เปลี่ยนระบบภายนอก จึงต้องอนุญาตและตรวจเข้มกว่า",
-   "ต้องรันพร้อมกันกับ tool อื่นทุกครั้งเสมอ",
-   "ต้องใช้ embedding ในการเลือก tool เท่านั้น",
-   "ไม่ต้องตรวจ argument เพราะ LLM เลือกแล้ว"
+   "ให้นิยาม tool กับโมเดล แต่ไม่รับประกันว่าจะเรียก",
+   "รัน tool ทุกตัวทันทีที่ bind เข้ากับโมเดล",
+   "บังคับให้โมเดลเรียกทุก tool ในทุกคำขอ",
+   "ทำให้ LLM ไม่ต้องรับ prompt จากผู้ใช้อีก"
   ],
   "answer": 0,
-  "explanation": "<p>Tools that modify external systems generally require stronger authorization and validation than read-only tools</p>",
+  "explanation": "<p>หลัง bind โมเดลรู้จัก tool สร้าง tool call ได้ แต่จะเรียกหรือไม่ขึ้นกับโมเดล นิยาม คำสั่ง และบริบท lab ใช้ tool_choice=\"required\" เพื่อบังคับ</p>",
   "why_wrong": [
-   "ไม่เกี่ยว topology",
-   "ไม่เกี่ยว selection strategy",
-   "ต้องตรวจเสมอ"
+   "ไม่ได้รัน",
+   "ไม่ได้บังคับ",
+   "ยังต้องมีข้อความ"
   ],
-  "ref": "Lesson 15 §2.2"
+  "link": "schema ที่โมเดลเห็นสร้างจาก signature และ docstring ไม่ใช่ตัวโค้ด",
+  "ref": "Lesson 15 §3.2",
+  "terms": []
  },
  {
   "id": "L15-12",
   "lesson": 15,
-  "topic": "memory ของ LLM",
+  "topic": "@tool",
   "source": "lesson",
-  "type": "concept",
+  "type": "recall",
   "difficulty": "medium",
-  "stem": "เรียก llm.invoke สองครั้งต่อกัน ครั้งที่สองจะรู้คำถามของครั้งแรกไหม",
+  "stem": "decorator @tool ใช้ส่วนใดของฟังก์ชันสร้างนิยาม tool",
   "options": [
-   "ไม่รู้ แอปต้องส่งประวัติเป็น list ของ message",
-   "รู้ เพราะ LLM เก็บ session ไว้ให้อัตโนมัติ",
-   "รู้ แต่เฉพาะเมื่อตั้ง temperature เป็น 0",
-   "รู้เฉพาะ SystemMessage ที่ส่งไปครั้งแรก"
+   "ชื่อฟังก์ชัน docstring และ type hint",
+   "เฉพาะ return value ของฟังก์ชันเท่านั้น",
+   "เนื้อโค้ดทุกบรรทัดภายในฟังก์ชัน",
+   "ชื่อไฟล์และโฟลเดอร์ที่ฟังก์ชันอยู่"
   ],
   "answer": 0,
-  "explanation": "<p>The model does not automatically remember previous independent API calls. The application must maintain and supply the relevant conversation history</p>",
+  "explanation": "<p>ชื่อฟังก์ชันคือชื่อ tool docstring บอกจุดประสงค์ type hint บอกชนิด input LangChain สร้าง schema ที่มี name, description และ parameters ให้โมเดลเห็น</p>",
   "why_wrong": [
-   "ไม่เก็บอัตโนมัติ",
-   "temperature ไม่เกี่ยว",
-   "ไม่จำอะไรเลย"
+   "return คือผลตอนรัน",
+   "โมเดลไม่เห็นตัวโค้ด",
+   "ไม่เกี่ยวกับชื่อไฟล์"
   ],
-  "ref": "Lesson 15 §2.3"
+  "link": "docstring ที่ชัดช่วยให้โมเดลเลือก tool ถูก โดยเฉพาะเมื่อ tool คล้ายกัน",
+  "ref": "Lesson 15 §4.2",
+  "terms": [
+   [
+    "docstring",
+    "ข้อความอธิบายใต้บรรทัด def"
+   ]
+  ]
  },
  {
   "id": "L15-13",
   "lesson": 15,
-  "topic": "knowledge base vs memory vs state",
+  "topic": "parallel_tool_calls",
   "source": "lesson",
-  "type": "concept",
+  "type": "recall",
   "difficulty": "medium",
-  "stem": "ประเภทปัญหาที่ classifier ตัดสินแล้ว เช่น billing ของคำขอที่กำลังทำอยู่ ควรอยู่ส่วนใด",
+  "stem": "parallel_tool_calls=True ทำอะไร",
   "options": [
-   "state",
-   "knowledge base",
-   "long-term memory",
-   "tool definition"
+   "ให้โมเดลสร้างหลาย tool call ในคำตอบเดียว",
+   "รัน tool ทุกตัวพร้อมกันให้โดยอัตโนมัติ",
+   "บังคับให้ทุก tool รับ argument ชุดเดียวกัน",
+   "ปิดการเรียก tool ทั้งหมดในคำขอนั้น"
   ],
   "answer": 0,
-  "explanation": "<p>state ติดตามข้อมูลของ workflow ปัจจุบันระหว่างขั้น เช่น issue_type tool results response knowledge base เก็บนโยบาย memory เก็บ interaction ที่ผ่านมา</p>",
+  "explanation": "<p>โมเดลคืน tool call สามตัวใน response เดียว แต่การรันพร้อมกันต้องเขียนเอง เช่น ThreadPoolExecutor</p>",
   "why_wrong": [
-   "เก็บนโยบาย",
-   "ข้าม session",
-   "ไม่ใช่ข้อมูลระหว่างทำงาน"
+   "ต้องเขียนการรันเอง",
+   "แต่ละตัวมี argument ของตัวเอง",
+   "ตรงข้าม"
   ],
-  "ref": "Lesson 15 §2.3"
+  "link": "thread เหมาะกับ tool ที่รอ I/O เช่นเรียก API",
+  "ref": "Lesson 15 §4.3",
+  "terms": []
  },
  {
   "id": "L15-14",
   "lesson": 15,
-  "topic": "multi-agent cost",
+  "topic": "LCEL",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ข้อใดเป็นข้อเสียของ multi-agent เทียบ single-agent ตามตาราง",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "ใน LCEL เครื่องหมาย | ทำอะไร",
   "options": [
-   "ต้องประสานระหว่าง agent และอาจเรียกโมเดลมากขึ้น",
-   "แต่ละ agent จะถนัดงานเฉพาะด้านไม่ได้เลย",
-   "เหมาะกับงานที่นิยามชัดและไม่ซับซ้อนเท่านั้น",
-   "overhead ในการประสานงานต่ำกว่า single-agent"
+   "ต่อ component ให้ output ก่อนหน้าเป็น input ถัดไป",
+   "รัน component สองตัวพร้อมกันแล้วรวมผลลัพธ์",
+   "เลือก component ตัวใดตัวหนึ่งตามเงื่อนไขที่ตั้ง",
+   "วนซ้ำ component เดิมไปเรื่อยๆ จนกว่าจะสำเร็จ"
   ],
   "answer": 0,
-  "explanation": "<p>multi-agent: requires inter-agent coordination · may require more model calls · เหมาะกับงานซับซ้อนที่แยกย่อยได้</p>",
+  "explanation": "<p>chain = a | b | c ทุก component เป็น Runnable จึงประกอบและรันแบบเดียวกันได้ ผลของ a เข้า b แล้วเข้า c</p>",
   "why_wrong": [
-   "ถนัดเฉพาะได้",
-   "นั่นคือ single-agent",
-   "กลับกัน"
+   "นั่นคือ parallel",
+   "นั่นคือ conditional edge ของ graph",
+   "chain ตายตัวไม่วน"
   ],
-  "ref": "Lesson 15 §2.4"
+  "link": "ถ้าต้องแตกกิ่งหรือวน ให้ใช้ graph",
+  "ref": "Lesson 15 §5.1",
+  "terms": [
+   [
+    "LCEL",
+    "LangChain Expression Language"
+   ],
+   [
+    "Runnable",
+    "interface กลางที่ประกอบต่อกันได้"
+   ]
+  ]
  },
  {
   "id": "L15-15",
   "lesson": 15,
-  "topic": "ต้องใช้ framework ไหม",
+  "topic": "state ของ graph",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "สไลด์ตอบคำถาม Do we always need a framework? ว่าอย่างไร",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ใน LangGraph node ส่งข้อมูลให้กันอย่างไร",
   "options": [
-   "ไม่ agent ง่ายๆ เขียนด้วย model API กับ Python ธรรมดาได้",
-   "ต้องใช้เสมอ เพราะ LLM เรียก tool เองไม่ได้",
-   "ต้องใช้ LangGraph เสมอเมื่อมี tool มากกว่าหนึ่ง",
-   "ต้องใช้ AutoGen เมื่อมี agent ตัวเดียว"
+   "node อ่าน state ร่วมแล้วคืนเฉพาะ field ที่อัปเดต",
+   "node เรียก node ถัดไปเองโดยตรงในโค้ดของมัน",
+   "ต้องส่ง dict ทั้งหมดต่อเองทุกขั้นแบบ LCEL",
+   "ทุก node ใช้ตัวแปร global ชุดเดียวกันร่วมกัน"
   ],
   "answer": 0,
-  "explanation": "<p>No. A simple agent can be implemented using a model API and ordinary Python code บทนี้เลือก LangChain และ LangGraph</p>",
+  "explanation": "<p>LangGraph รวม field ที่คืนเข้า state ให้เอง node จึงไม่ต้องเรียกกันและไม่ต้องส่งข้อมูลสะสมต่อเองแบบ **data ของ LCEL</p>",
   "why_wrong": [
-   "ไม่จำเป็น",
-   "parallel และ chain ไม่ต้องใช้ LangGraph",
-   "AutoGen เน้น multi-agent"
+   "edge เป็นตัวต่อ",
+   "นั่นคือ LCEL",
+   "ไม่ใช่ global"
   ],
-  "ref": "Lesson 15 §3.1"
+  "link": "state fields เช่น user_message, issue_type, step_result, response",
+  "ref": "Lesson 15 §6.1",
+  "terms": [
+   [
+    "state",
+    "ข้อมูลของ workflow ปัจจุบันที่ทุกขั้นอ่านและอัปเดตได้"
+   ]
+  ]
  },
  {
   "id": "L15-16",
   "lesson": 15,
-  "topic": "framework จับคู่",
+  "topic": "memory กับ state",
   "source": "lesson",
-  "type": "concept",
+  "type": "recall",
   "difficulty": "medium",
-  "stem": "framework ใดเด่นเรื่อง stateful workflow, conditional routing และ iterative execution",
+  "stem": "ข้อใดแยก memory กับ state ได้ถูกตามสไลด์",
   "options": [
-   "LangGraph",
-   "LangChain",
-   "CrewAI",
-   "OpenAI Agents SDK"
+   "แยกที่จุดประสงค์ memory เก็บจากครั้งก่อน state ติดตามงานนี้",
+   "แยกที่ระยะเวลา memory เก็บนานเสมอ ส่วน state เก็บสั้นเสมอ",
+   "memory อยู่ในตัวโมเดล ส่วน state อยู่ในฐานข้อมูลภายนอกเสมอ",
+   "memory กับ state เป็นสิ่งเดียวกัน ต่างกันแค่ชื่อที่เรียก"
   ],
   "answer": 0,
-  "explanation": "<p>LangGraph เหมาะกับ complex agentic workflow LangChain เด่นเรื่องต่อ model tool message CrewAI role-based multi-agent prototype</p>",
+  "explanation": "<p>สองอย่างซ้อนกันได้ เช่น customer ID จาก memory กลายเป็นส่วนของ state แต่จุดประสงค์ต่างกัน โมเดลไม่จำเองด้วย แอปต้องส่งประวัติให้ทุกครั้ง</p>",
   "why_wrong": [
-   "เน้นต่อ component",
-   "role-based agents",
-   "tool-using agent"
+   "สไลด์แยกที่จุดประสงค์",
+   "โมเดลไม่ได้จำเอง",
+   "จุดประสงค์ต่างกัน"
   ],
-  "ref": "Lesson 15 §3.1"
+  "link": "knowledge base คือความรู้โดเมน เช่นนโยบาย refund",
+  "ref": "Lesson 15 §2.3",
+  "terms": []
  },
  {
   "id": "L15-17",
   "lesson": 15,
-  "topic": "LangChain method",
+  "topic": "agent pattern",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "easy",
-  "stem": "method ใดให้ tool definition กับโมเดล",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "pattern ใดวางแผนทีละขั้น ดูผลแล้วตัดสินขั้นถัดไป เหมาะกับ troubleshooting",
   "options": [
-   "llm.bind_tools()",
-   "tool.invoke()",
-   "chain.invoke()",
-   "llm.invoke()"
+   "ReAct",
+   "Reflex",
+   "Planner–Executor",
+   "Query Decomposition"
   ],
   "answer": 0,
-  "explanation": "<p>bind_tools ให้โมเดลรู้จัก schema ของ tool · tool.invoke รัน tool · chain.invoke รันลำดับ · llm.invoke เรียก LLM</p>",
+  "explanation": "<p>ReAct คิดแล้วทำทีละขั้น ปรับตัวสูง เหมาะเมื่อไม่รู้ action ถัดไป Reflex ไม่วางแผน Planner–Executor วางแผนทั้งหมดก่อน</p>",
   "why_wrong": [
-   "รัน tool",
-   "รัน chain",
-   "เรียกโมเดลเฉยๆ"
+   "ไม่วางแผน",
+   "วางแผนทั้งหมดก่อน",
+   "แยกคำถามย่อยไปค้น"
   ],
-  "ref": "Lesson 15 §3.1"
+  "link": "ระบบเดียวผสมหลาย pattern ได้",
+  "ref": "Lesson 15 §6.4",
+  "terms": []
  },
  {
   "id": "L15-18",
   "lesson": 15,
-  "topic": "schema จาก @tool",
+  "topic": "context engineering",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "LangChain สร้าง schema ของ tool นี้จากอะไรบ้าง",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "context engineering คืออะไร",
   "options": [
-   "ชื่อฟังก์ชัน docstring และ type hint",
-   "ค่าที่ return ออกมาตอนรันครั้งแรก",
-   "ชื่อไฟล์ของ notebook ที่นิยาม tool",
-   "ตัวแปร tool_map ที่จับคู่ชื่อกับ tool"
+   "เลือกและจัดข้อมูลที่เกี่ยวข้องให้ LLM ในแต่ละขั้น",
+   "เขียน prompt ให้ยาวที่สุดเท่าที่โมเดลรับได้",
+   "ส่งทุกอย่างใน state ให้ LLM ทุกครั้งที่เรียก",
+   "เปลี่ยนไปใช้โมเดลที่ใหญ่ขึ้นตามความยากของงาน"
   ],
   "answer": 0,
-  "explanation": "<p>@tool แปลงฟังก์ชันเป็น LangChain tool name มาจากชื่อฟังก์ชัน description จาก docstring parameters จาก type hint user_id: str โมเดลเห็น schema ไม่เห็นโค้ด</p>",
+  "explanation": "<p>ข้อมูลที่ agent มีไม่จำเป็นต้องเป็นข้อมูลที่ควรส่งให้ LLM node จัดหมวดได้แค่คำขอ node สรุปได้ผล handler กับนโยบายที่เกี่ยว</p>",
   "why_wrong": [
-   "ยังไม่ได้รัน",
-   "ไม่เกี่ยว",
-   "tool_map ใช้ตอนรัน"
+   "ยาวไม่ได้ดีเสมอ",
+   "เปลือง token และอาจตอบผิด",
+   "ไม่เกี่ยวกับขนาดโมเดล"
   ],
-  "ref": "Lesson 15 §4.2",
-  "code": "@tool\ndef get_refund(user_id: str) -> dict:\n    \"\"\"Retrieve the refund status for a customer ID.\"\"\"\n    return {\"user_id\": user_id, \"status\": \"Pending\"}"
+  "link": "best practice: relevance, structure, summarization, dynamic assembly",
+  "ref": "Lesson 15 §6.3",
+  "terms": []
  },
  {
   "id": "L15-19",
   "lesson": 15,
-  "topic": "tool_choice",
+  "topic": "ไม่ต้องใช้ agent",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "<code>tool_choice=\"required\"</code> ใน bind_tools มีผลอย่างไร",
+  "type": "apply",
+  "difficulty": "easy",
+  "stem": "ระบบคำนวณภาษีจากยอดขายด้วยสูตรตายตัว ควรใช้วิธีใด",
   "options": [
-   "บังคับให้เรียก tool อย่างน้อยหนึ่งตัว ไม่ตอบข้อความเปล่า",
-   "บังคับให้โมเดลเรียกทุก tool ที่ bind ไว้ทั้งหมด",
-   "บังคับให้ Python รัน tool ที่เลือกทันทีอัตโนมัติ",
-   "บังคับให้โมเดลเรียกใช้ tool ได้ครั้งละตัวเท่านั้น"
+   "traditional code",
+   "autonomous agent",
+   "chatbot แบบ RAG",
+   "multi-agent"
   ],
   "answer": 0,
-  "explanation": "<p>required บังคับให้มี tool call การจำกัดทีละตัวคือ parallel_tool_calls=False</p>",
+  "explanation": "<p>กฎตายตัว input คาดได้ ไม่ต้องวางแผน ใช้วิธีที่ง่ายที่สุดที่แก้ปัญหาได้อย่างเชื่อถือได้</p>",
   "why_wrong": [
-   "ไม่ใช่ทุกตัว",
-   "LLM ไม่รัน tool",
-   "นั่นคือ parallel_tool_calls=False"
+   "ซับซ้อนเกินจำเป็น",
+   "ไม่ได้ต้องการเอกสาร",
+   "ซับซ้อนเกินจำเป็น"
   ],
-  "ref": "Lesson 15 §4.2"
+  "link": "topology ที่ซับซ้อนกว่าไม่ได้ดีกว่าเสมอ",
+  "ref": "Lesson 15 §1.2",
+  "terms": []
  },
  {
   "id": "L15-20",
   "lesson": 15,
-  "topic": "ToolMessage",
+  "topic": "RAG ไม่ลงมือ",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "ทำไมส่ง tool call ทั้งก้อน <code>tool_map[name].invoke(call)</code> แทนการส่งแค่ args",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ลูกค้าขอยกเลิก order ระบบ RAG ทำอะไรได้ และขาดอะไร",
   "options": [
-   "ได้ ToolMessage ที่มี tool_call_id ตรงกับ call",
-   "เพื่อให้ tool รันเร็วขึ้นแบบขนานกันได้",
-   "เพื่อให้ LLM ได้เลือก tool ใหม่อีกครั้ง",
-   "เพราะใน args ไม่มีค่า user_id อยู่เลย"
+   "อธิบายนโยบายยกเลิกได้ แต่ไม่ได้ยกเลิกจริง",
+   "ยกเลิก order ได้เอง แต่ไม่รู้นโยบายยกเลิก",
+   "ทำได้ทั้งอธิบายนโยบายและยกเลิกจริงครบ",
+   "ทำไม่ได้ทั้งอธิบายนโยบายและการยกเลิก"
   ],
   "answer": 0,
-  "explanation": "<p>ส่ง call ทั้งก้อนคืน ToolMessage(content=..., name=..., tool_call_id=...) ถ้าส่ง args จะได้ผลดิบ ไม่ผูกกับ tool call</p>",
+  "explanation": "<p>RAG ดึงความรู้มาตอบ แต่ไม่จำเป็นต้องลงมือ workflow ดึงสถานะแล้วใช้กฎยกเลิกได้ agent เลือก tool และตัดสินเอง</p>",
   "why_wrong": [
-   "ไม่เกี่ยวความเร็ว",
-   "ไม่ได้เรียก LLM",
-   "args มี user_id"
+   "สลับกัน",
+   "RAG ไม่มี tool ลงมือ",
+   "RAG อธิบายได้"
   ],
-  "ref": "Lesson 15 §4.2"
+  "link": "คำขอเดียวกันทำได้สี่ระดับ code, workflow, RAG, agent",
+  "ref": "Lesson 15 §1.2",
+  "terms": []
  },
  {
   "id": "L15-21",
   "lesson": 15,
-  "topic": "messages ครั้งที่สอง",
+  "topic": "เลือก tool และถามเพิ่ม",
   "source": "lesson",
-  "type": "code",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "ข้อใดเป็น messages ที่ถูกสำหรับเรียก LLM ครั้งที่สองใน parallel execution",
+  "stem": "ลูกค้าพิมพ์ I returned my product last week. Has my money been sent back? โดยไม่บอก ID agent ควรทำอย่างไร",
   "options": [
-   "[HumanMessage(query), ai_msg, *tool_messages]",
-   "[ai_msg, *tool_messages] โดยไม่มีคำถาม",
-   "[*tool_messages] ส่งเฉพาะผลของ tool",
-   "[HumanMessage(query), *tool_messages]"
+   "เลือก get_refund_status แล้วถามหา customer ID",
+   "เรียก get_refund_status ด้วย ID ที่แต่งขึ้นเอง",
+   "เรียก cancel_order ทันทีเพื่อความปลอดภัย",
+   "ตอบว่าเงินคืนแล้วโดยไม่เรียก tool"
   ],
   "answer": 0,
-  "explanation": "<p>ต้องมีคำถามเดิม AIMessage ที่มี tool calls และ ToolMessage ทุกตัว *tool_messages แตก list ออกมา</p>",
+  "explanation": "<p>ต้องใช้ tool ใช่ tool ที่ถูกคือ get_refund_status argument คือ customer ID ซึ่งยังไม่มี จึงต้องถามก่อน</p>",
   "why_wrong": [
-   "ขาดคำถามเดิม",
-   "ขาดคำถามและ tool call",
-   "ขาด AIMessage ที่ ToolMessage อ้างถึง"
+   "แต่งค่าขึ้นเองคือข้อผิดพลาด",
+   "ผิด tool และเป็น tool ที่แก้ระบบ",
+   "ตอบโดยไม่มีข้อมูล"
   ],
-  "ref": "Lesson 15 §4.3"
+  "link": "test case Where is my order ก็ต้องถาม ID ก่อน",
+  "ref": "Lesson 15 §3.3",
+  "terms": []
  },
  {
   "id": "L15-22",
   "lesson": 15,
-  "topic": "tool selection",
+  "topic": "ข้อผิดพลาด argument",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "toolset มี 40 tool แบ่งเป็นกลุ่ม billing, shipping, account ชัดเจน วิธีเลือก tool ใดเหมาะ และพลาดแบบไหน",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "tool get_invoice(user_id: str) คำขอคือ customer U1234 LLM สร้าง get_invoice(user_id=1234) ผิดแบบใด",
   "options": [
-   "hierarchical · เลือกกลุ่มผิด",
-   "semantic · ค้นไม่เจอ tool ที่ถูก",
-   "standard · token โตตามจำนวน tool",
-   "hierarchical · ค้นไม่เจอ tool ที่ถูก"
+   "ชนิดข้อมูลผิด",
+   "ชื่อ parameter ผิด",
+   "ขาด argument",
+   "แต่งค่าขึ้นเอง"
   ],
   "answer": 0,
-  "explanation": "<p>large, naturally grouped toolsets เหมาะกับ hierarchical ใช้ LLM สองครั้ง main failure mode คือ incorrect group selection</p>",
+  "explanation": "<p>user_id ต้องเป็น string \"U1234\" แต่ได้ตัวเลข 1234 validate_customer_id จะได้ False ตั้งแต่ isinstance</p>",
   "why_wrong": [
-   "เหมาะเมื่อไม่มีกลุ่ม",
-   "เหมาะเมื่อ tool น้อย",
-   "จับคู่ failure mode ผิด"
+   "ชื่อ parameter ถูก",
+   "มี argument",
+   "ค่ามาจากผู้ใช้ แค่ชนิดผิด"
   ],
-  "ref": "Lesson 15 §3.3"
+  "link": "orchestration ควรตรวจ argument ก่อนรัน tool เสมอ",
+  "ref": "Lesson 15 §3.3",
+  "terms": []
  },
  {
   "id": "L15-23",
   "lesson": 15,
-  "topic": "parameterization",
+  "topic": "validate",
   "source": "lesson",
-  "type": "concept",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "โมเดลสร้าง <code>get_invoice(customer=\"U1234\")</code> ทั้งที่ schema คือ user_id เป็นข้อผิดพลาดแบบใด",
+  "stem": "ฟังก์ชันนี้ให้ผลอะไรกับ \"U12345\"",
   "options": [
-   "incorrect parameter name",
-   "incorrect value",
-   "incorrect data type",
-   "missing argument"
+   "False เพราะเลข 5 หลัก fullmatch ไม่ตรง",
+   "True เพราะขึ้นต้นด้วยตัวอักษร U",
+   "True เพราะชนิดข้อมูลเป็น string",
+   "Error เพราะสตริงยาวเกินกำหนด"
   ],
   "answer": 0,
-  "explanation": "<p>ค่าถูกแต่ชื่อ parameter ผิด orchestration ควรตรวจก่อนรัน</p>",
+  "explanation": "<p>pattern ต้องเป็น U ตามด้วยตัวเลข 4 หลักพอดี fullmatch ต้องตรงทั้งสตริง 5 หลักจึงไม่ตรง</p>",
   "why_wrong": [
-   "ค่าถูก",
-   "ชนิดถูก",
-   "มี argument"
+   "ต้องตรงทั้งสตริง",
+   "ผ่าน isinstance แต่ไม่ผ่าน pattern",
+   "ฟังก์ชันคืน False ไม่ error"
   ],
-  "ref": "Lesson 15 §3.3"
+  "link": "ตรวจ argument ก่อนรันลดความเสี่ยง tool ทำ operation ผิด",
+  "ref": "Lesson 15 §3.3",
+  "terms": [],
+  "code": "def validate_customer_id(user_id):\n    return isinstance(user_id, str) and re.fullmatch(r\"U\\d{4}\", user_id) is not None"
  },
  {
   "id": "L15-24",
   "lesson": 15,
-  "topic": "ThreadPoolExecutor",
+  "topic": "เลือก topology",
   "source": "lesson",
-  "type": "code",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "tool สามตัวรอ I/O ตัวละ 1 วินาที รันด้วย <code>ThreadPoolExecutor(max_workers=1)</code> ใช้เวลาประมาณเท่าใด",
+  "stem": "หา order ล่าสุด ดูรายละเอียด แล้วตัดสินสิทธิ์ refund ควรใช้ topology ใด",
   "options": [
-   "3 วินาที",
-   "1 วินาที",
-   "0.33 วินาที",
-   "6 วินาที"
+   "chain เพราะแต่ละขั้นต้องใช้ผลขั้นก่อน",
+   "parallel เพราะรันพร้อมกันได้เร็วที่สุด",
+   "single tool เพราะลูกค้าถามคำถามเดียว",
+   "graph เพราะต้องวนซ้ำจนกว่าจะได้คำตอบ"
   ],
   "answer": 0,
-  "explanation": "<p>worker เดียวรันทีละงาน เท่ากับ sequential 3 × 1 = 3 วินาที max_workers=3 จึงได้ราว 1 วินาทีแบบใน lab</p>",
+  "explanation": "<p>ต้องรู้ order ID ก่อนจึงดึงรายละเอียดได้ และต้องมีรายละเอียดก่อนตัดสินสิทธิ์ รันพร้อมกันไม่ได้</p>",
   "why_wrong": [
-   "ต้อง 3 worker",
-   "เร็วกว่าตัวช้าสุดไม่ได้",
-   "เกินจริง"
+   "พึ่งกันจึงขนานไม่ได้",
+   "ต้องใช้สาม operation",
+   "ไม่ต้องวนหรือแตกกิ่ง"
   ],
-  "ref": "Lesson 15 §4.3"
+  "link": "LCEL เขียน chain นี้ด้วย RunnableLambda ต่อด้วย pipe",
+  "ref": "Lesson 15 §5.1",
+  "terms": []
  },
  {
   "id": "L15-25",
   "lesson": 15,
-  "topic": "latency ผสม",
+  "topic": "ลืม **data",
   "source": "lesson",
-  "type": "calc",
+  "type": "apply",
   "difficulty": "hard",
-  "stem": "get_invoice 2s และ get_refund 4s อิสระกัน จากนั้น calculate_balance 1s ต้องใช้ผลทั้งสอง เวลารวมที่ดีที่สุดคือเท่าใด",
+  "stem": "ใน chain refund ถ้า get_order_details คืนแค่ {\"days_since_delivery\": 5, \"order_status\": \"Delivered\"} ไม่ใส่ **data ขั้นถัดไปจะมีปัญหาอะไร",
   "options": [
-   "5 วินาที",
-   "7 วินาที",
-   "4 วินาที",
-   "3 วินาที"
+   "field เดิมเช่น order_id และ user_id หายไป",
+   "ได้ข้อมูลครบ เพราะ LCEL รวม state ให้เอง",
+   "chain จะรันพร้อมกันแทนการเรียงตามลำดับ",
+   "LLM จะเป็นคนตัดสินสิทธิ์ refund แทนกฎ"
   ],
   "answer": 0,
-  "explanation": "<p>รันสองตัวแรกพร้อมกัน max(2, 4) = 4 แล้วต่อ 1 วินาที รวม 5 ถ้ารันทีละตัว 7</p>",
+  "explanation": "<p>LCEL ไม่มี state กลางให้อัตโนมัติ แต่ละขั้นรับ dict จากขั้นก่อนเท่านั้น ถ้าไม่คัดลอกข้อมูลเดิมไปด้วย field เก่าหาย</p>",
   "why_wrong": [
-   "รันทีละตัว",
-   "ลืมขั้นสุดท้าย",
-   "รันทุกตัวพร้อมกันไม่ได้เพราะมี dependency"
+   "นั่นคือ LangGraph",
+   "ยังเรียงลำดับ",
+   "กฎยังอยู่ใน Python"
   ],
-  "ref": "Lesson 15 §4.3"
+  "link": "LangGraph แก้เรื่องนี้ด้วย state ร่วม node คืนแค่ field ที่อัปเดต",
+  "ref": "Lesson 15 §5.2",
+  "terms": []
  },
  {
   "id": "L15-26",
   "lesson": 15,
-  "topic": "LCEL pipe",
+  "topic": "ส่ง context เกิน",
   "source": "lesson",
-  "type": "code",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "<code>chain = a | b | c</code> แล้ว <code>chain.invoke(x)</code> ได้ผลเทียบเท่าข้อใด",
+  "stem": "node สรุปคำตอบเรื่อง invoice ส่งทั้ง billing policy และ technical policy และประวัติแชตทั้งหมดให้ LLM ปัญหาคืออะไร",
   "options": [
-   "c.invoke(b.invoke(a.invoke(x)))",
-   "a.invoke(b.invoke(c.invoke(x)))",
-   "[a.invoke(x), b.invoke(x), c.invoke(x)]",
-   "a.invoke(x) + b.invoke(x) + c.invoke(x)"
+   "เปลือง token และข้อมูลไม่เกี่ยวอาจทำให้ตอบผิด",
+   "LLM ตอบได้แม่นขึ้นเสมอเมื่อได้ข้อมูลมาก",
+   "LangGraph จะ error เพราะ state ใหญ่เกิน",
+   "ไม่มีปัญหาเพราะ LLM เลือกเองได้เสมอ"
   ],
   "answer": 0,
-  "explanation": "<p>output ของแต่ละ Runnable เป็น input ของตัวถัดไปจากซ้ายไปขวา</p>",
+  "explanation": "<p>ควรส่งแค่ user_message, step_result และ billing policy ที่เกี่ยว technical policy ไม่เกี่ยวกับ invoice</p>",
   "why_wrong": [
-   "กลับลำดับ",
-   "นั่นคือการรันแยก",
-   "ไม่ได้บวกผล"
+   "มากไม่ได้ดีเสมอ",
+   "ไม่ได้ error",
+   "เสี่ยงตอบผิด"
   ],
-  "ref": "Lesson 15 §5.1"
+  "link": "ข้อมูลที่ agent มี ไม่จำเป็นต้องเป็นข้อมูลที่ควรส่งให้ LLM",
+  "ref": "Lesson 15 §6.3",
+  "terms": []
  },
  {
   "id": "L15-27",
   "lesson": 15,
-  "topic": "Runnable method",
+  "topic": "เดินตาม graph",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "easy",
-  "stem": "ต้องการรัน chain กับ input หลายตัวพร้อมกันใช้ method ใด",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "user_message = \"I cannot login to my account\" เดินผ่าน node ใดบ้าง",
   "options": [
-   "batch()",
-   "invoke()",
-   "stream()",
-   "ainvoke()"
+   "categorize_issue → handle_login → summarize_response",
+   "categorize_issue → handle_invoice → summarize_response",
+   "handle_login → categorize_issue → END",
+   "categorize_issue → handle_refund → handle_login"
   ],
   "answer": 0,
-  "explanation": "<p>invoke 1 input · batch หลาย input · stream ส่งผลทีละส่วน · ainvoke asynchronous</p>",
+  "explanation": "<p>categorize_issue จัดเป็น technical route_issue เจอคำว่า login จึงไป handle_login แล้วทุก handler ไป summarize_response ก่อน END</p>",
   "why_wrong": [
-   "input เดียว",
-   "ส่ง output ทีละ chunk",
-   "async ของ input เดียว"
+   "login เป็นเรื่อง technical",
+   "ต้องจัดหมวดก่อน",
+   "เดินแค่ handler เดียว"
   ],
-  "ref": "Lesson 15 §5.1"
+  "link": "billing ที่มีคำว่า refund ไป handle_refund นอกนั้นไป handle_invoice",
+  "ref": "Lesson 15 §6.1",
+  "terms": []
  },
  {
   "id": "L15-28",
   "lesson": 15,
-  "topic": "LLM ในเชนตัดสินสิทธิ์ไหม",
+  "topic": "ประเมิน agent",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "hard",
-  "stem": "ใน customer_support_chain ใครตัดสินว่า refund_eligible เป็น True",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "agent ตอบประโยคสวยว่า Your balance is $50 แต่เรียก get_refund แทน get_invoice ควรประเมินอย่างไร",
   "options": [
-   "check_refund_eligibility ตามกฎ 14 วัน LLM แค่อธิบาย",
-   "LLM อ่าน prompt แล้วตัดสินสิทธิ์ด้วยตัวเอง",
-   "PromptTemplate คำนวณจาก days_since_delivery",
-   "StrOutputParser แปลงผลลัพธ์ให้เป็น True"
+   "ยังถือว่าพัง ต้องวัด tool selection ด้วย",
+   "ผ่าน เพราะคำตอบสุดท้ายฟังดูถูกต้อง",
+   "ผ่าน เพราะเรียก tool อย่างน้อยหนึ่งตัวแล้ว",
+   "วัดแค่ latency ของคำตอบอย่างเดียวก็พอ"
   ],
   "answer": 0,
-  "explanation": "<p>notebook ระบุว่า LLM explains the computed decision; it does not determine eligibility กฎอยู่ในโค้ด deterministic</p>",
+  "explanation": "<p>การประเมิน agent ต้องดูหลายระดับ tool selection accuracy, argument accuracy, response correctness คือคำตอบตรงกับผล tool ตัวเลข $50 ไม่ได้มาจาก tool ที่เรียก</p>",
   "why_wrong": [
-   "LLM แค่อธิบาย",
-   "template แค่เติมข้อความ",
-   "parser แปลงเป็น string"
+   "คำตอบต้องตรงกับผล tool",
+   "ต้องเรียกตัวที่ถูก",
+   "latency เป็นแค่หนึ่งตัวชี้วัด"
   ],
-  "ref": "Lesson 15 §5.2"
+  "link": "เริ่มจากทีละ component แล้วประเมินทั้ง workflow",
+  "ref": "Lesson 15 §6.4",
+  "terms": []
  },
  {
   "id": "L15-29",
   "lesson": 15,
-  "topic": "node คืนอะไร",
+  "topic": "Hello",
   "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "node handle_refund ใน LangGraph ควรคืนอะไร",
+  "type": "apply",
+  "difficulty": "easy",
+  "stem": "test case ผู้ใช้พิมพ์ Hello! ผลที่คาดหวังคืออะไร",
   "options": [
-   "dict เฉพาะ field ที่อัปเดต เช่น step_result",
-   "state ทั้งก้อนที่ copy มาแล้วแก้บางค่า",
-   "ชื่อ node ถัดไปที่ต้องรันเป็น string",
-   "ToolMessage สำหรับส่งให้ LLM อ่านต่อ"
+   "ทักทายกลับโดยไม่เรียก tool",
+   "เรียก get_invoice ตามค่าเริ่มต้น",
+   "เรียกทุก tool เพื่อเตรียมข้อมูล",
+   "ถามหา customer ID ทันที"
   ],
   "answer": 0,
-  "explanation": "<p>node อ่าน state แล้วคืนเฉพาะ field ที่อัปเดต LangGraph merge ให้ การคืนชื่อ node เป็นหน้าที่ของ router</p>",
+  "explanation": "<p>คำทักทายไม่ต้องใช้ข้อมูลใด การเรียก tool ที่ไม่จำเป็นเปลืองและเสี่ยง</p>",
   "why_wrong": [
-   "ไม่จำเป็น",
-   "นั่นคือ router",
-   "ไม่ใช่ใน graph นี้"
+   "ไม่มีเหตุให้เรียก",
+   "เปลือง",
+   "ยังไม่มีงานที่ต้องใช้ ID"
   ],
-  "ref": "Lesson 15 §6.1"
+  "link": "tool_choice=\"required\" ใน lab จะบังคับเรียก จึงไม่เหมาะกับข้อความทักทาย",
+  "ref": "Lesson 15 §6.4",
+  "terms": []
  },
  {
   "id": "L15-30",
   "lesson": 15,
-  "topic": "ประเมิน agent",
+  "topic": "เลือก single หรือ multi-agent",
   "source": "lesson",
-  "type": "concept",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "test case \"Hello!\" ในตารางประเมินคาดหวังพฤติกรรมใด",
+  "stem": "งาน customer support ที่นิยามชัด มี tool แค่สี่ตัว ควรเริ่มด้วยแบบใด",
   "options": [
-   "ไม่เรียก tool และตอบทักทายกลับ",
-   "เรียก get_invoice เพื่อเช็คบัญชีลูกค้า",
-   "ขอ customer ID ก่อนตอบทุกครั้ง",
-   "ส่งต่อคำขอให้เจ้าหน้าที่ที่เป็นคน"
+   "single-agent เพราะประสานง่ายและ overhead ต่ำ",
+   "multi-agent เพราะดีกว่า single-agent เสมอ",
+   "multi-agent เพราะต้องใช้ LLM หลายตัวทุกครั้ง",
+   "ไม่ใช้ agent เลย เพราะมี tool ให้เรียกอยู่แล้ว"
   ],
   "answer": 0,
-  "explanation": "<p>Expected tool: None · Expected behavior: Generate greeting วัด tool selection accuracy รวมถึงการไม่เรียก tool เมื่อไม่จำเป็น</p>",
+  "explanation": "<p>single-agent เหมาะกับงานนิยามชัด multi-agent เหมาะกับงานซับซ้อนที่แยกย่อยได้ แต่ต้องประสานและอาจเรียกโมเดลมากขึ้น</p>",
   "why_wrong": [
-   "เรียก tool เกินจำเป็น",
-   "นั่นคือกรณี Where is my order?",
-   "ไม่จำเป็น"
+   "ไม่ดีกว่าเสมอ",
+   "ไม่ใช่เหตุผล",
+   "งานต้องเลือกและเรียก tool"
   ],
-  "ref": "Lesson 15 §6.4"
+  "link": "หลักเดียวกับทั้งบท เลือกแบบง่ายที่สุดที่ตอบโจทย์",
+  "ref": "Lesson 15 §2.4",
+  "terms": []
  }
 ]

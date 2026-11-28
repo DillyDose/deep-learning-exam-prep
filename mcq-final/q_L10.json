@@ -2,610 +2,783 @@
  {
   "id": "L10-01",
   "lesson": 10,
-  "topic": "ทำไมต้อง RNN",
+  "topic": "parameter SimpleRNN",
   "source": "lesson",
-  "type": "concept",
+  "type": "calc",
   "difficulty": "easy",
-  "stem": "เหตุผลใดไม่อยู่ในสามข้อที่สไลด์ให้ว่าทำไม dense ไม่เหมาะกับลำดับ",
+  "stem": "SimpleRNN 4 neuron รับ input 2 feature มี parameter เท่าใด",
   "options": [
-   "dense ใช้ activation ไม่เชิงเส้นไม่ได้",
-   "ลำดับของสมาชิกมีผลต่อความหมาย",
-   "ลำดับแต่ละตัวยาวไม่เท่ากันได้",
-   "ต้องใช้ feature ซ้ำในทุกตำแหน่ง"
+   "28",
+   "24",
+   "12",
+   "32"
   ],
   "answer": 0,
-  "explanation": "<p>สามเหตุผลบนสไลด์: order of elements matters · lengths ต่างกันแต่ dense ต้อง fixed length · reuse the feature learned across positions dense ใช้ activation ได้ปกติ</p>",
+  "explanation": "<p>สูตร n(n + m) + n ที่ n = 4, m = 2 ได้ 4 × 6 + 4 = 28 แยกเป็น W_x 2 × 4 = 8, W_a 4 × 4 = 16 และ bias 4</p>",
   "why_wrong": [
-   "เป็นเหตุผลข้อแรก",
-   "เป็นเหตุผลข้อสอง",
-   "เป็นเหตุผลข้อสาม"
+   "ลืม bias",
+   "ลืม W_a ที่ต่อ state ก่อนหน้า",
+   "นับ bias เป็น 2 เท่า"
   ],
-  "ref": "Lesson 10 §1.1"
+  "link": "ส่วน W_a คือ recurrent connection ที่ Dense ไม่มี ความยาวลำดับไม่อยู่ในสูตรเพราะใช้ weight ชุดเดียวทุก step",
+  "ref": "Lesson 10 §1.2",
+  "terms": [
+   [
+    "neuron n",
+    "ความยาวของ hidden state"
+   ],
+   [
+    "feature m",
+    "จำนวนตัวแปรต่อ step"
+   ],
+   [
+    "W_a",
+    "weight ที่คูณ state ของ step ก่อน"
+   ]
+  ]
  },
  {
   "id": "L10-02",
   "lesson": 10,
-  "topic": "input shape",
+  "topic": "parameter LSTM",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "ข้อมูลอากาศ 14 ตัวแปร batch 32 หน้าต่างละ 24 step input ของ RNN มี shape อะไร",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "SimpleRNN ขนาดหนึ่งมี 28 parameter ถ้าเปลี่ยนเป็น LSTM ขนาดเดียวกันจะมีเท่าใด",
   "options": [
-   "(32, 24, 14)",
-   "(32, 14, 24)",
-   "(24, 32, 14)",
-   "(32, 336)"
+   "112",
+   "84",
+   "56",
+   "28"
   ],
   "answer": 0,
-  "explanation": "<p>(batch, sequence, feature) = (32, 24, 14)</p>",
+  "explanation": "<p>LSTM มี 4 ชุด weight คือ candidate กับ gate อีก 3 ตัว ทุกชุดขนาดเท่า SimpleRNN จึงได้ 4 × 28 = 112</p>",
   "why_wrong": [
-   "สลับ sequence กับ feature",
-   "สลับ batch กับ sequence",
-   "flatten แบบ dense"
+   "นั่นคือ 3 เท่าแบบ GRU",
+   "คูณ 2",
+   "ไม่ได้คูณ"
   ],
-  "ref": "Lesson 10 §1.2"
+  "link": "GRU มี 3 ชุดจึงเป็น 3 เท่า แต่ Keras ใช้ bias สองชุดใน GRU ตัวเลขใน summary จึงมากกว่า 3 เท่าเล็กน้อย",
+  "ref": "Lesson 10 §3.2",
+  "terms": [
+   [
+    "gate",
+    "ตัวคุมค่า 0 ถึง 1 ว่าจะให้ข้อมูลผ่านแค่ไหน"
+   ]
+  ]
  },
  {
   "id": "L10-03",
-  "lesson": 10,
-  "topic": "SimpleRNN parameter",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "SimpleRNN(20) รับ input 5 feature มี parameter เท่าใด",
-  "options": [
-   "520",
-   "500",
-   "120",
-   "420"
-  ],
-  "answer": 0,
-  "explanation": "<p>n(n + m) + n = 20·25 + 20 = 520 · W_x 5·20 = 100 · W_a 20·20 = 400 · bias 20</p>",
-  "why_wrong": [
-   "ลืม bias",
-   "ลืม W_a",
-   "ลืม W_x"
-  ],
-  "ref": "Lesson 10 §1.2"
- },
- {
-  "id": "L10-04",
-  "lesson": 10,
-  "topic": "ความยาวลำดับกับ parameter",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "SimpleRNN(16) กับลำดับยาว 10 เทียบลำดับยาว 100 จำนวน parameter เป็นอย่างไร",
-  "options": [
-   "เท่ากัน เพราะ weight ชุดเดียวใช้ทุก step",
-   "ลำดับยาว 100 มีมากกว่าราว 10 เท่า",
-   "ลำดับยาว 100 น้อยกว่าเพราะ gradient หาย",
-   "ขึ้นกับ batch size ไม่ใช่ความยาวลำดับ"
-  ],
-  "answer": 0,
-  "explanation": "<p>W_a W_x W_y shared at each time step สูตร parameter ไม่มีความยาวลำดับ</p>",
-  "why_wrong": [
-   "ไม่ใช่ weight แยกต่อ step",
-   "parameter ไม่ขึ้นกับ gradient",
-   "batch ไม่อยู่ในสูตร"
-  ],
-  "ref": "Lesson 10 §1.3"
- },
- {
-  "id": "L10-05",
-  "lesson": 10,
-  "topic": "forward ด้วยมือ",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "hard",
-  "stem": "RNN ตัวแปรเดียว W_a = 0.5 W_x = 1 bias 0 activation tanh a⟨0⟩ = 0 input 0, 2 ค่า a⟨2⟩ ใกล้ค่าใด",
-  "options": [
-   "tanh(2) ≈ 0.964",
-   "tanh(2.5) ≈ 0.987",
-   "tanh(1) ≈ 0.762",
-   "0"
-  ],
-  "answer": 0,
-  "explanation": "<p>a⟨1⟩ = tanh(0.5·0 + 0) = 0 · a⟨2⟩ = tanh(0.5·0 + 1·2) = tanh(2) ≈ 0.964</p>",
-  "why_wrong": [
-   "บวก 0.5 เกิน",
-   "ใช้ x ครึ่งหนึ่ง",
-   "ลืม input step 2"
-  ],
-  "ref": "Lesson 10 §1.3"
- },
- {
-  "id": "L10-06",
-  "lesson": 10,
-  "topic": "unrolled",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "แผนภาพ RNN unrolled สาม step หมายถึงอะไร",
-  "options": [
-   "RNN ตัวเดียววาดซ้ำตามเวลา ใช้ weight ชุดเดียว",
-   "RNN สาม layer ซ้อนกันที่ weight ต่างกัน",
-   "สามโมเดลที่เทรนแยกกันแล้วนำผลมาเฉลี่ย",
-   "สาม batch ที่ป้อนเข้าโมเดลพร้อมกันในรอบเดียว"
-  ],
-  "answer": 0,
-  "explanation": "<p>unrolled คือวาด cell เดียวกันที่เวลาต่างกัน ไม่ใช่ layer ซ้อน</p>",
-  "why_wrong": [
-   "ไม่ใช่ deep RNN",
-   "ไม่ใช่ ensemble",
-   "ไม่ใช่ batch"
-  ],
-  "ref": "Lesson 10 §1.3"
- },
- {
-  "id": "L10-07",
-  "lesson": 10,
-  "topic": "ชนิด RNN",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ติดป้ายชื่อเฉพาะให้ทุกคำในประโยคเป็น RNN ชนิดใด",
-  "options": [
-   "sequence-to-sequence ที่ T_x = T_y",
-   "sequence-to-vector ที่ T_y = 1",
-   "vector-to-sequence ที่ T_x = 1",
-   "encoder–decoder ที่ T_x ≠ T_y"
-  ],
-  "answer": 0,
-  "explanation": "<p>named entity recognition ให้ output หนึ่งตัวต่อ input หนึ่งตัวทุก step ใน Keras ใช้ return_sequences=True</p>",
-  "why_wrong": [
-   "ให้ output ค่าเดียว",
-   "input ค่าเดียว",
-   "ความยาวเท่ากันจึงไม่ต้อง encoder–decoder"
-  ],
-  "ref": "Lesson 10 §2.1"
- },
- {
-  "id": "L10-08",
-  "lesson": 10,
-  "topic": "BPTT",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "gradient ของ W_a จากสี่ step คือ 0.3, −0.1, 0.2, 0.0 lr 0.5 W_a เดิม 1.0 ค่าใหม่เท่าใด",
-  "options": [
-   "0.80",
-   "0.90",
-   "1.20",
-   "0.85"
-  ],
-  "answer": 0,
-  "explanation": "<p>BPTT บวก gradient ทุก step = 0.4 · W_a = 1.0 − 0.5 × 0.4 = 0.80</p>",
-  "why_wrong": [
-   "ใช้แค่ step แรก",
-   "บวกแทนลบ",
-   "หาร 4 ก่อน"
-  ],
-  "ref": "Lesson 10 §2.2"
- },
- {
-  "id": "L10-09",
-  "lesson": 10,
-  "topic": "vanishing",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "ตัวคูณ gradient ต่อ step 0.5 ย้อนไป 10 step เหลือประมาณเท่าใด",
-  "options": [
-   "0.001",
-   "0.05",
-   "0.5",
-   "0.1"
-  ],
-  "answer": 0,
-  "explanation": "<p>0.5¹⁰ = 1/1024 ≈ 0.001 สัญญาณจากอดีตไกลแทบหาย</p>",
-  "why_wrong": [
-   "คูณ 0.5 กับ 0.1",
-   "ไม่ยกกำลัง",
-   "ยกกำลังผิด"
-  ],
-  "ref": "Lesson 10 §2.3"
- },
- {
-  "id": "L10-10",
   "lesson": 10,
   "topic": "GRU update",
   "source": "lesson",
   "type": "calc",
   "difficulty": "easy",
-  "stem": "GRU simplified c̃ = 0.6 c⟨t−1⟩ = −0.4 Γ_u = 0.25 ค่า c⟨t⟩ เท่าใด",
+  "stem": "GRU มี memory เดิม 1.0 ค่าใหม่ที่เสนอ 0.0 และ Γ_u = 0.25 memory ใหม่เท่าใด",
   "options": [
-   "−0.15",
-   "0.15",
-   "0.35",
-   "−0.45"
+   "0.75",
+   "0.25",
+   "1.0",
+   "0.0"
   ],
   "answer": 0,
-  "explanation": "<p>Γ_u·c̃ + (1 − Γ_u)·c_prev = 0.25·0.6 + 0.75·(−0.4) = 0.15 − 0.30 = −0.15</p>",
+  "explanation": "<p>c = Γ_u × ค่าใหม่ + (1 − Γ_u) × ค่าเดิม = 0.25 × 0 + 0.75 × 1.0 = 0.75 gate เปิดแค่หนึ่งในสี่ ค่าเดิมจึงเหลือสามในสี่</p>",
   "why_wrong": [
-   "สลับเครื่องหมาย",
-   "ลืมคูณ c_prev ด้วย 0.75",
-   "ใช้ Γ_u กับ c_prev"
+   "สลับน้ำหนักของสองส่วน",
+   "คิดว่า Γ_u = 0 เก็บของเดิมทั้งหมด",
+   "คิดว่า Γ_u = 1 เขียนทับทั้งหมด"
   ],
-  "ref": "Lesson 10 §3.1"
+  "link": "Γ_u = 0 คือคัดลอก memory เดิม ทำให้ข้อมูลข้ามหลาย step ได้ ดูตัวอย่าง man … is",
+  "ref": "Lesson 10 §3.1",
+  "terms": [
+   [
+    "Γ_u",
+    "update gate ตัดสินว่าจะเขียนค่าใหม่ลง memory แค่ไหน"
+   ],
+   [
+    "c̃",
+    "ค่าใหม่ที่เสนอจาก input ปัจจุบัน"
+   ]
+  ]
  },
  {
-  "id": "L10-11",
+  "id": "L10-04",
   "lesson": 10,
-  "topic": "GRU Γu = 0",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "GRU ที่ Γ_u = 0 ทุก step มีผลอย่างไร",
-  "options": [
-   "คัดลอก memory ต่อไม่เปลี่ยน gradient จึงไม่หาย",
-   "memory ถูกลบเป็นศูนย์ทุก step ที่ผ่านไป",
-   "memory ถูกแทนด้วย input ล่าสุดทุก step",
-   "เกิด exploding gradient ขึ้นทันทีในการเทรน"
-  ],
-  "answer": 0,
-  "explanation": "<p>c⟨t⟩ = 0·c̃ + 1·c⟨t−1⟩ ค่าเดิมผ่านไปตรงๆ ไม่ผ่าน tanh ไม่คูณ weight gradient ตามเส้นทางนี้ถูกคูณด้วย 1</p>",
-  "why_wrong": [
-   "ศูนย์คือไม่เขียนใหม่ ไม่ใช่ลบ",
-   "นั่นคือ Γ_u = 1",
-   "ตัวคูณ 1 ไม่ระเบิด"
-  ],
-  "ref": "Lesson 10 §3.1"
- },
- {
-  "id": "L10-12",
-  "lesson": 10,
-  "topic": "reset gate",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "Γ_r ใน full GRU ทำหน้าที่อะไร",
-  "options": [
-   "คุมว่า memory เดิมเกี่ยวข้องแค่ไหนตอนสร้างค่าเสนอ c̃",
-   "คุมว่าจะเปิดเผย memory ออกเป็น output แค่ไหน",
-   "คุมสัดส่วนระหว่าง c̃ กับ memory เดิมในค่าใหม่",
-   "ลบ memory เดิมทั้งหมดก่อนทุก step"
-  ],
-  "answer": 0,
-  "explanation": "<p>c̃ = tanh(W_c[Γ_r * c⟨t−1⟩, x⟨t⟩] + b_c) ถ้า Γ_r = 0 ค่าเสนอมาจาก input อย่างเดียว output gate เป็นของ LSTM สัดส่วนเป็นหน้าที่ของ Γ_u</p>",
-  "why_wrong": [
-   "นั่นคือ Γ_o ของ LSTM",
-   "นั่นคือ Γ_u",
-   "Γ_r ไม่ได้ลบ memory โดยตรง"
-  ],
-  "ref": "Lesson 10 §3.1"
- },
- {
-  "id": "L10-13",
-  "lesson": 10,
-  "topic": "LSTM state",
+  "topic": "หน้าต่างอนุกรมเวลา",
   "source": "lesson",
   "type": "calc",
-  "difficulty": "hard",
-  "stem": "LSTM c̃ = 0.5 c⟨t−1⟩ = 2.0 Γ_u = 0.4 Γ_f = 0.5 Γ_o = 1 ค่า c⟨t⟩ และ a⟨t⟩ ประมาณเท่าใด",
-  "options": [
-   "c = 1.2, a = tanh(1.2) ≈ 0.834",
-   "c = 1.2, a = 1.2",
-   "c = 1.4, a = tanh(1.4) ≈ 0.885",
-   "c = 0.8, a = tanh(0.8) ≈ 0.664"
-  ],
-  "answer": 0,
-  "explanation": "<p>c = 0.4·0.5 + 0.5·2.0 = 0.2 + 1.0 = 1.2 · a = Γ_o·tanh(c) = tanh(1.2) ≈ 0.834</p>",
-  "why_wrong": [
-   "ลืม tanh",
-   "ใช้ 1 − Γ_u แบบ GRU ได้ 0.2 + 1.2 = 1.4",
-   "ใช้ Γ_f คูณผิด"
-  ],
-  "ref": "Lesson 10 §3.2"
- },
- {
-  "id": "L10-14",
-  "lesson": 10,
-  "topic": "GRU vs LSTM",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ข้อใดเป็นความต่างระหว่าง GRU กับ LSTM",
-  "options": [
-   "GRU ผูก forget กับ update · LSTM มี Γ_f แยกและมี Γ_o",
-   "GRU มี state สองตัว ส่วน LSTM มี state ตัวเดียว",
-   "LSTM ไม่มี update gate ใช้ forget gate อย่างเดียว",
-   "GRU มี parameter มากกว่า LSTM เพราะมี reset gate"
-  ],
-  "answer": 0,
-  "explanation": "<p>GRU: gate 2 ตัว state 1 ตัว · LSTM: gate 3 ตัว state 2 ตัว คือ c long-term และ a short-term parameter GRU 3 ชุด LSTM 4 ชุด</p>",
-  "why_wrong": [
-   "กลับกัน",
-   "LSTM มี update gate",
-   "LSTM มากกว่า"
-  ],
-  "ref": "Lesson 10 §3.2"
- },
- {
-  "id": "L10-15",
-  "lesson": 10,
-  "topic": "LSTM parameter",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "LSTM(8) รับ input 4 feature มี parameter เท่าใด",
-  "options": [
-   "416",
-   "312",
-   "104",
-   "384"
-  ],
-  "answer": 0,
-  "explanation": "<p>4 × [8 × (8 + 4) + 8] = 4 × 104 = 416</p>",
-  "why_wrong": [
-   "คิดแบบ GRU 3 ชุด",
-   "ชุดเดียวแบบ SimpleRNN",
-   "ลืม bias"
-  ],
-  "ref": "Lesson 10 §3.2"
- },
- {
-  "id": "L10-16",
-  "lesson": 10,
-  "topic": "exploding gradient",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "วิธีใดไม่ใช่คำแนะนำของสไลด์สำหรับ exploding gradient ใน RNN",
-  "options": [
-   "เปลี่ยน activation เป็น ReLU ไม่ให้อิ่มตัว",
-   "ใช้ tanh ซึ่งเป็น activation แบบอิ่มตัว",
-   "ลด learning rate ให้เล็กลงตอนเทรน",
-   "ใช้ gradient clipping จำกัดขนาด gradient"
-  ],
-  "answer": 0,
-  "explanation": "<p>สไลด์บอกว่า nonsaturating activation เช่น ReLU อาจไม่ช่วย เพราะ weight ชุดเดียวใช้ซ้ำทุก step ค่าโตสะสมได้ ให้ใช้ tanh ลด lr หรือ clipping</p>",
-  "why_wrong": [
-   "เป็นคำแนะนำ",
-   "เป็นคำแนะนำ",
-   "เป็นคำแนะนำ"
-  ],
-  "ref": "Lesson 10 §4.1"
- },
- {
-  "id": "L10-17",
-  "lesson": 10,
-  "topic": "clipping",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "gradient [9, 12] clip ด้วย norm 5 ได้อะไร",
-  "options": [
-   "[3, 4]",
-   "[5, 5]",
-   "[4.5, 6]",
-   "[9, 12]"
-  ],
-  "answer": 0,
-  "explanation": "<p>norm = √(81 + 144) = 15 · คูณ 5/15 = 1/3 ได้ [3, 4] ทิศเดิม</p>",
-  "why_wrong": [
-   "ตัดทีละค่า ทิศเปลี่ยน",
-   "หารสอง",
-   "ไม่ clip"
-  ],
-  "ref": "Lesson 10 §4.1"
- },
- {
-  "id": "L10-18",
-  "lesson": 10,
-  "topic": "deep LSTM",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "โค้ดนี้ error เพราะอะไร",
-  "options": [
-   "ชั้นแรกไม่ตั้ง return_sequences=True ชั้นสองได้ input 2 มิติ",
-   "LSTM ซ้อนกันสองชั้นไม่ได้ใน Sequential model",
-   "recurrent_dropout ใช้กับ LSTM ชั้นแรกไม่ได้",
-   "Dense(1) ต้องการ input 3 มิติจาก LSTM ชั้นสุดท้าย"
-  ],
-  "answer": 0,
-  "explanation": "<p>LSTM ชั้นแรกคืน (None, 16) ชั้นสองต้องการ (batch, sequence, feature) ต้องตั้ง return_sequences=True ทุกชั้นยกเว้นชั้นสุดท้าย</p>",
-  "why_wrong": [
-   "ซ้อนได้",
-   "ใช้ได้ทุกชั้น",
-   "Dense รับ 2 มิติได้"
-  ],
-  "ref": "Lesson 10 §4.2",
-  "code": "model = Sequential()\nmodel.add(layers.LSTM(16, recurrent_dropout=0.2, input_shape=(None, 14)))\nmodel.add(layers.LSTM(16))\nmodel.add(layers.Dense(1))"
- },
- {
-  "id": "L10-19",
-  "lesson": 10,
-  "topic": "Bidirectional parameter",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "Bidirectional(GRU(8)) รับ 4 feature แล้ว Dense(1) มี parameter รวมเท่าใด ใช้สูตร GRU 3 ชุด bias ชุดเดียว",
-  "options": [
-   "641",
-   "329",
-   "625",
-   "337"
-  ],
-  "answer": 0,
-  "explanation": "<p>GRU หนึ่งทิศ 3 × [8·12 + 8] = 312 · สองทิศ 624 · output ต่อกันยาว 16 · Dense 16 + 1 = 17 · รวม 641</p>",
-  "why_wrong": [
-   "ทิศเดียว",
-   "ลืม bias ของ Dense",
-   "Dense รับ 8"
-  ],
-  "ref": "Lesson 10 §4.2"
- },
- {
-  "id": "L10-20",
-  "lesson": 10,
-  "topic": "delay",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "sampling_rate = 6 sequence_length = 72 ทายอุณหภูมิ 12 ชั่วโมงหลังจุดสุดท้าย delay ตามสูตรของโค้ดเท่าใด",
-  "options": [
-   "498",
-   "504",
-   "432",
-   "83"
-  ],
-  "answer": 0,
-  "explanation": "<p>delay = sampling_rate × (sequence_length + 12 − 1) = 6 × 83 = 498</p>",
-  "why_wrong": [
-   "ลืม −1",
-   "ลืม 12",
-   "ลืมคูณ 6"
-  ],
-  "ref": "Lesson 10 §4.4"
- },
- {
-  "id": "L10-21",
-  "lesson": 10,
-  "topic": "timeseries_dataset_from_array",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "data = [0..9][:-1] targets = [0..9][4:] sequence_length = 4 แถวแรกที่พิมพ์คืออะไร",
-  "options": [
-   "[0, 1, 2, 3] 4",
-   "[0, 1, 2, 3] 3",
-   "[1, 2, 3, 4] 5",
-   "[0, 1, 2, 3] 5"
-  ],
-  "answer": 0,
-  "explanation": "<p>หน้าต่างแรกเริ่ม data[0] ยาว 4 target = targets[0] = 4</p>",
-  "why_wrong": [
-   "target เป็นตัวสุดท้ายของหน้าต่าง",
-   "เริ่มผิด",
-   "เลื่อน target เกิน"
-  ],
-  "ref": "Lesson 10 §4.4"
- },
- {
-  "id": "L10-22",
-  "lesson": 10,
-  "topic": "กลยุทธ์ทำนาย",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "กลยุทธ์ใดที่ error สะสมเมื่อทำนายไกลขึ้น",
-  "options": [
-   "recursive ที่ป้อนค่าที่ทายกลับเป็น input",
-   "direct multi-output ทายทั้ง 10 ค่าครั้งเดียว",
-   "direct forecasting ของ horizon เดียว",
-   "forecast at every time step ทุกตำแหน่ง"
-  ],
-  "answer": 0,
-  "explanation": "<p>recursive ใช้ x̂₅₁ ทาย x̂₅₂ error ของ step ก่อนจึงติดไป ข้อความที่อาจารย์ทำสีคือ Larger errors for later time steps!!</p>",
-  "why_wrong": [
-   "ไม่ป้อนกลับ",
-   "ทายค่าเดียว",
-   "ไม่ป้อนค่าที่ทายกลับ"
-  ],
-  "ref": "Lesson 10 §4.3"
- },
- {
-  "id": "L10-23",
-  "lesson": 10,
-  "topic": "one-hot",
-  "source": "lesson",
-  "type": "concept",
   "difficulty": "easy",
-  "stem": "ข้อใดเป็นปัญหาของ one-hot ตามสไลด์",
+  "stem": "ข้อมูล 10 จุด ใช้หน้าต่างยาว 4 และ target คือจุดถัดจากหน้าต่าง ได้กี่ตัวอย่าง",
   "options": [
-   "มองคำเป็นหน่วยเดี่ยว ไม่เห็นความคล้าย และยาวเท่า vocab",
-   "ใช้ได้เฉพาะคำภาษาอังกฤษ ภาษาอื่นแทนไม่ได้",
-   "เรียนจากข้อมูล จึงต้องใช้ข้อมูลเทรนปริมาณมาก",
-   "dense เกินไปจนโมเดล overfit เร็วกว่าปกติ"
-  ],
-  "answer": 0,
-  "explanation": "<p>one-hot เป็น atomic units ไม่ดู context dot product ระหว่างคำต่างกันเป็น 0 ทุกคู่ และ computationally inefficient</p>",
-  "why_wrong": [
-   "ใช้ได้ทุกภาษา",
-   "one-hot hardcoded ไม่ได้เรียน",
-   "one-hot sparse"
-  ],
-  "ref": "Lesson 10 §5.2"
- },
- {
-  "id": "L10-24",
-  "lesson": 10,
-  "topic": "embedding analogy",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "embedding man = (1, 1) woman = (1, 3) king = (4, 1) คำที่ใกล้ king − man + woman ควรอยู่ที่จุดใด",
-  "options": [
-   "(4, 3)",
-   "(4, −1)",
-   "(1, 3)",
-   "(6, 5)"
-  ],
-  "answer": 0,
-  "explanation": "<p>woman − man = (0, 2) เลื่อน king ไปทิศเดียวกันได้ (4, 3) แบบ Dog → Wolf ขนานกับ Cat → Tiger</p>",
-  "why_wrong": [
-   "ลบผิดทิศ",
-   "ไม่ได้บวก king",
-   "บวกทุกค่า"
-  ],
-  "ref": "Lesson 10 §5.3"
- },
- {
-  "id": "L10-25",
-  "lesson": 10,
-  "topic": "Embedding layer",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "easy",
-  "stem": "<code>Embedding(input_dim=8000, output_dim=50)</code> มี parameter เท่าใด และข้อความ 30 คำได้ output ต่อประโยคเท่าใด",
-  "options": [
-   "400,000 และ (30, 50)",
-   "400,000 และ (30, 8000)",
-   "8,050 และ (30, 50)",
-   "400,050 และ (50, 30)"
-  ],
-  "answer": 0,
-  "explanation": "<p>matrix 8,000 × 50 = 400,000 ไม่มี bias · แต่ละคำได้ vector 50 มิติ</p>",
-  "why_wrong": [
-   "นั่นคือ one-hot",
-   "บวกแทนคูณ",
-   "ไม่มี bias และแกนสลับ"
-  ],
-  "ref": "Lesson 10 §5.3"
- },
- {
-  "id": "L10-26",
-  "lesson": 10,
-  "topic": "CBOW vs SkipGram",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "hard",
-  "stem": "ประโยค 5 คำ หน้าต่าง 1 ข้าง SkipGram สร้างคู่ (center, context) ได้กี่คู่",
-  "options": [
-   "8",
-   "5",
+   "6",
+   "7",
    "10",
    "4"
   ],
   "answer": 0,
-  "explanation": "<p>คำหัวท้ายมีเพื่อนบ้าน 1 คำ คำกลางสามคำมี 2 คำ: 1 + 2 + 2 + 2 + 1 = 8 · CBOW ได้ 5 sample คือหนึ่งต่อคำกลาง</p>",
+  "explanation": "<p>หน้าต่างเริ่มได้ที่จุด 1 ถึง 6 เพราะต้องเหลือจุดถัดไปไว้เป็น target 10 − 4 = 6 ตัวอย่าง</p>",
   "why_wrong": [
-   "นั่นคือ CBOW",
-   "คิดว่าทุกคำมี 2 คำ",
-   "ลืมคำหัวท้าย"
+   "ลืมว่าต้องเหลือ target 1 จุด",
+   "นับทุกจุด",
+   "นับเป็นความยาวหน้าต่าง"
   ],
-  "ref": "Lesson 10 §5.3"
+  "link": "ตัวอย่างในสไลด์ใช้ 0–9 หน้าต่าง 3 ได้ 7 หน้าต่าง เพราะส่ง data แค่ 0–8",
+  "ref": "Lesson 10 §4.4",
+  "terms": [
+   [
+    "target",
+    "ค่าที่ต้องทาย"
+   ]
+  ]
+ },
+ {
+  "id": "L10-05",
+  "lesson": 10,
+  "topic": "Embedding parameter",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "Embedding(input_dim=1000, output_dim=8) มี parameter เท่าใด และประโยค 5 คำได้ output shape อะไร",
+  "options": [
+   "8,000 และ (5, 8)",
+   "8,008 และ (5, 8)",
+   "8,000 และ (8, 5)",
+   "1,008 และ (5, 1000)"
+  ],
+  "answer": 0,
+  "explanation": "<p>embedding matrix มีหนึ่งแถวต่อคำ 1,000 คำ × 8 มิติ = 8,000 ไม่มี bias แต่ละคำได้ vector 8 ค่า ประโยค 5 คำจึงได้ (5, 8)</p>",
+  "why_wrong": [
+   "Embedding ไม่มี bias",
+   "สลับแกน",
+   "นั่นคือขนาด one-hot"
+  ],
+  "link": "embedding คือการหยิบแถวตาม index ไม่ต้องคูณ one-hot จริง ประหยัดกว่า one-hot ที่ยาว 1,000 ต่อคำ",
+  "ref": "Lesson 10 §5.3",
+  "terms": [
+   [
+    "input_dim",
+    "ขนาด vocabulary"
+   ],
+   [
+    "output_dim",
+    "จำนวนมิติของ vector แต่ละคำ"
+   ]
+  ]
+ },
+ {
+  "id": "L10-06",
+  "lesson": 10,
+  "topic": "gradient clipping",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "medium",
+  "stem": "gradient [6, 8] มีขนาด 10 ใช้ clipnorm = 5 ได้ gradient ใหม่เท่าใด",
+  "options": [
+   "[3, 4]",
+   "[5, 5]",
+   "[6, 5]",
+   "[1, 1]"
+  ],
+  "answer": 0,
+  "explanation": "<p>ขนาด 10 เกิน 5 จึงย่อด้วย 5/10 = 0.5 ทุกตัว ได้ [3, 4] ขนาด 5 ทิศเดิม</p>",
+  "why_wrong": [
+   "ตัดทุกค่าที่ 5 ทำให้ทิศเปลี่ยน",
+   "ตัดเฉพาะค่าที่เกิน",
+   "ย่อเหลือขนาด 1 ไม่ใช่ 5"
+  ],
+  "link": "clipping แก้ exploding gradient ที่ loss กลายเป็น NaN",
+  "ref": "Lesson 10 §4.1",
+  "terms": [
+   [
+    "norm",
+    "ขนาดของ vector = √(ผลรวมกำลังสอง)"
+   ],
+   [
+    "exploding gradient",
+    "gradient ใหญ่ขึ้นเรื่อยๆ จนค่าพัง"
+   ]
+  ]
+ },
+ {
+  "id": "L10-07",
+  "lesson": 10,
+  "topic": "ทำไมต้อง RNN",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "เหตุผลที่ dense network ไม่เหมาะกับข้อมูลเชิงลำดับตามสไลด์คือข้อใด",
+  "options": [
+   "ไม่สนลำดับ ความยาวต้องคงที่ และไม่ใช้ weight ซ้ำข้ามตำแหน่ง",
+   "คำนวณ softmax ไม่ได้ และรับตัวเลขทศนิยมจากข้อมูลไม่ได้",
+   "ใช้ GPU ไม่ได้ และเทรนได้แค่ทีละตัวอย่างโดยไม่มี batch",
+   "ต้องใช้ embedding เสมอ และให้ output ได้แค่ค่าเดียวต่อครั้ง"
+  ],
+  "answer": 0,
+  "explanation": "<p>The dog bites the man กับ The man bites the dog ใช้คำชุดเดียวกันแต่ความหมายตรงข้าม dense ไม่เห็นลำดับ input ต้องยาวคงที่ และรู้จักคำที่ตำแหน่ง 2 ไม่ช่วยตำแหน่ง 5 เพราะคนละ weight</p>",
+  "why_wrong": [
+   "dense ใช้ softmax และรับทศนิยมได้",
+   "dense ใช้ GPU และเทรนเป็น batch",
+   "dense ไม่ต้องใช้ embedding"
+  ],
+  "link": "สามข้อนี้ขนานกับเหตุผลที่ dense ไม่เหมาะกับภาพใน L7 RNN แก้ด้วยการใช้ weight ซ้ำทุก step",
+  "ref": "Lesson 10 §1.1",
+  "terms": []
+ },
+ {
+  "id": "L10-08",
+  "lesson": 10,
+  "topic": "input ของ RNN",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "input ของ RNN ใน Keras มีสามมิติเรียงอย่างไร",
+  "options": [
+   "(batch size, sequence, feature)",
+   "(feature, sequence, batch size)",
+   "(sequence, batch size, feature)",
+   "(batch size, feature, sequence)"
+  ],
+  "answer": 0,
+  "explanation": "<p>กี่ตัวอย่างต่อ batch, แต่ละตัวอย่างยาวกี่ step, แต่ละ step มีกี่ตัวแปร ข้อมูลอากาศ 14 คอลัมน์ หน้าต่าง 3 batch 7 ได้ (7, 3, 14)</p>",
+  "why_wrong": [
+   "กลับลำดับทั้งหมด",
+   "batch ต้องมาก่อน",
+   "feature อยู่ท้าย"
+  ],
+  "link": "univariate คือ feature = 1 ไม่ใช่ sequence = 1",
+  "ref": "Lesson 10 §1.2",
+  "terms": [
+   [
+    "univariate",
+    "แต่ละ step มีตัวแปรเดียว"
+   ],
+   [
+    "multivariate",
+    "แต่ละ step มีหลายตัวแปร"
+   ]
+  ]
+ },
+ {
+  "id": "L10-09",
+  "lesson": 10,
+  "topic": "unrolled",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "รูป RNN ที่วาดเรียงสามกล่องตามเวลาหมายถึงอะไร",
+  "options": [
+   "cell เดียวกันวาดซ้ำสามครั้ง ใช้ weight ชุดเดียว",
+   "RNN สาม layer ซ้อนกันที่ weight ต่างกัน",
+   "สามโมเดลแยกกันที่เทรนพร้อมกันในรอบเดียว",
+   "สาม batch ที่ป้อนต่อกันตามลำดับเวลา"
+  ],
+  "answer": 0,
+  "explanation": "<p>unrolled คือการคลี่ RNN ตัวเดียวออกตามเวลาเพื่อให้เห็นว่า state ของ step ก่อนส่งเข้า step ถัดไป W_a, W_x, W_y ใช้ร่วมกันทุก step</p>",
+  "why_wrong": [
+   "ไม่ใช่สาม layer",
+   "เป็นโมเดลเดียว",
+   "แกนนอนคือเวลา ไม่ใช่ batch"
+  ],
+  "link": "การใช้ weight ร่วมกันทุก step คือแนวคิดเดียวกับ weight sharing ของ filter ใน CNN",
+  "ref": "Lesson 10 §1.3",
+  "terms": [
+   [
+    "hidden state",
+    "ความจำที่ RNN ส่งต่อจาก step หนึ่งไปอีก step"
+   ]
+  ]
+ },
+ {
+  "id": "L10-10",
+  "lesson": 10,
+  "topic": "สี่ชนิดของ RNN",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "การแปล Good Morning เป็น สวัสดีครับ เป็น RNN ชนิดใด",
+  "options": [
+   "encoder–decoder เพราะ T_x ≠ T_y",
+   "sequence-to-sequence เพราะ T_x = T_y",
+   "sequence-to-vector เพราะ T_y = 1",
+   "vector-to-sequence เพราะ T_x = 1"
+  ],
+  "answer": 0,
+  "explanation": "<p>คำต้นทางกับปลายทางนับไม่เท่ากัน encoder จึงอ่านทั้งประโยคเก็บเป็น vector ก่อน แล้ว decoder สร้างประโยคใหม่ทีละคำ</p>",
+  "why_wrong": [
+   "seq-to-seq ใช้กับงานติดป้ายทุกคำ เช่น NER",
+   "seq-to-vector คือ sentiment",
+   "vector-to-seq คือสร้างเพลงจากแนวเพลง"
+  ],
+  "link": "encoder–decoder ใช้ต่อใน L11 และเป็นที่มาของ Transformer",
+  "ref": "Lesson 10 §2.1",
+  "terms": [
+   [
+    "T_x, T_y",
+    "ความยาวลำดับ input และ output"
+   ]
+  ]
+ },
+ {
+  "id": "L10-11",
+  "lesson": 10,
+  "topic": "BPTT",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "BPTT ต่างจาก backprop ปกติตรงไหน",
+  "options": [
+   "weight ใช้ร่วมทุก step จึงรวม gradient ทุก step แล้วอัปเดตครั้งเดียว",
+   "อัปเดต weight ทุก step ทันทีที่คำนวณ loss ของ step นั้นเสร็จ",
+   "ส่ง gradient ไปข้างหน้าตามเวลาแทนที่จะส่งย้อนกลับ",
+   "ใช้แค่ loss ของ step แรกเพราะเป็นจุดเริ่มต้นของลำดับ"
+  ],
+  "answer": 0,
+  "explanation": "<p>BPTT คือ backprop บน network ที่คลี่ตามเวลา W_a มีตัวเดียว gradient จากทุก step จึงถูกรวมเป็นค่าเดียวแล้วอัปเดตครั้งเดียว loss อาจไม่ใช้บาง output เช่น seq-to-vector ใช้แค่ output สุดท้าย</p>",
+  "why_wrong": [
+   "ไม่ได้อัปเดตทีละ step",
+   "ย้อนกลับตามเวลา",
+   "seq-to-vector ใช้ output สุดท้าย"
+  ],
+  "link": "gradient ที่ถูกคูณซ้ำทุก step ตอนย้อนคือที่มาของ vanishing gradient ใน §2.3",
+  "ref": "Lesson 10 §2.2",
+  "terms": [
+   [
+    "BPTT",
+    "Backpropagation Through Time"
+   ]
+  ]
+ },
+ {
+  "id": "L10-12",
+  "lesson": 10,
+  "topic": "ปัญหา simple RNN",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ทำไม simple RNN จับความสัมพันธ์ man กับ is ในประโยคยาวไม่ได้",
+  "options": [
+   "gradient ถูกคูณซ้ำทุก step ตอนย้อน จึงหดแบบ exponential",
+   "RNN ไม่มี weight สำหรับคำที่อยู่ไกลออกไปหลายคำ",
+   "embedding ของ man กับ is ใกล้กันเกินไปจนแยกไม่ออก",
+   "RNN อ่านจากขวาไปซ้าย จึงเห็นคำว่า is ก่อน man"
+  ],
+  "answer": 0,
+  "explanation": "<p>vanishing gradient แบบเดียวกับ network ที่ลึกมากใน L5 ตัวคูณ 0.9 ย้อน 50 step เหลือราว 0.005 ข้อมูลจากคำแรกๆ จึงแทบไม่ส่งผลต่อการเรียน</p>",
+  "why_wrong": [
+   "ใช้ weight ชุดเดียวทุก step",
+   "embedding ไม่ใช่สาเหตุ",
+   "simple RNN อ่านซ้ายไปขวา"
+  ],
+  "link": "ทางแก้จริงคือเปลี่ยนสถาปัตยกรรมเป็น GRU และ LSTM",
+  "ref": "Lesson 10 §2.3",
+  "terms": []
+ },
+ {
+  "id": "L10-13",
+  "lesson": 10,
+  "topic": "LSTM gate",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ข้อใดจับคู่ gate ของ LSTM กับหน้าที่ได้ถูก",
+  "options": [
+   "Γ_u รับของใหม่ · Γ_f เก็บของเก่าไว้แค่ไหน · Γ_o ดึงออกมาใช้แค่ไหน",
+   "Γ_u ลบของเก่า · Γ_f รับของใหม่ · Γ_o เลือกคำถัดไป",
+   "Γ_u ดึงออกมาใช้ · Γ_f รับของใหม่ · Γ_o ลบของเก่า",
+   "Γ_u กับ Γ_f ผูกกันเป็น 1 − Γ · Γ_o ไม่มีใน LSTM"
+  ],
+  "answer": 0,
+  "explanation": "<p>LSTM เรียนว่า input ไหนสำคัญด้วย update gate เก็บนานแค่ไหนด้วย forget gate และดึงออกมาเมื่อไรด้วย output gate a = Γ_o × tanh(c)</p>",
+  "why_wrong": [
+   "สลับหน้าที่",
+   "สลับหน้าที่",
+   "การผูกกันคือ GRU ไม่ใช่ LSTM"
+  ],
+  "link": "LSTM มี state สองตัว c ระยะยาวและ a ระยะสั้น GRU มีตัวเดียว",
+  "ref": "Lesson 10 §3.2",
+  "terms": [
+   [
+    "sigmoid",
+    "ให้ค่า 0 ถึง 1 ใช้เป็น gate 0 คือปิด 1 คือเปิด"
+   ]
+  ]
+ },
+ {
+  "id": "L10-14",
+  "lesson": 10,
+  "topic": "exploding gradient",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "สไลด์แนะนำอะไรเพื่อลดความเสี่ยง exploding gradient ใน RNN",
+  "options": [
+   "ใช้ tanh ลด learning rate และ gradient clipping",
+   "ใช้ ReLU เพื่อให้ gradient ไม่ถูกจำกัด",
+   "เพิ่ม learning rate ให้หลุดจากจุดที่ระเบิด",
+   "ใช้ sigmoid ทุก gate และตัด bias ออก"
+  ],
+  "answer": 0,
+  "explanation": "<p>ReLU ไม่มีเพดาน weight ที่ใช้ซ้ำทุก step จึงขยายค่าต่อไปได้ tanh อิ่มตัวใน −1 ถึง 1 learning rate เล็กกับ clipping ช่วยคุมขนาด</p>",
+  "why_wrong": [
+   "ตรงข้ามกับคำแนะนำ",
+   "learning rate ใหญ่ทำให้แย่ลง",
+   "ไม่ใช่วิธีที่สไลด์ให้"
+  ],
+  "link": "คำแนะนำนี้กลับกับ feedforward ใน L5 ที่ให้ใช้ ReLU",
+  "ref": "Lesson 10 §4.1",
+  "terms": []
+ },
+ {
+  "id": "L10-15",
+  "lesson": 10,
+  "topic": "recurrent dropout และ bidirectional",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "Bidirectional RNN เหมาะกับงานแบบใด",
+  "options": [
+   "งานที่ลำดับย้อนกลับมีความหมาย เช่นต้องดูคำที่ตามมา",
+   "งานทายอนาคตที่ต้องเห็นแค่อดีตเท่านั้น",
+   "งานที่ไม่มีลำดับ เช่นตารางข้อมูลลูกค้า",
+   "งานที่ต้องการ output ยาวครึ่งหนึ่งของเดิม"
+  ],
+  "answer": 0,
+  "explanation": "<p>RNN สองตัวอ่านซ้ายไปขวาและขวาไปซ้าย Donal Trump กับ Donal Duck เหมือนกันจนถึง Donal ต้องดูคำถัดไป output ยาวสองเท่า</p>",
+  "why_wrong": [
+   "ทายอนาคตห้ามเห็นอนาคต",
+   "ไม่มีลำดับไม่ต้องใช้ RNN",
+   "output ยาวสองเท่า ไม่ใช่ครึ่ง"
+  ],
+  "link": "BERT ใน L12 ก็อ่านทั้งประโยคสองทิศ ส่วน GPT เห็นแค่อดีต",
+  "ref": "Lesson 10 §4.2",
+  "terms": []
+ },
+ {
+  "id": "L10-16",
+  "lesson": 10,
+  "topic": "one-hot กับ embedding",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ข้อใดเปรียบเทียบ one-hot กับ word embedding ได้ถูก",
+  "options": [
+   "one-hot sparse มิติสูงกำหนดตายตัว · embedding dense มิติต่ำเรียนจากข้อมูล",
+   "one-hot dense มิติต่ำเรียนได้ · embedding sparse มิติสูงตายตัว",
+   "ทั้งสองแบบ dense แต่ embedding ยาวเท่า vocabulary",
+   "ทั้งสองแบบเรียนจากข้อมูล แต่ one-hot ใช้แค่ภาษาอังกฤษ"
+  ],
+  "answer": 0,
+  "explanation": "<p>one-hot มีเลข 1 ตัวเดียวใน vocabulary ทุกคำห่างกันเท่ากัน dot เป็น 0 ทุกคู่ embedding เป็นทศนิยมทุกค่า คำความหมายใกล้กันอยู่ใกล้กัน และทิศทางแทนความสัมพันธ์</p>",
+  "why_wrong": [
+   "สลับสองฝั่ง",
+   "one-hot ไม่ dense",
+   "one-hot ไม่ได้เรียน"
+  ],
+  "link": "Dog ไป Wolf ขนานกับ Cat ไป Tiger เป็นตัวอย่างของทิศทางที่มีความหมาย",
+  "ref": "Lesson 10 §5.2",
+  "terms": [
+   [
+    "sparse",
+    "ค่าส่วนใหญ่เป็นศูนย์"
+   ],
+   [
+    "dense",
+    "ทุกค่ามีข้อมูล"
+   ]
+  ]
+ },
+ {
+  "id": "L10-17",
+  "lesson": 10,
+  "topic": "CBOW กับ SkipGram",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ข้อใดถูกเกี่ยวกับ Word2Vec สองแบบ",
+  "options": [
+   "CBOW ทายคำกลางจากคำรอบข้าง SkipGram ทายคำรอบข้างจากคำกลาง",
+   "CBOW ทายคำรอบข้างจากคำกลาง SkipGram ทายคำกลางจากคำรอบข้าง",
+   "ทั้งสองทายคำถัดไปจากคำก่อนหน้าเหมือน language model",
+   "CBOW ต้องมีคนติด label SkipGram ไม่ต้องมี label"
+  ],
+  "answer": 0,
+  "explanation": "<p>CBOW ได้ 1 sample ต่อคำกลาง SkipGram ได้ 1 sample ต่อคู่ จึงได้ตัวอย่างมากกว่า ช้ากว่า แต่ดีกับคำหายากและ dataset เล็ก ทั้งสองเป็น self-supervised</p>",
+  "why_wrong": [
+   "สลับกัน",
+   "ใช้คำทั้งสองข้าง ไม่ใช่แค่ก่อนหน้า",
+   "ไม่ต้องมีคนติด label ทั้งคู่"
+  ],
+  "link": "label มาจากข้อความเอง แนวคิดเดียวกับ language model ใน L11",
+  "ref": "Lesson 10 §5.3",
+  "terms": [
+   [
+    "self-supervised",
+    "สร้าง label จากข้อมูลเอง ไม่ต้องมีคนติด"
+   ]
+  ]
+ },
+ {
+  "id": "L10-18",
+  "lesson": 10,
+  "topic": "masking",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "mask_zero=True ใน Embedding ทำอะไร",
+  "options": [
+   "บอกให้ RNN ข้ามตำแหน่ง padding ที่เป็น 0",
+   "ตั้ง embedding ของทุกคำเริ่มที่ 0",
+   "ลบคำที่ไม่อยู่ใน vocabulary ออก",
+   "ทำให้ index 0 เป็นคำที่พบบ่อยสุด"
+  ],
+  "answer": 0,
+  "explanation": "<p>ประโยคใน batch ถูกเติม 0 ท้ายให้ยาวเท่ากัน ถ้า RNN อ่าน 0 เยอะ state จะจาง mask บอกว่าตำแหน่งไหน False ให้ข้าม ผลคือ index 0 ใช้แทนคำจริงไม่ได้</p>",
+  "why_wrong": [
+   "ไม่ได้ตั้งค่าเริ่ม",
+   "คำนอก vocabulary คือ index 1 [UNK]",
+   "0 สงวนไว้ให้ padding"
+  ],
+  "link": "แนวคิดเดียวกับ attention_mask ของ tokenizer ใน L12",
+  "ref": "Lesson 10 §6.3",
+  "terms": [
+   [
+    "padding",
+    "เติมค่าว่างให้ทุกประโยคยาวเท่ากัน"
+   ],
+   [
+    "[UNK]",
+    "token แทนคำที่ไม่อยู่ใน vocabulary"
+   ]
+  ]
+ },
+ {
+  "id": "L10-19",
+  "lesson": 10,
+  "topic": "เลือก return_sequences",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ซ้อน LSTM สองชั้น ชั้นแรกต้องตั้งค่าอะไร และทำไม",
+  "options": [
+   "return_sequences=True เพราะชั้นสองต้องได้ input 3 มิติ",
+   "return_sequences=False เพราะชั้นสองต้องการแค่ step สุดท้าย",
+   "recurrent_dropout=0 เพราะชั้นแรกห้ามมี dropout",
+   "go_backwards=True เพื่อให้ชั้นสองอ่านย้อนกลับ"
+  ],
+  "answer": 0,
+  "explanation": "<p>ชั้นแรกต้องคืน state ทุก step shape (None, None, 16) ชั้นสองจึงอ่านเป็นลำดับต่อได้ ถ้าลืมจะได้ (None, 16) แค่ 2 มิติแล้ว error</p>",
+  "why_wrong": [
+   "ชั้นสุดท้ายเท่านั้นที่ใช้ False",
+   "ใส่ dropout ได้ทุกชั้น",
+   "ไม่เกี่ยวกับทิศการอ่าน"
+  ],
+  "link": "m ของชั้นที่สองคือจำนวน neuron ชั้นแรก ไม่ใช่ feature ของข้อมูล",
+  "ref": "Lesson 10 §4.2",
+  "terms": [
+   [
+    "return_sequences",
+    "คืน output ทุก step แทนแค่ step สุดท้าย"
+   ]
+  ]
+ },
+ {
+  "id": "L10-20",
+  "lesson": 10,
+  "topic": "งานไหนใช้ seq-to-vector",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "งานใดเป็น sequence-to-vector",
+  "options": [
+   "อ่านรีวิวยาวแล้วให้ดาว 1 ค่า",
+   "ติดป้ายชื่อคนให้ทุกคำในประโยค",
+   "รับแนวเพลงแล้วสร้างลำดับโน้ต",
+   "แปลประโยคไทยเป็นอังกฤษ"
+  ],
+  "answer": 0,
+  "explanation": "<p>input เป็นลำดับหลายคำ T_x > 1 output ค่าเดียว T_y = 1 ใน Keras ใช้ return_sequences=False</p>",
+  "why_wrong": [
+   "นั่นคือ seq-to-seq T_x = T_y",
+   "นั่นคือ vector-to-sequence",
+   "นั่นคือ encoder–decoder"
+  ],
+  "link": "งาน IMDB ในตอน 6 เป็น seq-to-vector",
+  "ref": "Lesson 10 §2.1",
+  "terms": []
+ },
+ {
+  "id": "L10-21",
+  "lesson": 10,
+  "topic": "GRU Γ_u = 0",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "GRU ที่ Γ_u = 0 ติดกันสิบ step จะเกิดอะไรกับ memory และ gradient",
+  "options": [
+   "memory ถูกคัดลอกตรงๆ gradient ไหลย้อนได้ไม่จาง",
+   "memory ถูกลบจนเหลือศูนย์ในทุก step",
+   "memory ถูกเขียนทับด้วยค่าใหม่ในทุก step",
+   "gradient ระเบิดเพราะคูณ 1 ซ้ำสิบครั้ง"
+  ],
+  "answer": 0,
+  "explanation": "<p>c = 0 × ค่าใหม่ + 1 × ค่าเดิม memory จึงเท่าเดิมทุก step การคัดลอกตรงๆ เป็นทางลัดให้ gradient ไหลย้อน คล้าย skip connection ของ ResNet</p>",
+  "why_wrong": [
+   "0 คือคัดลอก ไม่ใช่ลบ",
+   "เขียนทับคือ Γ_u = 1",
+   "คูณ 1 ไม่โตขึ้น"
+  ],
+  "link": "ตัวอย่าง man who met Tenjiro ได้ Γ_u = 1, 0, 0, 0 memory ของ man จึงอยู่ถึง is",
+  "ref": "Lesson 10 §3.1",
+  "terms": []
+ },
+ {
+  "id": "L10-22",
+  "lesson": 10,
+  "topic": "GRU กับ LSTM เก็บสองอย่าง",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "งานต้องเก็บข้อมูลเก่าไว้เต็มที่และรับข้อมูลใหม่เต็มที่ในขั้นเดียวกัน ข้อใดถูก",
+  "options": [
+   "LSTM ทำได้เพราะ Γ_f แยกจาก Γ_u ส่วน GRU ต้องแลก",
+   "GRU ทำได้เพราะ Γ_r แยกเป็นอิสระจาก Γ_u",
+   "ทั้งสองทำได้เท่ากันเพราะมี gate สองตัวขึ้นไป",
+   "ทั้งสองทำไม่ได้เพราะ memory ต้องอยู่ในช่วง 0 ถึง 1"
+  ],
+  "answer": 0,
+  "explanation": "<p>LSTM ใช้ c = Γ_u c̃ + Γ_f c_prev ตั้ง Γ_u = Γ_f = 1 ได้พร้อมกัน ค่าเก่า 1.0 กับใหม่ 0.4 ได้ 1.4 GRU บังคับน้ำหนักของค่าเดิมเป็น 1 − Γ_u ยิ่งรับใหม่มากยิ่งลืมเก่ามาก</p>",
+  "why_wrong": [
+   "Γ_r คุมการสร้าง candidate ไม่ใช่การเก็บของเก่า",
+   "GRU ผูก forget กับ update",
+   "LSTM memory เกิน 1 ได้"
+  ],
+  "link": "ราคาที่ LSTM จ่ายคือ parameter 4 เท่าเทียบ 3 เท่าของ GRU",
+  "ref": "Lesson 10 §3.2",
+  "terms": []
+ },
+ {
+  "id": "L10-23",
+  "lesson": 10,
+  "topic": "อ่านโค้ด Bidirectional",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "โมเดลนี้ Dense รับ input กี่ค่า",
+  "options": [
+   "32",
+   "16",
+   "64",
+   "14"
+  ],
+  "answer": 0,
+  "explanation": "<p>Bidirectional ห่อ LSTM สองตัว ทิศละ 16 แล้วต่อกันได้ 16 + 16 = 32 Dense จึงรับ 32 ค่า</p>",
+  "why_wrong": [
+   "ลืมว่ามีสองทิศ",
+   "คูณสองซ้ำ",
+   "14 คือ feature ของ input"
+  ],
+  "link": "parameter ของ Bidirectional คือสองเท่าของ LSTM ทิศเดียว",
+  "ref": "Lesson 10 §4.2",
+  "terms": [],
+  "code": "model.add(Bidirectional(LSTM(16, recurrent_dropout=0.2),\n                        input_shape=(None, 14)))\nmodel.add(Dropout(0.2))\nmodel.add(Dense(1))"
+ },
+ {
+  "id": "L10-24",
+  "lesson": 10,
+  "topic": "ทายหลาย step ข้างหน้า",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ทายอุณหภูมิ 10 step ข้างหน้าแบบ recursive แล้วพบว่า error โตขึ้นเรื่อยๆ ตาม step เพราะอะไร",
+  "options": [
+   "คำทายที่ผิดเล็กน้อยถูกป้อนกลับเป็น input ความผิดจึงสะสม",
+   "โมเดลเห็นข้อมูลจริงทุก step จึง overfit",
+   "recursive ทายทั้ง 10 ค่าพร้อมกันในครั้งเดียว",
+   "recursive ใช้หน้าต่างยาวขึ้นทุก step จนเกิน memory"
+  ],
+  "answer": 0,
+  "explanation": "<p>recursive ทายทีละ step แล้วใช้คำทายของตัวเองเป็น input ของ step ถัดไป ความผิดจึงทบกัน แบบ direct ทายจากข้อมูลจริงตรงๆ จึงไม่สะสม</p>",
+  "why_wrong": [
+   "recursive ไม่ได้เห็นค่าจริงของอนาคต",
+   "ทายพร้อมกันคือ multi-output",
+   "หน้าต่างยาวคงที่"
+  ],
+  "link": "ปัญหาเดียวกันเกิดกับ decoder ตอน inference ใน L11 ถ้าทายผิดคำแรก คำต่อไปก็ผิดตาม",
+  "ref": "Lesson 10 §4.3",
+  "terms": [
+   [
+    "recursive forecasting",
+    "ทายหนึ่ง step แล้วป้อนกลับเพื่อทายต่อ"
+   ]
+  ]
+ },
+ {
+  "id": "L10-25",
+  "lesson": 10,
+  "topic": "แบ่งข้อมูลอนุกรมเวลา",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "แบ่งข้อมูลอากาศเป็น train, val, test ควรทำอย่างไร",
+  "options": [
+   "แบ่งตามเวลา val และ test อยู่หลัง train",
+   "สุ่มแถวแบ่งเพื่อให้กระจายทุกฤดู",
+   "ใช้ test อยู่ก่อน train เพื่อทดสอบอดีต",
+   "ใช้ข้อมูลชุดเดียวกันทั้งสามส่วน"
+  ],
+  "answer": 0,
+  "explanation": "<p>งานคือทายอนาคตจากอดีต ถ้าสุ่มแถว โมเดลจะเห็นข้อมูลอนาคตตอนเทรน notebook แบ่ง 50:25:25 ตามเวลา</p>",
+  "why_wrong": [
+   "สุ่มทำให้ข้อมูลอนาคตรั่ว",
+   "ต้องทดสอบกับอนาคต",
+   "ไม่ได้วัดอะไรเลย"
+  ],
+  "link": "shuffle=True ในโค้ดสับแค่ลำดับหน้าต่าง ข้อมูลในหน้าต่างยังเรียงตามเวลา",
+  "ref": "Lesson 10 §4.3",
+  "terms": []
+ },
+ {
+  "id": "L10-26",
+  "lesson": 10,
+  "topic": "baseline",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "GRU ได้ MAE 2.53 ส่วน baseline ที่ทายว่าเท่าตอนนี้ได้ 2.62 ควรสรุปอย่างไร",
+  "options": [
+   "GRU ชนะ baseline แค่ราว 0.1 องศา ต้องเทียบเสมอ",
+   "GRU แม่นมากแล้ว เพราะ MAE ต่ำกว่า 3 องศา",
+   "baseline ดีกว่า เพราะไม่ต้องเทรนอะไรเลย",
+   "สองตัวเลขเทียบกันไม่ได้ เพราะคนละหน่วย"
+  ],
+  "answer": 0,
+  "explanation": "<p>MAE อยู่หน่วยองศา ตัวเลขดูต่ำ แต่ baseline ที่ไม่ใช้ ML ก็ได้ใกล้กัน ถ้าไม่เทียบ baseline จะไม่รู้ว่าโมเดลดีจริงไหม Conv1D ใน notebook ได้ 2.94 แพ้ baseline ด้วย</p>",
+  "why_wrong": [
+   "ต่ำกว่า 3 ไม่ได้บอกอะไรถ้าไม่มีจุดเทียบ",
+   "baseline แพ้เล็กน้อย",
+   "ทั้งคู่หน่วยองศา"
+  ],
+  "link": "หลักเดียวกับ baseline ที่ทาย joy ทุกข้อใน L12",
+  "ref": "Lesson 10 §4.4",
+  "terms": [
+   [
+    "MAE",
+    "mean absolute error ค่าเฉลี่ยของความคลาดเคลื่อนแบบไม่คิดเครื่องหมาย"
+   ],
+   [
+    "baseline",
+    "วิธีง่ายที่สุดที่ใช้เป็นจุดเทียบ"
+   ]
+  ]
  },
  {
   "id": "L10-27",
   "lesson": 10,
-  "topic": "TextVectorization index",
+  "topic": "TextVectorization",
   "source": "lesson",
-  "type": "code",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "vocabulary คือ [\"\", \"[UNK]\", \"the\", \"cat\", \"sat\"] ข้อความ \"The dog sat\" ได้ลำดับ index อะไร",
+  "stem": "vocabulary คือ [\"\", \"[UNK]\", \"the\", \"cat\", \"sat\"] ประโยค \"The dog sat\" ได้ลำดับ index อะไร",
   "options": [
    "[2, 1, 4]",
    "[2, 0, 4]",
@@ -613,81 +786,107 @@
    "[2, 4]"
   ],
   "answer": 0,
-  "explanation": "<p>standardize เป็นตัวพิมพ์เล็ก the = 2 · dog ไม่อยู่ใน vocabulary จึงเป็น OOV index 1 · sat = 4 index 0 สงวนไว้สำหรับ padding</p>",
+  "explanation": "<p>TextVectorization แปลงเป็นตัวพิมพ์เล็กก่อน the อยู่ index 2 dog ไม่อยู่ใน vocabulary จึงเป็น [UNK] index 1 sat อยู่ index 4</p>",
   "why_wrong": [
-   "0 คือ padding ไม่ใช่ OOV",
-   "นับ index เริ่ม 1",
-   "ตัดคำที่ไม่รู้จักทิ้ง"
+   "0 สงวนให้ padding",
+   "นับ index เริ่มที่ 1",
+   "คำที่ไม่รู้จักไม่ถูกทิ้ง"
   ],
-  "ref": "Lesson 10 §6.1"
+  "link": "subword tokenizer ใน L12 ตัดคำที่ไม่รู้จักเป็นชิ้นเล็ก จึงไม่ค่อยเจอ [UNK]",
+  "ref": "Lesson 10 §6.1",
+  "terms": [
+   [
+    "index 0",
+    "mask token สำหรับ padding"
+   ],
+   [
+    "index 1",
+    "OOV token แทนคำที่ไม่รู้จัก"
+   ]
+  ]
  },
  {
   "id": "L10-28",
   "lesson": 10,
-  "topic": "Bi-LSTM IMDB parameter",
+  "topic": "bigram ชนะ Bi-LSTM",
   "source": "lesson",
-  "type": "code",
+  "type": "apply",
   "difficulty": "hard",
-  "stem": "Embedding(10000, 64) → Bidirectional(LSTM(16)) → Dense(1, sigmoid) มี parameter รวมเท่าใด",
+  "stem": "IMDB bag-of-bigrams TF-IDF ได้ 0.892 Bi-LSTM ได้ 0.882 สรุปอะไรได้",
   "options": [
-   "650,401",
-   "645,217",
-   "650,368",
-   "640,033"
+   "รู้แค่ว่ามีคำอะไรก็พอ โมเดลซับซ้อนกว่าไม่ชนะเสมอ",
+   "Bi-LSTM ต้องเทรนผิดพลาด เพราะควรชนะทุกครั้ง",
+   "TF-IDF รักษาลำดับคำได้ดีกว่า LSTM ทั้งประโยค",
+   "ทั้งสองเท่ากัน เพราะต่างกันไม่ถึง 5 เปอร์เซ็นต์"
   ],
   "answer": 0,
-  "explanation": "<p>Embedding 10,000 × 64 = 640,000 · LSTM ทิศเดียว m = 64: 4 × [16·80 + 16] = 5,184 · สองทิศ 10,368 · output ยาว 32 · Dense 32 + 1 = 33 · รวม 650,401</p>",
+  "explanation": "<p>bigram ไม่สนลำดับทั้งประโยค แต่เห็นคู่คำอย่าง not good ก็พอจับความรู้สึกได้ Bi-LSTM training loss ลงถึง 0.02 แต่ test loss 0.30 เป็นสัญญาณ overfitting</p>",
   "why_wrong": [
-   "คิด LSTM ทิศเดียว",
-   "ลืม Dense",
-   "ลืม LSTM"
+   "ไม่มีกฎว่าซับซ้อนต้องชนะ",
+   "TF-IDF ทิ้งลำดับ",
+   "ต่าง 1 จุดก็ยังสรุปทิศได้"
   ],
-  "ref": "Lesson 10 §6.2"
+  "link": "เลือกโมเดลที่ง่ายที่สุดที่แก้ปัญหาได้ หลักเดียวกับ L15",
+  "ref": "Lesson 10 §6.2",
+  "terms": [
+   [
+    "TF-IDF",
+    "น้ำหนักคำ สูงเมื่อพบบ่อยในเอกสารนี้แต่พบน้อยในเอกสารอื่น"
+   ],
+   [
+    "bigram",
+    "คู่คำที่ติดกัน"
+   ]
+  ]
  },
  {
   "id": "L10-29",
   "lesson": 10,
-  "topic": "masking",
+  "topic": "embedding ใน vector space",
   "source": "lesson",
-  "type": "code",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "<code>Embedding(10, 8, mask_zero=True).compute_mask([[3, 5, 0, 0]])</code> ได้อะไร",
+  "stem": "embedding 2 มิติ Dog (0.3, 0.3) Wolf (0.3, 0.7) Cat (0.6, 0.2) คำที่อยู่ตำแหน่ง Cat + (Wolf − Dog) ควรเป็นอะไร",
   "options": [
-   "[[True, True, False, False]]",
-   "[[False, False, True, True]]",
-   "[[1, 1, 1, 1]]",
-   "[[3, 5]]"
+   "Tiger",
+   "Dog",
+   "Kitten",
+   "Wolf"
   ],
   "answer": 0,
-  "explanation": "<p>mask_zero=True ถือว่า 0 คือ padding True คือ token จริง False คือตำแหน่งที่ข้าม</p>",
+  "explanation": "<p>Wolf − Dog = (0, 0.4) คือทิศสัตว์เลี้ยงไปสัตว์ป่า Cat + (0, 0.4) = (0.6, 0.6) ได้สัตว์ป่าตระกูลแมว คือ Tiger</p>",
   "why_wrong": [
-   "กลับค่า",
-   "ไม่ได้ mask",
-   "mask ไม่ได้ตัด token"
+   "Dog อยู่จุดเริ่ม",
+   "Kitten คือทิศโตไปเด็ก",
+   "Wolf อยู่ตระกูลสุนัข"
   ],
-  "ref": "Lesson 10 §6.3"
+  "link": "ทิศทางใน embedding แทนความสัมพันธ์ one-hot ทำแบบนี้ไม่ได้เพราะทุกคำห่างเท่ากัน",
+  "ref": "Lesson 10 §5.3",
+  "terms": []
  },
  {
   "id": "L10-30",
   "lesson": 10,
-  "topic": "TF-IDF vs sequence",
+  "topic": "Embedding กับ Flatten",
   "source": "lesson",
-  "type": "concept",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "ผลบน IMDB ของอาจารย์บอกอะไร",
+  "stem": "จำแนกข้อความด้วย Embedding + Flatten + Dense ข้อจำกัดคืออะไร เมื่อเทียบกับ Embedding + RNN",
   "options": [
-   "bigram TF-IDF 0.892 ชนะ Bi-LSTM 0.882",
-   "Bi-LSTM ชนะเพราะเห็นลำดับคำครบทุกคำ",
-   "TF-IDF เป็น dense representation จึงเร็ว",
-   "ทั้งสองวิธีได้ accuracy เท่ากันพอดี"
+   "ทุกประโยคต้องยาวเท่ากัน เพราะตำแหน่งผูกกับ weight",
+   "ใช้ pretrained embedding มาต่อไม่ได้เลย",
+   "Dense เรียน weight ไม่ได้ถ้า input เป็น embedding",
+   "Flatten ทำให้ embedding กลายเป็น one-hot"
   ],
   "answer": 0,
-  "explanation": "<p>สำหรับ sentiment ของรีวิว การมีบางคำบอกคำตอบได้มากแล้ว Bi-LSTM ยัง overfit training loss 0.02 test loss 0.298 TF-IDF ยังเป็น sparse</p>",
+  "explanation": "<p>Flatten ต่อ vector ทุกคำเป็นแถวเดียว 5 คำ × 8 มิติ = 40 ค่า Dense มี weight ผูกกับตำแหน่ง ความยาวจึงต้องคงที่ RNN ป้อนทีละคำ รับความยาวต่างกันได้</p>",
   "why_wrong": [
-   "ตัวเลขกลับกัน",
-   "TF-IDF เป็น sparse",
-   "ต่างกัน 0.01"
+   "ใช้ได้ทั้งสองแบบ",
+   "Dense เรียนได้",
+   "Flatten แค่เปลี่ยนรูปร่าง"
   ],
-  "ref": "Lesson 10 §6.2"
+  "link": "ปัญหาเดียวกับ dense กับภาพใน L7 ตำแหน่งผูกกับ weight",
+  "ref": "Lesson 10 §5.3",
+  "terms": []
  }
 ]

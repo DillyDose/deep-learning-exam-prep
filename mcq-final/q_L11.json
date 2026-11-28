@@ -2,426 +2,109 @@
  {
   "id": "L11-01",
   "lesson": 11,
-  "topic": "language model target",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "เทรน language model จากประโยค 6 token x และ y สัมพันธ์กันอย่างไร",
-  "options": [
-   "y คือ x ที่เลื่อนไป 1 ตำแหน่ง ได้ 5 โจทย์ต่อประโยค",
-   "y คือ label แยกที่คนกำกับไว้ ได้ 1 โจทย์ต่อประโยค",
-   "y คือ x กลับลำดับ ได้ 6 โจทย์ต่อประโยค",
-   "y คือ token สุดท้ายเท่านั้น ได้ 1 โจทย์ต่อประโยค"
-  ],
-  "answer": 0,
-  "explanation": "<p>x = vectorized[:, :-1] · y = vectorized[:, 1:] ทุก step มี target คือ token ถัดไป ประโยค 6 token ให้ 5 คู่</p>",
-  "why_wrong": [
-   "ไม่ต้องมี label แยก",
-   "ไม่ได้กลับลำดับ",
-   "ทุก step มี target"
-  ],
-  "ref": "Lesson 11 §1.1"
- },
- {
-  "id": "L11-02",
-  "lesson": 11,
-  "topic": "greedy",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ทำไม greedy sampling อาจพลาดประโยคที่น่าจะเป็นที่สุด",
-  "options": [
-   "เลือกสูงสุดทีละ step จึงไม่เห็นเส้นทางที่ดีกว่า",
-   "สุ่มมากเกินไปจนได้ข้อความไม่ต่อเนื่อง",
-   "ใช้ temperature สูงจึงการกระจายแบนเกินไป",
-   "ไม่ใช้ softmax ในการเลือกคำถัดไปเลย"
-  ],
-  "answer": 0,
-  "explanation": "<p>ตัวอย่าง nice 0.5 → woman 0.4 ได้ 0.20 แต่ dog 0.4 → has 0.9 ได้ 0.36 greedy ทิ้ง dog ตั้งแต่ step แรก beam search แก้จุดนี้</p>",
-  "why_wrong": [
-   "greedy ไม่สุ่ม",
-   "greedy เท่ากับ T → 0",
-   "ใช้ softmax แล้วเลือก argmax"
-  ],
-  "ref": "Lesson 11 §1.2"
- },
- {
-  "id": "L11-03",
-  "lesson": 11,
-  "topic": "beam vs greedy คำนวณ",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "step 1: A 0.6, B 0.4 · หลัง A: x 0.5, y 0.5 · หลัง B: z 0.9, w 0.1 greedy กับ beam width 2 ได้ลำดับใด",
-  "options": [
-   "greedy ได้ 0.30 · beam ได้ B-z 0.36",
-   "greedy ได้ B-z 0.36 · beam ได้ 0.30",
-   "greedy และ beam ได้ B-z 0.36 ทั้งคู่",
-   "greedy และ beam ได้ A-x 0.30 ทั้งคู่"
-  ],
-  "answer": 0,
-  "explanation": "<p>greedy เลือก A ก่อน แล้วได้ 0.6 × 0.5 = 0.30 · beam เก็บทั้ง A และ B ขยายแล้วพบ B-z = 0.4 × 0.9 = 0.36 สูงสุด</p>",
-  "why_wrong": [
-   "สลับ",
-   "greedy ไม่เห็น B",
-   "beam เห็นทุกเส้นที่เก็บไว้"
-  ],
-  "ref": "Lesson 11 §3.2"
- },
- {
-  "id": "L11-04",
-  "lesson": 11,
   "topic": "temperature",
   "source": "lesson",
   "type": "calc",
   "difficulty": "medium",
-  "stem": "p = [0.5, 0.25, 0.25] ที่ T = 0.5 ได้การกระจายอะไร",
+  "stem": "การกระจาย p = [0.5, 0.25, 0.25] ใช้ temperature T = 0.5 ได้การกระจายใหม่เท่าใด",
   "options": [
-   "[0.667, 0.167, 0.167]",
-   "[0.5, 0.25, 0.25]",
-   "[0.414, 0.293, 0.293]",
-   "[1, 0, 0]"
+   "[2/3, 1/6, 1/6]",
+   "[1/2, 1/4, 1/4]",
+   "[1/3, 1/3, 1/3]",
+   "[1/4, 1/16, 1/16]"
   ],
   "answer": 0,
-  "explanation": "<p>ยกกำลัง 1/T = 2: [0.25, 0.0625, 0.0625] รวม 0.375 · normalize ได้ [0.667, 0.167, 0.167] แหลมขึ้น</p>",
+  "explanation": "<p>ยกกำลัง 1/T = 2 ได้ [0.25, 0.0625, 0.0625] รวม 0.375 หารแต่ละตัวได้ 0.25/0.375 = 2/3 และ 0.0625/0.375 = 1/6 ตัวสูงยิ่งสูงขึ้น</p>",
   "why_wrong": [
-   "นั่นคือ T = 1",
-   "นั่นคือ T = 2 รากที่สอง",
-   "นั่นคือ T → 0"
+   "นั่นคือ T = 1 ไม่เปลี่ยน",
+   "นั่นคือ T สูงมากจนแบน",
+   "ลืม normalize ให้รวมเป็น 1"
   ],
-  "ref": "Lesson 11 §1.2"
- },
- {
-  "id": "L11-05",
-  "lesson": 11,
-  "topic": "temperature สูง",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "ข้อความที่สร้างด้วย temperature 1.5 มีลักษณะอย่างไรตามสไลด์",
-  "options": [
-   "โครงสร้างประโยคเริ่มพัง ข้อความเกือบสุ่ม",
-   "น่าเบื่อ ซ้ำซาก และอาจติดวนคำเดิม",
-   "เหมือนการเลือกแบบ greedy ทุกประการ",
-   "สร้างคำว่า [UNK] ไม่ได้อีกเลยในผลลัพธ์"
-  ],
-  "answer": 0,
-  "explanation": "<p>T ต่ำ 0.2 ซ้ำและน่าเบื่อ T 0.5–1.0 น่าสนใจ T 1.5 local structure starts to break down</p>",
-  "why_wrong": [
-   "นั่นคือ T ต่ำ",
-   "greedy คือ T → 0",
-   "temperature ไม่ลบ token"
-  ],
-  "ref": "Lesson 11 §1.3"
- },
- {
-  "id": "L11-06",
-  "lesson": 11,
-  "topic": "sample_next",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "โค้ดนี้ temperature=0.01 กับ predictions [0.2, 0.5, 0.1, 0.2] คืนค่าอะไรเกือบทุกครั้ง",
-  "options": [
-   "1",
-   "0",
-   "3",
-   "สุ่มเท่าๆ กันทั้ง 0–3"
-  ],
-  "answer": 0,
-  "explanation": "<p>หาร log ด้วย 0.01 เท่ากับยกกำลัง 100 ตัวที่ 0.5 กลบตัวอื่นหมด multinomial ได้ one-hot [[0 1 0 0]] argmax = 1</p>",
-  "why_wrong": [
-   "index 0 คือ 0.2",
-   "index 3 คือ 0.2",
-   "นั่นคือ T สูงมาก"
-  ],
+  "link": "T ต่ำทำให้แหลมเข้าใกล้ greedy T สูงทำให้แบนเข้าใกล้สุ่มเท่ากัน ลำดับไม่เปลี่ยน",
   "ref": "Lesson 11 §1.2",
-  "code": "def sample_next(predictions, temperature=1.0):\n    predictions = np.asarray(predictions).astype(\"float64\")\n    predictions = np.log(predictions) / temperature\n    exp_preds = np.exp(predictions)\n    predictions = exp_preds / np.sum(exp_preds)\n    probas = np.random.multinomial(1, predictions, 1)\n    return np.argmax(probas)"
+  "terms": [
+   [
+    "temperature",
+    "ปุ่มคุมความสุ่มตอนเลือกคำ"
+   ],
+   [
+    "normalize",
+    "หารด้วยผลรวมให้รวมกันได้ 1"
+   ]
+  ]
  },
  {
-  "id": "L11-07",
+  "id": "L11-02",
   "lesson": 11,
-  "topic": "teacher forcing",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ตอนเทรน NMT decoder ได้ input อะไรที่ step t",
-  "options": [
-   "คำจริงของประโยคปลายทางที่ step t − 1",
-   "คำที่ decoder ทายเองที่ step t − 1",
-   "คำต้นทางที่ตำแหน่งเดียวกัน",
-   "vector สรุปของ encoder อย่างเดียว"
-  ],
-  "answer": 0,
-  "explanation": "<p>teacher forcing ป้อนคำจริง ทุก step คำนวณพร้อมกันได้ ตอน inference จึงป้อนคำที่ทายเอง</p>",
-  "why_wrong": [
-   "นั่นคือตอน inference",
-   "ไม่ใช่ alignment ตามตำแหน่ง",
-   "encoder state เป็น initial state เท่านั้น"
-  ],
-  "ref": "Lesson 11 §2.1"
- },
- {
-  "id": "L11-08",
-  "lesson": 11,
-  "topic": "slice decoder",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "spa = [start] ¿Dónde está? [end] หลัง vectorize เป็น [2, 15, 8, 3, 0] ค่า <code>spa[:-1]</code> และ <code>spa[1:]</code> คืออะไร",
-  "options": [
-   "[2, 15, 8, 3] และ [15, 8, 3, 0]",
-   "[15, 8, 3, 0] และ [2, 15, 8, 3]",
-   "[2, 15, 8] และ [8, 3, 0]",
-   "[2, 15, 8, 3, 0] ทั้งคู่"
-  ],
-  "answer": 0,
-  "explanation": "<p>[:-1] ตัดตัวสุดท้ายได้ decoder input · [1:] ตัดตัวแรกได้ target เหลื่อม 1 ตำแหน่ง</p>",
-  "why_wrong": [
-   "สลับ",
-   "ตัดเกิน",
-   "ไม่ได้ตัด"
-  ],
-  "ref": "Lesson 11 §2.2"
- },
- {
-  "id": "L11-09",
-  "lesson": 11,
-  "topic": "output_sequence_length",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "ทำไม target_vectorization ฝั่งสเปนตั้ง output_sequence_length = sequence_length + 1",
-  "options": [
-   "ตัด [:, :-1] และ [:, 1:] แล้วยาวเท่ากันทั้งคู่",
-   "เผื่อที่ให้ token [UNK] เพิ่มอีกหนึ่งตัว",
-   "ภาษาสเปนมีคำยาวกว่าภาษาอังกฤษหนึ่งคำเสมอ",
-   "ให้ encoder อ่าน token [end] เข้าไปด้วย"
-  ],
-  "answer": 0,
-  "explanation": "<p>ฝั่งสเปนยาว 21 ตัดแล้วเหลือ 20 เท่าฝั่งอังกฤษ batch จึงมี shape (64, 20) ทุกตัว</p>",
-  "why_wrong": [
-   "ไม่เกี่ยวกับ UNK",
-   "ไม่ใช่เหตุผลทางภาษา",
-   "encoder อ่านฝั่งอังกฤษ"
-  ],
-  "ref": "Lesson 11 §2.2"
- },
- {
-  "id": "L11-10",
-  "lesson": 11,
-  "topic": "merge_mode",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "ถ้าเปลี่ยน encoder เป็น <code>Bidirectional(GRU(1024), merge_mode=\"concat\")</code> โดย decoder ยังเป็น GRU(1024) จะเกิดอะไร",
-  "options": [
-   "encoded_source ยาว 2,048 ไม่ตรงกับ state 1,024 ของ decoder",
-   "ใช้ได้ตามเดิมเพราะ concat กับ sum ให้ขนาดเท่ากัน",
-   "decoder จะขยาย state เป็น 2,048 ให้เองอัตโนมัติ",
-   "encoder จะเหลือแค่ทิศไปหน้า ไม่มี backward GRU"
-  ],
-  "answer": 0,
-  "explanation": "<p>sum บวก state สองทิศได้ 1,024 · concat ต่อได้ 2,048 initial_state ต้องขนาดเท่า state ของ decoder</p>",
-  "why_wrong": [
-   "ขนาดต่างกัน",
-   "Keras ไม่ปรับให้",
-   "ยังมีสองทิศ"
-  ],
-  "ref": "Lesson 11 §2.2"
- },
- {
-  "id": "L11-11",
-  "lesson": 11,
-  "topic": "seq2seq parameter",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "hard",
-  "stem": "GRU(64) รับ embedding 32 มิติ ใช้สูตร Keras bias สองชุด มี parameter เท่าใด",
-  "options": [
-   "18,816",
-   "18,624",
-   "12,480",
-   "6,272"
-  ],
-  "answer": 0,
-  "explanation": "<p>3 × [64 × (64 + 32) + 2 × 64] = 3 × [6,144 + 128] = 3 × 6,272 = 18,816</p>",
-  "why_wrong": [
-   "bias ชุดเดียว",
-   "ไม่คูณ 3 และ bias",
-   "ชุดเดียว"
-  ],
-  "ref": "Lesson 11 §2.2"
- },
- {
-  "id": "L11-12",
-  "lesson": 11,
-  "topic": "sampled softmax",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ทำไมใช้ sampled softmax ได้แค่ตอนเทรน",
-  "options": [
-   "ต้องรู้คำที่ถูกเพื่อเลือก logit แต่ inference ไม่รู้",
-   "ตอน inference vocabulary จะเล็กลงเองโดยอัตโนมัติ",
-   "ตอนเทรนไม่ต้องใช้ softmax เลยตลอดการเทรน",
-   "sampled softmax ช้ากว่า softmax ปกติทุกกรณี"
-  ],
-  "answer": 0,
-  "explanation": "<p>sampled softmax ดู logit ของคำที่ถูกกับคำผิดที่สุ่มมา จึงต้องรู้คำที่ถูก ตอน inference ต้องคำนวณ softmax ทั้ง vocabulary</p>",
-  "why_wrong": [
-   "vocabulary คงเดิม",
-   "ยังใช้ softmax โดยประมาณ",
-   "มันเร็วกว่า"
-  ],
-  "ref": "Lesson 11 §3.1"
- },
- {
-  "id": "L11-13",
-  "lesson": 11,
-  "topic": "BLEU p1 p2",
+  "topic": "language model pair",
   "source": "lesson",
   "type": "calc",
-  "difficulty": "medium",
-  "stem": "เป้าหมาย the dog runs fast ทาย the dog runs ค่า p₁ และ p₂ เท่าใด",
+  "difficulty": "easy",
+  "stem": "ประโยค 6 คำใช้เทรน language model ด้วย x = คำที่ 1–5 และ y = คำที่ 2–6 ได้โจทย์ทายคำกี่ข้อ",
   "options": [
-   "p₁ = 1 · p₂ = 1",
-   "p₁ = 3/4 · p₂ = 2/3",
-   "p₁ = 1 · p₂ = 2/3",
-   "p₁ = 3/4 · p₂ = 1"
+   "5",
+   "6",
+   "1",
+   "12"
   ],
   "answer": 0,
-  "explanation": "<p>precision หารด้วยจำนวน n-gram ที่ทาย · 1-gram 3/3 · 2-gram the dog, dog runs ตรงทั้ง 2 ได้ 2/2 คะแนนลดจาก brevity penalty แทน</p>",
+  "explanation": "<p>ทุก step มี target คือคำถัดไป x กับ y ยาว 5 เท่ากัน จึงได้ 5 โจทย์จากประโยคเดียว คำสุดท้ายไม่มีคำถัดไปให้ทาย</p>",
+  "why_wrong": [
+   "คำสุดท้ายไม่มี target",
+   "ทุก step มีโจทย์ ไม่ใช่แค่ท้าย",
+   "นับ x กับ y รวมกัน"
+  ],
+  "link": "โค้ดเขียนเป็น x = seq[:, :-1] และ y = seq[:, 1:] แบบเดียวกับ teacher forcing ใน §2.1",
+  "ref": "Lesson 11 §1.1",
+  "terms": [
+   [
+    "language model",
+    "โมเดลที่ทายความน่าจะเป็นของคำถัดไปจากคำก่อนหน้า"
+   ]
+  ]
+ },
+ {
+  "id": "L11-03",
+  "lesson": 11,
+  "topic": "BLEU 1-gram",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "ทาย \"the ball is blue\" เทียบเป้าหมาย \"the ball has a blue color\" 1-gram precision เท่าใด",
+  "options": [
+   "3/4",
+   "3/6",
+   "1/4",
+   "4/6"
+  ],
+  "answer": 0,
+  "explanation": "<p>คำที่ทาย 4 คำ ตรงกับเป้าหมาย 3 คำคือ the, ball, blue precision = ทายถูก/ทายทั้งหมด = 3/4</p>",
   "why_wrong": [
    "หารด้วยความยาวเป้าหมาย",
-   "นับ bigram ผิด",
-   "สลับ"
+   "นับคำที่ผิด",
+   "นับผิดและหารผิด"
   ],
-  "ref": "Lesson 11 §3.1"
+  "link": "precision ลดลงเมื่อ n โต เพราะต้องตรงต่อเนื่องหลายคำ BLEU รวม p₁ ถึง p₄ แล้วคูณ brevity penalty",
+  "ref": "Lesson 11 §3.1",
+  "terms": [
+   [
+    "BLEU",
+    "Bilingual Evaluation Understudy วัดว่าคำแปลตรงเป้าหมายแค่ไหน"
+   ],
+   [
+    "n-gram",
+    "กลุ่มคำ n คำที่ติดกัน"
+   ]
+  ]
  },
  {
-  "id": "L11-14",
-  "lesson": 11,
-  "topic": "brevity penalty",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "hard",
-  "stem": "ทายยาว 3 คำ เป้าหมาย 4 คำ BP เท่าใด",
-  "options": [
-   "e^(−1/3) ≈ 0.72",
-   "e^(−1/4) ≈ 0.78",
-   "1",
-   "3/4"
-  ],
-  "answer": 0,
-  "explanation": "<p>c = 3 ≤ r = 4 · BP = e^(1 − r/c) = e^(1 − 4/3) = e^(−1/3) ≈ 0.717</p>",
-  "why_wrong": [
-   "ใช้ c/r ผิดตำแหน่ง",
-   "BP = 1 เมื่อ c มากกว่า r",
-   "ไม่ใช่สัดส่วนตรง"
-  ],
-  "ref": "Lesson 11 §3.1"
- },
- {
-  "id": "L11-15",
-  "lesson": 11,
-  "topic": "beam search cost",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "easy",
-  "stem": "vocabulary 20,000 beam width 4 ต้องพิจารณา candidate กี่ตัวต่อ step",
-  "options": [
-   "80,000",
-   "20,000",
-   "5,000",
-   "24"
-  ],
-  "answer": 0,
-  "explanation": "<p>ขยาย k ประโยคด้วยทุกคำ 4 × 20,000 = 80,000 แล้วเก็บไว้ 4</p>",
-  "why_wrong": [
-   "นั่นคือ greedy",
-   "หารแทนคูณ",
-   "บวกแทนคูณ"
-  ],
-  "ref": "Lesson 11 §3.2"
- },
- {
-  "id": "L11-16",
-  "lesson": 11,
-  "topic": "ปัญหา encoder–decoder",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "ปัญหาใดที่ attention แก้ ไม่ใช่ beam search",
-  "options": [
-   "ประโยคยาวถูกบีบลง vector ขนาดตายตัวจนข้อมูลหาย",
-   "เลือกคำผิดตั้งแต่ step แรกแล้วแก้ย้อนกลับไม่ได้",
-   "softmax บน vocabulary ขนาดใหญ่คำนวณช้ามาก",
-   "token padding ถูกนำไปนับรวมใน loss ด้วย"
-  ],
-  "answer": 0,
-  "explanation": "<p>beam search แก้การเลือกพลาดตั้งแต่ต้น · attention แก้คอขวดของ vector เดียวโดยให้ decoder ดู output ทุกตัวของ encoder</p>",
-  "why_wrong": [
-   "นั่นคือเรื่องของ beam search",
-   "นั่นคือ sampled softmax",
-   "นั่นคือ masking"
-  ],
-  "ref": "Lesson 11 §3.2"
- },
- {
-  "id": "L11-17",
-  "lesson": 11,
-  "topic": "Bahdanau attention",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "คะแนน alignment [1, 1, 1] encoder outputs [2, 0], [0, 2], [4, 4] context vector คืออะไร",
-  "options": [
-   "[2, 2]",
-   "[6, 6]",
-   "[4, 4]",
-   "[0, 0]"
-  ],
-  "answer": 0,
-  "explanation": "<p>softmax ของคะแนนเท่ากันได้ [1/3, 1/3, 1/3] · context = ([2,0] + [0,2] + [4,4])/3 = [6, 6]/3 = [2, 2]</p>",
-  "why_wrong": [
-   "ผลรวมไม่หาร",
-   "เลือกตัวสุดท้าย",
-   "คะแนนเท่ากันไม่ได้แปลว่าศูนย์"
-  ],
-  "ref": "Lesson 11 §4.1"
- },
- {
-  "id": "L11-18",
-  "lesson": 11,
-  "topic": "Transformer advantage",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "ข้อใดไม่อยู่ในสามข้อดีของ Transformer ตามสไลด์",
-  "options": [
-   "ใช้ parameter น้อยกว่า RNN ทุกขนาด",
-   "long-range dependencies ระยะไกล",
-   "parallel efficiency บน GPU/TPU",
-   "explainability จาก attention map"
-  ],
-  "answer": 0,
-  "explanation": "<p>สามข้อบนสไลด์: Long-Range Dependencies, Parallel Efficiency, Explainability สไลด์ไม่ได้อ้างว่า parameter น้อยกว่า</p>",
-  "why_wrong": [
-   "เป็นข้อดีบนสไลด์",
-   "เป็นข้อดีบนสไลด์",
-   "เป็นข้อดีบนสไลด์"
-  ],
-  "ref": "Lesson 11 §4.2"
- },
- {
-  "id": "L11-19",
+  "id": "L11-04",
   "lesson": 11,
   "topic": "positional encoding",
   "source": "lesson",
   "type": "calc",
-  "difficulty": "medium",
-  "stem": "d_model = 4 ตำแหน่ง pos = 0 ได้ positional encoding อะไร",
+  "difficulty": "easy",
+  "stem": "positional encoding แบบ sinusoidal d_model = 4 ที่ตำแหน่ง 0 มีค่าเท่าใด",
   "options": [
    "[0, 1, 0, 1]",
    "[0, 0, 0, 0]",
@@ -429,265 +112,726 @@
    "[1, 1, 1, 1]"
   ],
   "answer": 0,
-  "explanation": "<p>มิติคู่ sin(0) = 0 มิติคี่ cos(0) = 1</p>",
+  "explanation": "<p>มิติคู่ใช้ sin มิติคี่ใช้ cos ที่ pos = 0 ทุกตัวหารได้ 0 sin 0 = 0 และ cos 0 = 1 จึงได้ [0, 1, 0, 1]</p>",
   "why_wrong": [
-   "ลืม cos",
-   "สลับ sin cos",
-   "ไม่ใช่ค่าคงที่"
+   "cos 0 ไม่ใช่ 0",
+   "สลับ sin กับ cos",
+   "sin 0 ไม่ใช่ 1"
   ],
-  "ref": "Lesson 11 §5.1"
+  "link": "ค่าอยู่ในช่วง −1 ถึง 1 เสมอ จึงไม่กลบความหมายของคำแบบการใส่เลขตำแหน่งดิบ",
+  "ref": "Lesson 11 §5.1",
+  "terms": [
+   [
+    "positional encoding",
+    "ตัวเลขที่บวกเข้า embedding ให้รู้ตำแหน่ง"
+   ],
+   [
+    "d_model",
+    "จำนวนมิติของ embedding"
+   ]
+  ]
  },
  {
-  "id": "L11-20",
-  "lesson": 11,
-  "topic": "PE ตัวหาร",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "hard",
-  "stem": "d_model = 4 มิติ 2 ของตำแหน่ง pos = 3 ตามสูตร sin(pos/10000^(2i/d_model)) มีค่าเท่าใด",
-  "options": [
-   "sin(0.03) ≈ 0.030",
-   "sin(3) ≈ 0.141",
-   "sin(0.0003) ≈ 0.0003",
-   "cos(0.03) ≈ 1.000"
-  ],
-  "answer": 0,
-  "explanation": "<p>มิติ 2 คือ i = 1 · 10000^(2/4) = 100 · sin(3/100) ≈ 0.030 สไลด์หน้า 33 พิมพ์มิติ 2 ผิดเป็น 0.0001 ที่ pos = 1 ค่าถูกคือ 0.0100</p>",
-  "why_wrong": [
-   "นั่นคือมิติ 0",
-   "หารด้วย 10,000 แบบที่สไลด์พิมพ์ผิด",
-   "มิติ 2 ใช้ sin"
-  ],
-  "ref": "Lesson 11 §5.1"
- },
- {
-  "id": "L11-21",
-  "lesson": 11,
-  "topic": "บวกไม่ใช่ต่อ",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "token embedding 512 มิติรวมกับ positional embedding อย่างไร ได้กี่มิติ",
-  "options": [
-   "บวกกัน ได้ 512",
-   "ต่อกัน ได้ 1,024",
-   "คูณทีละมิติ ได้ 512",
-   "ต่อกัน ได้ 513"
-  ],
-  "answer": 0,
-  "explanation": "<p>The embeddings consist of two components that are combined through addition มิติจึงเท่าเดิม</p>",
-  "why_wrong": [
-   "ไม่ได้ต่อ",
-   "ไม่ได้คูณ",
-   "ไม่ได้เพิ่มเลขตำแหน่ง 1 มิติ"
-  ],
-  "ref": "Lesson 11 §5.1"
- },
- {
-  "id": "L11-22",
-  "lesson": 11,
-  "topic": "self-attention ด้วยมือ",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "hard",
-  "stem": "self-attention ไม่มี projection v₁ = [1, 0] v₂ = [1, 0] v₃ = [0, 1] scale ด้วย √2 v₃ ใหม่ใกล้ค่าใด",
-  "options": [
-   "[0.50, 0.50]",
-   "[0, 1]",
-   "[0.42, 0.58]",
-   "[0.67, 0.33]"
-  ],
-  "answer": 0,
-  "explanation": "<p>dot ของ v₃ กับทุกตัว: [0, 0, 1] หาร √2 = [0, 0, 0.707] · softmax: e⁰ = 1, 1, e^0.707 = 2.028 รวม 4.028 ได้ [0.248, 0.248, 0.503] · v₃ ใหม่ = 0.248[1,0] + 0.248[1,0] + 0.503[0,1] ≈ [0.50, 0.50]</p>",
-  "why_wrong": [
-   "คิดว่า v₃ ไม่ถูกผสมกับตัวอื่น",
-   "ลืม scale ได้ softmax [0.21, 0.21, 0.58]",
-   "สลับแกน"
-  ],
-  "ref": "Lesson 11 §5.2"
- },
- {
-  "id": "L11-23",
-  "lesson": 11,
-  "topic": "scaled dot-product",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "q·k₁ = 4 q·k₂ = 0 d_k = 16 หลัง scale ได้คะแนนอะไร",
-  "options": [
-   "[1, 0]",
-   "[0.25, 0]",
-   "[4, 0]",
-   "[2, 0]"
-  ],
-  "answer": 0,
-  "explanation": "<p>หารด้วย √d_k = √16 = 4 ได้ [1, 0]</p>",
-  "why_wrong": [
-   "หารด้วย d_k",
-   "ไม่ scale",
-   "หาร 2"
-  ],
-  "ref": "Lesson 11 §6.1"
- },
- {
-  "id": "L11-24",
-  "lesson": 11,
-  "topic": "cross-attention QKV",
-  "source": "lesson",
-  "type": "concept",
-  "difficulty": "medium",
-  "stem": "cross-attention ใน decoder ของงานแปลใช้อะไรเป็น query และ key/value",
-  "options": [
-   "query จากประโยคปลายทาง · key/value จาก encoder",
-   "query จาก encoder · key/value จากประโยคปลายทาง",
-   "query key value มาจากประโยคปลายทางทั้งหมด",
-   "query key value มาจากประโยคต้นทางทั้งหมด"
-  ],
-  "answer": 0,
-  "explanation": "<p>สไลด์หน้า 41: cross attention ของ decoder ใช้ target sequence เป็น query และ source sequence เป็น keys และ values</p>",
-  "why_wrong": [
-   "สลับ",
-   "นั่นคือ causal self-attention ของ decoder",
-   "นั่นคือ self-attention ของ encoder"
-  ],
-  "ref": "Lesson 11 §6.1"
- },
- {
-  "id": "L11-25",
-  "lesson": 11,
-  "topic": "multi-head",
-  "source": "lesson",
-  "type": "calc",
-  "difficulty": "medium",
-  "stem": "d_model = 512 จำนวน head 8 แต่ละ head มีมิติเท่าใด และ projection Q K V รวมมี parameter เท่าใด",
-  "options": [
-   "64 และ 787,968",
-   "512 และ 787,968",
-   "64 และ 262,656",
-   "8 และ 787,968"
-  ],
-  "answer": 0,
-  "explanation": "<p>512/8 = 64 · Q K V แต่ละตัว 512 × 512 + 512 = 262,656 · สามตัว 787,968</p>",
-  "why_wrong": [
-   "คิดว่าทุก head ใช้ 512",
-   "นับ projection เดียว",
-   "สลับจำนวน head กับมิติ"
-  ],
-  "ref": "Lesson 11 §6.2"
- },
- {
-  "id": "L11-26",
-  "lesson": 11,
-  "topic": "key_dim",
-  "source": "lesson",
-  "type": "code",
-  "difficulty": "medium",
-  "stem": "<code>MultiHeadAttention(num_heads=4, key_dim=64)</code> key_dim หมายถึงอะไร",
-  "options": [
-   "ขนาดต่อ head รวมทุก head 256",
-   "ขนาดรวมทุก head แบ่งได้ head ละ 16",
-   "จำนวน token สูงสุดที่รับได้",
-   "มิติของ output หลัง concatenate"
-  ],
-  "answer": 0,
-  "explanation": "<p>ใน Keras key_dim คือขนาดต่อ head 4 × 64 = 256</p>",
-  "why_wrong": [
-   "ไม่ได้แบ่ง",
-   "ไม่ใช่ความยาวลำดับ",
-   "output project กลับขนาด input"
-  ],
-  "ref": "Lesson 11 §6.2"
- },
- {
-  "id": "L11-27",
+  "id": "L11-05",
   "lesson": 11,
   "topic": "causal mask",
   "source": "lesson",
   "type": "calc",
   "difficulty": "easy",
-  "stem": "causal mask ของลำดับยาว 5 มองเห็นได้กี่คู่ (query, key)",
+  "stem": "causal mask ของลำดับยาว 4 มองเห็นได้กี่คู่จากทั้งหมด 16",
   "options": [
-   "15",
-   "25",
    "10",
-   "5"
+   "16",
+   "6",
+   "4"
   ],
   "answer": 0,
-  "explanation": "<p>แถว i เห็น i คอลัมน์: 1 + 2 + 3 + 4 + 5 = 15 จาก 25</p>",
+  "explanation": "<p>แถวที่ 1 เห็น 1 ช่อง แถวที่ 2 เห็น 2 ช่อง จนแถวที่ 4 เห็น 4 ช่อง รวม 1 + 2 + 3 + 4 = 10 ที่เหลือ 6 ช่องคืออนาคตที่ถูกปิด</p>",
   "why_wrong": [
-   "ไม่ mask",
-   "ไม่นับเส้นทแยง",
-   "แค่เส้นทแยง"
+   "ไม่มี mask",
+   "นับช่องที่ถูกปิด",
+   "นับแค่เส้นทแยง"
   ],
-  "ref": "Lesson 11 §6.3"
+  "link": "ช่องที่ปิดได้ −∞ ก่อน softmax จึงได้ weight 0",
+  "ref": "Lesson 11 §6.3",
+  "terms": [
+   [
+    "causal mask",
+    "ปิดตำแหน่งอนาคตไม่ให้ token มองเห็น"
+   ]
+  ]
+ },
+ {
+  "id": "L11-06",
+  "lesson": 11,
+  "topic": "multi-head",
+  "source": "lesson",
+  "type": "calc",
+  "difficulty": "easy",
+  "stem": "d_model = 512 แบ่งเป็น 8 head แต่ละ head มีขนาดเท่าใด",
+  "options": [
+   "64",
+   "512",
+   "4,096",
+   "8"
+  ],
+  "answer": 0,
+  "explanation": "<p>512 / 8 = 64 แต่ละ head ทำ attention ในมิติที่เล็กลง แล้วนำทุก head มาต่อกันได้ 512 เท่าเดิม</p>",
+  "why_wrong": [
+   "ไม่ได้แบ่ง",
+   "คูณแทนหาร",
+   "นั่นคือจำนวน head"
+  ],
+  "link": "head ต่างกันมี parameter ของตัวเอง จึงจับแง่มุมความหมายต่างกัน เช่นประธานกับกริยา",
+  "ref": "Lesson 11 §6.2",
+  "terms": [
+   [
+    "head",
+    "attention หนึ่งชุดที่มี Q, K, V ของตัวเอง"
+   ]
+  ]
+ },
+ {
+  "id": "L11-07",
+  "lesson": 11,
+  "topic": "greedy sampling",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "greedy sampling มีข้อเสียอะไร",
+  "options": [
+   "ได้ข้อความซ้ำ เดาได้ ไม่เหมือนภาษาจริง",
+   "ได้ข้อความสุ่มจนอ่านไม่รู้เรื่อง",
+   "ต้องใช้ temperature สูงมากเสมอ",
+   "เลือกคำที่น่าจะเป็นน้อยที่สุดทุกครั้ง"
+  ],
+  "answer": 0,
+  "explanation": "<p>greedy เลือกคำที่ความน่าจะเป็นสูงสุดเสมอ ผลจึงซ้ำและน่าเบื่อ และพลาดประโยคที่ดีกว่าแต่เริ่มด้วยคำที่ไม่ใช่อันดับหนึ่ง</p>",
+  "why_wrong": [
+   "นั่นคือ T สูง",
+   "greedy ไม่ได้ใช้ temperature",
+   "ตรงข้าม"
+  ],
+  "link": "ปัญหาเลือกพลาดแต่ต้นเป็นเหตุผลของ beam search ใน §3.2",
+  "ref": "Lesson 11 §1.2",
+  "terms": [
+   [
+    "stochastic sampling",
+    "สุ่มคำตามสัดส่วนความน่าจะเป็น"
+   ]
+  ]
+ },
+ {
+  "id": "L11-08",
+  "lesson": 11,
+  "topic": "teacher forcing",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "teacher forcing คืออะไร",
+  "options": [
+   "ตอนเทรนป้อนคำจริงเป็น input ของ decoder",
+   "ตอน inference ป้อนคำจริงจากเฉลยให้ decoder",
+   "ให้ encoder ทายคำแรกแทน decoder",
+   "ลงโทษ decoder ที่ทายคำซ้ำกับครู"
+  ],
+  "answer": 0,
+  "explanation": "<p>ตอนเทรน decoder ได้คำจริงของ step ก่อนเป็น input เสมอ ทุก step จึงคำนวณพร้อมกันได้ ตอน inference ไม่มีคำจริง ต้องป้อนคำที่ทายเอง</p>",
+  "why_wrong": [
+   "inference ไม่มีเฉลย",
+   "encoder ไม่ได้ทายคำ",
+   "ไม่ใช่การลงโทษ"
+  ],
+  "link": "ช่องว่างระหว่างเทรนกับใช้งานนี้ทำให้ทายผิดคำแรกแล้วผิดต่อเนื่อง",
+  "ref": "Lesson 11 §2.1",
+  "terms": [
+   [
+    "inference",
+    "ช่วงใช้งานจริงหลังเทรน"
+   ]
+  ]
+ },
+ {
+  "id": "L11-09",
+  "lesson": 11,
+  "topic": "start และ end",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "ในการแปลอังกฤษเป็นสเปน เติม [start] และ [end] ที่ฝั่งใด",
+  "options": [
+   "ฝั่งปลายทางคือสเปน",
+   "ฝั่งต้นทางคืออังกฤษ",
+   "ทั้งสองฝั่ง",
+   "ไม่เติมเลย"
+  ],
+  "answer": 0,
+  "explanation": "<p>decoder ต้องรู้ว่าเริ่มสร้างเมื่อไรและหยุดเมื่อไร จึงเติมเฉพาะประโยคปลายทาง ฝั่งต้นทาง encoder อ่านทั้งประโยคอยู่แล้ว</p>",
+  "why_wrong": [
+   "encoder ไม่ต้องรู้จุดเริ่มสร้าง",
+   "ต้นทางไม่ต้องเติม",
+   "ถ้าไม่เติม decoder ไม่รู้ว่าเมื่อไรหยุด"
+  ],
+  "link": "ฝั่งสเปนตั้งความยาว 21 เพื่อตัดเป็น decoder input กับ target อย่างละ 20",
+  "ref": "Lesson 11 §2.2",
+  "terms": []
+ },
+ {
+  "id": "L11-10",
+  "lesson": 11,
+  "topic": "sampled softmax",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "sampled softmax ใช้เมื่อใดและแก้อะไร",
+  "options": [
+   "ตอนเทรน ประมาณ loss จากคำผิดที่สุ่มมาบางส่วน",
+   "ตอน inference เพื่อให้เลือกคำถัดไปได้เร็วขึ้น",
+   "ตอนเทรน เพื่อเพิ่มความสุ่มของคำที่โมเดลสร้าง",
+   "ตอน inference เพื่อตัดคำนอก vocabulary ทิ้ง"
+  ],
+  "answer": 0,
+  "explanation": "<p>softmax บน 15,000 คำทุก step แพง sampled softmax ดู logit ของคำที่ถูกกับคำผิดที่สุ่มมาจำนวนหนึ่ง ตอน inference ต้องใช้ softmax ปกติเพราะไม่รู้ target</p>",
+  "why_wrong": [
+   "inference ใช้ softmax ปกติ",
+   "ไม่ได้เพิ่มความสุ่ม",
+   "ไม่ได้ตัดคำ"
+  ],
+  "link": "ปัญหาเดียวกันทำให้ Dense output กิน parameter ราว 44% ของโมเดลแปลภาษา",
+  "ref": "Lesson 11 §3.1",
+  "terms": [
+   [
+    "logit",
+    "คะแนนก่อนผ่าน softmax"
+   ]
+  ]
+ },
+ {
+  "id": "L11-11",
+  "lesson": 11,
+  "topic": "beam search",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ข้อใดตรงกับ beam search",
+  "options": [
+   "เก็บ k ประโยคที่ดีสุดทุก step ดีกับประโยคสั้น ยังแปลประโยคยาวไม่ดี",
+   "เก็บประโยคเดียวที่ดีสุดทุก step และแก้ประโยคยาวได้",
+   "เก็บทุกประโยคที่เป็นไปได้ จึงได้คำตอบดีที่สุดเสมอ",
+   "สุ่ม k คำตาม temperature แล้วเลือกคำที่ยาวสุด"
+  ],
+  "answer": 0,
+  "explanation": "<p>beam width k เก็บ k ตัวเลือก ขยายแต่ละตัวด้วยคำอีก 1 คำแล้วเก็บ k ตัวที่ดีสุด k ใหญ่แปลดีขึ้นแต่ใช้ memory มาก ปัญหาประโยคยาวต้องแก้ด้วย attention</p>",
+  "why_wrong": [
+   "เก็บตัวเดียวคือ greedy",
+   "เก็บทุกประโยคแพงเกิน",
+   "ไม่ได้สุ่ม"
+  ],
+  "link": "beam search แก้การเลือกพลาดแต่ต้น attention แก้คอขวดของ vector เดียว",
+  "ref": "Lesson 11 §3.2",
+  "terms": [
+   [
+    "beam width",
+    "จำนวนประโยคที่เก็บไว้ทุก step"
+   ]
+  ]
+ },
+ {
+  "id": "L11-12",
+  "lesson": 11,
+  "topic": "คอขวด encoder",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ทำไม encoder–decoder แบบ RNN แปลประโยคยาวไม่ดี",
+  "options": [
+   "encoder บีบทุกอย่างลง vector ขนาดตายตัว ต้นประโยคเลือน",
+   "decoder มี vocabulary เล็กเกินกว่าจะแปลประโยคยาว",
+   "encoder อ่านประโยคยาวไม่ได้ เพราะจำกัดไว้ที่ 20 คำ",
+   "beam width เล็กเกินกว่าจะเก็บประโยคยาวไว้ได้"
+  ],
+  "answer": 0,
+  "explanation": "<p>ประโยค 5 คำหรือ 20 คำก็ถูกบีบเป็น 1,024 ค่าเท่ากัน RNN ค่อยๆ ลืมอดีตในลำดับยาว attention ให้ decoder ดูทุก output ของ encoder แทน</p>",
+  "why_wrong": [
+   "vocabulary ไม่ใช่สาเหตุ",
+   "RNN รับยาวเท่าใดก็ได้",
+   "beam search ไม่แก้ปัญหานี้"
+  ],
+  "link": "เหมือนล่ามที่ต้องฟังทั้งชั่วโมงแล้วแปลจากความจำ",
+  "ref": "Lesson 11 §3.2",
+  "terms": []
+ },
+ {
+  "id": "L11-13",
+  "lesson": 11,
+  "topic": "Bahdanau attention",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ใน Bahdanau attention น้ำหนักของ encoder output แต่ละตัวมาจากไหน",
+  "options": [
+   "alignment model ที่เทรนร่วมกัน ให้คะแนนแล้วผ่าน softmax",
+   "ผู้ออกแบบกำหนดให้คำแรกได้น้ำหนักมากที่สุดเสมอ",
+   "นับความถี่ของแต่ละคำในประโยคต้นทางแล้วหารรวม",
+   "สุ่มน้ำหนักใหม่ทุก step ในช่วง inference"
+  ],
+  "answer": 0,
+  "explanation": "<p>alignment model ให้คะแนนว่า output ของ encoder แต่ละตัวเข้ากับ state ปัจจุบันของ decoder แค่ไหน แล้ว softmax ให้น้ำหนักรวมเป็น 1 ในแต่ละ step</p>",
+  "why_wrong": [
+   "น้ำหนักเรียนจากข้อมูล",
+   "ไม่ได้นับความถี่",
+   "ไม่ได้สุ่ม"
+  ],
+  "link": "แม้ attention ช่วยมาก แต่ยังใช้ RNN จึงทำขนานไม่ได้ นำไปสู่ Transformer",
+  "ref": "Lesson 11 §4.1",
+  "terms": [
+   [
+    "alignment",
+    "การจับคู่ว่าคำต้นทางไหนเกี่ยวกับคำปลายทางไหน"
+   ]
+  ]
+ },
+ {
+  "id": "L11-14",
+  "lesson": 11,
+  "topic": "ข้อดี Transformer",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "ข้อใดเป็นข้อดีของ Transformer เหนือ RNN ตามสไลด์",
+  "options": [
+   "เชื่อมคำไกลกันตรงๆ คำนวณขนานได้ ดู attention ได้",
+   "ใช้ parameter น้อยกว่า RNN ในทุกขนาดของโมเดล",
+   "ไม่ต้องใช้ข้อมูลเทรนเลย เพราะ attention รู้เอง",
+   "อ่านลำดับทีละ step จึงแม่นกว่า RNN ทุกงาน"
+  ],
+  "answer": 0,
+  "explanation": "<p>attention เชื่อมคำแรกถึงคำสุดท้ายใน 1 step ทุกตำแหน่งคำนวณพร้อมกันบน GPU และ attention เป็น matrix ที่วาด heatmap ดูได้</p>",
+  "why_wrong": [
+   "ไม่ได้เล็กกว่าเสมอ",
+   "ยังต้องเทรน",
+   "ทีละ step คือ RNN"
+  ],
+  "link": "ใน encoder–decoder ความต่างเดียวคือ RNN ถูกแทนด้วย self-attention",
+  "ref": "Lesson 11 §4.2",
+  "terms": []
+ },
+ {
+  "id": "L11-15",
+  "lesson": 11,
+  "topic": "ทำไมต้อง positional encoding",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ทำไม Transformer ต้องบวก positional encoding",
+  "options": [
+   "self-attention ไม่รู้ลำดับ ต้องบอกตำแหน่งให้",
+   "เพื่อเพิ่มจำนวนมิติของ embedding",
+   "เพื่อแทน softmax ใน attention",
+   "เพื่อปิดตำแหน่งอนาคตไม่ให้มองเห็น"
+  ],
+  "answer": 0,
+  "explanation": "<p>self-attention เหมือนเทลูกปัดลงถุงแล้วดูว่าลูกไหนเข้ากับลูกไหน ลำดับหายไป จึงบวกตำแหน่งเข้า embedding บวกไม่ใช่ต่อ มิติจึงเท่าเดิม</p>",
+  "why_wrong": [
+   "บวกไม่ใช่ต่อ มิติเท่าเดิม",
+   "softmax ยังอยู่",
+   "นั่นคือ causal mask"
+  ],
+  "link": "ระยะระหว่างตำแหน่งติดกันเท่ากันทุกคู่ โมเดลจึงเรียนตำแหน่งสัมพัทธ์ได้",
+  "ref": "Lesson 11 §5.1",
+  "terms": []
+ },
+ {
+  "id": "L11-16",
+  "lesson": 11,
+  "topic": "Q K V",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ใน cross-attention ของ decoder แปลภาษา Q, K, V มาจากไหน",
+  "options": [
+   "Q จากประโยคปลายทาง K และ V จากประโยคต้นทาง",
+   "Q จากประโยคต้นทาง K และ V จากประโยคปลายทาง",
+   "Q, K และ V ทั้งสามมาจากประโยคปลายทาง",
+   "Q, K และ V ทั้งสามมาจากประโยคต้นทาง"
+  ],
+  "answer": 0,
+  "explanation": "<p>decoder ถามด้วยคำที่กำลังสร้าง แล้วไปค้นในประโยคต้นทางที่ encoder เข้ารหัสไว้ ส่วน self-attention ใน encoder ใช้ต้นทางทั้งสามบทบาท</p>",
+  "why_wrong": [
+   "สลับกัน",
+   "นั่นคือ causal self-attention",
+   "นั่นคือ self-attention ใน encoder"
+  ],
+  "link": "เหมือนค้นรูปด้วยคำค้น คำค้นคือ query ป้ายคือ key รูปคือ value",
+  "ref": "Lesson 11 §6.1",
+  "terms": [
+   [
+    "query",
+    "สิ่งที่ถาม"
+   ],
+   [
+    "key",
+    "ป้ายที่ถูกเทียบ"
+   ],
+   [
+    "value",
+    "เนื้อหาที่ถูกนำไปผสม"
+   ]
+  ]
+ },
+ {
+  "id": "L11-17",
+  "lesson": 11,
+  "topic": "scale",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "medium",
+  "stem": "ทำไม attention ต้องหาร QKᵀ ด้วย √d_k",
+  "options": [
+   "ไม่ scale แล้ว softmax แหลมเกินจน gradient หาย",
+   "เพื่อให้ผลรวมของ weight ทุกตัวเท่ากับ 1",
+   "เพื่อลดจำนวน parameter ของ Q และ K ลง",
+   "เพื่อปิดตำแหน่งอนาคตไม่ให้ token มองเห็น"
+  ],
+  "answer": 0,
+  "explanation": "<p>dot product โตตามจำนวนมิติ ค่าใหญ่ทำให้ softmax เกือบเป็น one-hot gradient จึงเล็กมาก หาร √d_k ให้ค่าอยู่ในช่วงที่ softmax ยังนุ่ม</p>",
+  "why_wrong": [
+   "softmax ทำให้รวมเป็น 1 อยู่แล้ว",
+   "scale ไม่มี parameter",
+   "นั่นคือ mask"
+  ],
+  "link": "หาร √d_k ไม่ใช่ d_k ข้อสอบชอบหลอกตรงนี้",
+  "ref": "Lesson 11 §6.1",
+  "terms": []
+ },
+ {
+  "id": "L11-18",
+  "lesson": 11,
+  "topic": "สามชนิด Transformer",
+  "source": "lesson",
+  "type": "recall",
+  "difficulty": "easy",
+  "stem": "BERT เป็น Transformer ชนิดใด",
+  "options": [
+   "encoder-only",
+   "decoder-only",
+   "encoder-decoder",
+   "RNN-encoder"
+  ],
+  "answer": 0,
+  "explanation": "<p>BERT, RoBERTa, DistilBERT เป็น encoder-only แปลงข้อความเป็น representation เหมาะกับ classification GPT เป็น decoder-only T5 กับ BART เป็น encoder-decoder</p>",
+  "why_wrong": [
+   "นั่นคือ GPT",
+   "นั่นคือ T5 BART",
+   "ไม่มีชนิดนี้"
+  ],
+  "link": "workshop ใน L12 ใช้ DistilBERT ซึ่งเป็น encoder-only",
+  "ref": "Lesson 11 §6.3",
+  "terms": []
+ },
+ {
+  "id": "L11-19",
+  "lesson": 11,
+  "topic": "เลือก temperature",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "อยากให้แชตบอตตอบคำถามข้อเท็จจริงแบบคงที่ ไม่แต่งเติม ควรตั้ง temperature อย่างไร",
+  "options": [
+   "ต่ำ ใกล้ greedy ได้คำที่น่าจะเป็นสุด",
+   "สูง เพื่อให้ได้คำหลากหลาย",
+   "เท่ากับ 1 ทุกงานเพราะเป็นค่ามาตรฐาน",
+   "สูงมากให้การกระจายแบนทุกคำเท่ากัน"
+  ],
+  "answer": 0,
+  "explanation": "<p>T ต่ำทำให้การกระจายแหลม เลือกคำที่น่าจะเป็นสุดซ้ำๆ ผลคงที่ งานเขียนสร้างสรรค์จึงใช้ T กลาง 0.5–1.0</p>",
+  "why_wrong": [
+   "สูงทำให้สุ่มมาก",
+   "แต่ละงานต้องการต่างกัน",
+   "แบนคือสุ่มเกือบเท่ากัน"
+  ],
+  "link": "notebook IMDB: T 0.2 น่าเบื่อซ้ำ T 1.5 โครงสร้างประโยคพัง",
+  "ref": "Lesson 11 §1.2",
+  "terms": []
+ },
+ {
+  "id": "L11-20",
+  "lesson": 11,
+  "topic": "ตัด target",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "spa_vectorization ให้ประโยคยาว 21 token โค้ดตัดอย่างไรให้ได้ decoder input กับ target",
+  "options": [
+   "input = [:, :-1] · target = [:, 1:]",
+   "input = [:, 1:] · target = [:, :-1]",
+   "input = [:, :20] · target = [:, :20]",
+   "input = [:, :-1] · target = [:, :-1]"
+  ],
+  "answer": 0,
+  "explanation": "<p>decoder input ตัดตัวสุดท้ายออก เริ่มด้วย [start] target ตัดตัวแรกออก จบด้วย [end] ทั้งคู่ยาว 20 และเหลื่อมกัน 1 ตำแหน่ง</p>",
+  "why_wrong": [
+   "สลับกัน",
+   "ไม่เหลื่อมกัน",
+   "ไม่เหลื่อมกัน"
+  ],
+  "link": "การเหลื่อม 1 ตำแหน่งนี้คือป้าย Target offset by one step ในรูป Transformer",
+  "ref": "Lesson 11 §2.2",
+  "terms": []
+ },
+ {
+  "id": "L11-21",
+  "lesson": 11,
+  "topic": "merge_mode",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "encoder Bi-GRU(1024) ต้องส่ง state ให้ decoder GRU(1024) ควรตั้ง merge_mode แบบใด",
+  "options": [
+   "sum ให้ได้ 1,024 เท่า state ของ decoder",
+   "concat ให้ได้ 2,048 ข้อมูลครบกว่า",
+   "ave ให้ได้ 512 ประหยัด memory",
+   "ไม่ต้องตั้ง เพราะ default ได้ 1,024"
+  ],
+  "answer": 0,
+  "explanation": "<p>สองทิศให้ 1,024 ทิศละชุด sum บวกค่าทีละช่องได้ 1,024 เท่ากับขนาด state ของ decoder ถ้าต่อจะได้ 2,048 ซึ่งใช้เป็น initial state ไม่ได้</p>",
+  "why_wrong": [
+   "2,048 ไม่เท่า decoder",
+   "เฉลี่ยยังได้ 1,024 ไม่ใช่ 512",
+   "default ของ Keras คือ concat"
+  ],
+  "link": "sum ต่างจาก concatenate แบบเดียวกับ residual กับ Inception ใน L8",
+  "ref": "Lesson 11 §2.2",
+  "terms": [
+   [
+    "initial state",
+    "state เริ่มต้นของ decoder ที่รับจาก encoder"
+   ]
+  ]
+ },
+ {
+  "id": "L11-22",
+  "lesson": 11,
+  "topic": "อ่าน attention heatmap",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "heatmap แปล European Economic Area เป็น zone économique européenne ส่วนใหญ่อยู่บนเส้นทแยง แต่ช่วงนี้กลับทิศ หมายความว่าอะไร",
+  "options": [
+   "attention จับคู่ได้ถูกแม้สองภาษาเรียงคำกลับกัน",
+   "โมเดลแปลผิดตรงช่วงนั้น จึงต้องเทรนใหม่",
+   "attention ใช้ได้กับคำที่เรียงตรงกันเท่านั้น",
+   "heatmap วาดสลับแกนนอนกับแกนตั้งไว้"
+  ],
+  "answer": 0,
+  "explanation": "<p>ภาษาฝรั่งเศสวางคำคุณศัพท์หลังคำนาม zone จึงคู่กับ Area ซึ่งอยู่ท้าย attention ไม่ได้ล็อกตำแหน่ง จึงจับคู่ได้ถูก</p>",
+  "why_wrong": [
+   "การกลับทิศเป็นเรื่องปกติของภาษา",
+   "ทำได้แม้ไม่ตรงลำดับ",
+   "แกนวาดถูก"
+  ],
+  "link": "ความสามารถดู attention weight เป็นข้อดีข้อหนึ่งของ Transformer",
+  "ref": "Lesson 11 §4.1",
+  "terms": []
+ },
+ {
+  "id": "L11-23",
+  "lesson": 11,
+  "topic": "ทำไม Transformer ขนานได้",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ประโยค 100 คำ RNN กับ Transformer layer เดียวต่างกันอย่างไรเรื่องเวลา",
+  "options": [
+   "RNN ทำ 100 step ต่อกัน Transformer ทำพร้อมกันทุกตำแหน่ง",
+   "ทั้งสองต้องทำ 100 step ต่อกันเท่ากัน",
+   "Transformer ต้องทำ 100 × 100 step ต่อกันไปเรื่อยๆ",
+   "RNN ทำพร้อมกัน แต่ Transformer ต้องทำทีละคำ"
+  ],
+  "answer": 0,
+  "explanation": "<p>RNN ต้องรอ state ของ step ก่อน จึงทำขนานไม่ได้ Transformer คำนวณ attention ของทุกคู่พร้อมกันเป็น matrix บน GPU</p>",
+  "why_wrong": [
+   "Transformer ไม่ต้องรอ step ก่อน",
+   "100 × 100 คือจำนวนคู่ ไม่ใช่จำนวน step",
+   "สลับกัน"
+  ],
+  "link": "ราคาคือจำนวนคู่ n² ซึ่งเป็นปัญหาที่ Swin ใน L8 แก้",
+  "ref": "Lesson 11 §4.2",
+  "terms": []
+ },
+ {
+  "id": "L11-24",
+  "lesson": 11,
+  "topic": "self-attention ด้วยมือ",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "v₁ = [2, 0] v₂ = [0, 2] หลังหาร √2 และ softmax ได้น้ำหนักของ v₁ คือ [0.9, 0.1] v₁ ใหม่เป็นเท่าใด",
+  "options": [
+   "[1.8, 0.2]",
+   "[2, 0]",
+   "[1, 1]",
+   "[0.2, 1.8]"
+  ],
+  "answer": 0,
+  "explanation": "<p>v₁ ใหม่ = 0.9 × [2, 0] + 0.1 × [0, 2] = [1.8, 0] + [0, 0.2] = [1.8, 0.2] ยังใกล้ตัวเองแต่ดึงข้อมูลจาก v₂ มาเล็กน้อย</p>",
+  "why_wrong": [
+   "ลืมผสม v₂",
+   "น้ำหนักเท่ากัน",
+   "สลับน้ำหนัก"
+  ],
+  "link": "นี่คือความหมายของ representation ที่รู้บริบท station ดึงความหมายจาก train เข้ามาผสม",
+  "ref": "Lesson 11 §5.2",
+  "terms": []
+ },
+ {
+  "id": "L11-25",
+  "lesson": 11,
+  "topic": "decoder-only ไม่มีอะไร",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "โมเดล decoder-only อย่าง GPT ไม่มีส่วนใด",
+  "options": [
+   "cross attention เพราะไม่มี encoder ให้ดู",
+   "causal self-attention เพราะไม่ต้องปิดอนาคต",
+   "feed forward เพราะใช้แค่ attention",
+   "positional encoding เพราะอ่านทีละคำอยู่แล้ว"
+  ],
+  "answer": 0,
+  "explanation": "<p>cross attention ต้องมี encoder output เป็น K และ V decoder-only จึงเหลือ causal self-attention กับ feed forward ซึ่งยังต้องมีตำแหน่ง</p>",
+  "why_wrong": [
+   "GPT ต้องปิดอนาคต",
+   "ยังมี feed forward",
+   "ยังต้องรู้ตำแหน่ง"
+  ],
+  "link": "decoder-only ทายคำถัดไปซ้ำๆ เหมือน language model ใน §1.1",
+  "ref": "Lesson 11 §6.3",
+  "terms": []
+ },
+ {
+  "id": "L11-26",
+  "lesson": 11,
+  "topic": "ไม่ใส่ causal mask",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "hard",
+  "stem": "ถ้าเทรน decoder โดยลืมใส่ causal mask จะเกิดอะไร",
+  "options": [
+   "decoder ลอกคำถัดไปจาก target ได้ loss ต่ำแต่ใช้จริงไม่ได้",
+   "เทรนไม่ได้เลย เพราะ shape ของ attention ไม่ตรงกัน",
+   "decoder แปลได้ดีขึ้น เพราะเห็นข้อมูลมากขึ้นทุกตำแหน่ง",
+   "ไม่มีผล เพราะ teacher forcing ปิดอนาคตไว้อยู่แล้ว"
+  ],
+  "answer": 0,
+  "explanation": "<p>ตอนเทรนทุกตำแหน่งคำนวณพร้อมกัน ถ้าไม่ปิด แต่ละตำแหน่งจะเห็นคำที่ต้องทาย loss จึงต่ำหลอกตา ตอน inference ไม่มีคำอนาคตให้ดู ผลจึงพัง</p>",
+  "why_wrong": [
+   "shape เท่าเดิม",
+   "ข้อมูลอนาคตไม่มีตอนใช้งาน",
+   "teacher forcing ป้อนคำจริงทั้งลำดับ ต้องอาศัย mask"
+  ],
+  "link": "mask ใส่ −∞ ก่อน softmax ให้ weight ของอนาคตเป็น 0",
+  "ref": "Lesson 11 §6.3",
+  "terms": []
+ },
+ {
+  "id": "L11-27",
+  "lesson": 11,
+  "topic": "beam search คำนวณ",
+  "source": "lesson",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "vocabulary 1,000 คำ beam width 3 แต่ละ step ต้องพิจารณาตัวเลือกกี่ตัวและเก็บไว้กี่ตัว",
+  "options": [
+   "พิจารณา 3,000 เก็บ 3",
+   "พิจารณา 1,000 เก็บ 3",
+   "พิจารณา 3 เก็บ 1",
+   "พิจารณา 3,000 เก็บ 1,000"
+  ],
+  "answer": 0,
+  "explanation": "<p>แต่ละประโยคที่เก็บไว้ 3 ประโยคขยายด้วยทุกคำ 1,000 คำ ได้ 3,000 ตัวเลือก แล้วเก็บ 3 ตัวที่ผลคูณความน่าจะเป็นสูงสุด</p>",
+  "why_wrong": [
+   "นั่นคือ greedy k = 1",
+   "ไม่ได้ขยายทุกคำ",
+   "เก็บ k ไม่ใช่ทั้ง vocabulary"
+  ],
+  "link": "k ใหญ่แปลดีขึ้นแต่ต้นทุนโตตาม k",
+  "ref": "Lesson 11 §3.2",
+  "terms": []
  },
  {
   "id": "L11-28",
   "lesson": 11,
-  "topic": "ทำไมต้อง mask",
+  "topic": "เลือกชนิด Transformer",
   "source": "lesson",
-  "type": "concept",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "ถ้าไม่มี causal mask ใน decoder ตอนเทรนจะเกิดอะไร",
+  "stem": "งานสรุปบทความยาวเป็นย่อหน้าสั้น ควรเลือก Transformer ชนิดใด",
   "options": [
-   "decoder เห็นคำในอนาคตของ target จึงโกงด้วยการ copy",
-   "encoder จะมองไม่เห็นประโยคต้นทางที่ต้องแปล",
-   "softmax จะรวมกันไม่เป็น 1 ในแต่ละแถว",
-   "เทรนแบบขนานไม่ได้อีกต่อไปต้องทำทีละ step"
+   "encoder-decoder เช่น T5 หรือ BART",
+   "encoder-only เช่น BERT",
+   "decoder-only แบบไม่มี mask",
+   "encoder-only ที่ต่อ Dense หนึ่งค่า"
   ],
   "answer": 0,
-  "explanation": "<p>ตอนเทรน decoder เห็น target ทั้งประโยคพร้อมกัน mask ทำให้ตำแหน่ง i เห็นแค่ j ≤ i ยังคำนวณขนานได้</p>",
+  "explanation": "<p>สรุปความคือ map ลำดับหนึ่งไปอีกลำดับที่ยาวไม่เท่ากัน encoder อ่านต้นฉบับ decoder สร้างข้อความใหม่ทีละ token</p>",
   "why_wrong": [
-   "encoder ไม่ใช้ causal mask",
-   "softmax ยังรวมเป็น 1",
-   "mask ไม่ได้ทำให้เทรนแบบขนานไม่ได้"
+   "BERT ไม่ได้สร้างข้อความ",
+   "decoder ต้องมี mask",
+   "Dense ให้ค่าเดียว ไม่ใช่ข้อความ"
   ],
-  "ref": "Lesson 11 §6.3"
+  "link": "pipeline summarization ใน L12 ใช้โมเดลชนิดนี้",
+  "ref": "Lesson 11 §6.3",
+  "terms": []
  },
  {
   "id": "L11-29",
   "lesson": 11,
-  "topic": "encoder block",
+  "topic": "QKV ค้นรูป",
   "source": "lesson",
-  "type": "calc",
+  "type": "apply",
   "difficulty": "medium",
-  "stem": "feed-forward ใน encoder embed_dim 128 dense_dim 512 มี parameter เท่าใด",
+  "stem": "ค้นรูปด้วย query dogs on the beach รูปที่มีป้าย Beach, Dog, Tree ได้ match 1.0 ส่วน Dog อย่างเดียวได้ 0.5 output ของ attention จะเป็นอย่างไร",
   "options": [
-   "131,712",
-   "131,072",
-   "65,664",
-   "66,048"
+   "ผสมทุกรูปโดยรูปแรกได้น้ำหนักมากที่สุด",
+   "เลือกรูปแรกรูปเดียวทิ้งรูปอื่น",
+   "เฉลี่ยทุกรูปเท่ากันไม่สนคะแนน",
+   "เลือกรูปที่ป้ายน้อยที่สุด"
   ],
   "answer": 0,
-  "explanation": "<p>(128 × 512 + 512) + (512 × 128 + 128) = 66,048 + 65,664 = 131,712</p>",
+  "explanation": "<p>outputs = sum(values × scores) ทุก value ถูกนำมาผสมตามคะแนน ไม่ได้เลือกตัวเดียว รูปที่ตรงมากจึงมีผลมาก</p>",
   "why_wrong": [
-   "ลืม bias",
-   "นับแค่ชั้นที่สอง",
-   "นับแค่ชั้นแรก"
+   "attention ผสม ไม่ได้เลือก",
+   "คะแนนกำหนดน้ำหนัก",
+   "ป้ายน้อยไม่ได้แปลว่าตรง"
   ],
-  "ref": "Lesson 11 §6.2"
+  "link": "นี่คือผลรวมถ่วงน้ำหนักแบบเดียวกับ context ของ Bahdanau",
+  "ref": "Lesson 11 §6.1",
+  "terms": []
  },
  {
   "id": "L11-30",
   "lesson": 11,
-  "topic": "ชนิด Transformer",
+  "topic": "ทายผิดคำแรก",
   "source": "lesson",
-  "type": "concept",
-  "difficulty": "easy",
-  "stem": "งานสรุปความจากบทความยาวเหมาะกับ Transformer ชนิดใดตามสไลด์",
+  "type": "apply",
+  "difficulty": "medium",
+  "stem": "ตอน inference decoder ทายคำแรกผิด คำต่อๆ ไปมักผิดตาม เพราะอะไร",
   "options": [
-   "encoder-decoder เช่น BART, T5",
-   "encoder-only เช่น BERT",
-   "decoder-only เช่น GPT",
-   "ใช้ได้เฉพาะ RNN encoder–decoder"
+   "decoder ใช้คำที่ทายเองเป็น input ของ step ถัดไป",
+   "encoder ลบประโยคต้นทางทิ้งหลังทายคำแรกเสร็จ",
+   "teacher forcing ป้อนคำผิดให้ decoder ทุก step",
+   "softmax ถูกปิดหลังคำแรก decoder จึงเดาสุ่ม"
   ],
   "answer": 0,
-  "explanation": "<p>encoder-decoder map ลำดับหนึ่งไปอีกลำดับ เหมาะกับ translation และ summarization encoder-only เหมาะกับ classification decoder-only เหมาะกับ generation</p>",
+  "explanation": "<p>ตอนใช้งานไม่มีคำจริง decoder ป้อนคำที่ทายเองกลับเข้าไป ความผิดจึงต่อเนื่อง ต่างจากตอนเทรนที่ได้คำจริงทุก step</p>",
   "why_wrong": [
-   "ไม่ได้สร้างลำดับใหม่",
-   "สไลด์จัด summarization ไว้กับ encoder-decoder",
-   "Transformer ทำได้"
+   "encoder output ยังอยู่",
+   "teacher forcing ใช้ตอนเทรน",
+   "softmax ใช้ทุก step"
   ],
-  "ref": "Lesson 11 §6.3"
+  "link": "ปัญหาเดียวกับ recursive forecasting ใน L10 ความผิดสะสม",
+  "ref": "Lesson 11 §2.1",
+  "terms": []
  }
 ]
