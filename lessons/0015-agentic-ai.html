@@ -49,12 +49,12 @@
 
 <p class="pic">ผู้ช่วยที่ตอบได้ว่า "ตรวจสถานะพัสดุได้ที่เว็บ" กับผู้ช่วยที่เปิดระบบดูให้แล้วบอกว่า "ส่งแล้วครับ" คนแรกพูด คนที่สองทำ agent คือคนที่สอง</p>
 
-<p>สไลด์เรียก Agentic AI ว่าคลื่นที่สามของ AI: จากการทำนาย สู่การสร้าง สู่การลงมือทำเอง นิยามสามข้อ: เป็นแนวทางที่ให้ระบบ AI ให้เหตุผล วางแผน ตัดสินใจ และลงมือทำเพื่อบรรลุเป้าหมาย · ใช้ tool และระบบภายนอก แล้วปรับ action ถัดไปตามผลที่ได้ · ทำงานได้ด้วยความอิสระระดับหนึ่ง ลดการที่คนต้องสั่งทุกขั้น</p>
+<p>Agentic AI ถูกเรียกว่าคลื่นที่สามของ AI: จากการทำนาย สู่การสร้าง สู่การลงมือทำเอง นิยามสามข้อ: เป็นแนวทางที่ให้ระบบ AI ให้เหตุผล วางแผน ตัดสินใจ และลงมือทำเพื่อบรรลุเป้าหมาย · ใช้ tool และระบบภายนอก แล้วปรับ action ถัดไปตามผลที่ได้ · ทำงานได้ด้วยความอิสระระดับหนึ่ง ลดการที่คนต้องสั่งทุกขั้น</p>
 
 <p>AI agent คือระบบที่ตีความสภาพแวดล้อม ตัดสินใจ และลงมือทำเพื่อเป้าหมาย ต่างจาก automation ปกติตรงที่เลือก action ตามสถานการณ์ได้ ไม่ต้องเดินตามลำดับที่เขียนตายตัวอย่างเดียว</p>
 
 <figure class="viz"><img src="../assets/viz/l15-levels.svg" alt="สี่ระดับของ agency"></figure>
-<p>สี่ขั้นจากสไลด์หน้า 3 ใช้โจทย์ refund เดียวกัน กล่องยิ่งขวายิ่งให้ระบบตัดสินใจเอง สไลด์ย้ำว่า agent มีระดับความอิสระต่างกันได้ ไม่ใช่ทุก agent ต้องทำงานโดยไม่มีคนดูแล</p>
+<p>รูปนี้ไล่วิวัฒนาการสี่ขั้นด้วยโจทย์ refund เดียวกัน กล่องยิ่งขวายิ่งให้ระบบตัดสินใจเอง ประเด็นสำคัญคือ agent มีระดับความอิสระต่างกันได้ ไม่ใช่ทุก agent ต้องทำงานโดยไม่มีคนดูแล</p>
 
 <table>
 <tr><th></th><th>Traditional ML</th><th>Foundation model-based agent</th></tr>
@@ -95,7 +95,7 @@
 
 <h3 id="s1-choose">1.2 ไม่ใช่ทุกงานต้องใช้ agent</h3>
 
-<p>หลักบนสไลด์: ใช้วิธีที่ง่ายที่สุดที่แก้ปัญหาได้อย่างเชื่อถือได้ ขึ้นกับความซับซ้อน ความไม่แน่นอน และความจำเป็นต้องตัดสินใจแบบ dynamic</p>
+<p>หลักการเลือกคือใช้วิธีที่ง่ายที่สุดที่แก้ปัญหาได้อย่างเชื่อถือได้ ขึ้นกับความซับซ้อน ความไม่แน่นอน และความจำเป็นต้องตัดสินใจแบบ dynamic</p>
 
 <table>
 <tr><th>วิธี</th><th>งานที่เหมาะ</th><th>ตัวอย่าง</th><th>dynamic planning</th><th>คาดเดาได้</th><th>ซับซ้อน</th><th>ยืดหยุ่น</th></tr>
@@ -173,7 +173,7 @@
 
 <h3 id="s2-tools">2.2 Tools</h3>
 
-<p>tool คือความสามารถที่ให้ agent ดึงข้อมูล คำนวณ และติดต่อระบบภายนอก ตัวอย่างบนสไลด์: get_invoice() ดึง invoice · get_refund_status() ดึงสถานะ refund · lookup_order() ดึง order</p>
+<p>tool คือความสามารถที่ให้ agent ดึงข้อมูล คำนวณ และติดต่อระบบภายนอก ตัวอย่างเช่น get_invoice() ดึง invoice · get_refund_status() ดึงสถานะ refund · lookup_order() ดึง order</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl15-p13.png" alt="Lecture 15 หน้า 13: Tools in Agentic Systems: local tool กับ API-based tool" loading="lazy">
@@ -248,7 +248,7 @@
 <tr><td>งานที่เหมาะ</td><td>งานที่นิยามชัด</td><td>งานซับซ้อนที่แยกย่อยได้</td></tr>
 </table>
 
-<p>ตัวอย่างบนสไลด์ หน้า 18: single-agent มี Customer Support Agent ตัวเดียวถือ invoice, refund, order, technical tool · multi-agent มี coordinator agent กระจายงานให้ billing, refund, order, technical agent</p>
+<p>ตัวอย่าง: single-agent มี Customer Support Agent ตัวเดียวถือ invoice, refund, order, technical tool · multi-agent มี coordinator agent กระจายงานให้ billing, refund, order, technical agent</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 17–18)</summary><div class="gallery">
 <figure>
@@ -299,6 +299,8 @@
 <h3 id="s3-call">3.2 Tool calling และ bind_tools</h3>
 
 <figure class="viz"><img src="../assets/viz/l15-toolcall.svg" alt="ลำดับ tool calling"></figure>
+<p class="pic">LLM เหมือนหัวหน้าที่เขียนใบสั่งงานว่า "ไปดึง invoice ของลูกค้า U1234" แต่ไม่ได้ลงมือเอง Python คือลูกน้องที่รับใบสั่งไปทำ แล้วเอาผลกลับมาให้หัวหน้าสรุปเป็นคำตอบ</p>
+
 <p>ไล่ลูกศรจากบนลงล่าง: คำถามไปถึง LLM ครั้งแรก LLM คืน tool call ไม่ใช่คำตอบ Python รัน tool ได้ผล แล้วส่งคำถามเดิม tool call และผลกลับให้ LLM ครั้งที่สองเพื่อสรุปคำตอบ</p>
 
 <table>
@@ -449,7 +451,7 @@ tool_map = {t.name: t for t in tools}</code></pre>
 <figcaption>Lecture 15 หน้า 31 — Single Tool Execution: Step 2 — Bind and Select a Tool</figcaption>
 </figure>
 
-<p>ผลที่พิมพ์คือ list ที่มี tool call เดียว: args {'user_id': 'U1234'} · id ที่สร้างตอนรัน · name 'get_invoice' · type 'tool_call' สไลด์ย้ำว่า LLM เลือก tool และสร้าง argument แต่ไม่ได้รันฟังก์ชัน</p>
+<p>ผลที่พิมพ์คือ list ที่มี tool call เดียว: args {'user_id': 'U1234'} · id ที่สร้างตอนรัน · name 'get_invoice' · type 'tool_call' จุดสำคัญคือ LLM เลือก tool และสร้าง argument แต่ไม่ได้รันฟังก์ชันเอง</p>
 
 <pre><code>from langchain_openai import ChatOpenAI
 
@@ -520,7 +522,7 @@ print(response.content)</code></pre>
 <tr><td><code>llm.invoke(messages)</code></td><td>ใช้ llm ปกติที่ไม่ bind tool สรุปคำตอบ</td></tr>
 </table>
 
-<p class="num">หน้าที่สรุปบนสไลด์: LLM เลือกและสร้าง parameter · Python รัน tool · tool ดึงข้อมูล · LLM สร้างคำตอบสุดท้าย · ทั้ง workflow เรียก LLM 2 ครั้ง</p>
+<p class="num">สรุปว่าใครทำอะไร: LLM เลือกและสร้าง parameter · Python รัน tool · tool ดึงข้อมูล · LLM สร้างคำตอบสุดท้าย · ทั้ง workflow เรียก LLM 2 ครั้ง</p>
 
 <p class="trap">notebook เพิ่ม SystemMessage และตรวจ tool call ก่อนรัน: ไม่มีหรือ invalid ให้ error · ต้องมี tool call เดียว · ชื่อต้องอยู่ใน tool_map · ถ้าใส่ SystemMessage ให้บอกว่าข้อมูลจำลอง คำตอบจะต่อท้าย "Please note that these records are simulated."</p>
 
@@ -543,7 +545,7 @@ print(response.content)</code></pre>
 
 <p>รันหลาย tool อิสระพร้อมกัน agent ต้องตัดสินทั้งว่าใช้ tool ไหนและกี่ตัว ขั้นตอน: วิเคราะห์คำขอ → เลือกทุก tool ที่เกี่ยว → สร้าง argument ของแต่ละตัว → รันพร้อมกัน → รวมผล → สร้างคำตอบ ลักษณะ: แต่ละ tool มี argument ของตัวเอง ไม่พึ่ง output ของกัน เก็บผลครบก่อนสร้างคำตอบ</p>
 
-<p>ตัวอย่างคำขอ หน้า 34: "Please check my outstanding invoice, refund status, and order status. My customer ID is U1234."</p>
+<p>ตัวอย่างคำขอ: "Please check my outstanding invoice, refund status, and order status. My customer ID is U1234."</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl15-p35.png" alt="Lecture 15 หน้า 35: Parallel Tool Execution: Step 1 — Select Multiple Tools" loading="lazy">
@@ -658,9 +660,11 @@ print(response.content)</code></pre>
 
 <h3 id="s5-idea">5.1 เมื่อ operation ต้องรอกัน</h3>
 
+<p class="pic">ทำอาหารตามสูตรต้องหั่นก่อนผัด ผัดก่อนจัดจาน สลับลำดับไม่ได้ ต่างจากต้มน้ำกับหุงข้าวที่ทำพร้อมกันได้ แบบแรกคือ chain แบบหลังคือ parallel</p>
+
 <p>chain คือลำดับ operation ที่ output ของขั้นหนึ่งเป็น input ของขั้นถัดไป ต่างจาก parallel ตรงที่มี dependency ลักษณะ: รันเรียงลำดับ · ขั้นหลังพึ่งผลขั้นก่อน · ลำดับสำคัญ · ส่งผลระหว่างกลางต่อกัน · error ลามต่อได้</p>
 
-<p>ตัวอย่าง หน้า 40: "Can I get a refund for my latest order? My customer ID is U1234." ต้องหา order ID ล่าสุดก่อน แล้วดึงรายละเอียด order แล้วจึงตัดสินสิทธิ์ refund รันพร้อมกันไม่ได้เพราะขั้นหลังต้องใช้ผลขั้นก่อน</p>
+<p>ตัวอย่าง: "Can I get a refund for my latest order? My customer ID is U1234." ต้องหา order ID ล่าสุดก่อน แล้วดึงรายละเอียด order แล้วจึงตัดสินสิทธิ์ refund รันพร้อมกันไม่ได้เพราะขั้นหลังต้องใช้ผลขั้นก่อน</p>
 
 <p>LangChain Expression Language หรือ LCEL ประกอบ operation เป็น chain ด้วย pipe <code>chain = component_a | component_b | component_c</code> ทุก component เป็น Runnable จึงประกอบและรันแบบเดียวกันได้</p>
 
@@ -1050,7 +1054,7 @@ print("Final state:", result)</code></pre>
 
 <p>shared state มี user_message, issue_type, response, conversation_history, user_id, step_result, customer_profile, support_policy node จัดหมวดได้แค่ system instruction กับ user_message ส่วน node สรุปคำตอบได้ user_message, step_result และนโยบายที่เกี่ยว ถ้าเป็น billing ส่ง billing policy ไม่ส่ง technical policy ตัวอย่าง "I need help correcting my invoice." context ที่ส่งมีแค่ user_message, step_result "invoice information for U1234; balance $50" และ policy ว่าแก้ invoice ได้ภายใน 30 วัน</p>
 
-<p class="trap">best practice สี่ข้อบนสไลด์: relevance, structure, summarization, dynamic assembly · ส่งทุกอย่างใน state ให้ LLM ไม่ใช่วิธีที่ดี เปลือง token และอาจทำให้ตอบผิด</p>
+<p class="trap">best practice สี่ข้อ: relevance, structure, summarization, dynamic assembly · ส่งทุกอย่างใน state ให้ LLM ไม่ใช่วิธีที่ดี เปลือง token และอาจทำให้ตอบผิด</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 55)</summary><div class="gallery">
 <figure>
@@ -1090,7 +1094,7 @@ print("Final state:", result)</code></pre>
 <figcaption>Lecture 15 หน้า 59 — Evaluating a Tool-Using Agent</figcaption>
 </figure>
 
-<p>ตาราง test case บนสไลด์: "Check invoice for U1234." ต้องเรียก get_invoice · "Where is my order?" ต้องถาม customer ID ก่อนถ้าไม่มี · "Hello!" ไม่ต้องใช้ tool แค่ทักทาย · ID ไม่ถูกต้องต้องไม่รันสำเร็จ และขอให้แก้ ตัวชี้วัด: tool selection accuracy, argument accuracy, execution success rate, task completion rate, response correctness คือคำตอบตรงกับผล tool, robustness, latency, token usage, user satisfaction</p>
+<p>ตัวอย่าง test case: "Check invoice for U1234." ต้องเรียก get_invoice · "Where is my order?" ต้องถาม customer ID ก่อนถ้าไม่มี · "Hello!" ไม่ต้องใช้ tool แค่ทักทาย · ID ไม่ถูกต้องต้องไม่รันสำเร็จ และขอให้แก้ ตัวชี้วัด: tool selection accuracy, argument accuracy, execution success rate, task completion rate, response correctness คือคำตอบตรงกับผล tool, robustness, latency, token usage, user satisfaction</p>
 
 <p class="trap">ตอบประโยคสวยแต่เรียก tool ผิดยังถือว่าพัง ต้องวัด tool selection และ argument ด้วย · "Hello!" ที่คาดหวังคือไม่เรียก tool</p>
 

@@ -97,7 +97,7 @@ model.summary()</code></pre>
 <p>บางงานมีข้อมูลหลายชนิด เช่นทำนายราคาสินค้าจากข้อมูลตาราง (metadata) ข้อความคำอธิบาย และรูป ข้อมูลแต่ละชนิดเหมาะกับ layer ต่างกัน ตารางใช้ Dense ข้อความใช้ RNN รูปใช้ ConvNet แล้วนำผลมารวมกัน ได้โมเดลที่มี<mark class="src" data-p="2" title="multi-inputs">หลาย input</mark> ซึ่งแม่นกว่าการแยกเป็นหลายโมเดล เพราะโมเดลเดียวเห็นข้อมูลทุกแหล่งพร้อมกัน</p>
 
 <figure class="viz"><img src="../assets/viz/l9-wide-deep.svg" alt="Wide and Deep สอง input และ auxiliary output"></figure>
-<p>ในรูป input_A วิ่งตรงไปที่ concat เรียกว่าทาง wide ส่วน input_B ผ่าน hidden สองชั้นเรียกว่าทาง deep ทาง wide ส่งความสัมพันธ์ง่ายๆ ไปถึง output ตรงๆ ทาง deep เรียน pattern ที่ซับซ้อน หลัง concat ได้ 5 + 30 = 35 ค่า กล่องขวาล่างคือ auxiliary output ซึ่งอธิบายในตอน 2.2</p>
+<p>ในรูป input_A วิ่งตรงไปที่ concat เรียกว่าทาง wide (wide path) ส่วน input_B ผ่าน hidden สองชั้นเรียกว่าทาง deep (deep path) ทาง wide ส่งความสัมพันธ์ง่ายๆ ไปถึง output ตรงๆ ทาง deep เรียน pattern ที่ซับซ้อน หลัง concat ได้ 5 + 30 = 35 ค่า กล่องขวาล่างคือ auxiliary output ซึ่งอธิบายในตอน 2.2</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p05.png" alt="Lecture 9 หน้า 5: Wide and Deep Neural Network: California housing input เดียว" loading="lazy">
@@ -564,11 +564,11 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <p class="pic">แทนที่จะเลื่อนกระดาษทั่วรูป ให้คนวงไว้ก่อนว่าตรงไหนน่าจะมีคน แล้วดูเฉพาะจุดที่วง</p>
 
-<p><mark class="src" data-p="34" title="R-CNN">R-CNN</mark> ไม่ตรวจทุกตำแหน่ง แต่ใช้ <mark class="src" data-p="34" title="Selective Search algorithm">อัลกอริทึม Selective Search</mark> (ไม่ใช่ neural network) เสนอบริเวณที่น่าจะมีวัตถุราว 2,000 บริเวณ เรียกว่า ROI แล้วส่งแต่ละ ROI เข้า CNN แยกกัน ยังต้องรัน CNN 2,000 ครั้งต่อภาพ R-CNN เป็นงานยุคแรกที่ใช้ CNN ทำ detection ได้ผลดี ทำผลระดับ state-of-the-art บน PASCAL VOC-2012 และ ILSVRC-2013</p>
+<p><mark class="src" data-p="34" title="R-CNN">R-CNN</mark> ไม่ตรวจทุกตำแหน่ง แต่ใช้ <mark class="src" data-p="34" title="Selective Search algorithm">อัลกอริทึม Selective Search</mark> (ไม่ใช่ neural network) เสนอบริเวณที่น่าจะมีวัตถุราว 2,000 บริเวณ เรียกว่า ROI แล้วส่งแต่ละ ROI เข้า CNN แยกกัน ยังต้องรัน CNN 2,000 ครั้งต่อภาพ R-CNN เป็นงานยุคแรกที่ใช้ CNN ทำ detection ได้ผลดี ทำผลระดับ state-of-the-art บน <mark class="src" data-p="35" title="PASCAL VOC-2012">PASCAL VOC-2012</mark> และ ILSVRC-2013</p>
 
-<p><mark class="src" data-p="34" title="Fast R-CNN">Fast R-CNN</mark> ส่งทั้งภาพเข้า CNN ครั้งเดียว แล้วตัดส่วนของแต่ละ ROI จาก feature map ที่ได้ convolution ซ้ำจึงหายไป เหลือ Selective Search เป็นส่วนที่ช้าที่สุด</p>
+<p><mark class="src" data-p="34" title="Fast R-CNN">Fast R-CNN</mark> ทำ <mark class="src" data-p="35" title="convolution operation">convolution</mark> <mark class="src" data-p="35" title="only once per image">ครั้งเดียวต่อภาพ</mark> แล้วตัดส่วนของแต่ละ ROI จาก feature map ที่ได้ convolution ซ้ำจึงหายไป เหลือ Selective Search เป็นส่วนที่ช้าที่สุด</p>
 
-<p><mark class="src" data-p="34" title="Faster R-CNN">Faster R-CNN</mark> เปลี่ยน Selective Search เป็น neural network ชื่อ Region Proposal Network (RPN) ทั้งระบบจึงเป็น network เดียวที่เทรนได้ end-to-end</p>
+<p><mark class="src" data-p="34" title="Faster R-CNN">Faster R-CNN</mark> เปลี่ยน Selective Search เป็น neural network ชื่อ <mark class="src" data-p="35" title="Region Proposal Network (RPN)">Region Proposal Network (RPN)</mark> ทั้งระบบจึงเป็น<mark class="src" data-p="35" title="end-to-end deep learning network">network เดียวที่เทรนได้ end-to-end</mark></p>
 
 <table>
 <tr><th></th><th>R-CNN</th><th>Fast R-CNN</th><th>Faster R-CNN</th></tr>
@@ -586,7 +586,7 @@ heatmap = make_gradcam_heatmap(img_array, model, last_conv_layer_name)</code></p
 
 <p>ในตาราง mAP แทบไม่เปลี่ยน (66.0% → 66.9%) แต่เวลาต่อภาพลดจาก 50 เหลือ 0.2 วินาที เร็วขึ้น 250 เท่า สามรุ่นนี้พัฒนาความเร็ว ไม่ใช่ความแม่น แต่ 0.2 วินาทีคือ 5 FPS ยังช้าเกินไปสำหรับรถขับเอง</p>
 
-<p>สาเหตุที่ยังช้าคือทั้งตระกูลเป็น <mark class="src" data-p="36" title="multi-stage detector">multi-stage detector</mark> เสนอบริเวณก่อนแล้วค่อยจำแนก ขั้นหลังต้องรอขั้นแรก <mark class="src" data-p="36" title="One-stage detector">One-stage detector</mark> เช่น SSD และ YOLO ตัดขั้นเสนอบริเวณทิ้ง แล้วทายตำแหน่งกับ class ตรงๆ ใน forward ครั้งเดียว จึงเร็วพอสำหรับ real-time</p>
+<p>สาเหตุที่ยัง<mark class="src" data-p="36" title="computational expensive">คำนวณแพง</mark>คือทั้งตระกูลเป็น <mark class="src" data-p="36" title="multi-stage detector">multi-stage detector</mark> เสนอบริเวณก่อนแล้วค่อยจำแนก ขั้นหลังต้องรอขั้นแรก <mark class="src" data-p="36" title="One-stage detector">One-stage detector</mark> เช่น SSD และ YOLO ตัดขั้นเสนอบริเวณทิ้ง แล้วทายตำแหน่งกับ class ตรงๆ ใน forward ครั้งเดียว จึงเร็วพอสำหรับ real-time</p>
 
 <p class="trap">Fast R-CNN ยังใช้ selective search · ตัวที่เลิกใช้คือ Faster R-CNN · R-CNN family ทั้งหมดเป็น multi-stage</p>
 
@@ -663,7 +663,7 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 
 <p class="pic">แบ่งภาพเป็นตาราง ให้นักเรียนหนึ่งคนประจำหนึ่งช่อง ถ้าจุดกลางของวัตถุตกในช่องไหน คนประจำช่องนั้นต้องรายงานว่ามีอะไร อยู่ตรงไหน ขนาดเท่าไร ทุกคนรายงานพร้อมกันในรอบเดียว</p>
 
-<p><mark class="src" data-p="40" title="Yolo">YOLO</mark> เป็น one-stage detector ที่ทั้ง<mark class="src" data-p="40" title="fast">เร็ว</mark>และ<mark class="src" data-p="40" title="accurate">แม่น</mark> แบ่งภาพเป็นตาราง (grid) แล้วรัน<mark class="src" data-p="40" title="algorithm">อัลกอริทึม</mark><mark class="src" data-p="40" title="convolutionally">แบบ convolution</mark>บน<mark class="src" data-p="40" title="each grid">ทุกช่อง</mark>พร้อมกันตามแนวคิดในตอน 5.3 ตอนใช้งานจึง "มองภาพครั้งเดียว" (You Only Look Once) อีกข้อที่ต่างจาก sliding windows คือ sliding windows ได้กรอบขนาดเท่าหน้าต่างเสมอ แต่ YOLO ทาย b_x, b_y, b_h, b_w เป็นตัวเลข กรอบจึงมีขนาดเท่าไรก็ได้</p>
+<p><mark class="src" data-p="40" title="Yolo">YOLO</mark> เป็น one-stage detector ที่ทั้ง<mark class="src" data-p="40" title="fast">เร็ว</mark>และ<mark class="src" data-p="40" title="accurate">แม่น</mark> แบ่งภาพเป็นตาราง (grid) แล้วรัน<mark class="src" data-p="40" title="algorithm">อัลกอริทึม</mark><mark class="src" data-p="40" title="convolutionally">แบบ convolution</mark>บน<mark class="src" data-p="40" title="each grid">ทุกช่อง</mark>พร้อมกันตามแนวคิดในตอน 5.3 ตอนใช้งาน (test) จึง "มองภาพครั้งเดียว" (You Only Look Once) อีกข้อที่ต่างจาก sliding windows คือ sliding windows ได้กรอบขนาดเท่าหน้าต่างเสมอ แต่ YOLO ทาย b_x, b_y, b_h, b_w เป็นตัวเลข กรอบจึงมีขนาดเท่าไรก็ได้</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl9-p40.png" alt="Lecture 9 หน้า 40: YOLO: ภาพ 224×224 ได้ output 5×5×8" loading="lazy">
@@ -702,7 +702,7 @@ model.compile(loss=["sparse_categorical_crossentropy", "mse"],
 <figcaption>Lecture 9 หน้า 42 — Anchor Boxes: grid 19×19 สอง anchor</figcaption>
 </figure>
 
-<p>ลองหาขนาด output ของ grid 19×19 ที่มี 2 anchor และ 3 class แต่ละ anchor มี 5 + 3 = 8 ค่า จึงเขียนได้ทั้ง 19 × 19 × 2 × 8 หรือรวมสองมิติท้ายเป็น 19 × 19 × 16 ซึ่ง implement ง่ายกว่า จำนวนค่าเท่ากันคือ 5,776</p>
+<p>ลองตอบคำถาม "What is the output dimension?" ของ grid 19×19 ที่มี 2 anchor และ 3 class แต่ละ anchor มี 5 + 3 = 8 ค่า จึงเขียนได้ทั้ง 19 × 19 × 2 × 8 หรือรวมสองมิติท้ายเป็น 19 × 19 × 16 ซึ่ง implement ง่ายกว่า จำนวนค่าเท่ากันคือ 5,776</p>
 
 <p>แต่ละกรอบมี<mark class="src" data-p="43" title="objectness score">objectness score</mark>บอกว่าโมเดลมั่นใจแค่ไหนว่ากรอบนั้นมีวัตถุ ตอน post-processing นำไปคูณกับ class score ได้<mark class="src" data-p="43" title="confidence score">confidence score</mark>ของแต่ละ class แล้วใช้ค่านี้กรองและเรียงกรอบใน NMS เหตุที่ต้องคูณคือกรอบต้องผ่านสองด่าน ต้องมีวัตถุจริง และต้องเป็น class นั้นจริง</p>
 

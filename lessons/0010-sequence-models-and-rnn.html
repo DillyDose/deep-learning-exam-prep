@@ -103,7 +103,7 @@ model.summary()</code></pre>
 
 <p class="num">n = 16, m = 14: W_x 14·16 = 224 · W_a 16·16 = 256 · bias 16 · รวม 496 · Dense(1) 17 · ทั้งโมเดล 513 · ถ้าเป็น Dense 16 node จะได้ 240 ส่วนต่าง 256 คือ recurrent connection</p>
 
-<p>ข้อมูลที่ใช้ทั้งบทคือ weather timeseries หนึ่งแถวต่อ 10 นาที มี 14 คอลัมน์ คำถามแรกที่ต้องตอบได้คือ input ของ RNN มีกี่มิติ คำตอบคือสามมิติ</p>
+<p>ข้อมูลที่ใช้ทั้งบทคือ weather timeseries หนึ่งแถวต่อ 10 นาที มี 14 คอลัมน์ คำถามแรกที่ต้องตอบได้คือ "What is the dimension of input to RNNs?" คำตอบคือสามมิติ</p>
 
 <div class="eq">\[\text{input ของ RNN} = (\text{batch size},\ \text{sequence},\ \text{feature})\]</div>
 <p class="say">กี่ตัวอย่างต่อ batch, แต่ละตัวอย่างยาวกี่ step, แต่ละ step มีกี่ตัวแปร</p>
@@ -251,7 +251,7 @@ model.summary()</code></pre>
 
 <p class="num">c̃ = −0.2 c⟨t−1⟩ = 0.8: Γ_u = 1 ได้ −0.2 · Γ_u = 0 ได้ 0.8 · Γ_u = 0.25 ได้ 0.25·(−0.2) + 0.75·0.8 = 0.55</p>
 
-<p>Full GRU เพิ่ม gate ตัวที่สอง <mark class="src" data-p="16" title="Γr Γu">Γ_r</mark> เรียกว่า relevance หรือ reset gate คุมว่า memory เดิมเกี่ยวข้องแค่ไหนตอนสร้างค่าใหม่ ถ้า Γ_r = 0 ค่าใหม่จะมาจาก input ปัจจุบันอย่างเดียว เหมือนเริ่มเรื่องใหม่</p>
+<p>Full GRU เพิ่ม gate ตัวที่สอง <mark class="src" data-p="16" title="Γr Γu">Γ_r</mark> เรียกว่า relevant หรือ reset gate คุมว่า memory เดิมเกี่ยวข้องแค่ไหนตอนสร้างค่าใหม่ที่เสนอ (candidate) ถ้า Γ_r = 0 candidate จะมาจาก input ปัจจุบันอย่างเดียว เหมือนเริ่มเรื่องใหม่</p>
 
 <div class="eq">\[\tilde{c}^{\langle t \rangle} = \tanh(\net{W_c}[\net{\Gamma_r} * c^{\langle t-1 \rangle}, x^{\langle t \rangle}] + \net{b_c}) \qquad \net{\Gamma_r} = \sigma(\net{W_r}[c^{\langle t-1 \rangle}, x^{\langle t \rangle}] + \net{b_r})\]</div>
 <p class="say">ต่างจากแบบ simplified จุดเดียว: memory เดิมถูกคูณด้วย Γ_r ก่อนเข้าคำนวณค่าใหม่</p>
@@ -494,7 +494,7 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <h3 id="s5-nlp">5.1 NLP และความท้าทาย</h3>
 
-<p>NLP คือสาขาที่ทำให้คอมพิวเตอร์<mark class="src" data-p="28" title="understand human language">เข้าใจภาษามนุษย์</mark> แล้ว<mark class="src" data-p="28" title="predict">ทำนาย</mark>หรือ<mark class="src" data-p="28" title="generate">สร้าง</mark>สิ่งที่มีประโยชน์ งานมีตั้งแต่ง่ายเช่นตรวจคำผิด ระดับกลางเช่นจำแนกข้อความ ไปจนถึงยากเช่นสรุปความ ตอบคำถาม และแปลภาษา</p>
+<p>NLP คือสาขาที่ทำให้คอมพิวเตอร์<mark class="src" data-p="28" title="understand human language">เข้าใจภาษามนุษย์</mark> แล้ว<mark class="src" data-p="28" title="predict">ทำนาย</mark>หรือ<mark class="src" data-p="28" title="generate">สร้าง</mark>สิ่งที่มีประโยชน์ งานมีตั้งแต่ง่ายเช่นตรวจคำผิด (spell checking) ระดับกลางเช่นจำแนกข้อความ (text classification) ไปจนถึงยากเช่นสรุปความ (summarization) ตอบคำถาม (QA) และแปลภาษา (machine translation)</p>
 
 <table>
 <tr><th>ช่วง</th><th>แนวทาง</th></tr>
@@ -539,7 +539,7 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <p class="pic">one-hot เหมือนให้ทุกคนในห้องมีเลขที่ประจำตัว รู้เลขที่ไม่ได้บอกว่าใครนิสัยคล้ายใคร embedding เหมือนให้แต่ละคนมีคะแนนหลายด้าน เช่นชอบกีฬาแค่ไหน ชอบดนตรีแค่ไหน คนที่คะแนนใกล้กันก็นิสัยคล้ายกัน</p>
 
-<p>วิธีง่ายที่สุดคือ one-hot ให้ index กับทุกคำ แล้วแทนคำด้วย vector ยาวเท่า vocabulary ที่เป็น 0 ทั้งหมด ยกเว้นตำแหน่งของคำนั้นเป็น 1 ปัญหาคือ one-hot มองคำ<mark class="src" data-p="33" title="as atomic units">เป็นหน่วยเดี่ยว</mark> <mark class="src" data-p="33" title="not its context">ไม่ดูบริบท</mark> ทุกคำห่างกันเท่ากันหมด โมเดลจึงเอาสิ่งที่เรียนจากคำหนึ่งไปใช้กับ<mark class="src" data-p="33" title="different words">คำที่ต่างกัน</mark>ไม่ได้ ถ้ารู้<mark class="src" data-p="33" title="semantics representation">ความหมายของคำ</mark> โมเดลจะเรียน feature ร่วมกันได้ อีกปัญหาคือ vector ยาวตาม vocabulary จึง<mark class="src" data-p="33" title="computationally inefficient">คำนวณไม่มีประสิทธิภาพ</mark></p>
+<p>วิธีง่ายที่สุดคือ one-hot ให้ index กับทุกคำ แล้วแทนคำด้วย vector ยาวเท่า vocabulary ที่เป็น 0 ทั้งหมด ยกเว้นตำแหน่งของคำนั้นเป็น 1 ปัญหาคือ one-hot มองคำ<mark class="src" data-p="33" title="as atomic units">เป็นหน่วยเดี่ยว</mark> <mark class="src" data-p="33" title="not its context">ไม่ดูบริบท</mark> ทุกคำห่างกันเท่ากันหมด โมเดลจึง generalize เอาสิ่งที่เรียนจากคำหนึ่งไปใช้กับ<mark class="src" data-p="33" title="different words">คำที่ต่างกัน</mark>ไม่ได้ ถ้ารู้<mark class="src" data-p="33" title="semantics representation">ความหมายของคำ</mark> โมเดลจะเรียน feature ร่วมกันได้ อีกปัญหาคือ vector ยาวตาม vocabulary จึง<mark class="src" data-p="33" title="computationally inefficient">คำนวณไม่มีประสิทธิภาพ</mark></p>
 
 <figure class="viz"><img src="../assets/viz/l10-embedding.svg" alt="embedding space และ one-hot เทียบ dense"></figure>
 <p>ซ้ายคือ embedding 2 มิติ จาก Dog ไป Wolf ขยับขึ้น (0, 0.4) ถ้าเลื่อน Cat ไปทิศเดียวกันจะได้ Tiger ทิศทางจึงแทนความสัมพันธ์ "สัตว์เลี้ยง → สัตว์ป่า" ขวาคือ one-hot ที่มีเลข 1 ตัวเดียวใน 20,000 เทียบกับ embedding ที่ทุกค่ามีข้อมูล</p>
@@ -575,7 +575,7 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <h3 id="s5-emb">5.3 Word embeddings และการเรียน</h3>
 
-<p><mark class="src" data-p="35" title="Word embeddings">Word embeddings</mark> แทนคำด้วย vector ทศนิยม ต่างจาก one-hot ตรงที่<mark class="src" data-p="35" title="dense, relatively low dimensional, which reduce">dense มิติค่อนข้างต่ำ ซึ่งลดขนาด</mark>ข้อมูลที่ต้องใช้เทรน และเรียนได้เร็วจาก<mark class="src" data-p="35" title="semantic relationship of words.">ความสัมพันธ์เชิงความหมายของคำ</mark> การขยับไปทิศใดทิศหนึ่งใน vector space แทนความสัมพันธ์ระหว่างคำ สรุปสั้นๆ: one-hot เป็น sparse มิติสูง กำหนดตายตัว · embedding เป็น dense มิติต่ำ เรียนจากข้อมูล</p>
+<p><mark class="src" data-p="35" title="Word embeddings">Word embeddings</mark> แทนคำด้วย vector ทศนิยม ต่างจาก one-hot ตรงที่<mark class="src" data-p="35" title="dense, relatively low dimensional, which reduce">dense มิติค่อนข้างต่ำ ซึ่งลดขนาด</mark>ข้อมูลที่ต้องใช้เทรน และเรียนได้เร็วจาก<mark class="src" data-p="35" title="semantic relationship of words.">ความสัมพันธ์เชิงความหมายของคำ</mark> การขยับไปทิศใดทิศหนึ่งใน vector space แทนความสัมพันธ์ระหว่างคำ สรุปสั้นๆ: one-hot เป็น sparse มิติสูง กำหนดตายตัว (hardcoded) · embedding เป็น dense มิติต่ำ เรียนจากข้อมูล</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p35.png" alt="Lecture 10 หน้า 35: Word Embeddings: Dog, Wolf, Cat และช่องว่าง" loading="lazy">

@@ -114,7 +114,7 @@
 <figcaption>Lecture13 หน้า 6 — Autoencoders: chess memory experiment และ autoencoder อย่างง่าย</figcaption>
 </figure>
 
-<p>autoencoder อย่างง่ายบนสไลด์มี input 3 ตัว (x₁, x₂, x₃) hidden layer 2 unit เป็นคอขวด และ output 3 ตัวที่พยายามให้เท่ากับ input ใช้หลักเดียวกับรูปขนาดใหญ่ แค่จำนวนน้อยกว่า</p>
+<p>autoencoder ที่เล็กที่สุดมี input 3 ตัว (x₁, x₂, x₃) hidden layer 2 unit เป็นคอขวด และ output 3 ตัวที่พยายามให้เท่ากับ input ใช้หลักเดียวกับรูปขนาดใหญ่ แค่จำนวนน้อยกว่า</p>
 
 <h3 id="s2-enc">2.2 Encoder ในโค้ด Fashion MNIST</h3>
 
@@ -160,7 +160,7 @@
 <figcaption>Lecture13 หน้า 35 — Convolutional Transpose Layers: filter 3×3 กับรูป 3×3 strides = 2 ได้ 6×6</figcaption>
 </figure>
 
-<p>บนสไลด์ filter 3×3×1 เลื่อนผ่านรูป 3×3×1 ที่ stride 2 ได้ output 6×6×1 ซ้อน Conv2DTranspose หลายชั้นก็ขยายทีละสองเท่าจนกลับไปเท่ารูปต้นฉบับ</p>
+<p>ในรูป filter 3×3×1 เลื่อนผ่านรูป 3×3×1 ที่ stride 2 ได้ output 6×6×1 ซ้อน Conv2DTranspose หลายชั้นก็ขยายทีละสองเท่าจนกลับไปเท่ารูปต้นฉบับ</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl13-p09.png" alt="Lecture13 หน้า 9: Decoder: โค้ดและ decoder.summary()" loading="lazy">
@@ -202,7 +202,7 @@
 <figure class="viz"><img src="../assets/viz/l13-latent.svg" alt="latent space ของ autoencoder มีช่องว่าง ส่วนของ VAE เป็นก้อนซ้อนกันรอบจุดศูนย์กลาง"></figure>
 <p>ฝั่งซ้าย autoencoder วางรูปหนึ่งรูปเป็นจุดเดียว กลุ่มอยู่ห่างกันและไม่ได้อยู่รอบ (0, 0) จุดที่สุ่มในช่องว่างจึง decode ออกมาไม่เป็นเสื้อผ้า ฝั่งขวาคือสิ่งที่ VAE ในตอน 3 แก้ไว้ คือแต่ละรูปเป็นก้อนที่ซ้อนกันอยู่ในวง N(0, I)</p>
 
-<p>สไลด์สรุปปัญหาไว้เป็นข้อๆ จัดเป็นตารางได้ดังนี้</p>
+<p>ปัญหาของ latent space แบบนี้สรุปได้ดังนี้</p>
 
 <table>
 <tr><th>อาการ</th><th>สาเหตุ</th></tr>
@@ -450,7 +450,7 @@ total_loss = reconstruction_loss + kl_loss</code></pre>
 <tr><td><mark class="src" data-p="21" title="generator">Generator</mark></td><td><mark class="src" data-p="21" title="(little tricky)">ยุ่งยากกว่าเล็กน้อย</mark></td><td>ฝึกตัวเดียวแบบ D ไม่ได้ เพราะไม่มี label ของตัวเอง ต้องให้ D บอกว่าปลอมได้ดีหรือยัง</td></tr>
 </table>
 
-<p>สอง network <mark class="src" data-p="21" title="iteratively">สลับกัน</mark> <mark class="src" data-p="21" title="refine their skills">ขัดเกลาฝีมือ</mark> เมื่อ generator เก่งขึ้น discriminator ก็ปรับตาม ความก้าวหน้าเกิดต่อเนื่องจนจบการ train แล้วจึงนำ generator ไปใช้ แผนภาพการฝึกบนสไลด์ <mark class="src" data-p="21" title="Modified">ดัดแปลง</mark>มาจากหนังสือ Deep Learning for Vision Systems</p>
+<p>สอง network <mark class="src" data-p="21" title="iteratively">สลับกัน</mark> <mark class="src" data-p="21" title="refine their skills">ขัดเกลาฝีมือ</mark> เมื่อ generator เก่งขึ้น discriminator ก็ปรับตาม ความก้าวหน้าเกิดต่อเนื่องจนจบการ train แล้วจึงนำ generator ไปใช้ แผนภาพการฝึก<mark class="src" data-p="21" title="Modified">ดัดแปลง</mark>มาจากหนังสือ Deep Learning for Vision Systems</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl13-p21.png" alt="Lecture13 หน้า 21: Deep Convolutional GANs: แผนภาพ discriminator training และ generator training" loading="lazy">
@@ -572,9 +572,9 @@ grads = tape.gradient(g_loss, self.generator.trainable_weights)</code></pre>
 <tr><td><code>tape.gradient(g_loss, generator.trainable_weights)</code></td><td>ขั้นฝึก G หา gradient เฉพาะ weight ของ G นี่คือการ "freeze" D ในโค้ด: D อยู่ในเส้นทางคำนวณแต่ไม่ถูกอัปเดต</td></tr>
 </table>
 
-<p class="trap">ในโค้ดนี้ label กลับด้านจากสไลด์ทฤษฎี: <mark class="src" data-p="29" title="Note that in this celeb dataset, we use Keras API - dataset flow from directory API which has one directory and then labeled with ‘0’ for real images.">dataset ดาราโหลดด้วย Keras API แบบ flow from directory ที่มีโฟลเดอร์เดียว จึงติด label ‘0’ ให้รูปจริง</mark> ถ้าข้อสอบถามว่า misleading_labels เป็นศูนย์ทั้งหมดเพราะอะไร คำตอบคือ 0 หมายถึง "จริง" ในโค้ดนี้ หลักการไม่เปลี่ยน: label ของ G คือ label เดียวกับรูปจริงเสมอ</p>
+<p class="trap">ในโค้ดนี้ label กลับด้านจากทฤษฎีในตอน 4.3: <mark class="src" data-p="29" title="Note that in this celeb dataset, we use Keras API - dataset flow from directory API which has one directory and then labeled with ‘0’ for real images.">dataset ดาราโหลดด้วย Keras API แบบ flow from directory ที่มีโฟลเดอร์เดียว จึงติด label ‘0’ ให้รูปจริง</mark> ถ้าข้อสอบถามว่า misleading_labels เป็นศูนย์ทั้งหมดเพราะอะไร คำตอบคือ 0 หมายถึง "จริง" ในโค้ดนี้ หลักการไม่เปลี่ยน: label ของ G คือ label เดียวกับรูปจริงเสมอ</p>
 
-<details class="check"><summary>ถ้าแก้โค้ดให้รูปจริงได้ label 1 และรูปที่สร้างได้ 0 ตามสไลด์หน้า 23 ต้องแก้ misleading_labels อย่างไร</summary>
+<details class="check"><summary>ถ้าแก้โค้ดให้รูปจริงได้ label 1 และรูปที่สร้างได้ 0 ตามทฤษฎีในตอน 4.3 ต้องแก้ misleading_labels อย่างไร</summary>
 <p>เปลี่ยนเป็น <code>ops.ones((batch_size, 1))</code> เพราะ generator ต้องการให้ D ตอบว่า "จริง" ซึ่งตอนนี้คือ 1</p>
 </details>
 

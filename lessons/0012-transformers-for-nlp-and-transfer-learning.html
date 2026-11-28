@@ -97,14 +97,14 @@
 
 <h3 id="s2-pipe">2.1 สามขั้นในคำสั่งเดียว</h3>
 
-<p>pipeline() รวม preprocessing คือ tokenize เป็นตัวเลข · model inference ได้ logit · postprocessing แปลงเป็นผลที่อ่านได้ เช่น softmax แล้วจับคู่ชื่อ label</p>
+<p>pipeline() รวมสามขั้นไว้ในคำสั่งเดียว ขั้นแรก preprocessing ตัดข้อความแล้วแปลงเป็นตัวเลข ขั้นที่สอง model inference ส่งตัวเลขเข้าโมเดลได้ logit ขั้นที่สาม postprocessing แปลง logit เป็นผลที่อ่านได้ เช่นผ่าน softmax แล้วจับคู่กับชื่อ label</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl12-p08.png" alt="Lecture 12 หน้า 8: Text Classification: ผล NEGATIVE 0.70" loading="lazy">
 <figcaption>Lecture 12 หน้า 8 — Text Classification: ผล NEGATIVE 0.70</figcaption>
 </figure>
 
-<p>รีวิวชมว่า "classics of cinema history" และเพลงไพเราะ แต่ติเรื่องเสียงและคำบรรยาย โมเดลตอบ NEGATIVE ด้วย score แค่ 0.70 คือ POSITIVE ราว 0.30 ความไม่แน่ใจสะท้อนรีวิวที่ปนสองทาง</p>
+<p>ตัวอย่าง: รีวิวชมว่า "classics of cinema history" และเพลงไพเราะ แต่ติเรื่องเสียงและคำบรรยาย โมเดลตอบ NEGATIVE ด้วย score แค่ 0.70 คือ POSITIVE ราว 0.30 ความไม่แน่ใจสะท้อนรีวิวที่ปนสองทาง</p>
 
 <pre><code>from transformers import pipeline
 # instantiate a pipeline and providing the name of the task we are interested in
@@ -121,14 +121,14 @@ hard for me to tell whether this was to reflect an older manner of speaking, or 
 </table>
 
 <figure class="viz"><img src="../assets/viz/l12-pipeline.svg" alt="tokenizer model softmax"></figure>
-<p>รูปจากสไลด์หน้า 14 แยกสามขั้นให้เห็น: ข้อความกลายเป็น 7 ID รวม [CLS] กับ [SEP] โมเดลให้ logit สองค่า softmax แปลงเป็นความน่าจะเป็น ผลต่าง logit 9.05 ทำให้ POSITIVE ได้ 99.99%</p>
+<p>รูปนี้แยกสามขั้นให้เห็น: ข้อความกลายเป็น 7 ID รวม [CLS] กับ [SEP] โมเดลให้ logit สองค่า softmax แปลงเป็นความน่าจะเป็น ผลต่าง logit 9.05 ทำให้ POSITIVE ได้ 99.99%</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl12-p14.png" alt="Lecture 12 หน้า 14: Using Tokenizer and Model: Raw text → Input IDs → Logits → Predictions" loading="lazy">
 <figcaption>Lecture 12 หน้า 14 — Using Tokenizer and Model: Raw text → Input IDs → Logits → Predictions</figcaption>
 </figure>
 
-<p class="trap">สไลด์หน้า 14 พิมพ์ POSITIVE 99.89% NEGATIVE "0.,11%" ไม่ตรงกับ logit [−4.3630, 4.6859] ที่แสดง ค่าจาก softmax คือ 99.99% ถ้าข้อสอบให้ logit มา ให้คำนวณเอง</p>
+<p class="trap">ในสไลด์ รูปนี้พิมพ์ POSITIVE 99.89% NEGATIVE "0.,11%" ไม่ตรงกับ logit [−4.3630, 4.6859] ที่แสดง ค่าจาก softmax คือ 99.99% ถ้าข้อสอบให้ logit มา ให้คำนวณเอง</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 7)</summary><div class="gallery">
 <figure>
@@ -144,7 +144,7 @@ hard for me to tell whether this was to reflect an older manner of speaking, or 
 <figcaption>Lecture 12 หน้า 9 — Name Entity Recognition: ORG และ MISC</figcaption>
 </figure>
 
-<p>NER หาชื่อเฉพาะ ได้ Apple เป็น ORG score 0.996 ตำแหน่ง 49 ถึง 54 · Russian เป็น MISC 0.998 · Old Church เป็น MISC 0.864 ต่ำสุดเพราะชื่อเต็มคือ Old Church Slavonic aggregation_strategy="simple" รวม token ย่อยที่ติดกันเป็นแถวเดียว</p>
+<p>pipeline เดียวกันใช้กับงานอื่นได้ด้วยการเปลี่ยนชื่องาน NER หาชื่อเฉพาะในข้อความ ได้ Apple เป็น ORG score 0.996 ตำแหน่ง 49 ถึง 54 · Russian เป็น MISC 0.998 · Old Church เป็น MISC 0.864 ต่ำสุดเพราะชื่อเต็มคือ Old Church Slavonic aggregation_strategy="simple" รวม token ย่อยที่ติดกันเป็นแถวเดียว</p>
 
 <pre><code>classifier_pipeline = pipeline("ner", aggregation_strategy="simple")
 result = classifier_pipeline("I would like to know whether the actors from the Apple company \
@@ -190,7 +190,7 @@ print(pd.DataFrame(result))</code></pre>
 <figcaption>Lecture 12 หน้า 15 — BertViz neuron_view: train กับ station</figcaption>
 </figure>
 
-<p>ประโยคเดียวกับตัวอย่าง self-attention ใน Lesson 11 ใน layer 0 head 8 คำว่า train ให้ weight สูงกับ station BERT base มี 12 × 12 = 144 head แต่ละ head โฟกัสต่างกัน</p>
+<p>BertViz ช่วยดู attention weight ของโมเดลจริง ใช้ประโยคเดียวกับตัวอย่าง self-attention ใน Lesson 11 ใน layer 0 head 8 คำว่า train ให้ weight สูงกับ station BERT base มี 12 × 12 = 144 head แต่ละ head โฟกัสต่างกัน</p>
 
 <pre><code>from transformers import AutoTokenizer
 from bertviz.transformers_neuron_view import BertModel
@@ -211,7 +211,7 @@ show(model, "bert", tokenizer, text, display_mode="light", layer=0, head=8)</cod
 <figcaption>Lecture 12 หน้า 16 — Cross-attention ของ T5: heatmap 5 × 5</figcaption>
 </figure>
 
-<p>heatmap layer 0 head 0 แถวคือ token ฝรั่งเศส คอลัมน์คือ token อังกฤษ ช่องสว่างเป็นเส้นทแยง La↔The, maison↔house, est↔is, magnifique↔wonderful เพราะสองประโยคเรียงคำตรงกัน นี่คือ cross-attention ที่ query = target key/value = source</p>
+<p>อีกตัวอย่างดู cross-attention ของ T5 ที่แปล "The house is wonderful" เป็น "La maison est magnifique" heatmap layer 0 head 0 แถวคือ token ฝรั่งเศส คอลัมน์คือ token อังกฤษ ช่องสว่างเป็นเส้นทแยง La↔The, maison↔house, est↔is, magnifique↔wonderful เพราะสองประโยคเรียงคำตรงกัน นี่คือ cross-attention ที่ query = target key/value = source</p>
 
 <pre><code># Load T5 using eager attention so attention weights can be returned
 model_ckpt = "t5-small"
@@ -268,7 +268,7 @@ attn = outputs.cross_attentions[layer][0, head].cpu().numpy()</code></pre>
 <figcaption>Lecture 12 หน้า 18 — Approaches for Using and Adapting Pre-trained Models</figcaption>
 </figure>
 
-<p>ตารางเรียงจากบนลงล่างตามปริมาณที่ต้องเทรนคร่าวๆ สองแถวแรกไม่เทรนเลย แถวท้ายเปลี่ยน input แทน weight</p>
+<p>ตารางหกวิธีใช้ pretrained model เรียงจากบนลงล่างตามปริมาณที่ต้องเทรนคร่าวๆ สองแถวแรกไม่เทรนเลย แถวท้ายเปลี่ยน input แทน weight</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 17)</summary><div class="gallery">
 <figure>
@@ -290,7 +290,7 @@ attn = outputs.cross_attentions[layer][0, head].cpu().numpy()</code></pre>
 <p class="say">W₀ ล็อก เทรนแค่ A ขนาด r × d กับ B ขนาด d × r ผลคูณ BA ขนาด d × d เท่า W₀ แต่ rank ไม่เกิน r · α/r คุมว่า update มีผลแค่ไหน</p>
 
 <figure class="viz"><img src="../assets/viz/l12-lora.svg" alt="LoRA low-rank update"></figure>
-<p>กล่องฟ้าใหญ่คือ W₀ 768 × 768 ที่ล็อก แถบส้มสองแถบคือ B กับ A ซึ่งรวมกันมีแค่ 12,288 ค่า ตัวเลขขวาคือ parameter จริงใน workshop</p>
+<p>ในรูป กล่องฟ้าใหญ่คือ W₀ 768 × 768 ที่ล็อก แถบส้มสองแถบคือ B กับ A ซึ่งรวมกันมีแค่ 12,288 ค่า ตัวเลขขวาคือ parameter จริงใน workshop</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl12-p20.png" alt="Lecture 12 หน้า 20: How LoRA Works: low-rank update" loading="lazy">
@@ -346,7 +346,9 @@ attn = outputs.cross_attentions[layer][0, head].cpu().numpy()</code></pre>
 
 <h3 id="s4-rag">4.2 RAG</h3>
 
-<p>RAG ค้นข้อมูลภายนอกที่เกี่ยวข้องแล้วเติมใน input ของ generative model โดยไม่ต้องเทรน generator ใหม่ อัปเดต knowledge base ได้เลย similarity score วัดความเกี่ยวข้องของการค้น ไม่ใช่ความถูกต้องของคำตอบ ขั้นตอน: สร้าง knowledge base จากโน้ต 6 ชิ้น → แปลงคำถามและเอกสารเป็น embedding ด้วย all-MiniLM-L6-v2 เลือก top-k ตาม cosine similarity → ส่งให้ FLAN-T5-small ตอบ</p>
+<p class="pic">RAG เหมือนสอบแบบเปิดหนังสือ ไม่ต้องท่องทุกอย่าง แค่เปิดหาหน้าที่เกี่ยวข้องก่อนตอบ แต่ถ้าคนตอบอ่านไม่เก่ง ถึงเปิดถูกหน้าก็ยังตอบผิดได้</p>
+
+<p>RAG ค้นข้อมูลภายนอกที่เกี่ยวข้องมาเติมใน input ของ generative model โดยไม่ต้องเทรน generator ใหม่ อยากให้โมเดลรู้ข้อมูลใหม่ก็แค่อัปเดต knowledge base ส่วน similarity score วัดว่าค้นได้เอกสารที่เกี่ยวข้องแค่ไหน ไม่ได้วัดว่าคำตอบถูก ขั้นตอนใน workshop มีสามขั้น: สร้าง knowledge base จากโน้ต 6 ชิ้น → แปลงคำถามและเอกสารเป็น embedding ด้วย all-MiniLM-L6-v2 แล้วเลือก top-k ตาม cosine similarity → ส่งคำถามกับเอกสารที่ได้ให้ FLAN-T5-small ตอบ</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl12-p22.png" alt="Lecture 12 หน้า 22: RAG: ค้นแล้วเติมใน prompt" loading="lazy">
@@ -355,7 +357,7 @@ attn = outputs.cross_attentions[layer][0, head].cpu().numpy()</code></pre>
 
 <p class="lead"><b>ตัวอย่างนี้มีไว้ให้เห็นว่า</b> ค้นถูกไม่ได้แปลว่าตอบถูก</p>
 
-<p>ผลของอาจารย์ คำถามเรื่อง max token length และ metric ได้ Workshop setup 0.420 สูงสุด แต่ FLAN-T5-small ตอบแค่ "2." และตอนไม่มี retrieval ก็ตอบวนไม่จบ</p>
+<p>ในผลที่รันจริง คำถามเรื่อง max token length และ metric ได้ Workshop setup 0.420 สูงสุด แต่ FLAN-T5-small ตอบแค่ "2." และตอนไม่มี retrieval ก็ตอบวนไม่จบ</p>
 
 <div class="eq">\[\cos(q, d) = \frac{q \cdot d}{\lVert q \rVert\,\lVert d \rVert}\]</div>
 <p class="say">ถ้า normalize embedding ให้ยาว 1 แล้ว dot product คือ cosine similarity เลย ใน notebook ตั้ง normalize_embeddings=True</p>
@@ -367,9 +369,9 @@ attn = outputs.cross_attentions[layer][0, head].cpu().numpy()</code></pre>
 
 <h3 id="s5-data">5.1 Emotion dataset</h3>
 
-<p><mark class="src" data-p="23" title="Text classification dataset">dataset สำหรับ text classification</mark> ของ workshop มาจากงานวิจัยอารมณ์ใน tweet ภาษาอังกฤษ สไลด์ระบุหกอารมณ์ <mark class="src" data-p="23" title="anger disgust fear">โกรธ รังเกียจ กลัว</mark> <mark class="src" data-p="23" title="joy">สุข</mark> <mark class="src" data-p="23" title="sadness">เศร้า</mark> และ <mark class="src" data-p="23" title="surprise">ประหลาดใจ</mark> โมเดลคือ <mark class="src" data-p="23" title="DistilBERT">DistilBERT</mark> ซึ่งเล็กและเร็วกว่า BERT แต่ใกล้เคียง 6 layer แทน 12 ราว 66 ล้านแทน 110 ล้าน เปลี่ยนเป็น BERT ได้ด้วยการเปลี่ยนชื่อ checkpoint</p>
+<p><mark class="src" data-p="23" title="Text classification dataset">dataset สำหรับ text classification</mark> ของ workshop มาจากงานวิจัยอารมณ์ใน tweet ภาษาอังกฤษ สไลด์ระบุหกอารมณ์ <mark class="src" data-p="23" title="anger disgust fear">โกรธ รังเกียจ กลัว</mark> <mark class="src" data-p="23" title="joy">สุข</mark> <mark class="src" data-p="23" title="sadness">เศร้า</mark> และ <mark class="src" data-p="23" title="surprise">ประหลาดใจ</mark> โมเดลคือ <mark class="src" data-p="23" title="DistilBERT">DistilBERT</mark> ซึ่งเล็กและเร็วกว่า BERT แต่แม่นใกล้เคียงกัน (6 layer แทน 12 และ parameter ราว 66 ล้านแทน 110 ล้าน) เปลี่ยนเป็น BERT ได้ด้วยการเปลี่ยนชื่อ checkpoint</p>
 
-<p class="trap">label จริงของ dataset "emotion" คือ sadness, joy, love, anger, fear, surprise ที่ index 0–5 สไลด์หน้า 23 เขียน disgust แทน love ถ้าข้อสอบถามตามข้อความสไลด์ให้ตอบ disgust ถ้าถามตาม dataset หรือโค้ดให้ใช้ love</p>
+<p class="trap">label จริงของ dataset "emotion" คือ sadness, joy, love, anger, fear, surprise ที่ index 0–5 สไลด์เขียน disgust แทน love ถ้าข้อสอบถามตามข้อความสไลด์ให้ตอบ disgust ถ้าถามตาม dataset หรือโค้ดให้ใช้ love</p>
 
 <p>workshop รันบน Kaggle เลือก Accelerator เป็น GPU full fine-tuning 5 epoch ราว 193 วินาทีบน GPU บน CPU นานกว่าหลายสิบเท่า</p>
 
@@ -402,7 +404,7 @@ df.head()</code></pre>
 
 <p class="num">joy 5,362 คือ 33.5% · surprise 572 คือ 3.6% · ต่างกัน 9.4 เท่า · ทาย joy ทุกข้อ: F1 ของ joy = 2 × 0.335 × 1/1.335 = 0.50 · macro F1 = 0.50/6 = 0.084</p>
 
-<p class="trap">กราฟหน้า 27 แกน x ของ validation และ test ยาวถึง 5,000 เท่า train ทั้งที่แต่ละ split มี 2,000 แถว ใช้ดูลำดับของคลาสเท่านั้น</p>
+<p class="trap">กราฟการกระจายคลาส แกน x ของ validation และ test ยาวถึง 5,000 เท่า train ทั้งที่แต่ละ split มี 2,000 แถว ใช้ดูลำดับของคลาสเท่านั้น</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl12-p28.png" alt="Lecture 12 หน้า 28: How Long Are Our Tweets?" loading="lazy">
@@ -467,7 +469,7 @@ print(tokenizer.convert_tokens_to_string(tokens))</code></pre>
 <figcaption>Lecture 12 หน้า 30 — How Tokenizer works: subword tokenization</figcaption>
 </figure>
 
-<p>สี่อย่างที่เกิดขึ้น: เติม [CLS] 101 ต้น [SEP] 102 ท้าย · ทุก token เป็นตัวพิมพ์เล็กเพราะ uncased · tokenizing และ NLP ถูกตัดสองชิ้นเพราะไม่ใช่คำพบบ่อย · ## แปลว่าต่อกับชิ้นก่อนหน้าโดยไม่มีช่องว่าง ข้อดีของ subword คือไม่มีคำ [UNK] แบบ Lesson 11</p>
+<p>ลองป้อน "Tokenizing text is a core task of NLP." เข้า tokenizer จะเห็นสี่อย่าง: เติม [CLS] 101 ต้น [SEP] 102 ท้าย · ทุก token เป็นตัวพิมพ์เล็กเพราะ uncased · tokenizing และ NLP ถูกตัดสองชิ้นเพราะไม่ใช่คำพบบ่อย · ## แปลว่าต่อกับชิ้นก่อนหน้าโดยไม่มีช่องว่าง ข้อดีของ subword คือไม่มีคำ [UNK] แบบ Lesson 11</p>
 
 <table>
 <tr><th>attribute</th><th>ค่า</th></tr>
@@ -503,7 +505,7 @@ print(emotions_encoded["train"][0])</code></pre>
 <p class="trap">[PAD] คือ 0 ไม่ใช่ [CLS] · "Tokenizing text is a core task of NLP." มี 8 หน่วยแต่ได้ 13 token · attention_mask 0 คือ padding ที่ให้ข้าม</p>
 
 <details class="check"><summary>"this is a test" ได้ input_ids กี่ตัว ถ้าทุกคำอยู่ใน vocabulary</summary>
-<p>4 คำ + [CLS] + [SEP] = 6 ตรงกับ torch.Size([1, 6]) ในหน้า 35</p>
+<p>4 คำ + [CLS] + [SEP] = 6 ตรงกับ torch.Size([1, 6]) ในตอน 6.1</p>
 </details>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 29)</summary><div class="gallery">
@@ -518,10 +520,12 @@ print(emotions_encoded["train"][0])</code></pre>
 
 <h3 id="s6-fe">6.1 Feature extraction</h3>
 
+<p class="pic">feature extraction เหมือนจ้างล่ามมืออาชีพมาแปลเอกสาร แล้วเราเอาคำแปลไปตัดสินใจเอง fine-tuning เหมือนส่งล่ามคนนั้นไปเรียนศัพท์เฉพาะของบริษัทเราเพิ่ม</p>
+
 <p>DistilBERT ถูก pretrain ให้ทายคำที่ถูก [MASK] ตอน pretrain hidden state ทุกตัวเข้า layer ที่ทาย 30,522 คำ สำหรับ classification ต้องแทนด้วย layer ที่ให้ 6 คลาส มีสองทาง: ใช้ hidden state เป็น feature แล้วเทรน classifier แยก หรือเทรนทั้งโมเดล</p>
 
 <figure class="viz"><img src="../assets/viz/l12-fe-ft.svg" alt="feature extraction เทียบ fine-tuning"></figure>
-<p>แถวบน body สีฟ้าล็อก ลูกศร gradient หยุดที่เส้นประหน้า head แถวล่างทุกกล่องเป็นสีส้ม gradient ย้อนถึง embedding</p>
+<p>ในรูป แถวบน body สีฟ้าล็อก ลูกศร gradient หยุดที่เส้นประหน้า head แถวล่างทุกกล่องเป็นสีส้ม gradient ย้อนถึง embedding</p>
 
 <p>feature extraction เทรนเร็ว คำนวณ hidden state ครั้งเดียว ไม่ต้องใช้ GPU ระหว่างเทรน classifier AutoModel โหลดแค่ body ไม่มี head output คือ hidden states</p>
 
