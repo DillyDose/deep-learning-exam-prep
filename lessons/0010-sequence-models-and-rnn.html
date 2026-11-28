@@ -83,7 +83,14 @@
 <figcaption>Lecture 10 หน้า 4 — Recurrent Neural Networks: recurrent connection และโค้ด SimpleRNN</figcaption>
 </figure>
 
-<p>โค้ดตัวอย่างใช้ SimpleRNN 16 neuron กับข้อมูลอากาศที่มี 14 feature สังเกตว่าจำนวน parameter ไม่ขึ้นกับความยาวลำดับ ลำดับยาว 3 หรือ 120 ก็ใช้ weight ชุดเดียวกัน</p>
+<figure class="thumb">
+<img src="../assets/slides/dl10-p05.png" alt="Lecture 10 หน้า 5: Example on Temperature Forecasting: ตารางข้อมูลดิบ" loading="lazy">
+<figcaption>Lecture 10 หน้า 5 — Example on Temperature Forecasting: ตารางข้อมูลดิบ</figcaption>
+</figure>
+
+<p>ข้อมูลที่ใช้ทั้งบทคือตารางนี้ weather timeseries จาก Jena หนึ่งแถวต่อ 10 นาที มี 14 คอลัมน์ เช่นความกดอากาศ p ค่าแรก 996.52 และอุณหภูมิ T ค่าแรก −8.02 ซึ่งเป็นค่าที่จะทาย เลข 14 ในโค้ดและสูตรข้างล่างคือจำนวนคอลัมน์นี้ ส่วน −8.02, −8.41, −8.51 คืออุณหภูมิสามแถวแรกที่จะเห็นอีกในหน้า 6</p>
+
+<p>โค้ดในสไลด์หน้า 4 ข้างบนใช้ SimpleRNN 16 neuron กับข้อมูลนี้ raw_data.shape[-1] คือ 14 สังเกตว่าจำนวน parameter ไม่ขึ้นกับความยาวลำดับ ลำดับยาว 3 หรือ 120 ก็ใช้ weight ชุดเดียวกัน</p>
 
 <pre><code>model = Sequential()
 model.add(layers.SimpleRNN(16, return_sequences=True,
@@ -101,9 +108,9 @@ model.summary()</code></pre>
 <div class="eq">\[\#\text{param}_{\text{SimpleRNN}} = n\,(n + m) + n\]</div>
 <p class="say">n คือจำนวน neuron m คือจำนวน feature ของ input · n·m จาก input, n·n จาก state ก่อนหน้า, n คือ bias</p>
 
-<p class="num">n = 16, m = 14: W_x 14·16 = 224 · W_a 16·16 = 256 · bias 16 · รวม 496 · Dense(1) 17 · ทั้งโมเดล 513 · ถ้าเป็น Dense 16 node จะได้ 240 ส่วนต่าง 256 คือ recurrent connection</p>
+<p class="num">n = 16, m = 14: W_x 14·16 = 224 · W_a 16·16 = 256 · bias 16 · รวม 496 · Dense(1) 17 · ทั้งโมเดล 513 ตรงกับ model.summary() ในสไลด์หน้า 4 · ถ้าเป็น Dense 16 node จะได้ 240 ส่วนต่าง 256 คือ recurrent connection</p>
 
-<p>ข้อมูลที่ใช้ทั้งบทคือ weather timeseries หนึ่งแถวต่อ 10 นาที มี 14 คอลัมน์ คำถามแรกที่ต้องตอบได้คือ "What is the dimension of input to RNNs?" คำตอบคือสามมิติ</p>
+<p>หัวสไลด์หน้า 5 ถามว่า "What is the dimension of input to RNNs?" คำตอบคือสามมิติ</p>
 
 <div class="eq">\[\text{input ของ RNN} = (\text{batch size},\ \text{sequence},\ \text{feature})\]</div>
 <p class="say">กี่ตัวอย่างต่อ batch, แต่ละตัวอย่างยาวกี่ step, แต่ละ step มีกี่ตัวแปร</p>
@@ -130,13 +137,6 @@ model.summary()</code></pre>
 <details class="check"><summary>SimpleRNN(32) รับ input 10 feature มี parameter เท่าใด</summary>
 <p>32 × (32 + 10) + 32 = 1,344 + 32 = 1,376</p>
 </details>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 5)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl10-p05.png" alt="Lecture 10 หน้า 5: Example on Temperature Forecasting: ตารางข้อมูลดิบ" loading="lazy">
-<figcaption>Lecture 10 หน้า 5 — Example on Temperature Forecasting: ตารางข้อมูลดิบ</figcaption>
-</figure>
-</div></details>
 
 <h3 id="s1-fwd">1.3 Forward propagation</h3>
 
@@ -210,24 +210,22 @@ model.summary()</code></pre>
 
 <p>ในรูป gradient ของ W_a จากสาม step ถูกรวมเป็นค่าเดียว เพราะ W_a มีตัวเดียวและอัปเดตครั้งเดียว</p>
 
-<p class="num">gradient ของ W_a จาก 3 step = 0.20, 0.05, −0.10 รวม 0.15 · lr 0.1: W_a = 0.50 − 0.1 × 0.15 = 0.485</p>
+<p class="num">สมมติ W_a เดิม 0.50 และ gradient ของ W_a จาก 3 step = 0.20, 0.05, −0.10 รวม 0.15 · lr 0.1: W_a = 0.50 − 0.1 × 0.15 = 0.485</p>
 
 <h3 id="s2-vanish">2.3 ปัญหาของ simple RNN</h3>
 
 <p class="pic">เล่นกระซิบต่อกันสิบคน ข้อความของคนแรกเพี้ยนและจางลงทุกครั้งที่ส่งต่อ พอถึงคนสุดท้ายแทบไม่เหลือ</p>
 
-<p>Simple RNN จับ<mark class="src" data-p="13" title="long-range dependencies">ความสัมพันธ์ระยะไกล</mark>ได้ไม่ดี เช่นประโยค "That man who met Tenjiro … is my neighbor." กริยา is ต้องเป็นเอกพจน์ให้เข้ากับ man ที่อยู่ห่างออกไปหลายคำ ความสัมพันธ์<mark class="src" data-p="13" title="man is">man กับ is</mark>นี้หายไปเพราะ<mark class="src" data-p="13" title="vanishing gradient problem">ปัญหา vanishing gradient</mark> แบบเดียวกับ network ที่ลึกมากใน Lesson 5 ตอนส่ง gradient ย้อนเวลา gradient ถูกคูณซ้ำทุก step จึงเล็กลงแบบ exponential ตามจำนวน step ลำดับที่ยาวมากจึงอาจ<mark class="src" data-p="13" title="untrainable">เทรนไม่ได้</mark> initialization, optimizer หรือ dropout ช่วยได้บ้าง แต่จะแก้จริงต้องเปลี่ยนเป็น<mark class="src" data-p="13" title="better architectures">สถาปัตยกรรมที่ดีกว่า</mark> คือ GRU และ LSTM ในตอนถัดไป</p>
-
-<p class="num">ตัวคูณ 0.9 ย้อน 10 step: 0.349 · 50 step: 0.0052 · ตัวคูณ 0.5 ย้อน 10 step: 0.00098 · ตัวคูณ 1.1 ย้อน 50 step: 117.4 คือ exploding</p>
-
-<p class="trap">BPTT บวก gradient ทุก step แล้วอัปเดตครั้งเดียว ไม่ใช่อัปเดตทีละ step · ตัวคูณมากกว่า 1 นิดเดียวก็ระเบิดได้</p>
-
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 13)</summary><div class="gallery">
-<figure>
+<figure class="thumb">
 <img src="../assets/slides/dl10-p13.png" alt="Lecture 10 หน้า 13: The Problems of Simple RNN: long-range dependencies" loading="lazy">
 <figcaption>Lecture 10 หน้า 13 — The Problems of Simple RNN: long-range dependencies</figcaption>
 </figure>
-</div></details>
+
+<p>Simple RNN จับ<mark class="src" data-p="13" title="long-range dependencies">ความสัมพันธ์ระยะไกล</mark>ได้ไม่ดี เช่นประโยค "That man who met Tenjiro … is my neighbor." กริยา is ต้องเป็นเอกพจน์ให้เข้ากับ man ที่อยู่ห่างออกไปหลายคำ ความสัมพันธ์<mark class="src" data-p="13" title="man is">man กับ is</mark>นี้หายไปเพราะ<mark class="src" data-p="13" title="vanishing gradient problem">ปัญหา vanishing gradient</mark> แบบเดียวกับ network ที่ลึกมากใน Lesson 5 ตอนส่ง gradient ย้อนเวลา gradient ถูกคูณซ้ำทุก step จึงเล็กลงแบบ exponential ตามจำนวน step ลำดับที่ยาวมากจึงอาจ<mark class="src" data-p="13" title="untrainable">เทรนไม่ได้</mark> initialization, optimizer หรือ dropout ช่วยได้บ้าง แต่จะแก้จริงต้องเปลี่ยนเป็น<mark class="src" data-p="13" title="better architectures">สถาปัตยกรรมที่ดีกว่า</mark> คือ GRU และ LSTM ในตอนถัดไป</p>
+
+<p class="num">สมมติ gradient ถูกคูณด้วยค่าเดิมทุก step ที่ย้อน · ตัวคูณ 0.9 ย้อน 10 step: 0.349 · 50 step: 0.0052 · ตัวคูณ 0.5 ย้อน 10 step: 0.00098 · ตัวคูณ 1.1 ย้อน 50 step: 117.4 คือ exploding</p>
+
+<p class="trap">BPTT บวก gradient ทุก step แล้วอัปเดตครั้งเดียว ไม่ใช่อัปเดตทีละ step · ตัวคูณมากกว่า 1 นิดเดียวก็ระเบิดได้</p>
 
 <!-- ===================================================== -->
 <h2 id="s3">3. GRU และ LSTM</h2>
@@ -236,7 +234,13 @@ model.summary()</code></pre>
 
 <p class="pic">จดโน้ตลงสมุด เจอข้อมูลสำคัญก็เขียนทับ เจอเรื่องไม่สำคัญก็ไม่แตะสมุด หน้าที่จดไว้จึงอยู่รอดไปถึงตอนต้องใช้</p>
 
-<p>GRU (Cho et al., 2014) เพิ่มทางให้ข้อมูลข้ามหลาย step ได้โดยไม่จาง ใน GRU memory cell คือ hidden state เอง \(c^{\langle t \rangle} = a^{\langle t \rangle}\) แบบ simplified มี gate ตัวเดียวคือ update gate Γ_u ซึ่งตัดสินทุก step ว่าจะเขียน memory ใหม่หรือเก็บของเดิมไว้ ตัวอย่างประโยค "<mark class="src" data-p="14" title="Man is">Man … is</mark>" ให้ Γ_u = 1, 0, 0, 0 ที่คำ man, who, met, Tenjiro</p>
+<p>GRU (Cho et al., 2014) เพิ่มทางให้ข้อมูลข้ามหลาย step ได้โดยไม่จาง ใน GRU memory cell คือ hidden state เอง \(c^{\langle t \rangle} = a^{\langle t \rangle}\) แบบ simplified มี gate ตัวเดียวคือ update gate Γ_u ซึ่งตัดสินทุก step ว่าจะเขียน memory ใหม่หรือเก็บของเดิมไว้ สไลด์หน้า 14 ใช้ประโยค "<mark class="src" data-p="14" title="Man is">Man … is</mark>" แถว Γ_u ใต้แต่ละคำคือ 1, 0, 0, 0 ที่คำ man, who, met, Tenjiro ส่วนช่อง ? ที่คำ is คือสิ่งที่ต้องคิดต่อ</p>
+
+<figure class="thumb">
+<img src="../assets/slides/dl10-p14.png" alt="Lecture 10 หน้า 14: GRU (Simplified): Γ_u ของแต่ละคำ" loading="lazy">
+<figcaption>Lecture 10 หน้า 14 — GRU (Simplified): Γ_u ของแต่ละคำ</figcaption>
+</figure>
+<p>อ่านตารางในรูปเป็นสองแถว แถวบนคือ memory c⟨1⟩ ถึง c⟨5⟩ แถวล่างคือ Γ_u ของคำนั้น ค่า 1 ที่ man คือเขียนข้อมูลใหม่ลง memory ค่า 0 สามตัวถัดมาคือเก็บของเดิมไว้ หน้า 15 ข้างล่างไล่สูตรทีละคำให้ดู</p>
 
 <div class="eq">\[\tilde{c}^{\langle t \rangle} = \tanh(\net{W_c}[c^{\langle t-1 \rangle}, x^{\langle t \rangle}] + \net{b_c}) \qquad \net{\Gamma_u} = \sigma(\net{W_u}[c^{\langle t-1 \rangle}, x^{\langle t \rangle}] + \net{b_u})\]
 \[c^{\langle t \rangle} = \net{\Gamma_u} * \tilde{c}^{\langle t \rangle} + (1 - \net{\Gamma_u}) * c^{\langle t-1 \rangle}\]</div>
@@ -249,7 +253,7 @@ model.summary()</code></pre>
 
 <p>man ได้ Γ_u = 1 memory จึงรับข้อมูล "ประธานเอกพจน์" เต็มที่ ส่วน who, met, Tenjiro ได้ Γ_u = 0 memory จึงถูกคัดลอกต่อไปเฉยๆ c⟨4⟩ = c⟨1⟩ พอถึง is จึงยังรู้ว่าต้องใช้กริยาเอกพจน์ การคัดลอกตรงๆ แบบนี้ยังเป็นทางลัดให้ gradient ไหลย้อนได้โดยไม่จาง คล้าย skip connection ของ ResNet</p>
 
-<p class="num">c̃ = −0.2 c⟨t−1⟩ = 0.8: Γ_u = 1 ได้ −0.2 · Γ_u = 0 ได้ 0.8 · Γ_u = 0.25 ได้ 0.25·(−0.2) + 0.75·0.8 = 0.55</p>
+<p class="num">สมมติค่าใหม่ c̃ = −0.2 และ memory เดิม c⟨t−1⟩ = 0.8: Γ_u = 1 ได้ −0.2 · Γ_u = 0 ได้ 0.8 · Γ_u = 0.25 ได้ 0.25·(−0.2) + 0.75·0.8 = 0.55</p>
 
 <p>Full GRU เพิ่ม gate ตัวที่สอง <mark class="src" data-p="16" title="Γr Γu">Γ_r</mark> เรียกว่า relevant หรือ reset gate คุมว่า memory เดิมเกี่ยวข้องแค่ไหนตอนสร้างค่าใหม่ที่เสนอ (candidate) ถ้า Γ_r = 0 candidate จะมาจาก input ปัจจุบันอย่างเดียว เหมือนเริ่มเรื่องใหม่</p>
 
@@ -258,11 +262,7 @@ model.summary()</code></pre>
 
 <p>สรุป GRU: เป็นรุ่นย่อของ LSTM แต่ทำงานได้ดีพอกัน จึงนิยมมากขึ้น · gate ตัวเดียว <mark class="src" data-p="17" title="Γu • Γr">Γ_u</mark> คุมทั้ง update และ forget ถ้า Γ_u = 1 คือเขียนใหม่เต็มที่และลืมของเดิมหมด พูดอีกแบบคือจะเขียนของใหม่ลงตำแหน่งไหนต้องลบตำแหน่งนั้นก่อน · gate เป็น vector ค่าระหว่าง 0 ถึง 1 · Γ_r ตัดสินว่าจะทิ้งข้อมูลก่อนหน้าไหม</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 14, 16–17)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl10-p14.png" alt="Lecture 10 หน้า 14: GRU (Simplified)" loading="lazy">
-<figcaption>Lecture 10 หน้า 14 — GRU (Simplified)</figcaption>
-</figure>
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 16–17)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl10-p16.png" alt="Lecture 10 หน้า 16: Full GRU: reset gate" loading="lazy">
 <figcaption>Lecture 10 หน้า 16 — Full GRU: reset gate</figcaption>
@@ -303,7 +303,7 @@ model.summary()</code></pre>
 
 <p>gate สองตัวที่ LSTM มีเพิ่มคือ Γ_f ทำหน้าที่ลืมข้อมูลที่ไม่เกี่ยวข้อง และ Γ_o กำหนดว่าจะเปิดเผยสิ่งที่อยู่ใน cell ออกไปแค่ไหน</p>
 
-<p class="num">LSTM ค่าใหม่ 0.4 ค่าเดิม 1.0 Γ_u 0.5 Γ_f 0.9 Γ_o 0.6: c = 0.2 + 0.9 = 1.1 · a = 0.6 × tanh(1.1) = 0.6 × 0.8005 = 0.4803 · parameter ที่ n = 16 m = 14: SimpleRNN 496 · GRU 3 × 496 = 1,488 · LSTM 4 × 496 = 1,984 · GRU ของ Keras ใช้ bias สองชุดจึงรายงาน 3 × 512 = 1,536</p>
+<p class="num">ใช้ค่าเดียวกับรูปข้างบน LSTM ค่าใหม่ 0.4 ค่าเดิม 1.0 Γ_u 0.5 Γ_f 0.9 Γ_o 0.6: c = 0.2 + 0.9 = 1.1 · a = 0.6 × tanh(1.1) = 0.6 × 0.8005 = 0.4803 · parameter ที่ n = 16 m = 14: SimpleRNN 496 · GRU 3 × 496 = 1,488 · LSTM 4 × 496 = 1,984 · ถ้าสร้าง GRU(16) ใน Keras แล้วเรียก model.summary() จะเห็น 1,536 ไม่ใช่ 1,488 เพราะ Keras ใช้ bias สองชุด 3 × 512 = 1,536</p>
 
 <p class="trap">GRU ไม่มี output gate และ forget ผูกกับ update เป็น 1 − Γ_u · LSTM มี 4 ชุด weight ไม่ใช่ 3 · Γ_u = 0 ใน GRU คือคัดลอก memory เดิม ไม่ใช่ลบ</p>
 
@@ -386,7 +386,16 @@ model.add(layers.Dense(1))</code></pre>
 
 <p>ตัวอย่างใหญ่ของบทคือการทายอุณหภูมิ ข้อมูลมาจาก Max Planck Institute ที่เมือง Jena ประเทศเยอรมนี มี 14 ตัวแปร เช่นอุณหภูมิ ความกดอากาศ ความชื้น บันทึกทุก 10 นาที ตัวอย่างใช้ปี 2009–2016 เป้าหมายคือรับข้อมูลย้อนหลังเช่น 5 วัน แล้วทายอุณหภูมิอีก 24 ชั่วโมงข้างหน้า RNN ไม่จำเป็นต้องตัด trend และ seasonality ออกก่อน แต่บางครั้งตัดแล้วช่วยได้ เพราะโมเดลไม่ต้องเรียนส่วนนั้นเอง</p>
 
-<p class="num">ชั่วโมงละ 6 แถว วันละ 144 แถว · 420,451 แถว แบ่ง train 50% = 210,225 · val 25% = 105,112 · test 105,112 · แบ่งตามเวลา ไม่สุ่ม</p>
+<p>จำนวนแถวไม่อยู่บนสไลด์ มาจาก output ใน notebook ของอาจารย์ deep_learning_lecture10_69.ipynb ซึ่งแบ่ง train, val, test 50:25:25 ตามเวลา</p>
+
+<pre><code>print(temp.shape, raw_data.shape)
+(420451,) (420451, 14)
+
+number of train samples 210225
+number of val samples 105112
+number of test samples 105112</code></pre>
+
+<p class="num">ชั่วโมงละ 6 แถว วันละ 144 แถว · 420,451 × 0.5 = 210,225 · × 0.25 = 105,112 · val กับ test เป็นช่วงหลัง train ไม่สุ่ม เพราะต้องทายอนาคตจากอดีต</p>
 
 <figure class="thumb">
 <img src="../assets/slides/dl10-p24.png" alt="Lecture 10 หน้า 24: Plotting the Temperature Timeseries: ทั้งหมดเทียบ 10 วันแรก" loading="lazy">
@@ -481,7 +490,21 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 <tr><td><code>start_index=0, end_index=num_train_samples</code></td><td>ช่วง train · val และ test เลื่อน start_index ต่อไป</td></tr>
 </table>
 
-<p class="num">delay = 6 × (120 + 24 − 1) = 6 × 143 = 858 แถว = 143 ชั่วโมง · จุดสุดท้ายของลำดับอยู่ชั่วโมง 119 บวก 24 ได้ 143 · batch shape (256, 120, 14) target (256,) · MAE บน test: baseline ทายว่าเท่าตอนนี้ 2.62 · GRU(16) 2.53 · Bi-LSTM 2.52</p>
+<p class="num">delay = 6 × (120 + 24 − 1) = 6 × 143 = 858 แถว = 143 ชั่วโมง · จุดสุดท้ายของลำดับอยู่ชั่วโมง 119 บวก 24 ได้ 143 · batch shape (256, 120, 14) target (256,)</p>
+
+<p>ผลของแต่ละโมเดลไม่อยู่บนสไลด์ มาจาก notebook ตัวเดียวกัน ตัวเลขคือ MAE บน test หน่วยองศาเซลเซียส ยิ่งต่ำยิ่งดี baseline ไม่ใช้ machine learning เลย แค่ทายว่าอีก 24 ชั่วโมงอุณหภูมิเท่าตอนนี้</p>
+
+<table class="compact">
+<tr><th>โมเดลใน notebook</th><th>Test MAE</th></tr>
+<tr><td>baseline ทายว่าเท่าตอนนี้</td><td>2.62</td></tr>
+<tr><td>GRU(16)</td><td>2.53</td></tr>
+<tr><td>LSTM(16) + recurrent dropout</td><td>2.55</td></tr>
+<tr><td>LSTM ซ้อน 2 ชั้น</td><td>2.54</td></tr>
+<tr><td>Conv1D + LSTM</td><td>2.94</td></tr>
+<tr><td>Bidirectional LSTM(16)</td><td>2.52</td></tr>
+</table>
+
+<p>ตัวอย่างนี้มีไว้ให้เห็นว่า RNN ชนะ baseline แค่ราว 0.1 องศา และ Conv1D แพ้ baseline ด้วยซ้ำ ต้องเทียบกับ baseline ก่อนเสมอ ไม่งั้นไม่รู้ว่าโมเดลดีจริงไหม</p>
 
 <p class="trap">"− 1" ใน delay มาจากลำดับ 120 จุดครอบคลุม 119 ช่วง · shuffle=True สับระหว่างหน้าต่าง ไม่ได้สับในหน้าต่าง</p>
 
@@ -507,16 +530,21 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <p>ข้อความยากกว่าภาพสี่เรื่อง: <mark class="src" data-p="30" title="Words">คำ</mark> โดยลำพัง <mark class="src" data-p="30" title="no real meaning">ไม่มีความหมายจริง</mark> ความหมายมาจาก <mark class="src" data-p="30" title="context">บริบท</mark> · <mark class="src" data-p="30" title="order of words">ลำดับคำ</mark> สำคัญ และมี <mark class="src" data-p="30" title="long-term sequential dependencies">ความสัมพันธ์ระยะไกล</mark> · <mark class="src" data-p="30" title="Textual data">ข้อความ</mark> มี <mark class="src" data-p="30" title="rules-based grammatical structure">โครงสร้างไวยากรณ์ตามกฎ</mark> และต้องสมเหตุสมผล · <mark class="src" data-p="30" title="Textual data">ข้อความ</mark> ไวต่อการเปลี่ยนเล็กน้อย เพราะ <mark class="src" data-p="30" title="every word is vital to the overall meaning of the passage">ทุกคำสำคัญต่อความหมายทั้งข้อความ</mark> เปลี่ยน pixel 120 เป็น 121 ภาพยังเหมือนเดิม แต่เติม not คำเดียว ความหมายกลับด้าน</p>
 
+<figure class="thumb">
+<img src="../assets/slides/dl10-p31.png" alt="Lecture 10 หน้า 31: Preparing Text: standardize, tokenize, vectorize" loading="lazy">
+<figcaption>Lecture 10 หน้า 31 — Preparing Text: standardize, tokenize, vectorize</figcaption>
+</figure>
+
 <p>ก่อนเข้าโมเดลต้อง <mark class="src" data-p="31" title="transforming text into vectorized arrays">แปลงข้อความเป็น array ตัวเลข</mark> ซึ่งมีสามขั้น:</p>
 
 <table>
 <tr><th>ขั้น</th><th>ทำอะไร</th></tr>
 <tr><td><mark class="src" data-p="31" title="Text Standardization">Text standardization</mark></td><td>ตัวพิมพ์เล็ก ลบวรรคตอน stemming · "Story was so lovely because it was true." → "story was so lovely because it was true"</td></tr>
-<tr><td><mark class="src" data-p="31" title="Tokenization">Tokenization</mark></td><td>แบ่งเป็น <mark class="src" data-p="31" title="tokens">token</mark> คือตัวอักษร คำ หรือ n-gram · ได้ 8 token</td></tr>
+<tr><td><mark class="src" data-p="31" title="Tokenization">Tokenization</mark></td><td>แบ่งเป็น <mark class="src" data-p="31" title="tokens">token</mark> คือตัวอักษร คำ หรือ n-gram · ประโยคในสไลด์ได้ 8 token x⟨1⟩ ถึง x⟨8⟩</td></tr>
 <tr><td><mark class="src" data-p="31" title="Vectorization">Vectorization</mark></td><td>ผูกแต่ละ token กับ <mark class="src" data-p="31" title="numerical vectorized array">array ตัวเลข</mark> เช่น one-hot หรือ embedding</td></tr>
 </table>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 28–31)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 28–30)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl10-p28.png" alt="Lecture 10 หน้า 28: Deep Learning for Textual Data" loading="lazy">
 <figcaption>Lecture 10 หน้า 28 — Deep Learning for Textual Data</figcaption>
@@ -529,10 +557,6 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 <img src="../assets/slides/dl10-p30.png" alt="Lecture 10 หน้า 30: Challenges in Processing Text" loading="lazy">
 <figcaption>Lecture 10 หน้า 30 — Challenges in Processing Text</figcaption>
 </figure>
-<figure>
-<img src="../assets/slides/dl10-p31.png" alt="Lecture 10 หน้า 31: Preparing Text" loading="lazy">
-<figcaption>Lecture 10 หน้า 31 — Preparing Text</figcaption>
-</figure>
 </div></details>
 
 <h3 id="s5-onehot">5.2 One-hot และปัญหา</h3>
@@ -544,9 +568,14 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 <figure class="viz"><img src="../assets/viz/l10-embedding.svg" alt="embedding space และ one-hot เทียบ dense"></figure>
 <p>ซ้ายคือ embedding 2 มิติ จาก Dog ไป Wolf ขยับขึ้น (0, 0.4) ถ้าเลื่อน Cat ไปทิศเดียวกันจะได้ Tiger ทิศทางจึงแทนความสัมพันธ์ "สัตว์เลี้ยง → สัตว์ป่า" ขวาคือ one-hot ที่มีเลข 1 ตัวเดียวใน 20,000 เทียบกับ embedding ที่ทุกค่ามีข้อมูล</p>
 
-<p class="num">vocab 20,000 ประโยค 8 คำ: one-hot 160,000 ค่า ไม่เป็นศูนย์ 0.005% · embedding 8 มิติ 64 ค่า น้อยกว่า 2,500 เท่า · dot product ของ one-hot story กับ novel = 0 เท่าคู่อื่นทุกคู่</p>
+<p class="num">ใช้ประโยค 8 token จากหน้า 31 และสมมติ vocab 20,000: one-hot 160,000 ค่า ไม่เป็นศูนย์ 0.005% · embedding 8 มิติ 64 ค่า น้อยกว่า 2,500 เท่า · dot product ของ one-hot story กับ novel = 0 เท่าคู่อื่นทุกคู่</p>
 
-<p>ตัวอย่าง: ถ้าเคยเห็น "story are short tales" แล้วต้องเติม "novel are ____ works of fictions" คนที่รู้ว่า novel ความหมายใกล้ story จะเดาคำบอกความยาวได้ แต่ one-hot ไม่รู้ว่า novel ใกล้ story</p>
+<figure class="thumb">
+<img src="../assets/slides/dl10-p33.png" alt="Lecture 10 หน้า 33: Problems of One-hot Encoding: story กับ novel" loading="lazy">
+<figcaption>Lecture 10 หน้า 33 — Problems of One-hot Encoding: story กับ novel</figcaption>
+</figure>
+
+<p>ตัวอย่างในสไลด์: ถ้าเคยเห็น "story are short tales" แล้วต้องเติม "novel are ____ works of fictions" คนที่รู้ว่า novel ความหมายใกล้ story จะเดาคำบอกความยาวได้ แต่ one-hot ไม่รู้ว่า novel ใกล้ story</p>
 
 <p>ทางแก้มีสองกลุ่ม</p>
 
@@ -558,14 +587,10 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <p class="trap">TF-IDF ยังเป็น sparse ไม่ใช่ dense · คำที่พบทุกเอกสารเช่น the ได้น้ำหนัก TF-IDF ต่ำ</p>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 32–34)</summary><div class="gallery">
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 32, 34)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl10-p32.png" alt="Lecture 10 หน้า 32: One-Hot Encoding" loading="lazy">
 <figcaption>Lecture 10 หน้า 32 — One-Hot Encoding</figcaption>
-</figure>
-<figure>
-<img src="../assets/slides/dl10-p33.png" alt="Lecture 10 หน้า 33: Problems of One-hot Encoding" loading="lazy">
-<figcaption>Lecture 10 หน้า 33 — Problems of One-hot Encoding</figcaption>
 </figure>
 <figure>
 <img src="../assets/slides/dl10-p34.png" alt="Lecture 10 หน้า 34: Problems of One-hot Encoding (2): BOW, TF-IDF, embeddings" loading="lazy">
@@ -582,7 +607,7 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 <figcaption>Lecture 10 หน้า 35 — Word Embeddings: Dog, Wolf, Cat และช่องว่าง</figcaption>
 </figure>
 
-<p>คำที่ควรเติมในช่องว่างคือ tiger เพราะ (0.6, 0.2) + (0, 0.4) = (0.6, 0.6) ตรงกับจุด Tiger</p>
+<p>คำที่ควรเติมในช่องว่างคือ tiger สไลด์ไม่ได้ให้พิกัด ถ้าใช้พิกัดจากรูปวาดในหัวข้อ 5.2 Dog (0.3, 0.3) ไป Wolf (0.3, 0.7) ขยับ (0, 0.4) เลื่อน Cat (0.6, 0.2) ไปเท่ากันได้ (0.6, 0.6) ตรงกับจุด Tiger</p>
 
 <p>วิธีง่ายที่สุดในการได้ embedding คือเรียนไปพร้อมกับงานหลัก เรียกว่า<mark class="src" data-p="36" title="unsupervised way">แบบ unsupervised</mark> เพราะ label มาจากตัวข้อความเอง ไม่ต้องมีคนติดป้าย <mark class="src" data-p="36" title="Embedding layer">Embedding layer</mark> ทำหน้าที่แปลง index ของคำเป็น dense vector ตัวอย่างคือ vocab 10,000 คำ ใช้ 3 คำก่อนหน้าทายคำถัดไป</p>
 
@@ -596,7 +621,12 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 
 <p class="num">E มี 8 × 10,000 = 80,000 parameter · hidden layer รับ 3 × 8 = 24 ค่า แทน 3 × 10,000 = 30,000 ถ้าป้อน one-hot · output softmax 10,000 node · Keras: Embedding(input_dim=10000, output_dim=8)</p>
 
-<p>เมื่อได้ embedding แล้ว นำไปจำแนกข้อความได้สองแบบ แบบแรก Embedding + Flatten + Dense ตำแหน่งคำผูกกับ weight จึงต้องยาวเท่ากันทุกประโยค เช่น 5 คำ 8 มิติ dense รับ 40 ค่า แบบที่สอง Embedding + RNN ป้อน vector ทีละคำ จึงรับความยาวต่างกันได้</p>
+<figure class="thumb">
+<img src="../assets/slides/dl10-p37.png" alt="Lecture 10 หน้า 37: Words Embeddings-Text Classification: dense เทียบ recurrent" loading="lazy">
+<figcaption>Lecture 10 หน้า 37 — Words Embeddings-Text Classification: dense เทียบ recurrent</figcaption>
+</figure>
+
+<p>เมื่อได้ embedding แล้ว นำไปจำแนกข้อความได้สองแบบ ตามสองรูปในสไลด์ แบบแรกทางซ้าย Embedding + Flatten + Dense ตำแหน่งคำผูกกับ weight จึงต้องยาวเท่ากันทุกประโยค ประโยคในรูป every good boy does fine มี 5 คำ ถ้าสมมติ embedding 8 มิติ flatten แล้ว dense รับ 40 ค่า แบบที่สองทางขวา Embedding + RNN ป้อน vector ทีละคำ จึงรับความยาวต่างกันได้</p>
 
 <p>ถ้าไม่อยากเรียนเอง ใช้ pretrained embedding ที่เรียนจากข้อความจำนวนมากไว้แล้ว มองเป็นคู่ key-value: key คือคำ value คือ vector ตัวที่นิยมคือ Word2Vec ของ Mikolov ที่ Google ปี 2013, GloVe ของ Stanford ปี 2014 และ fastText ของ Facebook Word2Vec เรียนแบบ self-supervised ได้สองแบบ:</p>
 
@@ -619,11 +649,7 @@ train_dataset = keras.utils.timeseries_dataset_from_array(
 <p>5,000 × 64 = 320,000 · output (20, 64) ต่อประโยค หรือ (batch, 20, 64)</p>
 </details>
 
-<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 37–39)</summary><div class="gallery">
-<figure>
-<img src="../assets/slides/dl10-p37.png" alt="Lecture 10 หน้า 37: Words Embeddings-Text Classification: dense เทียบ recurrent" loading="lazy">
-<figcaption>Lecture 10 หน้า 37 — Words Embeddings-Text Classification: dense เทียบ recurrent</figcaption>
-</figure>
+<details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 38–39)</summary><div class="gallery">
 <figure>
 <img src="../assets/slides/dl10-p38.png" alt="Lecture 10 หน้า 38: Pretrained Word Embeddings" loading="lazy">
 <figcaption>Lecture 10 หน้า 38 — Pretrained Word Embeddings</figcaption>
@@ -695,7 +721,7 @@ vocabulary</code></pre>
 <tr><td>index 0 และ 1</td><td>0 = mask token สำหรับ padding · 1 = OOV token คำที่ไม่อยู่ใน vocabulary</td></tr>
 </table>
 
-<p class="num">vocabulary ["", "[UNK]", "the", "movie", "was", "great"]: "The movie was GREAT!!" ได้ [2, 3, 4, 5] · "The film was great" ได้ [2, 1, 4, 5] เพราะ film ไม่อยู่ใน vocabulary</p>
+<p class="num">สมมติ vocabulary ["", "[UNK]", "the", "movie", "was", "great"]: "The movie was GREAT!!" ได้ [2, 3, 4, 5] · "The film was great" ได้ [2, 1, 4, 5] เพราะ film ไม่อยู่ใน vocabulary</p>
 
 <details class="fold"><summary>สไลด์ต้นฉบับ (หน้า 42)</summary><div class="gallery">
 <figure>
